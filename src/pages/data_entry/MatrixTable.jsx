@@ -327,7 +327,7 @@ export default function MatrixTable({
                 </td>
                 {prevPeriod && (
                   <td style={{ padding: '12px 14px', textAlign: 'right', color: '#166534', fontWeight: '800' }}>
-                    {prevTotalPersons !== null ? `${prevTotalPersons.toLocaleString()} Persons` : '—'}
+                    {prevTotalPersons !== null ? prevTotalPersons.toLocaleString() : '—'}
                   </td>
                 )}
                 <td style={{ padding: '8px 12px', textAlign: 'center' }}>
@@ -345,14 +345,14 @@ export default function MatrixTable({
                     fontWeight: '800',
                     fontSize: '13.5px'
                   }}>
-                    {currTotalPersons.toLocaleString()} Persons
+                    {currTotalPersons.toLocaleString()}
                   </div>
                 </td>
                 <td style={{ padding: '12px 12px', textAlign: 'center' }}>
                   {renderDiffBadge(currTotalPersons, prevTotalPersons)}
                 </td>
                 <td style={{ padding: '12px 14px', textAlign: 'right', color: '#166534', fontWeight: '800' }}>
-                  {avgPersons.toLocaleString()} Persons
+                  {avgPersons.toLocaleString()}
                 </td>
                 <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', fontWeight: '700', color: '#15803d' }}>
                   Sum = Students + Staff + Others
@@ -367,7 +367,7 @@ export default function MatrixTable({
                 </td>
                 {prevPeriod && (
                   <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                    {prevProduction !== null ? `${prevProduction.toLocaleString()} Plates` : '—'}
+                    {prevProduction !== null ? prevProduction.toLocaleString() : '—'}
                   </td>
                 )}
                 <td style={{ padding: '8px 12px', textAlign: 'center' }}>
@@ -398,7 +398,7 @@ export default function MatrixTable({
                   {renderDiffBadge(prodCountNum, prevProduction)}
                 </td>
                 <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                  {avgProd.toLocaleString()} Plates
+                  {avgProd.toLocaleString()}
                 </td>
                 <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
                   Total meal plates produced
