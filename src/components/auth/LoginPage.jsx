@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Eye, EyeOff, Lock, User } from 'lucide-react';
 
 export default function LoginPage({
   loginForm,
   setLoginForm,
   loginLoading,
   loginError,
-  handleLogin,
-  handleQuickRoleSelect
+  handleLogin
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [keepSigned, setKeepSigned] = useState(true);
@@ -16,140 +15,113 @@ export default function LoginPage({
     <div style={{
       minHeight: '100vh',
       display: 'flex',
-      flexDirection: 'row',
-      backgroundColor: '#f8fafc',
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+      boxSizing: 'border-box',
+      background: 'radial-gradient(ellipse at 50% 15%, #2e1065 0%, #1e1b4b 45%, #0f172a 100%)',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      
-      {/* LEFT HERO / BRAND SECTION (ROYAL PURPLE GRADIENT WITH AMBIENT GLOW) */}
+
+      {/* AMBIENT GLOWING ORBS (MATCHING THE PURPLE / INDIGO PALETTE) */}
       <div style={{
-        flex: 1.15,
-        minHeight: '100vh',
-        background: 'linear-gradient(145deg, #1e1b4b 0%, #2e1065 25%, #3730a3 60%, #4f46e5 100%)',
+        position: 'absolute',
+        top: '-10%',
+        left: '20%',
+        width: '500px',
+        height: '500px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, transparent 70%)',
+        filter: 'blur(70px)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '-10%',
+        right: '15%',
+        width: '520px',
+        height: '520px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(168, 85, 247, 0.20) 0%, transparent 70%)',
+        filter: 'blur(80px)',
+        pointerEvents: 'none'
+      }} />
+
+      {/* SUBTLE GEOMETRIC ACCENT LINES */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '840px',
+        height: '840px',
+        borderRadius: '50%',
+        border: '1px solid rgba(255, 255, 255, 0.04)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '620px',
+        height: '620px',
+        borderRadius: '50%',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+        pointerEvents: 'none'
+      }} />
+
+      {/* MAIN CENTERED LOGIN CONTAINER */}
+      <div style={{
         position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '52px 64px',
-        boxSizing: 'border-box',
-        color: '#ffffff'
-      }}>
-        {/* Ambient Glowing Orbs in Background */}
-        <div style={{
-          position: 'absolute',
-          top: '-15%',
-          right: '5%',
-          width: '450px',
-          height: '450px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(129, 140, 248, 0.22) 0%, transparent 70%)',
-          filter: 'blur(50px)',
-          pointerEvents: 'none'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '5%',
-          left: '20%',
-          width: '420px',
-          height: '420px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-          pointerEvents: 'none'
-        }} />
-
-        {/* Decorative concentric translucent rings matching the visual design */}
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '35%',
-          transform: 'translate(-50%, -50%)',
-          width: '540px',
-          height: '540px',
-          borderRadius: '50%',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          pointerEvents: 'none'
-        }} />
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '35%',
-          transform: 'translate(-50%, -50%)',
-          width: '360px',
-          height: '360px',
-          borderRadius: '50%',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          pointerEvents: 'none'
-        }} />
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '35%',
-          transform: 'translate(-50%, -50%)',
-          width: '760px',
-          height: '760px',
-          borderRadius: '50%',
-          border: '1px solid rgba(255, 255, 255, 0.04)',
-          pointerEvents: 'none'
-        }} />
-
-        {/* TOP BRANDING: OFFICIAL RATHINAM LOGO */}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            backgroundColor: '#ffffff',
-            padding: '6px 12px',
-            borderRadius: '10px',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <img
-              src={`${import.meta.env.BASE_URL}rathinam_logo.png`}
-              alt="Rathinam Group"
-              style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-          </div>
-
-          <div>
-            <div style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.01em' }}>
-              Rathinam Group
-            </div>
-          </div>
-        </div>
-
-        {/* BOTTOM FOOTER */}
-        <div style={{ position: 'relative', zIndex: 1, fontSize: '11.5px', color: 'rgba(199, 210, 254, 0.7)' }}>
-          © Rathinam Group • FY 2026-2027
-        </div>
-      </div>
-
-      {/* RIGHT SIDE: CLEAN FLOATING CARD LOGIN */}
-      <div style={{
-        flex: 1,
-        minHeight: '100vh',
+        zIndex: 2,
+        width: '100%',
+        maxWidth: '460px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 32px',
-        boxSizing: 'border-box',
-        backgroundColor: '#f8fafc'
+        gap: '16px'
       }}>
+
+        {/* OFFICIAL RATHINAM ACCREDITATION & UNIVERSITY BANNER (WHITE GLOW CONTAINER) */}
         <div style={{
           width: '100%',
-          maxWidth: '440px',
           backgroundColor: '#ffffff',
-          borderRadius: '24px',
-          padding: '44px 38px',
-          boxShadow: '0 20px 45px -15px rgba(0, 0, 0, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.03)',
+          borderRadius: '16px',
+          padding: '14px 20px',
+          boxShadow: '0 12px 35px rgba(0, 0, 0, 0.25), 0 0 1px 1px rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           boxSizing: 'border-box'
         }}>
-          {/* Top Pill Badge */}
+          <img
+            src={`${import.meta.env.BASE_URL}rathinam_accreditation_banner.png`}
+            alt="Rathinam Global University - NAAC A++ Accredited - 1st in Tamil Nadu"
+            style={{
+              width: '100%',
+              maxWidth: '380px',
+              height: 'auto',
+              maxHeight: '44px',
+              objectFit: 'contain'
+            }}
+          />
+        </div>
+
+        {/* LOGIN FORM CARD */}
+        <div style={{
+          width: '100%',
+          backgroundColor: '#ffffff',
+          borderRadius: '20px',
+          padding: '36px 32px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+          boxSizing: 'border-box'
+        }}>
+
+          {/* TOP STATUS PILL */}
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -162,15 +134,15 @@ export default function LoginPage({
             fontWeight: '700',
             marginBottom: '14px'
           }}>
-            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#4f46e5' }} />
-            <span>Secure sign in</span>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4f46e5' }} />
+            <span>Campus Operations & Reporting</span>
           </div>
 
-          <h2 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
-            Welcome back
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+            Welcome Back
           </h2>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 24px 0' }}>
-            Sign in to continue to your operations workspace.
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 22px 0' }}>
+            Sign in with your institutional credentials to continue.
           </p>
 
           {loginError && (
@@ -191,35 +163,40 @@ export default function LoginPage({
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Email or Username */}
             <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                 Email or Username
               </label>
-              <input
-                type="text"
-                placeholder="admin or name@rathinam.in"
-                value={loginForm.username}
-                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: '#ffffff',
-                  border: '1.5px solid #c7d2fe',
-                  color: '#0f172a',
-                  fontSize: '13.5px',
-                  fontWeight: '500',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.15s ease'
-                }}
-                required
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="admin"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px 11px 38px',
+                    borderRadius: '8px',
+                    backgroundColor: '#ffffff',
+                    border: '1.5px solid #cbd5e1',
+                    color: '#0f172a',
+                    fontSize: '13.5px',
+                    fontWeight: '500',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#6366f1'}
+                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                  required
+                />
+                <User size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              </div>
             </div>
 
             {/* Password */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label style={{ fontSize: '12.5px', fontWeight: '600', color: '#334155' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>
                   Password
                 </label>
                 <button
@@ -247,17 +224,21 @@ export default function LoginPage({
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                   style={{
                     width: '100%',
-                    padding: '11px 44px 11px 14px',
+                    padding: '11px 40px 11px 38px',
                     borderRadius: '8px',
-                    backgroundColor: '#f8fafc',
-                    border: '1.5px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    border: '1.5px solid #cbd5e1',
                     color: '#0f172a',
                     fontSize: '13.5px',
                     outline: 'none',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    transition: 'all 0.15s ease'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = '#6366f1'}
+                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                   required
                 />
+                <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -269,8 +250,6 @@ export default function LoginPage({
                     background: 'none',
                     border: 'none',
                     color: '#64748b',
-                    fontSize: '12px',
-                    fontWeight: '600',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center'
@@ -316,11 +295,26 @@ export default function LoginPage({
                 boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
                 transition: 'all 0.15s ease'
               }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#4338ca'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f46e5'}
             >
-              <span>{loginLoading ? 'Signing In...' : 'Sign in'}</span>
+              <span>{loginLoading ? 'Signing In...' : 'Sign In'}</span>
               <ArrowRight size={16} />
             </button>
           </form>
+        </div>
+
+        {/* FOOTER ACCREDITATION NOTE */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '12px',
+          color: 'rgba(255, 255, 255, 0.65)',
+          marginTop: '4px'
+        }}>
+          <ShieldCheck size={14} color="#a5b4fc" />
+          <span>Rathinam Group of Institutions • NAAC Grade A++ Accredited</span>
         </div>
       </div>
 
