@@ -121,7 +121,11 @@ export default function MatrixTable({
                     const currentVal = row.amounts[editingPeriodId];
                     const activeVal = (draftVal !== undefined && draftVal !== null) ? draftVal : (currentVal !== null && currentVal !== undefined ? currentVal : '');
 
-                    const remarkVal = remarksDraft[row.cost_head_id]?.[editingPeriodId] ?? row.remarks?.[editingPeriodId] ?? '';
+                    const rawRemark = remarksDraft[row.cost_head_id]?.[editingPeriodId] ?? 
+                                      remarksDraft[row.cost_head_id]?.[String(editingPeriodId)] ?? 
+                                      row.remarks?.[editingPeriodId] ?? 
+                                      row.remarks?.[String(editingPeriodId)] ?? '';
+                    const remarkVal = (rawRemark && !rawRemark.startsWith('Entry via Operational Matrix') && !rawRemark.startsWith('Cloned from')) ? rawRemark : '';
 
                     // Generate mini 5-bar heights based on history
                     const sparkHeights = periods.slice(0, 5).map(p => {

@@ -63,7 +63,7 @@ export default function DashboardPage({
     return largest;
   }, [computedMatrix]);
 
-  // 1. Prepare Category items for Bar, Pie, Doughnut
+  // 1. Prepare Category items for Bar, Pie, Doughnut with remarks
   const categoryItems = useMemo(() => {
     if (!computedMatrix || !computedMatrix.categories) return [];
     return computedMatrix.categories.map((cat, idx) => {
@@ -71,16 +71,76 @@ export default function DashboardPage({
       if (activePeriod === 'all') {
         val = cat.subtotal.total;
       } else {
-        val = cat.subtotal.amounts[activePeriod] || 0;
+        val = cat.subtotal.amounts[activePeriod] ?? cat.subtotal.amounts[String(activePeriod)] ?? 0;
       }
+      const catRemarks = [];
+      cat.items?.forEach(it => {
+        if (!it.remarks) return;
+        if (activePeriod === 'all') {
+          Object.keys(it.remarks).forEach(pid => {
+            const t = it.remarks[pid];
+            if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
+              const pObj = periods.find(p => String(p.id) === String(pid));
+              catRemarks.push(`${it.description} (${pObj?.period_label || pid}): ${t}`);
+            }
+          });
+        } else {
+          const t = it.remarks[activePeriod] ?? it.remarks[String(activePeriod)];
+          if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
+            catRemarks.push(`${it.description}: ${t}`);
+          }
+        }
+      });
       return {
         id: cat.category_id,
         name: cat.category_name,
         value: val,
-        color: DASH_COLORS[idx % DASH_COLORS.length]
+        color: DASH_COLORS[idx % DASH_COLORS.length],
+        remarks: catRemarks
       };
     });
-  }, [computedMatrix, activePeriod]);
+  }, [computedMatrix, activePeriod, periods]);
+
+  // Active remarks list across the current view
+  const activeRemarksList = useMemo(() => {
+    if (!computedMatrix?.categories) return [];
+    const list = [];
+    computedMatrix.categories.forEach(cat => {
+      cat.items?.forEach(it => {
+        if (!it.remarks) return;
+        if (activePeriod === 'all') {
+          Object.keys(it.remarks).forEach(pid => {
+            const t = it.remarks[pid];
+            if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
+              const pObj = periods.find(p => String(p.id) === String(pid));
+              list.push({
+                cost_head_id: it.cost_head_id,
+                description: it.description,
+                category: cat.category_name,
+                periodId: pid,
+                periodLabel: pObj?.period_label || pid,
+                text: t
+              });
+            }
+          });
+        } else {
+          const t = it.remarks[activePeriod] ?? it.remarks[String(activePeriod)];
+          if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
+            const pObj = periods.find(p => String(p.id) === String(activePeriod));
+            list.push({
+              cost_head_id: it.cost_head_id,
+              description: it.description,
+              category: cat.category_name,
+              periodId: activePeriod,
+              periodLabel: pObj?.period_label || activePeriod,
+              text: t
+            });
+          }
+        }
+      });
+    });
+    return list;
+  }, [computedMatrix, activePeriod, periods]);
 
   // 2. Prepare all line items for Treemap, Histogram
   const allLineItems = useMemo(() => {
@@ -382,6 +442,52 @@ export default function DashboardPage({
             showDataTable={showDataTable}
             setShowDataTable={setShowDataTable}
           />
+
+          {/* ACTIVE OPERATIONAL REMARKS BANNER DIRECTLY ON THE CHART SECTION */}
+          {activeRemarksList.length > 0 && (
+            <div style={{
+              backgroundColor: '#fffbeb',
+              border: '1.5px solid #fde68a',
+              borderRadius: '10px',
+              padding: '12px 18px',
+              marginTop: '14px',
+              marginBottom: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            }}>
+              <span style={{ fontSize: '18px' }}>💬</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Operational Remarks & Notes ({activePeriod === 'all' ? 'All Recorded Cycles' : (activePeriodObj?.period_label || 'Selected Cycle')}):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                  {activeRemarksList.map((r, rIdx) => (
+                    <div key={rIdx} style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #fcd34d',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '12px',
+                      color: '#78350f',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                    }}>
+                      <span style={{ fontWeight: '800', color: '#b45309' }}>{r.description}</span>
+                      <span style={{ color: '#d97706' }}>•</span>
+                      <span style={{ fontWeight: '700', color: '#1e293b' }}>"{r.text}"</span>
+                      <span style={{ fontSize: '10.5px', color: '#4f46e5', backgroundColor: '#eef2ff', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                        {r.periodLabel}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Active Chart Component */}
           <div style={{ flex: 1, minHeight: '340px' }}>

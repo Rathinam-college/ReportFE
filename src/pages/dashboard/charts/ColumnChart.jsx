@@ -7,8 +7,15 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
   // Compute column points based on periods
   const columnData = periods.map((p, idx) => {
     let periodTotal = 0;
+    const periodRemarks = [];
     categories.forEach(cat => {
-      periodTotal += (cat.subtotal.amounts[p.id] || 0);
+      periodTotal += (cat.subtotal.amounts[p.id] ?? cat.subtotal.amounts[String(p.id)] ?? 0);
+      cat.items?.forEach(it => {
+        const t = it.remarks?.[p.id] ?? it.remarks?.[String(p.id)];
+        if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
+          periodRemarks.push(`${it.description}: ${t}`);
+        }
+      });
     });
     return {
       id: p.id,
@@ -16,7 +23,8 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
       code: p.period_code,
       days: p.operating_days || 30,
       value: periodTotal,
-      color: DASH_COLORS[idx % DASH_COLORS.length]
+      color: DASH_COLORS[idx % DASH_COLORS.length],
+      remarks: periodRemarks
     };
   });
 
@@ -67,6 +75,28 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
                 transform: isHovered ? 'scale(1.05)' : 'scale(1)'
               }}
             >
+              {col.remarks.length > 0 && (
+                <span
+                  title={`Operational Remarks for ${col.label}:\n${col.remarks.join('\n')}`}
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    color: '#92400e',
+                    backgroundColor: '#fef3c7',
+                    border: '1px solid #fde68a',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    marginBottom: '2px'
+                  }}
+                >
+                  💬 {col.remarks.length} note{col.remarks.length > 1 ? 's' : ''}
+                </span>
+              )}
+
               <span
                 style={{
                   fontSize: '12px',

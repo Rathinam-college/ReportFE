@@ -52,6 +52,16 @@ export default function TreemapChart({ items = [] }) {
           const color = catColorMap[item.category] || '#2563eb';
           const isHovered = hoveredItem === item.name;
 
+          const itemRemarks = [];
+          if (item.remarks) {
+            Object.keys(item.remarks).forEach(pid => {
+              const t = item.remarks[pid];
+              if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
+                itemRemarks.push(t);
+              }
+            });
+          }
+
           // Compute grid span based on percentage share
           let colSpan = 3;
           let rowSpan = 2;
@@ -105,6 +115,26 @@ export default function TreemapChart({ items = [] }) {
                 <strong style={{ fontSize: pct > 20 ? '14px' : '12px', fontWeight: '800', lineHeight: 1.2, display: 'block', marginTop: '2px' }}>
                   {item.name}
                 </strong>
+                {itemRemarks.length > 0 && (
+                  <span
+                    title={`Remark: ${itemRemarks.join(' • ')}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                      color: '#92400e',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontSize: '10.5px',
+                      fontWeight: '700',
+                      marginTop: '4px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    💬 {itemRemarks[0]}
+                  </span>
+                )}
               </div>
 
               <div>

@@ -23,18 +23,20 @@ export default function ChartDataTable({
 
         if (activePeriod === 'all') {
           selectedAmt = it.total || 0;
-          // Look for any remark across periods
+          // Look for any real remark across periods
           if (it.remarks) {
             for (const pid of Object.keys(it.remarks)) {
-              if (it.remarks[pid]) {
+              const rText = it.remarks[pid];
+              if (rText && !rText.startsWith('Entry via Operational Matrix') && !rText.startsWith('Cloned from')) {
                 const pLabel = periods.find(p => String(p.id) === String(pid))?.period_label || pid;
-                activeRemark += (activeRemark ? ' • ' : '') + `[${pLabel}]: ${it.remarks[pid]}`;
+                activeRemark += (activeRemark ? ' • ' : '') + `[${pLabel}]: ${rText}`;
               }
             }
           }
         } else {
-          selectedAmt = it.amounts[activePeriod] || 0;
-          activeRemark = it.remarks?.[activePeriod] || '';
+          selectedAmt = it.amounts[activePeriod] ?? it.amounts[String(activePeriod)] ?? 0;
+          const rText = it.remarks?.[activePeriod] ?? it.remarks?.[String(activePeriod)] ?? '';
+          activeRemark = (rText && !rText.startsWith('Entry via Operational Matrix') && !rText.startsWith('Cloned from')) ? rText : '';
         }
 
         const total5Mo = it.total || 0;
@@ -292,19 +294,20 @@ export default function ChartDataTable({
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '5px',
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          backgroundColor: '#eef2ff',
-                          color: '#4f46e5',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          border: 'none',
-                          cursor: 'pointer'
+                          gap: '6px',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          backgroundColor: '#fef3c7',
+                          color: '#92400e',
+                          border: '1px solid #fde68a',
+                          fontSize: '11.5px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
                         }}
                       >
-                        <MessageSquare size={11} />
-                        <span style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <MessageSquare size={12} color="#d97706" />
+                        <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {row.remark}
                         </span>
                       </button>

@@ -46,10 +46,30 @@ export default function BarChart({ data = [], title = "Category Expenditure (Hor
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', width: '22px' }}>#{idx + 1}</span>
                   <span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: color }} />
                   <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b' }}>{item.name}</span>
+                  {item.remarks && item.remarks.length > 0 && (
+                    <span
+                      title={`Operational Remarks:\n${item.remarks.join('\n')}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '2px 7px',
+                        borderRadius: '4px',
+                        backgroundColor: '#fef3c7',
+                        color: '#92400e',
+                        border: '1px solid #fde68a',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        cursor: 'help'
+                      }}
+                    >
+                      💬 {item.remarks.length === 1 ? item.remarks[0] : `${item.remarks.length} remarks`}
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }} className="currency-font">

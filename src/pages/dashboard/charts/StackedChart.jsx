@@ -39,9 +39,40 @@ export default function StackedChart({ periods = [], categories = [] }) {
       }}>
         {periods.map((p, pIdx) => {
           const tot = periodTotals[pIdx];
+          const periodRemarksList = [];
+          categories.forEach(c => {
+            c.items?.forEach(it => {
+              const t = it.remarks?.[p.id] ?? it.remarks?.[String(p.id)];
+              if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
+                periodRemarksList.push(`${it.description}: ${t}`);
+              }
+            });
+          });
 
           return (
-            <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+              {periodRemarksList.length > 0 && (
+                <span
+                  title={`Operational Remarks for ${p.period_label}:\n${periodRemarksList.join('\n')}`}
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: '#fef3c7',
+                    color: '#92400e',
+                    border: '1px solid #fde68a',
+                    fontSize: '10.5px',
+                    fontWeight: '700',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    cursor: 'help',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  💬 {periodRemarksList.length} note{periodRemarksList.length > 1 ? 's' : ''}
+                </span>
+              )}
+
               <span style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a' }} className="currency-font">
                 {formatLakhs(tot)}
               </span>
@@ -62,12 +93,20 @@ export default function StackedChart({ periods = [], categories = [] }) {
                   const color = DASH_COLORS[cIdx % DASH_COLORS.length];
                   const isHovered = hoveredCategory === cat.category_id;
 
+                  const segRemarks = [];
+                  cat.items?.forEach(it => {
+                    const t = it.remarks?.[p.id] ?? it.remarks?.[String(p.id)];
+                    if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
+                      segRemarks.push(`${it.description}: ${t}`);
+                    }
+                  });
+
                   return (
                     <div
                       key={cat.category_id}
                       onMouseEnter={() => setHoveredCategory(cat.category_id)}
                       onMouseLeave={() => setHoveredCategory(null)}
-                      title={`${cat.category_name} (${p.period_label}): ${formatINR(val)}`}
+                      title={`${cat.category_name} (${p.period_label}): ${formatINR(val)}${segRemarks.length > 0 ? `\n\n💬 Remarks:\n${segRemarks.join('\n')}` : ''}`}
                       style={{
                         height: `${segHeight}%`,
                         backgroundColor: color,

@@ -488,11 +488,14 @@ export default function App() {
         cat.items.forEach(it => {
           const val = matrixDraft[it.cost_head_id]?.[editingPeriodId];
           const numVal = val !== '' && val !== null && val !== undefined ? parseFloat(val) : 0;
-          const userRemark = remarksDraft[it.cost_head_id]?.[editingPeriodId] ?? it.remarks?.[editingPeriodId] ?? '';
+          const userRemark = remarksDraft[it.cost_head_id]?.[editingPeriodId] ?? 
+                             remarksDraft[it.cost_head_id]?.[String(editingPeriodId)] ?? 
+                             it.remarks?.[editingPeriodId] ?? 
+                             it.remarks?.[String(editingPeriodId)] ?? '';
           entries.push({
             cost_head_id: it.cost_head_id,
             amount: numVal,
-            remarks: userRemark ? userRemark.trim() : `Entry via Operational Matrix for ${activePeriod.period_label}`
+            remarks: userRemark ? userRemark.trim() : ''
           });
         });
       });
