@@ -1,0 +1,1280 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+
+// Common Components
+import LoginPage from './components/auth/LoginPage';
+import Navbar from './components/common/Navbar';
+import SubNav from './components/common/SubNav';
+import BreadcrumbHeader from './components/common/BreadcrumbHeader';
+import Footer from './components/common/Footer';
+
+// Pages
+import DashboardPage from './pages/dashboard/DashboardPage';
+import DataEntryPage from './pages/data_entry/DataEntryPage';
+import MasterDataPage from './pages/master_data/MasterDataPage';
+import SettingsPage from './pages/settings/SettingsPage';
+
+// Utilities
+import { getDonutSlicePath, DASH_COLORS } from './utils/formatters';
+
+export default function App() {
+  // --------------------------------------------------------------------------
+  // AUTHENTICATION STATE
+  // --------------------------------------------------------------------------
+  // Persisted user session so browser refresh keeps the user logged in
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rathinam_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [loginForm, setLoginForm] = useState({ username: 'admin', password: 'admin' });
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState(null);
+
+  // --------------------------------------------------------------------------
+  // NAVIGATION & TOPIC STATES (Persisted across browser refresh)
+  // --------------------------------------------------------------------------
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (['dashboard', 'data_entry', 'master_data', 'settings'].includes(hash)) {
+        return hash;
+      }
+      const savedTab = localStorage.getItem('rathinam_active_tab');
+      if (savedTab && ['dashboard', 'data_entry', 'master_data', 'settings'].includes(savedTab)) {
+        return savedTab;
+      }
+      return 'dashboard';
+    } catch {
+      return 'dashboard';
+    }
+  });
+
+  const [dataEntrySubTab, setDataEntrySubTab] = useState(() => {
+    try {
+      return localStorage.getItem('rathinam_data_entry_subtab') || 'food';
+    } catch {
+      return 'food';
+    }
+  });
+
+  const [masterDataSubTab, setMasterDataSubTab] = useState(() => {
+    try {
+      return localStorage.getItem('rathinam_master_subtab') || 'food';
+    } catch {
+      return 'food';
+    }
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [dbStatus, setDbStatus] = useState('checking');
+
+  // --------------------------------------------------------------------------
+  // DATA STATES
+  // --------------------------------------------------------------------------
+  const [overview, setOverview] = useState(null);
+  const [matrixData, setMatrixData] = useState(null);
+  const [varianceData, setVarianceData] = useState([]);
+  const [masterData, setMasterData] = useState(null);
+  const [auditFlags, setAuditFlags] = useState([]);
+
+  // Dashboard state
+  const [dashView, setDashView] = useState('pie'); // 'pie', 'comparison', 'trajectory'
+  const [piePeriod, setPiePeriod] = useState('all'); // 'all' or period_id
+  const [hoveredPieIndex, setHoveredPieIndex] = useState(null);
+  const [compareBasePeriod, setCompareBasePeriod] = useState(1);
+  const [compareTargetPeriod, setCompareTargetPeriod] = useState(5);
+
+  // Matrix-Style Data Entry State
+  const [editingPeriodId, setEditingPeriodId] = useState(5); // Default Oct'26 (id: 5)
+  const [matrixDraft, setMatrixDraft] = useState({}); // { [costHeadId]: { [periodId]: value } }
+  const [remarksDraft, setRemarksDraft] = useState({}); // { [costHeadId]: { [periodId]: remark } }
+  const [isDirty, setIsDirty] = useState(false);
+  const [savingBatch, setSavingBatch] = useState(false);
+  const [entryMessage, setEntryMessage] = useState(null);
+
+  // Add Month Modal State
+  const [showAddMonthModal, setShowAddMonthModal] = useState(false);
+  const [newMonthForm, setNewMonthForm] = useState({
+    start_date: '2026-12-01',
+    end_date: '2026-12-31',
+    period_label: "Dec'26",
+    period_code: '2026-12',
+    clone_from_prev: false
+  });
+
+  // Master Data Views & State
+  const [masterFoodView, setMasterFoodView] = useState('cost_heads'); // 'cost_heads' | 'periods'
+  const [costHeadsList, setCostHeadsList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [masterMessage, setMasterMessage] = useState(null);
+
+  // Category Modal State
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showManageCategoriesModal, setShowManageCategoriesModal] = useState(false);
+
+  // Cost Head Add/Edit Modal State
+  const [showCostHeadModal, setShowCostHeadModal] = useState(false);
+  const [editingCostHead, setEditingCostHead] = useState(null);
+  const [costHeadForm, setCostHeadForm] = useState({
+    category_id: 1,
+    name: '',
+    is_new_category: false,
+    new_category_name: ''
+  });
+
+  // Drag and Drop State
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+
+  // Edit Period Modal State
+  const [showEditPeriodModal, setShowEditPeriodModal] = useState(false);
+  const [editingPeriodItem, setEditingPeriodItem] = useState(null);
+  const [editPeriodForm, setEditPeriodForm] = useState({
+    period_label: '',
+    period_code: '',
+    is_closed: false
+  });
+
+  // System Settings: Users & Permissions State
+  const [usersList, setUsersList] = useState([]);
+  const [pagePermissions, setPagePermissions] = useState([]);
+
+  // --------------------------------------------------------------------------
+  // DYNAMIC DOCUMENT TITLE: Report / <Page Name>
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    let titleStr = 'Dashboard';
+    if (activeTab === 'dashboard') {
+      titleStr = 'Dashboard';
+    } else if (activeTab === 'data_entry') {
+      titleStr = `Data Entry (${dataEntrySubTab === 'food' ? 'Food & Dining' : dataEntrySubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
+    } else if (activeTab === 'master_data') {
+      titleStr = `Master Data (${masterDataSubTab === 'food' ? 'Food & Dining' : masterDataSubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
+    } else if (activeTab === 'settings') {
+      titleStr = 'System Settings';
+    }
+    document.title = `Report / ${titleStr} • Rathinam Operations ERP`;
+  }, [activeTab, dataEntrySubTab, masterDataSubTab]);
+
+  // --------------------------------------------------------------------------
+  // PERSISTENCE & URL HASH SYNCHRONIZATION
+  // Keeps the user on the same page when refreshing the browser
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (activeTab) {
+      try {
+        localStorage.setItem('rathinam_active_tab', activeTab);
+        if (window.location.hash !== `#${activeTab}`) {
+          window.location.hash = activeTab;
+        }
+      } catch (err) {
+        console.error('Error syncing tab:', err);
+      }
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (['dashboard', 'data_entry', 'master_data', 'settings'].includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
+    if (dataEntrySubTab) {
+      localStorage.setItem('rathinam_data_entry_subtab', dataEntrySubTab);
+    }
+  }, [dataEntrySubTab]);
+
+  useEffect(() => {
+    if (masterDataSubTab) {
+      localStorage.setItem('rathinam_master_subtab', masterDataSubTab);
+    }
+  }, [masterDataSubTab]);
+
+  // --------------------------------------------------------------------------
+  // AUTHENTICATION HANDLERS
+  // --------------------------------------------------------------------------
+  const handleLogin = async (e) => {
+    if (e) e.preventDefault();
+    setLoginLoading(true);
+    setLoginError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Invalid login credentials');
+      }
+
+      const data = await res.json();
+      setCurrentUser(data.user);
+      localStorage.setItem('rathinam_user', JSON.stringify(data.user));
+      localStorage.setItem('rathinam_token', data.token);
+
+      // When login, first show dashboard page!
+      setActiveTab('dashboard');
+      localStorage.setItem('rathinam_active_tab', 'dashboard');
+      window.location.hash = 'dashboard';
+
+      fetchData();
+    } catch (err) {
+      setLoginError(err.message || 'Login failed');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleQuickRoleSelect = (username, password) => {
+    setLoginForm({ username, password });
+    setLoginError(null);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setLoginForm({ username: 'admin', password: 'admin' });
+    setLoginError(null);
+    localStorage.removeItem('rathinam_user');
+    localStorage.removeItem('rathinam_token');
+    localStorage.removeItem('rathinam_active_tab');
+    localStorage.removeItem('rathinam_data_entry_subtab');
+    localStorage.removeItem('rathinam_master_subtab');
+    window.location.hash = '';
+  };
+
+  // --------------------------------------------------------------------------
+  // DATA FETCHING & SYNCHRONIZATION
+  // --------------------------------------------------------------------------
+  const fetchMasterDetails = async (mod = null) => {
+    try {
+      const activeMod = mod || (activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab);
+      const [chRes, catRes] = await Promise.all([
+        fetch(`/api/master/cost-heads?module=${activeMod}`),
+        fetch(`/api/master/categories?module=${activeMod}`)
+      ]);
+      if (chRes.ok) setCostHeadsList(await chRes.json());
+      if (catRes.ok) setCategoriesList(await catRes.json());
+    } catch (err) {
+      console.error('Error fetching master CRUD data:', err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) setUsersList(await res.json());
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  const fetchPermissions = async () => {
+    try {
+      const res = await fetch('/api/permissions/page-access');
+      if (res.ok) {
+        const perms = await res.json();
+        setPagePermissions(perms);
+
+        if (currentUser && currentUser.role !== 'admin') {
+          const currentPerm = perms.find(p => p.role === currentUser.role && p.page_id === activeTab);
+          if (currentPerm && !currentPerm.can_access) {
+            const firstAllowed = perms.find(p => p.role === currentUser.role && p.can_access);
+            if (firstAllowed) {
+              setActiveTab(firstAllowed.page_id);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching permissions:', err);
+    }
+  };
+
+  const fetchData = async (mod = null) => {
+    setLoading(true);
+    const activeMod = mod || (activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab);
+    try {
+      try {
+        const healthRes = await fetch('/api/health');
+        if (healthRes.ok) {
+          const health = await healthRes.json();
+          setDbStatus(health.database === 'connected' ? 'connected' : 'error');
+        } else {
+          setDbStatus('error');
+        }
+      } catch {
+        setDbStatus('offline');
+      }
+
+      const [ovRes, matRes, varRes, mastRes, flagRes] = await Promise.all([
+        fetch('/api/overview'),
+        fetch(`/api/matrix?module=${activeMod}`),
+        fetch('/api/mom-variance'),
+        fetch('/api/master-data'),
+        fetch('/api/audit-flags')
+      ]);
+
+      if (ovRes.ok) setOverview(await ovRes.json());
+      if (matRes.ok) {
+        const mData = await matRes.json();
+        setMatrixData(mData);
+
+        const draftMap = {};
+        const remarkMap = {};
+        if (mData.categories) {
+          mData.categories.forEach(cat => {
+            cat.items.forEach(it => {
+              draftMap[it.cost_head_id] = { ...it.amounts };
+              remarkMap[it.cost_head_id] = { ...(it.remarks || {}) };
+            });
+          });
+        }
+        setMatrixDraft(draftMap);
+        setRemarksDraft(remarkMap);
+        setIsDirty(false);
+
+        if (mData.periods && mData.periods.length > 0) {
+          if (!mData.periods.some(p => p.id === editingPeriodId)) {
+            setEditingPeriodId(mData.periods[mData.periods.length - 1].id);
+          }
+        }
+      }
+      if (varRes.ok) setVarianceData(await varRes.json());
+      if (mastRes.ok) setMasterData(await mastRes.json());
+      if (flagRes.ok) setAuditFlags(await flagRes.json());
+
+      fetchMasterDetails(activeMod);
+    } catch (err) {
+      console.error('Error fetching global data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      const activeMod = activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab;
+      fetchData(activeMod);
+      fetchMasterDetails(activeMod);
+      fetchUsers();
+      fetchPermissions();
+    }
+  }, [currentUser, dataEntrySubTab, masterDataSubTab, activeTab]);
+
+  // --------------------------------------------------------------------------
+  // LIVE COMPUTED MATRIX
+  // --------------------------------------------------------------------------
+  const computedMatrix = useMemo(() => {
+    if (!matrixData || !matrixData.categories || !matrixData.periods) return null;
+
+    const periods = matrixData.periods;
+    const numPeriods = periods.length || 1;
+    const grandTotalByPeriod = {};
+    periods.forEach(p => { grandTotalByPeriod[p.id] = 0.0; });
+    let overallGrandTotal = 0.0;
+
+    const categories = matrixData.categories.map(cat => {
+      const catSubtotalByPeriod = {};
+      periods.forEach(p => { catSubtotalByPeriod[p.id] = 0.0; });
+      let catOverallTotal = 0.0;
+
+      const items = cat.items.map(it => {
+        const rowAmounts = {};
+        let rowTotal = 0.0;
+
+        periods.forEach(p => {
+          const draftVal = matrixDraft[it.cost_head_id]?.[p.id];
+          const actualVal = it.amounts[p.id];
+
+          let val = 0.0;
+          if (draftVal !== undefined && draftVal !== null && draftVal !== '') {
+            val = parseFloat(draftVal) || 0.0;
+          } else if (actualVal !== undefined && actualVal !== null) {
+            val = parseFloat(actualVal) || 0.0;
+          }
+
+          rowAmounts[p.id] = val;
+          rowTotal += val;
+          catSubtotalByPeriod[p.id] += val;
+          grandTotalByPeriod[p.id] += val;
+        });
+
+        catOverallTotal += rowTotal;
+
+        return {
+          cost_head_id: it.cost_head_id,
+          description: it.description,
+          category: cat.category_name,
+          amounts: rowAmounts,
+          total: rowTotal,
+          avg: rowTotal / numPeriods
+        };
+      });
+
+      overallGrandTotal += catOverallTotal;
+
+      return {
+        category_id: cat.category_id,
+        category_name: cat.category_name,
+        items,
+        subtotal: {
+          amounts: catSubtotalByPeriod,
+          total: catOverallTotal,
+          avg: catOverallTotal / numPeriods
+        }
+      };
+    });
+
+    return {
+      periods,
+      categories,
+      grand_total: {
+        amounts: grandTotalByPeriod,
+        total: overallGrandTotal,
+        avg: overallGrandTotal / numPeriods
+      }
+    };
+  }, [matrixData, matrixDraft]);
+
+  // --------------------------------------------------------------------------
+  // DATA ENTRY ACTIONS
+  // --------------------------------------------------------------------------
+  const handleCellChange = (costHeadId, periodId, value) => {
+    setMatrixDraft(prev => ({
+      ...prev,
+      [costHeadId]: {
+        ...(prev[costHeadId] || {}),
+        [periodId]: value
+      }
+    }));
+    setIsDirty(true);
+  };
+
+  const handleRemarkChange = (costHeadId, periodId, value) => {
+    setRemarksDraft(prev => ({
+      ...prev,
+      [costHeadId]: {
+        ...(prev[costHeadId] || {}),
+        [periodId]: value
+      }
+    }));
+    setIsDirty(true);
+  };
+
+  const handleSaveActiveMonth = async () => {
+    if (!computedMatrix) return;
+    const activePeriod = computedMatrix.periods.find(p => p.id === editingPeriodId);
+    if (!activePeriod) return;
+
+    setSavingBatch(true);
+    setEntryMessage(null);
+
+    try {
+      const entries = [];
+      computedMatrix.categories.forEach(cat => {
+        cat.items.forEach(it => {
+          const val = matrixDraft[it.cost_head_id]?.[editingPeriodId];
+          const numVal = val !== '' && val !== null && val !== undefined ? parseFloat(val) : 0;
+          const userRemark = remarksDraft[it.cost_head_id]?.[editingPeriodId] ?? it.remarks?.[editingPeriodId] ?? '';
+          entries.push({
+            cost_head_id: it.cost_head_id,
+            amount: numVal,
+            remarks: userRemark ? userRemark.trim() : `Entry via Operational Matrix for ${activePeriod.period_label}`
+          });
+        });
+      });
+
+      const res = await fetch('/api/batch-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          period_id: editingPeriodId,
+          entries,
+          operating_days: activePeriod.operating_days || 30
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to save matrix entries');
+      }
+
+      setEntryMessage({ type: 'success', text: `Saved all line items for ${activePeriod.period_label} successfully!` });
+      setIsDirty(false);
+      fetchData();
+    } catch (err) {
+      setEntryMessage({ type: 'error', text: err.message || 'Error saving matrix data' });
+    } finally {
+      setSavingBatch(false);
+    }
+  };
+
+  const handleCloneFromPrev = () => {
+    if (!computedMatrix) return;
+    const currentIdx = computedMatrix.periods.findIndex(p => p.id === editingPeriodId);
+    if (currentIdx <= 0) {
+      alert('No earlier period available in the ledger to clone from.');
+      return;
+    }
+    const prevPeriod = computedMatrix.periods[currentIdx - 1];
+
+    if (!window.confirm(`Clone all expenses from ${prevPeriod.period_label} into ${computedMatrix.periods[currentIdx].period_label}?`)) {
+      return;
+    }
+
+    setMatrixDraft(prev => {
+      const next = { ...prev };
+      computedMatrix.categories.forEach(cat => {
+        cat.items.forEach(it => {
+          const prevVal = it.amounts[prevPeriod.id] ?? it.amounts[String(prevPeriod.id)] ?? 0;
+          next[it.cost_head_id] = {
+            ...(next[it.cost_head_id] || {}),
+            [editingPeriodId]: prevVal
+          };
+        });
+      });
+      return next;
+    });
+    setIsDirty(true);
+    setEntryMessage({ type: 'success', text: `Values cloned from ${prevPeriod.period_label}. Review and click Save.` });
+  };
+
+  const handleToggleLock = async () => {
+    if (!computedMatrix) return;
+    const period = computedMatrix.periods.find(p => p.id === editingPeriodId);
+    if (!period) return;
+    const newStatus = !period.is_closed;
+
+    try {
+      const res = await fetch(`/api/periods/${period.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          period_label: period.period_label,
+          period_code: period.period_code,
+          is_closed: newStatus
+        })
+      });
+      if (res.ok) {
+        setEntryMessage({
+          type: 'success',
+          text: `Month ${period.period_label} has been ${newStatus ? 'locked (read-only)' : 'unlocked for entry'}.`
+        });
+        fetchData();
+      }
+    } catch (err) {
+      alert('Failed to update period lock status');
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // PERIOD MANAGEMENT HANDLERS
+  // --------------------------------------------------------------------------
+  const openEditPeriodModal = (p) => {
+    setEditingPeriodItem(p);
+    setEditPeriodForm({
+      period_label: p.period_label,
+      period_code: p.period_code,
+      is_closed: !!p.is_closed
+    });
+    setShowEditPeriodModal(true);
+  };
+
+  const handleSavePeriodEdit = async (e) => {
+    if (e) e.preventDefault();
+    if (!editingPeriodItem) return;
+
+    try {
+      const res = await fetch(`/api/periods/${editingPeriodItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editPeriodForm)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to update period');
+      }
+
+      setShowEditPeriodModal(false);
+      setMasterMessage({ type: 'success', text: `Updated billing month "${editPeriodForm.period_label}" successfully.` });
+      fetchData();
+    } catch (err) {
+      alert(err.message || 'Error updating billing period');
+    }
+  };
+
+  const handleDeletePeriod = async (p) => {
+    const confirmMsg = `WARNING: Are you sure you want to permanently delete month "${p.period_label}" (${p.period_code})?\n\nThis will remove all associated expense entries for this month from the system.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(`/api/periods/${p.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to delete period');
+      }
+
+      setMasterMessage({ type: 'success', text: `Billing month "${p.period_label}" and its records have been safely deleted.` });
+
+      if (editingPeriodId === p.id) {
+        const remaining = computedMatrix?.periods?.filter(x => x.id !== p.id);
+        if (remaining && remaining.length > 0) {
+          setEditingPeriodId(remaining[0].id);
+        }
+      }
+      fetchData();
+    } catch (err) {
+      alert(err.message || 'Error deleting billing month');
+    }
+  };
+
+  const openAddMonthModal = () => {
+    const periods = computedMatrix?.periods || [];
+    let nextYear = 2026;
+    let nextMonth = 11;
+
+    if (periods.length > 0) {
+      const lastPeriod = periods[periods.length - 1];
+      if (lastPeriod.end_date) {
+        const parts = lastPeriod.end_date.split('-');
+        if (parts.length >= 2) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          if (m === 12) {
+            nextYear = y + 1;
+            nextMonth = 1;
+          } else {
+            nextYear = y;
+            nextMonth = m + 1;
+          }
+        }
+      }
+    }
+
+    const lastDay = new Date(nextYear, nextMonth, 0).getDate();
+    const startDateStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+    const endDateStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+    const monthShort = monthNames[nextMonth - 1] || 'Month';
+    const yrShort = String(nextYear).slice(-2);
+
+    setNewMonthForm({
+      start_date: startDateStr,
+      end_date: endDateStr,
+      period_label: `${monthShort}'${yrShort}`,
+      period_code: `${nextYear}-${String(nextMonth).padStart(2, '0')}`,
+      clone_from_prev: false
+    });
+    setShowAddMonthModal(true);
+  };
+
+  const handleToggleAddMonthModal = (val) => {
+    if (val) {
+      openAddMonthModal();
+    } else {
+      setShowAddMonthModal(false);
+    }
+  };
+
+  const handleStartDateChange = (val) => {
+    if (!val) {
+      setNewMonthForm(prev => ({ ...prev, start_date: val }));
+      return;
+    }
+    const [y, m] = val.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDateStr = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+    const monthShort = monthNames[m - 1] || 'Month';
+    const yrShort = String(y).slice(-2);
+    const derivedLabel = `${monthShort}'${yrShort}`;
+    const derivedCode = `${y}-${String(m).padStart(2, '0')}`;
+
+    setNewMonthForm(prev => ({
+      ...prev,
+      start_date: val,
+      end_date: endDateStr,
+      period_label: derivedLabel,
+      period_code: derivedCode
+    }));
+  };
+
+  const handleAddNewMonth = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      const payload = {
+        period_label: newMonthForm.period_label.trim(),
+        period_code: newMonthForm.period_code.trim(),
+        start_date: newMonthForm.start_date,
+        end_date: newMonthForm.end_date,
+        clone_from_period_id: null // Explicitly null: Do NOT clone values on month creation
+      };
+
+      const res = await fetch('/api/periods', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to add billing cycle');
+      }
+      const resJson = await res.json();
+      setShowAddMonthModal(false);
+      setEntryMessage({ type: 'success', text: `New Billing Month "${newMonthForm.period_label}" created! Values start blank (₹0.00). Ready for manual entry.` });
+      await fetchData();
+      if (resJson && resJson.period && resJson.period.id) {
+        setEditingPeriodId(resJson.period.id);
+      }
+    } catch (err) {
+      alert(err.message || 'Error creating period');
+    }
+  };
+
+  // Keyboard shortcut Ctrl+S
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (activeTab === 'data_entry') {
+          handleSaveActiveMonth();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, computedMatrix, matrixDraft, editingPeriodId]);
+
+  // --------------------------------------------------------------------------
+  // MASTER DATA: CATEGORIES & COST HEADS CRUD
+  // --------------------------------------------------------------------------
+  const openAddCategoryModal = () => {
+    setShowAddCategoryModal(true);
+  };
+
+  const openManageCategoriesModal = () => {
+    setShowManageCategoriesModal(true);
+  };
+
+  const handleAddCategory = async ({ name, code, module }) => {
+    const activeMod = masterDataSubTab;
+    const res = await fetch('/api/master/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, code, module: activeMod })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to create category');
+    }
+    setMasterMessage({ type: 'success', text: `Category "${name}" created successfully!` });
+    await fetchMasterDetails(activeMod);
+    await fetchData(activeMod);
+  };
+
+  const handleUpdateCategory = async (categoryId, data) => {
+    const activeMod = masterDataSubTab;
+    const res = await fetch(`/api/master/categories/${categoryId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to update category');
+    }
+    setMasterMessage({ type: 'success', text: `Category updated successfully!` });
+    await fetchMasterDetails(activeMod);
+    await fetchData(activeMod);
+  };
+
+  const handleDeleteCategory = async (cat) => {
+    const activeMod = masterDataSubTab;
+    const res = await fetch(`/api/master/categories/${cat.id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to delete category');
+    }
+    const data = await res.json();
+    setMasterMessage({ type: 'success', text: data.message || `Category "${cat.name}" removed.` });
+    await fetchMasterDetails(activeMod);
+    await fetchData(activeMod);
+  };
+
+  const openAddCostHeadModal = () => {
+    setEditingCostHead(null);
+    setCostHeadForm({
+      category_id: categoriesList[0]?.id || 1,
+      name: '',
+      is_new_category: false,
+      new_category_name: ''
+    });
+    setShowCostHeadModal(true);
+  };
+
+  const openEditCostHeadModal = (ch) => {
+    setEditingCostHead(ch);
+    setCostHeadForm({
+      category_id: ch.category_id,
+      name: ch.name,
+      is_new_category: false,
+      new_category_name: ''
+    });
+    setShowCostHeadModal(true);
+  };
+
+  const handleSaveCostHead = async (e) => {
+    if (e) e.preventDefault();
+    const activeMod = masterDataSubTab;
+
+    try {
+      let targetCategoryId = Number(costHeadForm.category_id);
+
+      // Simultaneous category creation if user chose to add new category at the same time
+      if (costHeadForm.is_new_category && costHeadForm.new_category_name?.trim()) {
+        const catRes = await fetch('/api/master/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: costHeadForm.new_category_name.trim(),
+            module: activeMod
+          })
+        });
+
+        if (!catRes.ok) {
+          const catErr = await catRes.json();
+          throw new Error(catErr.detail || 'Failed to create new category');
+        }
+
+        const catData = await catRes.json();
+        targetCategoryId = catData.category.id;
+      }
+
+      const payload = {
+        name: costHeadForm.name,
+        category_id: targetCategoryId,
+        code: costHeadForm.name.toUpperCase().replace(/\s+/g, '_').slice(0, 30),
+        default_vendor: 'Institutional Campus Supplier',
+        cost_behavior: 'variable',
+        module: activeMod
+      };
+
+      let res;
+      if (editingCostHead) {
+        res = await fetch(`/api/master/cost-heads/${editingCostHead.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch('/api/master/cost-heads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to save cost head');
+      }
+
+      setShowCostHeadModal(false);
+      setMasterMessage({
+        type: 'success',
+        text: costHeadForm.is_new_category
+          ? `Created new Category "${costHeadForm.new_category_name}" and Line Item "${costHeadForm.name}" simultaneously!`
+          : (editingCostHead
+            ? `Updated "${costHeadForm.name}" successfully.`
+            : `Created new line item "${costHeadForm.name}".`)
+      });
+      await fetchMasterDetails(activeMod);
+      await fetchData(activeMod);
+    } catch (err) {
+      alert(err.message || 'Error saving line item');
+    }
+  };
+
+  const handleDeleteCostHead = async (ch) => {
+    if (!window.confirm(`Are you sure you want to delete line item "${ch.name}"?`)) return;
+    const activeMod = masterDataSubTab;
+
+    try {
+      const res = await fetch(`/api/master/cost-heads/${ch.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to delete');
+      }
+      setMasterMessage({ type: 'success', text: `Deleted "${ch.name}".` });
+      fetchMasterDetails(activeMod);
+      fetchData(activeMod);
+    } catch (err) {
+      alert(err.message || 'Error deleting line item');
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e, idx) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIdx !== idx) setDragOverIdx(idx);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDrop = async (e, targetIdx) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+
+    const reordered = [...costHeadsList];
+    const [moved] = reordered.splice(draggedIdx, 1);
+    reordered.splice(targetIdx, 0, moved);
+
+    setCostHeadsList(reordered);
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+
+    try {
+      const item_ids = reordered.map(x => x.id);
+      const res = await fetch('/api/master/cost-heads/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_ids })
+      });
+      if (res.ok) {
+        setMasterMessage({ type: 'success', text: 'Line items reordered & saved to database.' });
+        fetchData();
+      }
+    } catch (err) {
+      console.error('Failed to persist order:', err);
+    }
+  };
+
+  const handleMoveStep = async (idx, step) => {
+    const targetIdx = idx + step;
+    if (targetIdx < 0 || targetIdx >= costHeadsList.length) return;
+
+    const reordered = [...costHeadsList];
+    const [moved] = reordered.splice(idx, 1);
+    reordered.splice(targetIdx, 0, moved);
+
+    setCostHeadsList(reordered);
+
+    try {
+      const item_ids = reordered.map(x => x.id);
+      const res = await fetch('/api/master/cost-heads/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_ids })
+      });
+      if (res.ok) {
+        setMasterMessage({ type: 'success', text: 'Line items order updated.' });
+        fetchData();
+      }
+    } catch (err) {
+      console.error('Failed to move item:', err);
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // DASHBOARD MEMOS (PIE & COMPARISON DATA)
+  // --------------------------------------------------------------------------
+  const activePeriodObj = computedMatrix?.periods?.find(p => p.id === editingPeriodId);
+
+  const pieData = useMemo(() => {
+    if (!computedMatrix || !computedMatrix.categories) return [];
+
+    let totalSum = 0;
+    const slices = computedMatrix.categories.map((cat, idx) => {
+      let val = 0;
+      if (piePeriod === 'all') {
+        val = cat.subtotal.total;
+      } else {
+        val = cat.subtotal.amounts[piePeriod] || 0;
+      }
+      totalSum += val;
+      return {
+        id: cat.category_id,
+        name: cat.category_name,
+        value: val,
+        color: DASH_COLORS[idx % DASH_COLORS.length]
+      };
+    });
+
+    if (totalSum <= 0) return [];
+
+    let currentAngle = -Math.PI / 2;
+    return slices.map(s => {
+      const pct = (s.value / totalSum) * 100;
+      const angle = (s.value / totalSum) * (2 * Math.PI);
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + angle;
+      currentAngle = endAngle;
+
+      const path = getDonutSlicePath(160, 160, 130, 75, startAngle, endAngle);
+
+      return {
+        ...s,
+        percentage: pct,
+        startAngle,
+        endAngle,
+        path,
+        totalSum
+      };
+    });
+  }, [computedMatrix, piePeriod]);
+
+  const comparisonData = useMemo(() => {
+    if (!computedMatrix || !computedMatrix.periods) return null;
+    const pBase = computedMatrix.periods.find(p => p.id === compareBasePeriod) || computedMatrix.periods[0];
+    const pTarget = computedMatrix.periods.find(p => p.id === compareTargetPeriod) || computedMatrix.periods[computedMatrix.periods.length - 1];
+
+    if (!pBase || !pTarget) return null;
+
+    const baseTotal = computedMatrix.grand_total.amounts[pBase.id] || 0;
+    const targetTotal = computedMatrix.grand_total.amounts[pTarget.id] || 0;
+    const netDiff = targetTotal - baseTotal;
+    const netPct = baseTotal > 0 ? (netDiff / baseTotal) * 100 : 0;
+
+    const categories = computedMatrix.categories.map(cat => {
+      const amtBase = cat.subtotal.amounts[pBase.id] || 0;
+      const amtTarget = cat.subtotal.amounts[pTarget.id] || 0;
+      const diff = amtTarget - amtBase;
+      const pct = amtBase > 0 ? (diff / amtBase) * 100 : 0;
+
+      const items = cat.items.map(it => {
+        const itemBase = it.amounts[pBase.id] || 0;
+        const itemTarget = it.amounts[pTarget.id] || 0;
+        const itemDiff = itemTarget - itemBase;
+        const itemPct = itemBase > 0 ? (itemDiff / itemBase) * 100 : 0;
+        return {
+          cost_head_id: it.cost_head_id,
+          description: it.description,
+          amtBase: itemBase,
+          amtTarget: itemTarget,
+          diff: itemDiff,
+          pct: itemPct
+        };
+      });
+
+      return {
+        category_id: cat.category_id,
+        category_name: cat.category_name,
+        amtBase,
+        amtTarget,
+        diff,
+        pct,
+        items
+      };
+    });
+
+    return {
+      pBase,
+      pTarget,
+      baseTotal,
+      targetTotal,
+      netDiff,
+      netPct,
+      categories
+    };
+  }, [computedMatrix, compareBasePeriod, compareTargetPeriod]);
+
+  // If not logged in, render the clean login screen
+  if (!currentUser) {
+    return (
+      <LoginPage
+        loginForm={loginForm}
+        setLoginForm={setLoginForm}
+        loginLoading={loginLoading}
+        loginError={loginError}
+        handleLogin={handleLogin}
+        handleQuickRoleSelect={handleQuickRoleSelect}
+      />
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // MAIN APP RENDER
+  // --------------------------------------------------------------------------
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#f4f6fa', display: 'flex', flexDirection: 'column' }}>
+      
+      {/* 1. TOP GLOBAL NAVIGATION BAR */}
+      <Navbar
+        currentUser={currentUser}
+        handleLogout={handleLogout}
+        dbStatus={dbStatus}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        permissions={pagePermissions}
+      />
+
+      {/* 2. SUB-NAVIGATION BAR (DATA ENTRY & MASTER DATA ONLY) */}
+      <SubNav
+        activeTab={activeTab}
+        dataEntrySubTab={dataEntrySubTab}
+        setDataEntrySubTab={setDataEntrySubTab}
+        masterDataSubTab={masterDataSubTab}
+        setMasterDataSubTab={setMasterDataSubTab}
+      />
+
+      {/* 3. MAIN WORKSPACE CONTENT */}
+      <main style={{ flex: 1, padding: '24px 32px', maxWidth: '1600px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+        
+        {/* DASHBOARD PAGE */}
+        {activeTab === 'dashboard' && (
+          <DashboardPage
+            overview={overview}
+            dashView={dashView}
+            setDashView={setDashView}
+            pieData={pieData}
+            piePeriod={piePeriod}
+            setPiePeriod={setPiePeriod}
+            hoveredPieIndex={hoveredPieIndex}
+            setHoveredPieIndex={setHoveredPieIndex}
+            computedMatrix={computedMatrix}
+            comparisonData={comparisonData}
+            compareBasePeriod={compareBasePeriod}
+            setCompareBasePeriod={setCompareBasePeriod}
+            compareTargetPeriod={compareTargetPeriod}
+            setCompareTargetPeriod={setCompareTargetPeriod}
+            onOpenDataEntry={() => setActiveTab('data_entry')}
+          />
+        )}
+
+        {/* DATA ENTRY PAGE */}
+        {activeTab === 'data_entry' && (
+          <DataEntryPage
+            computedMatrix={computedMatrix}
+            editingPeriodId={editingPeriodId}
+            setEditingPeriodId={setEditingPeriodId}
+            activePeriodObj={activePeriodObj}
+            matrixDraft={matrixDraft}
+            remarksDraft={remarksDraft}
+            isDirty={isDirty}
+            handleCellChange={handleCellChange}
+            handleRemarkChange={handleRemarkChange}
+            handleCloneFromPrev={handleCloneFromPrev}
+            handleToggleLock={handleToggleLock}
+            handleSaveActiveMonth={handleSaveActiveMonth}
+            savingBatch={savingBatch}
+            currentUser={currentUser}
+            entryMessage={entryMessage}
+            showAddMonthModal={showAddMonthModal}
+            setShowAddMonthModal={handleToggleAddMonthModal}
+            newMonthForm={newMonthForm}
+            setNewMonthForm={setNewMonthForm}
+            handleStartDateChange={handleStartDateChange}
+            handleAddNewMonth={handleAddNewMonth}
+          />
+        )}
+
+        {/* MASTER DATA CONFIGURATION PAGE */}
+        {activeTab === 'master_data' && (
+          <MasterDataPage
+            masterFoodView={masterFoodView}
+            setMasterFoodView={setMasterFoodView}
+            costHeadsList={costHeadsList}
+            categoriesList={categoriesList}
+            computedMatrix={computedMatrix}
+            masterMessage={masterMessage}
+            draggedIdx={draggedIdx}
+            dragOverIdx={dragOverIdx}
+            handleDragStart={handleDragStart}
+            handleDragOver={handleDragOver}
+            handleDragEnd={handleDragEnd}
+            handleDrop={handleDrop}
+            handleMoveStep={handleMoveStep}
+            openAddCostHeadModal={openAddCostHeadModal}
+            openEditCostHeadModal={openEditCostHeadModal}
+            handleDeleteCostHead={handleDeleteCostHead}
+            showCostHeadModal={showCostHeadModal}
+            setShowCostHeadModal={setShowCostHeadModal}
+            editingCostHead={editingCostHead}
+            costHeadForm={costHeadForm}
+            setCostHeadForm={setCostHeadForm}
+            handleSaveCostHead={handleSaveCostHead}
+            showAddCategoryModal={showAddCategoryModal}
+            setShowAddCategoryModal={setShowAddCategoryModal}
+            openAddCategoryModal={openAddCategoryModal}
+            handleAddCategory={handleAddCategory}
+            showManageCategoriesModal={showManageCategoriesModal}
+            setShowManageCategoriesModal={setShowManageCategoriesModal}
+            openManageCategoriesModal={openManageCategoriesModal}
+            handleUpdateCategory={handleUpdateCategory}
+            handleDeleteCategory={handleDeleteCategory}
+            openEditPeriodModal={openEditPeriodModal}
+            handleDeletePeriod={handleDeletePeriod}
+            showEditPeriodModal={showEditPeriodModal}
+            setShowEditPeriodModal={setShowEditPeriodModal}
+            editingPeriodItem={editingPeriodItem}
+            editPeriodForm={editPeriodForm}
+            setEditPeriodForm={setEditPeriodForm}
+            handleSavePeriodEdit={handleSavePeriodEdit}
+            showAddMonthModal={showAddMonthModal}
+            setShowAddMonthModal={handleToggleAddMonthModal}
+            newMonthForm={newMonthForm}
+            setNewMonthForm={setNewMonthForm}
+            handleStartDateChange={handleStartDateChange}
+            handleAddNewMonth={handleAddNewMonth}
+            moduleName={masterDataSubTab === 'food' ? 'Food & Dining' : masterDataSubTab === 'hostel' ? 'Hostel' : 'Transport'}
+          />
+        )}
+
+        {/* SYSTEM SETTINGS & CONTROLS PAGE */}
+        {activeTab === 'settings' && (
+          <SettingsPage
+            currentUser={currentUser}
+            users={usersList}
+            permissions={pagePermissions}
+            onRefreshUsers={fetchUsers}
+            onRefreshPermissions={fetchPermissions}
+            onRefreshData={() => {
+              const activeMod = activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab;
+              fetchData(activeMod);
+              fetchMasterDetails(activeMod);
+              fetchUsers();
+              fetchPermissions();
+            }}
+          />
+        )}
+
+      </main>
+
+      {/* 5. GLOBAL FOOTER */}
+      <Footer />
+
+    </div>
+  );
+}

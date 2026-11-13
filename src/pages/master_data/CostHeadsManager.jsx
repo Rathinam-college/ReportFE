@@ -1,0 +1,537 @@
+import React, { useState } from 'react';
+import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, X, FolderPlus, Layers, Filter } from 'lucide-react';
+
+export default function CostHeadsManager({
+  costHeadsList,
+  categoriesList,
+  draggedIdx,
+  dragOverIdx,
+  handleDragStart,
+  handleDragOver,
+  handleDragEnd,
+  handleDrop,
+  handleMoveStep,
+  openAddCostHeadModal,
+  openEditCostHeadModal,
+  handleDeleteCostHead,
+  showCostHeadModal,
+  setShowCostHeadModal,
+  editingCostHead,
+  costHeadForm,
+  setCostHeadForm,
+  handleSaveCostHead,
+  openAddCategoryModal,
+  openManageCategoriesModal,
+  moduleName = 'Food & Dining'
+}) {
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+
+  // Filter cost heads by category if a pill is clicked
+  const filteredCostHeads = selectedCategoryFilter === 'all'
+    ? costHeadsList
+    : costHeadsList.filter(ch => String(ch.category_id) === String(selectedCategoryFilter));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      
+      {/* Header Banner */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '10px',
+        padding: '20px 24px',
+        border: '1px solid #cbd5e1',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px'
+      }}>
+        <div>
+          <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
+            {moduleName} Master Data Configuration
+          </h2>
+          <p style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+            Manage <strong>Categories</strong> and <strong>Line Items / Cost Heads</strong>. Add new categories directly, create them simultaneously with line items, or reorder entries via drag & drop.
+          </p>
+        </div>
+
+        {/* Action Buttons: Add Category & Add Line Item */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          
+          <button
+            type="button"
+            onClick={openAddCategoryModal}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              backgroundColor: '#eff6ff',
+              color: '#2563eb',
+              fontSize: '13px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1.5px solid #bfdbfe',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <FolderPlus size={16} />
+            <span>+ Add Category</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={openManageCategoriesModal}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '6px',
+              backgroundColor: '#f8fafc',
+              color: '#475569',
+              fontSize: '13px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1px solid #cbd5e1',
+              cursor: 'pointer'
+            }}
+          >
+            <Layers size={15} />
+            <span>Manage Categories ({categoriesList.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={openAddCostHeadModal}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '6px',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <Plus size={16} />
+            <span>+ Add Line Item</span>
+          </button>
+        </div>
+      </div>
+
+      {/* CATEGORY FILTER PILLS BAR */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '10px',
+        padding: '12px 18px',
+        border: '1px solid #cbd5e1',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        overflowX: 'auto',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '6px', flexShrink: 0 }}>
+          <Filter size={14} color="#64748b" />
+          <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+            Filter Categories:
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSelectedCategoryFilter('all')}
+          style={{
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: selectedCategoryFilter === 'all' ? '800' : '600',
+            backgroundColor: selectedCategoryFilter === 'all' ? '#0f172a' : '#f1f5f9',
+            color: selectedCategoryFilter === 'all' ? '#ffffff' : '#475569',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          All Categories ({costHeadsList.length})
+        </button>
+
+        {categoriesList.map(cat => {
+          const isSelected = String(selectedCategoryFilter) === String(cat.id);
+          const count = costHeadsList.filter(ch => ch.category_id === cat.id).length;
+
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setSelectedCategoryFilter(cat.id)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: isSelected ? '800' : '600',
+                backgroundColor: isSelected ? '#2563eb' : '#f8fafc',
+                color: isSelected ? '#ffffff' : '#334155',
+                border: isSelected ? '1px solid #1d4ed8' : '1px solid #e2e8f0',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>{cat.name}</span>
+              <span style={{
+                fontSize: '10.5px',
+                padding: '1px 6px',
+                borderRadius: '10px',
+                backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                color: isSelected ? '#ffffff' : '#475569',
+                fontWeight: '700'
+              }}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+
+        {/* Quick Add Category Pill */}
+        <button
+          type="button"
+          onClick={openAddCategoryModal}
+          style={{
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: '700',
+            backgroundColor: '#eff6ff',
+            color: '#2563eb',
+            border: '1px dashed #3b82f6',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          <Plus size={13} />
+          <span>New Category</span>
+        </button>
+      </div>
+
+      {/* DRAG AND DROP REORDER TABLE */}
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <GripVertical size={18} color="#2563eb" />
+            <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
+              Line Items Order ({filteredCostHeads.length} Items)
+            </h3>
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            {selectedCategoryFilter === 'all'
+              ? '✋ Grab handle or use ⬆️ ⬇️ to reorder • Auto-saves to PostgreSQL'
+              : `Showing items under filtered category`}
+          </div>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#475569', fontWeight: '700' }}>
+                <th style={{ padding: '12px 16px', width: '10%', textAlign: 'center' }}>Reorder</th>
+                <th style={{ padding: '12px 16px', width: '8%', textAlign: 'center' }}>#</th>
+                <th style={{ padding: '12px 20px', width: '36%', textAlign: 'left' }}>Category</th>
+                <th style={{ padding: '12px 20px', width: '34%', textAlign: 'left' }}>Description / Cost Head</th>
+                <th style={{ padding: '12px 16px', width: '12%', textAlign: 'center' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCostHeads.map((ch, idx) => {
+                const originalIdx = costHeadsList.findIndex(x => x.id === ch.id);
+                const isDragging = draggedIdx === originalIdx;
+                const isOver = dragOverIdx === originalIdx;
+
+                return (
+                  <tr
+                    key={ch.id}
+                    draggable={selectedCategoryFilter === 'all'}
+                    onDragStart={(e) => handleDragStart(e, originalIdx)}
+                    onDragOver={(e) => handleDragOver(e, originalIdx)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={(e) => handleDrop(e, originalIdx)}
+                    style={{
+                      borderBottom: '1px solid #f1f5f9',
+                      backgroundColor: isOver ? '#eff6ff' : (isDragging ? '#e2e8f0' : (idx % 2 === 0 ? '#ffffff' : '#fafafa')),
+                      opacity: isDragging ? 0.5 : 1,
+                      transition: 'background-color 0.15s ease',
+                      cursor: selectedCategoryFilter === 'all' ? 'grab' : 'default'
+                    }}
+                  >
+                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <span title={selectedCategoryFilter === 'all' ? "Drag to reorder" : "Clear filter to drag"} style={{ cursor: selectedCategoryFilter === 'all' ? 'grab' : 'default', color: '#94a3b8' }}>
+                          <GripVertical size={16} />
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveStep(originalIdx, -1)}
+                          disabled={originalIdx === 0}
+                          title="Move Up"
+                          style={{
+                            padding: '3px 5px',
+                            borderRadius: '4px',
+                            backgroundColor: '#f1f5f9',
+                            color: originalIdx === 0 ? '#cbd5e1' : '#334155',
+                            cursor: originalIdx === 0 ? 'not-allowed' : 'pointer',
+                            border: '1px solid #e2e8f0'
+                          }}
+                        >
+                          <ArrowUp size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveStep(originalIdx, 1)}
+                          disabled={originalIdx === costHeadsList.length - 1}
+                          title="Move Down"
+                          style={{
+                            padding: '3px 5px',
+                            borderRadius: '4px',
+                            backgroundColor: '#f1f5f9',
+                            color: originalIdx === costHeadsList.length - 1 ? '#cbd5e1' : '#334155',
+                            cursor: originalIdx === costHeadsList.length - 1 ? 'not-allowed' : 'pointer',
+                            border: '1px solid #e2e8f0'
+                          }}
+                        >
+                          <ArrowDown size={12} />
+                        </button>
+                      </div>
+                    </td>
+
+                    <td style={{ padding: '12px 16px', textAlign: 'center', fontFamily: 'monospace', color: '#64748b', fontWeight: '600' }}>
+                      #{idx + 1}
+                    </td>
+
+                    <td style={{ padding: '12px 20px', fontWeight: '600', color: '#1e293b' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: '#f1f5f9',
+                        color: '#1e293b',
+                        border: '1px solid #e2e8f0',
+                        fontSize: '12.5px'
+                      }}>
+                        {ch.category_name}
+                      </span>
+                    </td>
+
+                    <td style={{ padding: '12px 20px', fontWeight: '700', color: '#0f172a' }}>
+                      {ch.name}
+                    </td>
+
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => openEditCostHeadModal(ch)}
+                          title="Edit Description / Category"
+                          style={{ padding: '5px 8px', borderRadius: '4px', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', cursor: 'pointer' }}
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCostHead(ch)}
+                          title="Delete / Deactivate"
+                          style={{ padding: '5px 8px', borderRadius: '4px', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* MODAL: ADD / EDIT LINE ITEM WITH SIMULTANEOUS CATEGORY CREATION */}
+      {showCostHeadModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 22px',
+              backgroundColor: '#0f172a',
+              color: '#ffffff',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700' }}>
+                {editingCostHead ? 'Edit Line Item' : 'Add Category & Description'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCostHeadModal(false)}
+                style={{ color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCostHead} style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Category Selector / Creator */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
+                    Category *
+                  </label>
+                  {!editingCostHead && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCostHeadForm(prev => ({
+                          ...prev,
+                          is_new_category: !prev.is_new_category,
+                          new_category_name: ''
+                        }));
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#2563eb',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        padding: 0
+                      }}
+                    >
+                      {costHeadForm.is_new_category ? '← Pick Existing Category' : '+ Add New Category at same time'}
+                    </button>
+                  )}
+                </div>
+
+                {costHeadForm.is_new_category ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      backgroundColor: '#eff6ff',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      <FolderPlus size={16} color="#2563eb" />
+                      <input
+                        type="text"
+                        placeholder="Enter New Category Name (e.g. Bakery Goods, Snacks Bar)"
+                        value={costHeadForm.new_category_name || ''}
+                        onChange={(e) => setCostHeadForm({ ...costHeadForm, new_category_name: e.target.value })}
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          outline: 'none',
+                          backgroundColor: 'transparent',
+                          fontSize: '13.5px',
+                          fontWeight: '600',
+                          color: '#0f172a'
+                        }}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: '500' }}>
+                      ⚡ Both this new Category and the Line Item will be saved simultaneously!
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    value={costHeadForm.category_id}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setCostHeadForm(prev => ({ ...prev, is_new_category: true, new_category_name: '' }));
+                      } else {
+                        setCostHeadForm({ ...costHeadForm, category_id: e.target.value, is_new_category: false });
+                      }
+                    }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', fontWeight: '600', color: '#0f172a', backgroundColor: '#ffffff' }}
+                    required
+                  >
+                    {categoriesList.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                    {!editingCostHead && (
+                      <option value="__new__" style={{ color: '#2563eb', fontWeight: 'bold' }}>
+                        ➕ + Create New Category...
+                      </option>
+                    )}
+                  </select>
+                )}
+              </div>
+
+              {/* Description / Cost Head */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Description / Cost Head *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Snacks Vendor, Kitchen Equipment AMC, Bakery Goods"
+                  value={costHeadForm.name}
+                  onChange={(e) => setCostHeadForm({ ...costHeadForm, name: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', fontWeight: '600', color: '#0f172a' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCostHeadModal(false)}
+                  style={{ padding: '9px 16px', borderRadius: '6px', backgroundColor: '#f1f5f9', color: '#475569', fontSize: '13px', fontWeight: '600', border: 'none', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: '9px 20px', borderRadius: '6px', backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: '700', border: 'none', cursor: 'pointer', boxShadow: '0 2px 6px rgba(37,99,235,0.3)' }}
+                >
+                  {costHeadForm.is_new_category
+                    ? 'Create Category & Line Item'
+                    : (editingCostHead ? 'Save Changes' : 'Add Line Item')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
