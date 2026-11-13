@@ -1248,6 +1248,7 @@ export default function App() {
         {/* DATA ENTRY PAGE */}
         {activeTab === 'data_entry' && (
           <DataEntryPage
+            selectedModule={selectedModule}
             computedMatrix={computedMatrix}
             editingPeriodId={editingPeriodId}
             setEditingPeriodId={setEditingPeriodId}

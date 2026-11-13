@@ -3,6 +3,7 @@ import { formatINR } from '../../utils/formatters';
 import { MessageSquare, Users, Utensils, Award } from 'lucide-react';
 
 export default function MatrixTable({
+  selectedModule = 'food',
   computedMatrix,
   editingPeriodId,
   setEditingPeriodId,
@@ -102,361 +103,7 @@ export default function MatrixTable({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
 
-      {/* 1. DINING CENSUS & MEAL PRODUCTION HEADCOUNT CARD */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '12px',
-        border: '1.5px solid #c7d2fe',
-        boxShadow: '0 2px 6px rgba(79, 70, 229, 0.04)',
-        overflow: 'hidden'
-      }}>
-        {/* HEADER */}
-        <div style={{
-          padding: '14px 20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: '#f8faff',
-          borderBottom: '1px solid #e0e7ff',
-          flexWrap: 'wrap',
-          gap: '8px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#4f46e5' }} />
-            <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#1e1b4b', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Users size={16} color="#4f46e5" />
-              <span>Dining Census & Headcount</span>
-            </h3>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#6366f1', backgroundColor: '#eef2ff', padding: '2px 8px', borderRadius: '4px' }}>
-              Operational Counts
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: '700',
-              padding: '3px 12px',
-              borderRadius: '9999px',
-              backgroundColor: '#eef2ff',
-              color: '#3730a3'
-            }}>
-              Total Diners: <strong style={{ color: '#4f46e5' }}>{currTotalPersons.toLocaleString()} Persons</strong>
-            </div>
-            {prodCountNum > 0 && (
-              <div style={{
-                fontSize: '12px',
-                fontWeight: '700',
-                padding: '3px 12px',
-                borderRadius: '9999px',
-                backgroundColor: '#f0fdf4',
-                color: '#166534'
-              }}>
-                Production: <strong style={{ color: '#15803d' }}>{prodCountNum.toLocaleString()} Plates</strong>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* TABLE */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '11.5px', fontWeight: '600' }}>
-                <th style={{ padding: '10px 20px', textAlign: 'left', width: '24%' }}>Diner / Production Category</th>
-                {prevPeriod && (
-                  <th style={{ padding: '10px 14px', textAlign: 'right', width: '14%' }}>
-                    {prevPeriod.period_label} (Count)
-                  </th>
-                )}
-                <th style={{ padding: '10px 14px', textAlign: 'center', width: '16%', color: '#4f46e5', fontWeight: '700' }}>
-                  {activePeriodObj?.period_label} • Edit
-                </th>
-                <th style={{ padding: '10px 12px', textAlign: 'center', width: '16%' }}>
-                  MoM Comparison
-                </th>
-                <th style={{ padding: '10px 14px', textAlign: 'right', width: '13%' }}>
-                  Avg / mo
-                </th>
-                <th style={{ padding: '10px 16px', textAlign: 'left', width: '17%' }}>
-                  Census Remarks
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Row 1: Students count */}
-              <tr style={{ borderBottom: '1px solid #f8fafc' }}>
-                <td style={{ padding: '12px 20px', fontWeight: '700', color: '#1e293b' }}>
-                  Students count
-                </td>
-                {prevPeriod && (
-                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                    {prevStudents !== null ? prevStudents.toLocaleString() : '—'}
-                  </td>
-                )}
-                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={currStudents}
-                    onChange={(e) => handleCensusChange?.('students', e.target.value)}
-                    disabled={activePeriodObj?.is_closed}
-                    style={{
-                      width: '100%',
-                      maxWidth: '130px',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      border: '1.5px solid #6366f1',
-                      backgroundColor: '#ffffff',
-                      textAlign: 'right',
-                      fontWeight: '700',
-                      fontSize: '13px',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.08)'
-                    }}
-                  />
-                </td>
-                <td style={{ padding: '12px 12px', textAlign: 'center' }}>
-                  {renderDiffBadge(sCountNum, prevStudents)}
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                  {avgStudents.toLocaleString()}
-                </td>
-                <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
-                  Enrolled student diners
-                </td>
-              </tr>
-
-              {/* Row 2: Staff count */}
-              <tr style={{ borderBottom: '1px solid #f8fafc' }}>
-                <td style={{ padding: '12px 20px', fontWeight: '700', color: '#1e293b' }}>
-                  Staff count
-                </td>
-                {prevPeriod && (
-                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                    {prevStaff !== null ? prevStaff.toLocaleString() : '—'}
-                  </td>
-                )}
-                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={currStaff}
-                    onChange={(e) => handleCensusChange?.('staff', e.target.value)}
-                    disabled={activePeriodObj?.is_closed}
-                    style={{
-                      width: '100%',
-                      maxWidth: '130px',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      border: '1.5px solid #6366f1',
-                      backgroundColor: '#ffffff',
-                      textAlign: 'right',
-                      fontWeight: '700',
-                      fontSize: '13px',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.08)'
-                    }}
-                  />
-                </td>
-                <td style={{ padding: '12px 12px', textAlign: 'center' }}>
-                  {renderDiffBadge(stCountNum, prevStaff)}
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                  {avgStaff.toLocaleString()}
-                </td>
-                <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
-                  Dining & campus staff
-                </td>
-              </tr>
-
-              {/* Row 3: Others */}
-              <tr style={{ borderBottom: '1px solid #f8fafc' }}>
-                <td style={{ padding: '12px 20px', fontWeight: '700', color: '#1e293b' }}>
-                  Others
-                </td>
-                {prevPeriod && (
-                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                    {prevOthers !== null ? prevOthers.toLocaleString() : '—'}
-                  </td>
-                )}
-                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={currOthers}
-                    onChange={(e) => handleCensusChange?.('others', e.target.value)}
-                    disabled={activePeriodObj?.is_closed}
-                    style={{
-                      width: '100%',
-                      maxWidth: '130px',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      border: '1.5px solid #6366f1',
-                      backgroundColor: '#ffffff',
-                      textAlign: 'right',
-                      fontWeight: '700',
-                      fontSize: '13px',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.08)'
-                    }}
-                  />
-                </td>
-                <td style={{ padding: '12px 12px', textAlign: 'center' }}>
-                  {renderDiffBadge(oCountNum, prevOthers)}
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                  {avgOthers.toLocaleString()}
-                </td>
-                <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
-                  Guests, visitors & events
-                </td>
-              </tr>
-
-              {/* Row 4: Total Persons count (HIGHLIGHT ROW) */}
-              <tr style={{ backgroundColor: '#f0fdf4', borderBottom: '1.5px solid #bbf7d0' }}>
-                <td style={{ padding: '12px 20px', fontWeight: '800', color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Award size={15} color="#16a34a" />
-                  <span>Total Persons count</span>
-                </td>
-                {prevPeriod && (
-                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#166534', fontWeight: '800' }}>
-                    {prevTotalPersons !== null ? prevTotalPersons.toLocaleString() : '—'}
-                  </td>
-                )}
-                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '100%',
-                    maxWidth: '130px',
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: '#dcfce7',
-                    border: '1.5px solid #86efac',
-                    color: '#15803d',
-                    fontWeight: '800',
-                    fontSize: '13.5px'
-                  }}>
-                    {currTotalPersons.toLocaleString()}
-                  </div>
-                </td>
-                <td style={{ padding: '12px 12px', textAlign: 'center' }}>
-                  {renderDiffBadge(currTotalPersons, prevTotalPersons)}
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#166534', fontWeight: '800' }}>
-                  {avgPersons.toLocaleString()}
-                </td>
-                <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', fontWeight: '700', color: '#15803d' }}>
-                  Sum = Students + Staff + Others
-                </td>
-              </tr>
-
-              {/* Row 5: Production count */}
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '12px 20px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Utensils size={14} color="#ea580c" />
-                  <span>Production count</span>
-                </td>
-                {prevPeriod && (
-                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                    {prevProduction !== null ? prevProduction.toLocaleString() : '—'}
-                  </td>
-                )}
-                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={currProduction}
-                    onChange={(e) => handleCensusChange?.('production', e.target.value)}
-                    disabled={activePeriodObj?.is_closed}
-                    style={{
-                      width: '100%',
-                      maxWidth: '130px',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      border: '1.5px solid #ea580c',
-                      backgroundColor: '#ffffff',
-                      textAlign: 'right',
-                      fontWeight: '700',
-                      fontSize: '13px',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxShadow: '0 0 0 2px rgba(234, 88, 12, 0.08)'
-                    }}
-                  />
-                </td>
-                <td style={{ padding: '12px 12px', textAlign: 'center' }}>
-                  {renderDiffBadge(prodCountNum, prevProduction)}
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
-                  {avgProd.toLocaleString()}
-                </td>
-                <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
-                  Total meal plates produced
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* COMPARATIVE UNIT METRICS STRIP (IT WAS USED BUT COMPARE THAT) */}
-        {currTotalPersons > 0 && (
-          <div style={{
-            padding: '12px 20px',
-            backgroundColor: '#f8fafc',
-            borderTop: '1px solid #e2e8f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-            fontSize: '12px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569' }}>
-              <span style={{ fontWeight: '700', color: '#1e293b' }}>Operational Comparison Metrics:</span>
-              <span style={{ color: '#94a3b8' }}>({activePeriodObj?.period_label})</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ color: '#64748b' }}>Cost / Person:</span>
-                <strong style={{ color: '#0f172a' }} className="currency-font">
-                  {formatINR(Math.round(totalFoodSpend / currTotalPersons))}
-                </strong>
-              </div>
-
-              {prodCountNum > 0 && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ color: '#64748b' }}>Cost / Meal Plate:</span>
-                    <strong style={{ color: '#0f172a' }} className="currency-font">
-                      {formatINR((totalFoodSpend / prodCountNum).toFixed(2))}
-                    </strong>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ color: '#64748b' }}>Plates / Person:</span>
-                    <strong style={{ color: '#2563eb' }}>
-                      {(prodCountNum / currTotalPersons).toFixed(1)} Plates
-                    </strong>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 2. EXPENSE CATEGORIES TABLES (FINANCIAL MATRIX) */}
+      {/* 1. EXPENSE CATEGORIES TABLES (FINANCIAL MATRIX) */}
       {computedMatrix.categories.map((cat, catIdx) => {
         const theme = getCategoryTheme(catIdx);
         const subtotalEditing = cat.subtotal?.amounts?.[editingPeriodId] || 0;
@@ -673,6 +320,363 @@ export default function MatrixTable({
           </div>
         );
       })}
+
+      {/* 2. DINING CENSUS & MEAL PRODUCTION HEADCOUNT CARD (DOWN IN THE LIST) */}
+      {(!selectedModule || selectedModule === 'food') && (
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          border: '1.5px solid #c7d2fe',
+          boxShadow: '0 2px 6px rgba(79, 70, 229, 0.04)',
+          overflow: 'hidden',
+          marginTop: '6px'
+        }}>
+          {/* HEADER */}
+          <div style={{
+            padding: '14px 20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: '#f8faff',
+            borderBottom: '1px solid #e0e7ff',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#4f46e5' }} />
+              <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#1e1b4b', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Users size={16} color="#4f46e5" />
+                <span>Dining Census & Headcount</span>
+              </h3>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#6366f1', backgroundColor: '#eef2ff', padding: '2px 8px', borderRadius: '4px' }}>
+                Operational Counts
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '700',
+                padding: '3px 12px',
+                borderRadius: '9999px',
+                backgroundColor: '#eef2ff',
+                color: '#3730a3'
+              }}>
+                Total Diners: <strong style={{ color: '#4f46e5' }}>{currTotalPersons.toLocaleString()} Persons</strong>
+              </div>
+              {prodCountNum > 0 && (
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  padding: '3px 12px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#f0fdf4',
+                  color: '#166534'
+                }}>
+                  Production: <strong style={{ color: '#15803d' }}>{prodCountNum.toLocaleString()} Plates</strong>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* TABLE */}
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '11.5px', fontWeight: '600' }}>
+                  <th style={{ padding: '10px 20px', textAlign: 'left', width: '24%' }}>Diner / Production Category</th>
+                  {prevPeriod && (
+                    <th style={{ padding: '10px 14px', textAlign: 'right', width: '14%' }}>
+                      {prevPeriod.period_label} (Count)
+                    </th>
+                  )}
+                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '16%', color: '#4f46e5', fontWeight: '700' }}>
+                    {activePeriodObj?.period_label} • Edit
+                  </th>
+                  <th style={{ padding: '10px 12px', textAlign: 'center', width: '16%' }}>
+                    MoM Comparison
+                  </th>
+                  <th style={{ padding: '10px 14px', textAlign: 'right', width: '13%' }}>
+                    Avg / mo
+                  </th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', width: '17%' }}>
+                    Census Remarks
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Row 1: Students count */}
+                <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                  <td style={{ padding: '12px 20px', fontWeight: '700', color: '#1e293b' }}>
+                    Students count
+                  </td>
+                  {prevPeriod && (
+                    <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                      {prevStudents !== null ? prevStudents.toLocaleString() : '—'}
+                    </td>
+                  )}
+                  <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={currStudents}
+                      onChange={(e) => handleCensusChange?.('students', e.target.value)}
+                      disabled={activePeriodObj?.is_closed}
+                      style={{
+                        width: '100%',
+                        maxWidth: '130px',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #6366f1',
+                        backgroundColor: '#ffffff',
+                        textAlign: 'right',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.08)'
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: '12px 12px', textAlign: 'center' }}>
+                    {renderDiffBadge(sCountNum, prevStudents)}
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                    {avgStudents.toLocaleString()}
+                  </td>
+                  <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                    Enrolled student diners
+                  </td>
+                </tr>
+
+                {/* Row 2: Staff count */}
+                <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                  <td style={{ padding: '12px 20px', fontWeight: '700', color: '#1e293b' }}>
+                    Staff count
+                  </td>
+                  {prevPeriod && (
+                    <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                      {prevStaff !== null ? prevStaff.toLocaleString() : '—'}
+                    </td>
+                  )}
+                  <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={currStaff}
+                      onChange={(e) => handleCensusChange?.('staff', e.target.value)}
+                      disabled={activePeriodObj?.is_closed}
+                      style={{
+                        width: '100%',
+                        maxWidth: '130px',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #6366f1',
+                        backgroundColor: '#ffffff',
+                        textAlign: 'right',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.08)'
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: '12px 12px', textAlign: 'center' }}>
+                    {renderDiffBadge(stCountNum, prevStaff)}
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                    {avgStaff.toLocaleString()}
+                  </td>
+                  <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                    Dining & campus staff
+                  </td>
+                </tr>
+
+                {/* Row 3: Others */}
+                <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                  <td style={{ padding: '12px 20px', fontWeight: '700', color: '#1e293b' }}>
+                    Others
+                  </td>
+                  {prevPeriod && (
+                    <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                      {prevOthers !== null ? prevOthers.toLocaleString() : '—'}
+                    </td>
+                  )}
+                  <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={currOthers}
+                      onChange={(e) => handleCensusChange?.('others', e.target.value)}
+                      disabled={activePeriodObj?.is_closed}
+                      style={{
+                        width: '100%',
+                        maxWidth: '130px',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #6366f1',
+                        backgroundColor: '#ffffff',
+                        textAlign: 'right',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.08)'
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: '12px 12px', textAlign: 'center' }}>
+                    {renderDiffBadge(oCountNum, prevOthers)}
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                    {avgOthers.toLocaleString()}
+                  </td>
+                  <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                    Guests, visitors & events
+                  </td>
+                </tr>
+
+                {/* Row 4: Total Persons count (HIGHLIGHT ROW) */}
+                <tr style={{ backgroundColor: '#f0fdf4', borderBottom: '1.5px solid #bbf7d0' }}>
+                  <td style={{ padding: '12px 20px', fontWeight: '800', color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Award size={15} color="#16a34a" />
+                    <span>Total Persons count</span>
+                  </td>
+                  {prevPeriod && (
+                    <td style={{ padding: '12px 14px', textAlign: 'right', color: '#166534', fontWeight: '800' }}>
+                      {prevTotalPersons !== null ? prevTotalPersons.toLocaleString() : '—'}
+                    </td>
+                  )}
+                  <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      maxWidth: '130px',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      backgroundColor: '#dcfce7',
+                      border: '1.5px solid #86efac',
+                      color: '#15803d',
+                      fontWeight: '800',
+                      fontSize: '13.5px'
+                    }}>
+                      {currTotalPersons.toLocaleString()}
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px 12px', textAlign: 'center' }}>
+                    {renderDiffBadge(currTotalPersons, prevTotalPersons)}
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#166534', fontWeight: '800' }}>
+                    {avgPersons.toLocaleString()}
+                  </td>
+                  <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', fontWeight: '700', color: '#15803d' }}>
+                    Sum = Students + Staff + Others
+                  </td>
+                </tr>
+
+                {/* Row 5: Production count */}
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '12px 20px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Utensils size={14} color="#ea580c" />
+                    <span>Production count</span>
+                  </td>
+                  {prevPeriod && (
+                    <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                      {prevProduction !== null ? prevProduction.toLocaleString() : '—'}
+                    </td>
+                  )}
+                  <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={currProduction}
+                      onChange={(e) => handleCensusChange?.('production', e.target.value)}
+                      disabled={activePeriodObj?.is_closed}
+                      style={{
+                        width: '100%',
+                        maxWidth: '130px',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #ea580c',
+                        backgroundColor: '#ffffff',
+                        textAlign: 'right',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxShadow: '0 0 0 2px rgba(234, 88, 12, 0.08)'
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: '12px 12px', textAlign: 'center' }}>
+                    {renderDiffBadge(prodCountNum, prevProduction)}
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                    {avgProd.toLocaleString()}
+                  </td>
+                  <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                    Total meal plates produced
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* COMPARATIVE UNIT METRICS STRIP (IT WAS USED BUT COMPARE THAT) */}
+          {currTotalPersons > 0 && (
+            <div style={{
+              padding: '12px 20px',
+              backgroundColor: '#f8fafc',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              fontSize: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569' }}>
+                <span style={{ fontWeight: '700', color: '#1e293b' }}>Operational Comparison Metrics:</span>
+                <span style={{ color: '#94a3b8' }}>({activePeriodObj?.period_label})</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ color: '#64748b' }}>Cost / Person:</span>
+                  <strong style={{ color: '#0f172a' }} className="currency-font">
+                    {formatINR(Math.round(totalFoodSpend / currTotalPersons))}
+                  </strong>
+                </div>
+
+                {prodCountNum > 0 && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: '#64748b' }}>Cost / Meal Plate:</span>
+                      <strong style={{ color: '#0f172a' }} className="currency-font">
+                        {formatINR((totalFoodSpend / prodCountNum).toFixed(2))}
+                      </strong>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: '#64748b' }}>Plates / Person:</span>
+                      <strong style={{ color: '#2563eb' }}>
+                        {(prodCountNum / currTotalPersons).toFixed(1)} Plates
+                      </strong>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

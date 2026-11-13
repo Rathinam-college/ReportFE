@@ -6,6 +6,7 @@ import CostMixSidebar from './CostMixSidebar';
 import AddMonthModal from './AddMonthModal';
 
 export default function DataEntryPage({
+  selectedModule = 'food',
   computedMatrix,
   editingPeriodId,
   setEditingPeriodId,
@@ -340,6 +341,7 @@ export default function DataEntryPage({
         {/* Left Column: Category Blocks Table */}
         <div style={{ width: '100%', minWidth: 0 }}>
           <MatrixTable
+            selectedModule={selectedModule}
             computedMatrix={computedMatrix}
             editingPeriodId={editingPeriodId}
             setEditingPeriodId={setEditingPeriodId}
