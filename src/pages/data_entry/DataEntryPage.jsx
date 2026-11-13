@@ -12,6 +12,8 @@ export default function DataEntryPage({
   activePeriodObj,
   matrixDraft,
   remarksDraft = {},
+  censusDraft = {},
+  handleCensusChange,
   isDirty,
   handleCellChange,
   handleRemarkChange,
@@ -344,6 +346,8 @@ export default function DataEntryPage({
             activePeriodObj={activePeriodObj}
             matrixDraft={matrixDraft}
             remarksDraft={remarksDraft}
+            censusDraft={censusDraft}
+            handleCensusChange={handleCensusChange}
             handleCellChange={handleCellChange}
             handleRemarkChange={handleRemarkChange}
           />

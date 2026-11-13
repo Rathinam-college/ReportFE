@@ -92,6 +92,13 @@ export default function App() {
   const [editingPeriodId, setEditingPeriodId] = useState(5); // Default Oct'26 (id: 5)
   const [matrixDraft, setMatrixDraft] = useState({}); // { [costHeadId]: { [periodId]: value } }
   const [remarksDraft, setRemarksDraft] = useState({}); // { [costHeadId]: { [periodId]: remark } }
+  const [censusDraft, setCensusDraft] = useState({
+    students: {},
+    staff: {},
+    others: {},
+    total_persons: {},
+    production: {}
+  });
   const [isDirty, setIsDirty] = useState(false);
   const [savingBatch, setSavingBatch] = useState(false);
   const [entryMessage, setEntryMessage] = useState(null);
@@ -344,6 +351,9 @@ export default function App() {
         }
         setMatrixDraft(draftMap);
         setRemarksDraft(remarkMap);
+        if (mData.census) {
+          setCensusDraft(mData.census);
+        }
         setIsDirty(false);
 
         if (mData.periods && mData.periods.length > 0) {
@@ -474,6 +484,33 @@ export default function App() {
     setIsDirty(true);
   };
 
+  const handleCensusChange = (field, value) => {
+    const pIdStr = String(editingPeriodId);
+    setCensusDraft(prev => {
+      const currentStudents = field === 'students' ? value : (prev.students?.[pIdStr] ?? '');
+      const currentStaff = field === 'staff' ? value : (prev.staff?.[pIdStr] ?? '');
+      const currentOthers = field === 'others' ? value : (prev.others?.[pIdStr] ?? '');
+      
+      const sNum = parseInt(currentStudents, 10) || 0;
+      const stNum = parseInt(currentStaff, 10) || 0;
+      const oNum = parseInt(currentOthers, 10) || 0;
+      const newTotal = sNum + stNum + oNum;
+
+      return {
+        ...prev,
+        [field]: {
+          ...(prev[field] || {}),
+          [pIdStr]: value
+        },
+        total_persons: {
+          ...(prev.total_persons || {}),
+          [pIdStr]: newTotal
+        }
+      };
+    });
+    setIsDirty(true);
+  };
+
   const handleSaveActiveMonth = async () => {
     if (!computedMatrix) return;
     const activePeriod = computedMatrix.periods.find(p => p.id === editingPeriodId);
@@ -500,12 +537,24 @@ export default function App() {
         });
       });
 
+      const pIdStr = String(editingPeriodId);
+      const sCount = parseInt(censusDraft?.students?.[pIdStr], 10) || 0;
+      const stCount = parseInt(censusDraft?.staff?.[pIdStr], 10) || 0;
+      const oCount = parseInt(censusDraft?.others?.[pIdStr], 10) || 0;
+      const totCount = sCount + stCount + oCount;
+      const prodCount = parseInt(censusDraft?.production?.[pIdStr], 10) || 0;
+
       const res = await fetch('/api/batch-entry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           period_id: editingPeriodId,
           entries,
+          active_students: sCount,
+          active_staff: stCount,
+          others_count: oCount,
+          total_persons: totCount,
+          production_meals: prodCount,
           operating_days: activePeriod.operating_days || 30
         })
       });
@@ -515,7 +564,7 @@ export default function App() {
         throw new Error(err.detail || 'Failed to save matrix entries');
       }
 
-      setEntryMessage({ type: 'success', text: `Saved all line items for ${activePeriod.period_label} successfully!` });
+      setEntryMessage({ type: 'success', text: `Saved all line items and census headcounts for ${activePeriod.period_label} successfully!` });
       setIsDirty(false);
       fetchData();
     } catch (err) {
@@ -534,7 +583,7 @@ export default function App() {
     }
     const prevPeriod = computedMatrix.periods[currentIdx - 1];
 
-    if (!window.confirm(`Clone all expenses from ${prevPeriod.period_label} into ${computedMatrix.periods[currentIdx].period_label}?`)) {
+    if (!window.confirm(`Clone all expenses and headcounts from ${prevPeriod.period_label} into ${computedMatrix.periods[currentIdx].period_label}?`)) {
       return;
     }
 
@@ -551,6 +600,26 @@ export default function App() {
       });
       return next;
     });
+
+    setCensusDraft(prev => {
+      const prevStr = String(prevPeriod.id);
+      const currStr = String(editingPeriodId);
+      const prevStudents = prev?.students?.[prevStr] ?? 0;
+      const prevStaff = prev?.staff?.[prevStr] ?? 0;
+      const prevOthers = prev?.others?.[prevStr] ?? 0;
+      const prevTotal = prevStudents + prevStaff + prevOthers;
+      const prevProd = prev?.production?.[prevStr] ?? 0;
+
+      return {
+        ...prev,
+        students: { ...(prev?.students || {}), [currStr]: prevStudents },
+        staff: { ...(prev?.staff || {}), [currStr]: prevStaff },
+        others: { ...(prev?.others || {}), [currStr]: prevOthers },
+        total_persons: { ...(prev?.total_persons || {}), [currStr]: prevTotal },
+        production: { ...(prev?.production || {}), [currStr]: prevProd }
+      };
+    });
+
     setIsDirty(true);
     setEntryMessage({ type: 'success', text: `Values cloned from ${prevPeriod.period_label}. Review and click Save.` });
   };
@@ -1185,6 +1254,8 @@ export default function App() {
             activePeriodObj={activePeriodObj}
             matrixDraft={matrixDraft}
             remarksDraft={remarksDraft}
+            censusDraft={censusDraft}
+            handleCensusChange={handleCensusChange}
             isDirty={isDirty}
             handleCellChange={handleCellChange}
             handleRemarkChange={handleRemarkChange}
