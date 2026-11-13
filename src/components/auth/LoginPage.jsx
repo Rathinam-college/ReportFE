@@ -116,18 +116,15 @@ export default function LoginPage({
           </div>
 
           <div>
-            <div style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c7d2fe', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.01em' }}>
               Rathinam Group
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-              Operations ERP
             </div>
           </div>
         </div>
 
         {/* BOTTOM FOOTER */}
         <div style={{ position: 'relative', zIndex: 1, fontSize: '11.5px', color: 'rgba(199, 210, 254, 0.7)' }}>
-          © Rathinam Group • Operations ERP • FY 2026-2027
+          © Rathinam Group • FY 2026-2027
         </div>
       </div>
 

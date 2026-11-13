@@ -58,18 +58,13 @@ export default function Navbar({
         <img
           src={`${import.meta.env.BASE_URL}rathinam_logo.png`}
           alt="Rathinam Group"
-          style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+          style={{ height: '34px', width: 'auto', objectFit: 'contain' }}
           onError={(e) => {
             e.target.style.display = 'none';
           }}
         />
-        <div>
-          <div style={{ fontSize: '10.5px', fontWeight: '700', letterSpacing: '0.04em', color: '#6366f1', lineHeight: 1.1 }}>
-            Rathinam Group
-          </div>
-          <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-            Operations ERP
-          </div>
+        <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.01em' }}>
+          Rathinam Group
         </div>
       </div>
 

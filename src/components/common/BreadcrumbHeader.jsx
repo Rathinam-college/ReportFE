@@ -90,7 +90,7 @@ export default function BreadcrumbHeader({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <span style={{ fontSize: '12px', color: '#64748b' }}>
-          Rathinam Operations ERP • FY 2026–2027
+          Rathinam Group • FY 2026–2027
         </span>
       </div>
     </div>

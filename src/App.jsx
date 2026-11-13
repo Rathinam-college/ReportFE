@@ -157,7 +157,7 @@ export default function App() {
     } else if (activeTab === 'settings') {
       titleStr = 'System Settings';
     }
-    document.title = `Report / ${titleStr} • Rathinam Operations ERP`;
+    document.title = `Report / ${titleStr} • Rathinam Group`;
   }, [activeTab, dataEntrySubTab, masterDataSubTab]);
 
   // --------------------------------------------------------------------------

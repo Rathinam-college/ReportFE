@@ -1,6 +1,6 @@
-# Rathinam Operations ERP - Frontend (Reoprt-FE)
+# Rathinam Report - Frontend (Reoprt-FE)
 
-Enterprise Operations Reporting & Data Entry Portal for Rathinam Group of Institutions.
+Campus Operations Reporting & Data Entry Portal for Rathinam Group of Institutions.
 
 ## 🚀 Overview
 A high-performance React + Vite frontend application designed for campus operations tracking across Food & Dining, Hostel Occupancy, and Transport Fleet.

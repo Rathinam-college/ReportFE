@@ -12,7 +12,7 @@ export default function Footer() {
       justifyContent: 'space-between',
       alignItems: 'center'
     }}>
-      <span>Rathinam Group of Institutions • Operations ERP</span>
+      <span>Rathinam Group of Institutions</span>
       <span>Modular Campus Management Architecture</span>
     </footer>
   );
