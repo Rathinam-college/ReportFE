@@ -227,61 +227,7 @@ export default function DashboardPage({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
       
-      {/* 1. TOP MODULE FILTER PILLS (FOOD / HOSTEL / TRANSPORT SEPARATE) */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#ffffff',
-        borderRadius: '12px',
-        padding: '12px 20px',
-        border: '1px solid #cbd5e1',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Dashboard View:
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {[
-              { id: 'food', label: '🍲 Food & Dining' },
-              { id: 'hostel', label: '🏢 Hostel Occupancy' },
-              { id: 'transport', label: '🚌 Transport Fleet' }
-            ].map(m => {
-              const isSel = currentModule === m.id;
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => onSelectModule?.(m.id)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '12.5px',
-                    fontWeight: isSel ? '800' : '600',
-                    backgroundColor: isSel ? '#4f46e5' : '#f8fafc',
-                    color: isSel ? '#ffffff' : '#475569',
-                    border: isSel ? '1.5px solid #4f46e5' : '1px solid #cbd5e1',
-                    cursor: 'pointer',
-                    boxShadow: isSel ? '0 2px 6px rgba(79,70,229,0.28)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {m.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{ fontSize: '12px', color: '#64748b' }}>
-          Showing <strong>{currentMeta.badge}</strong> segregated analytics & KPIs
-        </div>
-      </div>
-
-      {/* 2. OPERATIONS DASHBOARD HEADER */}
+      {/* OPERATIONS DASHBOARD HEADER */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
