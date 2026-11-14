@@ -219,6 +219,8 @@ export default function MasterDataPage({
           <MasterMathTools
             onClose={() => setShowMathTool(false)}
             moduleName={moduleName}
+            categoriesList={categoriesList}
+            computedMatrix={computedMatrix}
           />
         )}
 
