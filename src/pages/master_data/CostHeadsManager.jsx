@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, X, FolderPlus, Layers, Filter } from 'lucide-react';
+import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, X, FolderPlus, Layers, Filter, Calculator } from 'lucide-react';
 
 export default function CostHeadsManager({
   costHeadsList,
@@ -23,6 +23,7 @@ export default function CostHeadsManager({
   handleSaveCostHead,
   openAddCategoryModal,
   openManageCategoriesModal,
+  onToggleMathTool,
   moduleName = 'Food & Dining'
 }) {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
@@ -148,6 +149,31 @@ export default function CostHeadsManager({
             <Plus size={16} />
             <span>+ Add Line Item</span>
           </button>
+
+          {onToggleMathTool && (
+            <button
+              type="button"
+              onClick={onToggleMathTool}
+              title="Open interactive calculator & operational math formulas side-by-side"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                backgroundColor: '#f0fdf4',
+                color: '#047857',
+                fontSize: '13px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                border: '1.5px solid #bbf7d0',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Calculator size={15} />
+              <span>🧮 Math Tools</span>
+            </button>
+          )}
         </div>
       </div>
 

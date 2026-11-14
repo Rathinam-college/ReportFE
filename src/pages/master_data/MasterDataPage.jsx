@@ -1,11 +1,12 @@
-import React from 'react';
-import { SlidersHorizontal, Calendar, CheckCircle2, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { SlidersHorizontal, Calendar, CheckCircle2, AlertTriangle, Calculator } from 'lucide-react';
 import CostHeadsManager from './CostHeadsManager';
 import PeriodsManager from './PeriodsManager';
 import EditPeriodModal from './EditPeriodModal';
 import AddMonthModal from '../data_entry/AddMonthModal';
 import AddCategoryModal from './AddCategoryModal';
 import ManageCategoriesModal from './ManageCategoriesModal';
+import MasterMathTools from './MasterMathTools';
 
 export default function MasterDataPage({
   masterFoodView,
@@ -61,15 +62,19 @@ export default function MasterDataPage({
   handleAddNewMonth,
   moduleName = 'Food & Dining'
 }) {
+  const [showMathTool, setShowMathTool] = useState(false);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
-      {/* Master Data Section Switcher: Cost Heads vs Billing Periods */}
+      {/* Master Data Section Switcher: Cost Heads vs Billing Periods vs Math Tools */}
       <div style={{
         display: 'flex',
+        alignItems: 'center',
         gap: '8px',
         borderBottom: '1px solid #eef2f6',
-        paddingBottom: '14px'
+        paddingBottom: '14px',
+        flexWrap: 'wrap'
       }}>
         <button
           type="button"
@@ -114,6 +119,32 @@ export default function MasterDataPage({
           <Calendar size={14} />
           <span>Monthly Billing Cycles ({computedMatrix?.periods?.length || 0} Months)</span>
         </button>
+
+        {/* Math Tools Toggle Button in Master Data */}
+        <button
+          type="button"
+          onClick={() => setShowMathTool(prev => !prev)}
+          title="Open interactive calculator and operational math tools"
+          style={{
+            marginLeft: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+            padding: '7px 18px',
+            borderRadius: '9999px',
+            fontSize: '12.5px',
+            fontWeight: '700',
+            backgroundColor: showMathTool ? '#047857' : '#f0fdf4',
+            color: showMathTool ? '#ffffff' : '#047857',
+            border: showMathTool ? '1px solid #047857' : '1.5px solid #bbf7d0',
+            cursor: 'pointer',
+            boxShadow: showMathTool ? '0 2px 8px rgba(4,120,87,0.3)' : '0 1px 3px rgba(0,0,0,0.04)',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <Calculator size={15} />
+          <span>{showMathTool ? 'Hide Math Tools' : '🧮 Math Tools & Calculator'}</span>
+        </button>
       </div>
 
       {masterMessage && (
@@ -134,43 +165,63 @@ export default function MasterDataPage({
         </div>
       )}
 
-      {/* SUBVIEW 1: CATEGORIES & COST HEADS */}
-      {masterFoodView === 'cost_heads' && (
-        <CostHeadsManager
-          costHeadsList={costHeadsList}
-          categoriesList={categoriesList}
-          draggedIdx={draggedIdx}
-          dragOverIdx={dragOverIdx}
-          handleDragStart={handleDragStart}
-          handleDragOver={handleDragOver}
-          handleDragEnd={handleDragEnd}
-          handleDrop={handleDrop}
-          handleMoveStep={handleMoveStep}
-          openAddCostHeadModal={openAddCostHeadModal}
-          openEditCostHeadModal={openEditCostHeadModal}
-          handleDeleteCostHead={handleDeleteCostHead}
-          handleBatchDeleteCostHeads={handleBatchDeleteCostHeads}
-          showCostHeadModal={showCostHeadModal}
-          setShowCostHeadModal={setShowCostHeadModal}
-          editingCostHead={editingCostHead}
-          costHeadForm={costHeadForm}
-          setCostHeadForm={setCostHeadForm}
-          handleSaveCostHead={handleSaveCostHead}
-          openAddCategoryModal={openAddCategoryModal}
-          openManageCategoriesModal={openManageCategoriesModal}
-          moduleName={moduleName}
-        />
-      )}
+      {/* MAIN CONTAINER: SIDE-BY-SIDE WITH MATH TOOLS */}
+      <div style={{
+        display: 'flex',
+        gap: '20px',
+        alignItems: 'flex-start',
+        width: '100%'
+      }}>
+        
+        {/* LEFT / PRIMARY: MASTER DATA MANAGER */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {masterFoodView === 'cost_heads' && (
+            <CostHeadsManager
+              costHeadsList={costHeadsList}
+              categoriesList={categoriesList}
+              draggedIdx={draggedIdx}
+              dragOverIdx={dragOverIdx}
+              handleDragStart={handleDragStart}
+              handleDragOver={handleDragOver}
+              handleDragEnd={handleDragEnd}
+              handleDrop={handleDrop}
+              handleMoveStep={handleMoveStep}
+              openAddCostHeadModal={openAddCostHeadModal}
+              openEditCostHeadModal={openEditCostHeadModal}
+              handleDeleteCostHead={handleDeleteCostHead}
+              handleBatchDeleteCostHeads={handleBatchDeleteCostHeads}
+              showCostHeadModal={showCostHeadModal}
+              setShowCostHeadModal={setShowCostHeadModal}
+              editingCostHead={editingCostHead}
+              costHeadForm={costHeadForm}
+              setCostHeadForm={setCostHeadForm}
+              handleSaveCostHead={handleSaveCostHead}
+              openAddCategoryModal={openAddCategoryModal}
+              openManageCategoriesModal={openManageCategoriesModal}
+              onToggleMathTool={() => setShowMathTool(prev => !prev)}
+              moduleName={moduleName}
+            />
+          )}
 
-      {/* SUBVIEW 2: MONTHLY BILLING CYCLES */}
-      {masterFoodView === 'periods' && (
-        <PeriodsManager
-          computedMatrix={computedMatrix}
-          setShowAddMonthModal={setShowAddMonthModal}
-          openEditPeriodModal={openEditPeriodModal}
-          handleDeletePeriod={handleDeletePeriod}
-        />
-      )}
+          {masterFoodView === 'periods' && (
+            <PeriodsManager
+              computedMatrix={computedMatrix}
+              setShowAddMonthModal={setShowAddMonthModal}
+              openEditPeriodModal={openEditPeriodModal}
+              handleDeletePeriod={handleDeletePeriod}
+            />
+          )}
+        </div>
+
+        {/* RIGHT / SECONDARY: INTERACTIVE MATH TOOLS (DOCKED SIMULTANEOUSLY) */}
+        {showMathTool && (
+          <MasterMathTools
+            onClose={() => setShowMathTool(false)}
+            moduleName={moduleName}
+          />
+        )}
+
+      </div>
 
       {/* MODAL: ADD STANDALONE CATEGORY */}
       <AddCategoryModal
