@@ -99,6 +99,8 @@ export default function App() {
     total_persons: {},
     production: {}
   });
+  const [hostelCensusDraft, setHostelCensusDraft] = useState({});
+  const [transportCensusDraft, setTransportCensusDraft] = useState({});
   const [isDirty, setIsDirty] = useState(false);
   const [savingBatch, setSavingBatch] = useState(false);
   const [entryMessage, setEntryMessage] = useState(null);
@@ -354,6 +356,12 @@ export default function App() {
         if (mData.census) {
           setCensusDraft(mData.census);
         }
+        if (mData.hostel_census) {
+          setHostelCensusDraft(mData.hostel_census);
+        }
+        if (mData.transport_census) {
+          setTransportCensusDraft(mData.transport_census);
+        }
         setIsDirty(false);
 
         if (mData.periods && mData.periods.length > 0) {
@@ -511,6 +519,30 @@ export default function App() {
     setIsDirty(true);
   };
 
+  const handleHostelCensusChange = (field, value) => {
+    const pIdStr = String(editingPeriodId);
+    setHostelCensusDraft(prev => ({
+      ...prev,
+      [pIdStr]: {
+        ...(prev[pIdStr] || {}),
+        [field]: value
+      }
+    }));
+    setIsDirty(true);
+  };
+
+  const handleTransportCensusChange = (field, value) => {
+    const pIdStr = String(editingPeriodId);
+    setTransportCensusDraft(prev => ({
+      ...prev,
+      [pIdStr]: {
+        ...(prev[pIdStr] || {}),
+        [field]: value
+      }
+    }));
+    setIsDirty(true);
+  };
+
   const handleSaveActiveMonth = async () => {
     if (!computedMatrix) return;
     const activePeriod = computedMatrix.periods.find(p => p.id === editingPeriodId);
@@ -544,19 +576,24 @@ export default function App() {
       const totCount = sCount + stCount + oCount;
       const prodCount = parseInt(censusDraft?.production?.[pIdStr], 10) || 0;
 
+      const payload = {
+        period_id: editingPeriodId,
+        entries,
+        active_students: sCount,
+        active_staff: stCount,
+        others_count: oCount,
+        total_persons: totCount,
+        production_meals: prodCount,
+        operating_days: activePeriod.operating_days || 30,
+        module: dataEntrySubTab,
+        hostel_census: dataEntrySubTab === 'hostel' ? (hostelCensusDraft[pIdStr] || {}) : null,
+        transport_census: dataEntrySubTab === 'transport' ? (transportCensusDraft[pIdStr] || {}) : null
+      };
+
       const res = await fetch('/api/batch-entry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          period_id: editingPeriodId,
-          entries,
-          active_students: sCount,
-          active_staff: stCount,
-          others_count: oCount,
-          total_persons: totCount,
-          production_meals: prodCount,
-          operating_days: activePeriod.operating_days || 30
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
@@ -564,7 +601,7 @@ export default function App() {
         throw new Error(err.detail || 'Failed to save matrix entries');
       }
 
-      setEntryMessage({ type: 'success', text: `Saved all line items and census headcounts for ${activePeriod.period_label} successfully!` });
+      setEntryMessage({ type: 'success', text: `Saved all line items and operational parameters for ${activePeriod.period_label} successfully!` });
       setIsDirty(false);
       fetchData();
     } catch (err) {
@@ -583,7 +620,7 @@ export default function App() {
     }
     const prevPeriod = computedMatrix.periods[currentIdx - 1];
 
-    if (!window.confirm(`Clone all expenses and headcounts from ${prevPeriod.period_label} into ${computedMatrix.periods[currentIdx].period_label}?`)) {
+    if (!window.confirm(`Clone all expenses and parameters from ${prevPeriod.period_label} into ${computedMatrix.periods[currentIdx].period_label}?`)) {
       return;
     }
 
@@ -619,6 +656,26 @@ export default function App() {
         production: { ...(prev?.production || {}), [currStr]: prevProd }
       };
     });
+
+    if (dataEntrySubTab === 'hostel') {
+      setHostelCensusDraft(prev => {
+        const prevStr = String(prevPeriod.id);
+        const currStr = String(editingPeriodId);
+        return {
+          ...prev,
+          [currStr]: { ...(prev[prevStr] || {}) }
+        };
+      });
+    } else if (dataEntrySubTab === 'transport') {
+      setTransportCensusDraft(prev => {
+        const prevStr = String(prevPeriod.id);
+        const currStr = String(editingPeriodId);
+        return {
+          ...prev,
+          [currStr]: { ...(prev[prevStr] || {}) }
+        };
+      });
+    }
 
     setIsDirty(true);
     setEntryMessage({ type: 'success', text: `Values cloned from ${prevPeriod.period_label}. Review and click Save.` });
@@ -892,10 +949,10 @@ export default function App() {
     await fetchData(activeMod);
   };
 
-  const openAddCostHeadModal = () => {
+  const openAddCostHeadModal = (defaultCategoryId = null) => {
     setEditingCostHead(null);
     setCostHeadForm({
-      category_id: categoriesList[0]?.id || 1,
+      category_id: defaultCategoryId || categoriesList[0]?.id || 1,
       name: '',
       is_new_category: false,
       new_category_name: ''
@@ -1096,11 +1153,31 @@ export default function App() {
         val = cat.subtotal.amounts[piePeriod] || 0;
       }
       totalSum += val;
+
+      const catRemarks = [];
+      cat.items.forEach(it => {
+        if (piePeriod === 'all') {
+          if (it.remarks) {
+            Object.entries(it.remarks).forEach(([pid, rText]) => {
+              if (rText && !rText.startsWith('Entry via Operational Matrix') && !rText.startsWith('Cloned from')) {
+                catRemarks.push(`${it.description}: ${rText}`);
+              }
+            });
+          }
+        } else {
+          const rText = remarksDraft[it.cost_head_id]?.[piePeriod] ?? it.remarks?.[piePeriod] ?? it.remarks?.[String(piePeriod)];
+          if (rText && !rText.startsWith('Entry via Operational Matrix') && !rText.startsWith('Cloned from')) {
+            catRemarks.push(`${it.description}: ${rText}`);
+          }
+        }
+      });
+
       return {
         id: cat.category_id,
         name: cat.category_name,
         value: val,
-        color: DASH_COLORS[idx % DASH_COLORS.length]
+        color: DASH_COLORS[idx % DASH_COLORS.length],
+        remarks: catRemarks
       };
     });
 
@@ -1150,13 +1227,17 @@ export default function App() {
         const itemTarget = it.amounts[pTarget.id] || 0;
         const itemDiff = itemTarget - itemBase;
         const itemPct = itemBase > 0 ? (itemDiff / itemBase) * 100 : 0;
+        const userRemark = remarksDraft[it.cost_head_id]?.[pTarget.id] ?? 
+                           it.remarks?.[pTarget.id] ?? 
+                           it.remarks?.[String(pTarget.id)] ?? '';
         return {
           cost_head_id: it.cost_head_id,
           description: it.description,
           amtBase: itemBase,
           amtTarget: itemTarget,
           diff: itemDiff,
-          pct: itemPct
+          pct: itemPct,
+          remark: (userRemark && !userRemark.startsWith('Entry via Operational Matrix') && !userRemark.startsWith('Cloned from')) ? userRemark : ''
         };
       });
 
@@ -1257,6 +1338,14 @@ export default function App() {
             remarksDraft={remarksDraft}
             censusDraft={censusDraft}
             handleCensusChange={handleCensusChange}
+            hostelCensusDraft={hostelCensusDraft}
+            transportCensusDraft={transportCensusDraft}
+            handleHostelCensusChange={handleHostelCensusChange}
+            handleTransportCensusChange={handleTransportCensusChange}
+            openAddCostHeadModal={openAddCostHeadModal}
+            handleDeleteCostHead={handleDeleteCostHead}
+            openAddCategoryModal={openAddCategoryModal}
+            categoriesList={categoriesList}
             isDirty={isDirty}
             handleCellChange={handleCellChange}
             handleRemarkChange={handleRemarkChange}

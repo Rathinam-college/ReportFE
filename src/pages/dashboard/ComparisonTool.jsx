@@ -252,13 +252,14 @@ export default function ComparisonTool({
                 <th style={{ padding: '12px 16px', textAlign: 'right' }}>Variance (Delta ₹)</th>
                 <th style={{ padding: '12px 16px', textAlign: 'right' }}>Growth %</th>
                 <th style={{ padding: '12px 16px', textAlign: 'center' }}>Trend Status</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left' }}>Operational Remark / Note</th>
               </tr>
             </thead>
             <tbody>
               {comparisonData.categories.map(cat => (
                 <React.Fragment key={cat.category_id}>
                   <tr style={{ backgroundColor: '#f1f5f9', fontWeight: '700', color: '#1e293b' }}>
-                    <td colSpan={7} style={{ padding: '8px 18px', fontSize: '12px', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                    <td colSpan={8} style={{ padding: '8px 18px', fontSize: '12px', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
                       {cat.category_name} (Category Delta: {cat.diff >= 0 ? '+' : ''}{formatINR(cat.diff)})
                     </td>
                   </tr>
@@ -289,6 +290,15 @@ export default function ComparisonTool({
                           }}>
                             {isSurge ? '▲ Surge > 20%' : (isReduction ? '▼ Savings' : '● Stable')}
                           </span>
+                        </td>
+                        <td style={{ padding: '10px 16px', textAlign: 'left', fontSize: '11.5px', color: item.remark ? '#b45309' : '#94a3b8' }}>
+                          {item.remark ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#fffbeb', padding: '2px 8px', borderRadius: '4px', border: '1px solid #fef3c7' }}>
+                              💬 {item.remark}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                       </tr>
                     );

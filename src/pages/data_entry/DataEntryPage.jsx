@@ -15,6 +15,14 @@ export default function DataEntryPage({
   remarksDraft = {},
   censusDraft = {},
   handleCensusChange,
+  hostelCensusDraft = {},
+  transportCensusDraft = {},
+  handleHostelCensusChange,
+  handleTransportCensusChange,
+  openAddCostHeadModal,
+  handleDeleteCostHead,
+  openAddCategoryModal,
+  categoriesList = [],
   isDirty,
   handleCellChange,
   handleRemarkChange,
@@ -32,6 +40,9 @@ export default function DataEntryPage({
   handleAddNewMonth
 }) {
   if (!computedMatrix) return null;
+
+  const moduleLabel = selectedModule === 'food' ? 'Food & Dining Operations' : selectedModule === 'hostel' ? 'Hostel Resident Operations' : 'Transport & Fleet Operations';
+  const matrixTitle = selectedModule === 'food' ? 'Food & Dining Expense Matrix' : selectedModule === 'hostel' ? 'Hostel Operations & Expense Matrix' : 'Transport Fleet Operations & Expense Matrix';
 
   const periods = computedMatrix.periods || [];
   const currentIdx = periods.findIndex(p => p.id === editingPeriodId);
@@ -73,12 +84,12 @@ export default function DataEntryPage({
         <div>
           {/* Breadcrumbs */}
           <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-            Report / Data Entry / Food & Dining Operations
+            Report / Data Entry / {moduleLabel}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-              Food & Dining Expense Matrix
+              {matrixTitle}
             </h1>
             <span style={{
               fontSize: '11px',
@@ -350,6 +361,14 @@ export default function DataEntryPage({
             remarksDraft={remarksDraft}
             censusDraft={censusDraft}
             handleCensusChange={handleCensusChange}
+            hostelCensusDraft={hostelCensusDraft}
+            transportCensusDraft={transportCensusDraft}
+            handleHostelCensusChange={handleHostelCensusChange}
+            handleTransportCensusChange={handleTransportCensusChange}
+            openAddCostHeadModal={openAddCostHeadModal}
+            handleDeleteCostHead={handleDeleteCostHead}
+            openAddCategoryModal={openAddCategoryModal}
+            categoriesList={categoriesList}
             handleCellChange={handleCellChange}
             handleRemarkChange={handleRemarkChange}
           />

@@ -1,6 +1,9 @@
 import React from 'react';
 import { formatINR } from '../../utils/formatters';
-import { MessageSquare, Users, Utensils, Award } from 'lucide-react';
+import { 
+  MessageSquare, Users, Utensils, Award, Trash2, Plus, 
+  Home, Bus, Fuel, Droplet, Zap, Wrench, ShieldCheck, CheckCircle2, BedDouble, AlertCircle 
+} from 'lucide-react';
 
 export default function MatrixTable({
   selectedModule = 'food',
@@ -11,9 +14,16 @@ export default function MatrixTable({
   matrixDraft,
   remarksDraft = {},
   censusDraft = {},
+  hostelCensusDraft = {},
+  transportCensusDraft = {},
   handleCellChange,
   handleRemarkChange,
-  handleCensusChange
+  handleCensusChange,
+  handleHostelCensusChange,
+  handleTransportCensusChange,
+  openAddCostHeadModal,
+  handleDeleteCostHead,
+  openAddCategoryModal
 }) {
   if (!computedMatrix || !computedMatrix.categories) return null;
 
@@ -132,6 +142,29 @@ export default function MatrixTable({
                 <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                   {cat.category_name}
                 </h3>
+                {openAddCostHeadModal && (
+                  <button
+                    type="button"
+                    onClick={() => openAddCostHeadModal(cat.category_id)}
+                    title={`Add new line item into ${cat.category_name}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '2px 8px',
+                      borderRadius: '5px',
+                      backgroundColor: '#eff6ff',
+                      color: '#2563eb',
+                      border: '1px solid #bfdbfe',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Plus size={11} />
+                    <span>Add Item</span>
+                  </button>
+                )}
               </div>
 
               <div style={{
@@ -213,9 +246,34 @@ export default function MatrixTable({
                           transition: 'background-color 0.15s ease'
                         }}
                       >
-                        {/* Cost Head Name */}
+                        {/* Cost Head Name & Action */}
                         <td style={{ padding: '12px 20px', fontWeight: '600', color: '#1e293b' }}>
-                          {row.description}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                            <span>{row.description}</span>
+                            {handleDeleteCostHead && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCostHead({ id: row.cost_head_id, name: row.description })}
+                                title={`Delete line item "${row.description}"`}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  padding: '3px',
+                                  borderRadius: '4px',
+                                  backgroundColor: 'transparent',
+                                  border: 'none',
+                                  color: '#cbd5e1',
+                                  cursor: 'pointer',
+                                  transition: 'color 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = '#cbd5e1'}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
                         </td>
 
                         {/* Previous Month Value */}
@@ -320,6 +378,43 @@ export default function MatrixTable({
           </div>
         );
       })}
+
+      {/* ADD NEW CATEGORY BUTTON */}
+      {openAddCategoryModal && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '-4px', marginBottom: '8px' }}>
+          <button
+            type="button"
+            onClick={openAddCategoryModal}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 16px',
+              borderRadius: '8px',
+              backgroundColor: '#ffffff',
+              border: '1.5px dashed #cbd5e1',
+              color: '#475569',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#4f46e5';
+              e.currentTarget.style.color = '#4f46e5';
+              e.currentTarget.style.backgroundColor = '#f8faff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#cbd5e1';
+              e.currentTarget.style.color = '#475569';
+              e.currentTarget.style.backgroundColor = '#ffffff';
+            }}
+          >
+            <Plus size={14} />
+            <span>Add New Category</span>
+          </button>
+        </div>
+      )}
 
       {/* 2. DINING CENSUS & MEAL PRODUCTION HEADCOUNT CARD (DOWN IN THE LIST) */}
       {(!selectedModule || selectedModule === 'food') && (
@@ -677,6 +772,887 @@ export default function MatrixTable({
           )}
         </div>
       )}
+
+      {/* 3. HOSTEL OPERATIONAL CENSUS & RESIDENT PARAMETERS CARD (from hostel.xlsx) */}
+      {selectedModule === 'hostel' && (() => {
+        const currH = hostelCensusDraft?.[currStr] || {};
+        const prevH = prevStr ? (hostelCensusDraft?.[prevStr] || {}) : {};
+
+        const hBedBoys = currH.bed_capacity_boys !== undefined ? currH.bed_capacity_boys : 2223;
+        const hBedGirls = currH.bed_capacity_girls !== undefined ? currH.bed_capacity_girls : 896;
+        const hBedTotal = (parseInt(hBedBoys, 10) || 0) + (parseInt(hBedGirls, 10) || 0);
+
+        const hStudBoys = currH.students_boys !== undefined ? currH.students_boys : 2075;
+        const hStudGirls = currH.students_girls !== undefined ? currH.students_girls : 768;
+        const hStudTotal = (parseInt(hStudBoys, 10) || 0) + (parseInt(hStudGirls, 10) || 0);
+
+        const hStaffBoys = currH.staff_boys !== undefined ? currH.staff_boys : 72;
+        const hStaffGirls = currH.staff_girls !== undefined ? currH.staff_girls : 59;
+        const hStaffTotal = (parseInt(hStaffBoys, 10) || 0) + (parseInt(hStaffGirls, 10) || 0);
+
+        const hOccupied = hStudTotal + hStaffTotal;
+        const hVacant = Math.max(0, hBedTotal - hOccupied);
+        const hVacantCollege = currH.vacant_college !== undefined ? currH.vacant_college : 104;
+        const hOccupiedPct = hBedTotal > 0 ? ((hOccupied / hBedTotal) * 100).toFixed(2) : '0.00';
+        const hVacantPct = hBedTotal > 0 ? ((hVacant / hBedTotal) * 100).toFixed(2) : '0.00';
+
+        const hTicketsRec = currH.tickets_received !== undefined ? currH.tickets_received : 176;
+        const hTicketsClose = currH.tickets_closed !== undefined ? currH.tickets_closed : 176;
+        const hTicketsOpen = Math.max(0, (parseInt(hTicketsRec, 10) || 0) - (parseInt(hTicketsClose, 10) || 0));
+        const hTatHours = currH.tat_hours !== undefined ? currH.tat_hours : 62.29;
+
+        const hQualityRec = currH.quality_issues_received !== undefined ? currH.quality_issues_received : 5;
+        const hQualityClose = currH.quality_issues_closed !== undefined ? currH.quality_issues_closed : 3;
+        const hQualityOpen = Math.max(0, (parseInt(hQualityRec, 10) || 0) - (parseInt(hQualityClose, 10) || 0));
+        const hIncidents = currH.incidents_count !== undefined ? currH.incidents_count : 0;
+
+        const hPowerUnits = currH.power_units !== undefined ? currH.power_units : 108201;
+        const hPowerCost = currH.power_cost !== undefined ? currH.power_cost : 1325151;
+
+        const hWaterPurchase = currH.water_purchase_cost !== undefined ? currH.water_purchase_cost : 248765;
+        const hNormalWaterLtr = currH.normal_water_litres !== undefined ? currH.normal_water_litres : 8202000;
+        const hNormalWaterCost = currH.normal_water_cost !== undefined ? currH.normal_water_cost : 820200;
+        const hDrinkWaterLtr = currH.drinking_water_litres !== undefined ? currH.drinking_water_litres : 92800;
+        const hDrinkWaterCost = currH.drinking_water_cost !== undefined ? currH.drinking_water_cost : 23200;
+
+        const hApprovedBudget = currH.approved_budget !== undefined ? currH.approved_budget : 131788118;
+        const hSpentBudget = currH.cumulative_budget_spent !== undefined ? currH.cumulative_budget_spent : 34527814;
+        const hBudgetBalance = (parseFloat(hApprovedBudget) || 0) - (parseFloat(hSpentBudget) || 0);
+
+        // Previous values for MoM
+        const pOccupied = prevH.total_occupied !== undefined ? parseInt(prevH.total_occupied, 10) : null;
+        const pPowerUnits = prevH.power_units !== undefined ? parseInt(prevH.power_units, 10) : null;
+        const pNormalWaterLtr = prevH.normal_water_litres !== undefined ? parseInt(prevH.normal_water_litres, 10) : null;
+        const pDrinkWaterLtr = prevH.drinking_water_litres !== undefined ? parseInt(prevH.drinking_water_litres, 10) : null;
+
+        return (
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1.5px solid #a7f3d0',
+            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.05)',
+            overflow: 'hidden',
+            marginTop: '6px'
+          }}>
+            {/* HEADER */}
+            <div style={{
+              padding: '14px 20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#f0fdf4',
+              borderBottom: '1px solid #bbf7d0',
+              flexWrap: 'wrap',
+              gap: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#059669' }} />
+                <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#064e3b', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Home size={16} color="#059669" />
+                  <span>Hostel Resident Census & Operational Parameters</span>
+                </h3>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>
+                  Operational Master
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  padding: '3px 12px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#dcfce7',
+                  color: '#065f46'
+                }}>
+                  Occupancy: <strong style={{ color: '#059669' }}>{hOccupied.toLocaleString()} / {hBedTotal.toLocaleString()} ({hOccupiedPct}%)</strong>
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  padding: '3px 12px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#ecfdf5',
+                  color: '#047857',
+                  border: '1px solid #a7f3d0'
+                }}>
+                  Vacant: <strong style={{ color: '#047857' }}>{hVacant.toLocaleString()} ({hVacantPct}%)</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* TABLE */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '11.5px', fontWeight: '600' }}>
+                    <th style={{ padding: '10px 20px', textAlign: 'left', width: '28%' }}>Hostel Parameter</th>
+                    {prevPeriod && (
+                      <th style={{ padding: '10px 14px', textAlign: 'right', width: '15%' }}>
+                        {prevPeriod.period_label} (Baseline)
+                      </th>
+                    )}
+                    <th style={{ padding: '10px 14px', textAlign: 'center', width: '18%', color: '#059669', fontWeight: '700' }}>
+                      {activePeriodObj?.period_label} • Edit Value
+                    </th>
+                    <th style={{ padding: '10px 12px', textAlign: 'center', width: '16%' }}>
+                      MoM Delta
+                    </th>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', width: '23%' }}>
+                      Parameter Specification
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Row: Bed Capacity */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Bed Capacity (Boys / Girls)
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {(parseInt(prevH.bed_capacity_total, 10) || 3119).toLocaleString()}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="Boys"
+                          value={hBedBoys}
+                          onChange={(e) => handleHostelCensusChange?.('bed_capacity_boys', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Boys Bed Capacity"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #10b981', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Girls"
+                          value={hBedGirls}
+                          onChange={(e) => handleHostelCensusChange?.('bed_capacity_girls', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Girls Bed Capacity"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #10b981', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857' }}>Total: {hBedTotal.toLocaleString()}</span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Boys: {hBedBoys} | Girls: {hBedGirls}
+                    </td>
+                  </tr>
+
+                  {/* Row: Students Count */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Students Count (Boys / Girls)
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {(parseInt(prevH.students_total, 10) || 2843).toLocaleString()}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="Boys"
+                          value={hStudBoys}
+                          onChange={(e) => handleHostelCensusChange?.('students_boys', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Boys Enrolled Students"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #10b981', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Girls"
+                          value={hStudGirls}
+                          onChange={(e) => handleHostelCensusChange?.('students_girls', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Girls Enrolled Students"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #10b981', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857' }}>Total: {hStudTotal.toLocaleString()}</span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Enrolled hostel students
+                    </td>
+                  </tr>
+
+                  {/* Row: Staff Count */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Staff Count (Boys / Girls)
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {(parseInt(prevH.staff_total, 10) || 131).toLocaleString()}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="Boys"
+                          value={hStaffBoys}
+                          onChange={(e) => handleHostelCensusChange?.('staff_boys', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Boys Wardens/Staff"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #10b981', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Girls"
+                          value={hStaffGirls}
+                          onChange={(e) => handleHostelCensusChange?.('staff_girls', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Girls Wardens/Staff"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #10b981', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857' }}>Total: {hStaffTotal.toLocaleString()}</span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Wardens, resident tutors & staff
+                    </td>
+                  </tr>
+
+                  {/* Highlight Row: Total Occupied */}
+                  <tr style={{ backgroundColor: '#ecfdf5', borderBottom: '1.5px solid #a7f3d0' }}>
+                    <td style={{ padding: '12px 20px', fontWeight: '800', color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Award size={15} color="#059669" />
+                      <span>Total Occupied (Students + Staff)</span>
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '12px 14px', textAlign: 'right', color: '#065f46', fontWeight: '800' }}>
+                        {pOccupied !== null ? pOccupied.toLocaleString() : '—'}
+                      </td>
+                    )}
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        maxWidth: '140px',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: '#d1fae5',
+                        border: '1.5px solid #6ee7b7',
+                        color: '#065f46',
+                        fontWeight: '800',
+                        fontSize: '13.5px'
+                      }}>
+                        {hOccupied.toLocaleString()} Persons
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 12px', textAlign: 'center' }}>
+                      {renderDiffBadge(hOccupied, pOccupied)}
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', fontWeight: '700', color: '#047857' }}>
+                      Occupancy: {hOccupiedPct}% (Vacant: {hVacant})
+                    </td>
+                  </tr>
+
+                  {/* Row: Maintenance Tickets */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Maintenance Tickets (Rec / Closed)
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {(parseInt(prevH.tickets_received, 10) || 176).toLocaleString()}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="Rec"
+                          value={hTicketsRec}
+                          onChange={(e) => handleHostelCensusChange?.('tickets_received', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Tickets Received"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #10b981', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Closed"
+                          value={hTicketsClose}
+                          onChange={(e) => handleHostelCensusChange?.('tickets_closed', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Tickets Closed"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #10b981', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: '700', color: hTicketsOpen > 0 ? '#b91c1c' : '#047857' }}>
+                        Open: {hTicketsOpen} | TAT: {hTatHours}h
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Avg Turnaround Time: {hTatHours} hrs
+                    </td>
+                  </tr>
+
+                  {/* Row: Power Consumption */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Zap size={14} color="#f59e0b" />
+                      <span>Power Consumption (EB + DG Units / Cost)</span>
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {pPowerUnits !== null ? `${pPowerUnits.toLocaleString()} units` : '—'}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="Units"
+                          value={hPowerUnits}
+                          onChange={(e) => handleHostelCensusChange?.('power_units', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Power Units (EB + DG)"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #f59e0b', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Cost"
+                          value={hPowerCost}
+                          onChange={(e) => handleHostelCensusChange?.('power_cost', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Power Cost INR"
+                          style={{ width: '75px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #f59e0b', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      {renderDiffBadge(hPowerUnits, pPowerUnits)}
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }} className="currency-font">
+                      Cost: {formatINR(hPowerCost)}
+                    </td>
+                  </tr>
+
+                  {/* Row: Normal & Drinking Water Consumption */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Droplet size={14} color="#0284c7" />
+                      <span>Water Consumption (Normal / RO Drinking)</span>
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {pNormalWaterLtr !== null ? `${(pNormalWaterLtr / 1000000).toFixed(2)}M Ltrs` : '—'}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="Normal Ltr"
+                          value={hNormalWaterLtr}
+                          onChange={(e) => handleHostelCensusChange?.('normal_water_litres', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Normal Water Litres"
+                          style={{ width: '75px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #0284c7', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="RO Ltr"
+                          value={hDrinkWaterLtr}
+                          onChange={(e) => handleHostelCensusChange?.('drinking_water_litres', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Drinking Water Litres"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #0284c7', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>
+                        Normal: {(hNormalWaterLtr / 1000).toFixed(0)}kL | RO: {(hDrinkWaterLtr / 1000).toFixed(1)}kL
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Normal ₹{formatINR(hNormalWaterCost)} | RO ₹{formatINR(hDrinkWaterCost)}
+                    </td>
+                  </tr>
+
+                  {/* Row: Annual Approved Budget */}
+                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Hostel Approved Budget & Balance
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }} className="currency-font">
+                        {formatINR(hApprovedBudget)}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <input
+                        type="number"
+                        placeholder="Approved Budget"
+                        value={hApprovedBudget}
+                        onChange={(e) => handleHostelCensusChange?.('approved_budget', e.target.value)}
+                        disabled={activePeriodObj?.is_closed}
+                        style={{ width: '130px', padding: '5px 8px', borderRadius: '5px', border: '1.5px solid #64748b', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                      />
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857' }}>
+                        Bal: {formatINR(hBudgetBalance)}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Cumulative Spent: {formatINR(hSpentBudget)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* COMPARATIVE UNIT METRICS STRIP */}
+            {hOccupied > 0 && (
+              <div style={{
+                padding: '12px 20px',
+                backgroundColor: '#f8fafc',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                fontSize: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569' }}>
+                  <span style={{ fontWeight: '700', color: '#1e293b' }}>Hostel Unit Efficiency Metrics:</span>
+                  <span style={{ color: '#94a3b8' }}>({activePeriodObj?.period_label})</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Power / Occupant:</span>
+                    <strong style={{ color: '#0f172a' }}>
+                      {(hPowerUnits / hOccupied).toFixed(1)} Units ({formatINR(Math.round(hPowerCost / hOccupied))})
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Normal Water / Student / Day:</span>
+                    <strong style={{ color: '#0284c7' }}>
+                      {(hNormalWaterLtr / (hStudTotal || 1) / 30).toFixed(1)} Ltrs
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Drinking RO / Student / Day:</span>
+                    <strong style={{ color: '#0284c7' }}>
+                      {(hDrinkWaterLtr / (hStudTotal || 1) / 30).toFixed(2)} Ltrs
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Power Cost / Sq.Ft:</span>
+                    <strong style={{ color: '#059669' }}>
+                      ₹{(hPowerCost / 231701).toFixed(2)} / sq.ft
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 4. TRANSPORT FLEET OPERATIONS & FLEET METRICS CARD (from transport.xlsx) */}
+      {selectedModule === 'transport' && (() => {
+        const currT = transportCensusDraft?.[currStr] || {};
+        const prevT = prevStr ? (transportCensusDraft?.[prevStr] || {}) : {};
+
+        const tVehicles = currT.vehicles_count !== undefined ? currT.vehicles_count : '18+1';
+        const tPassengers = currT.passengers_count !== undefined ? currT.passengers_count : 447;
+        const tStudents = currT.students_count !== undefined ? currT.students_count : 412;
+        const tStaff = currT.staff_count !== undefined ? currT.staff_count : 35;
+
+        const tApprKms = currT.approved_kms !== undefined ? currT.approved_kms : 26691;
+        const tActKms = currT.actual_kms !== undefined ? currT.actual_kms : 25777;
+        const tAddKms = currT.additional_kms !== undefined ? currT.additional_kms : 2481;
+
+        const tDieselLtr = currT.diesel_litres !== undefined ? currT.diesel_litres : 5184.84;
+        const tFuelCost = currT.fuel_expenses !== undefined ? currT.fuel_expenses : 487375;
+
+        const tTicketsRaised = currT.service_tickets_raised !== undefined ? currT.service_tickets_raised : 38;
+        const tTicketsClosed = currT.service_tickets_closed !== undefined ? currT.service_tickets_closed : 38;
+        const tTicketsOpen = Math.max(0, (parseInt(tTicketsRaised, 10) || 0) - (parseInt(tTicketsClosed, 10) || 0));
+
+        const tCompliance = currT.statutory_compliance !== undefined ? currT.statutory_compliance : 1;
+        const tIncidents = currT.incidents_count !== undefined ? currT.incidents_count : 1;
+
+        const tApprovedBudget = currT.approved_budget !== undefined ? currT.approved_budget : 13730137.73;
+        const tSpentBudget = currT.cumulative_budget_spent !== undefined ? currT.cumulative_budget_spent : 0;
+        const tBudgetBalance = (parseFloat(tApprovedBudget) || 0) - (parseFloat(tSpentBudget) || 0);
+
+        // Previous values for MoM
+        const pPassengers = prevT.passengers_count !== undefined ? parseInt(prevT.passengers_count, 10) : null;
+        const pActKms = prevT.actual_kms !== undefined ? parseFloat(prevT.actual_kms) : null;
+        const pDieselLtr = prevT.diesel_litres !== undefined ? parseFloat(prevT.diesel_litres) : null;
+
+        return (
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1.5px solid #fed7aa',
+            boxShadow: '0 2px 6px rgba(249, 115, 22, 0.05)',
+            overflow: 'hidden',
+            marginTop: '6px'
+          }}>
+            {/* HEADER */}
+            <div style={{
+              padding: '14px 20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#fff7ed',
+              borderBottom: '1px solid #ffedd5',
+              flexWrap: 'wrap',
+              gap: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#ea580c' }} />
+                <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#7c2d12', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Bus size={16} color="#ea580c" />
+                  <span>Transport Fleet Operations & Trip Metrics</span>
+                </h3>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#c2410c', backgroundColor: '#ffedd5', padding: '2px 8px', borderRadius: '4px' }}>
+                  Fleet Master
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  padding: '3px 12px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#ffedd5',
+                  color: '#9a3412'
+                }}>
+                  Fleet Size: <strong style={{ color: '#ea580c' }}>{tVehicles} Vehicles</strong>
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  padding: '3px 12px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #fde68a'
+                }}>
+                  Commuters: <strong style={{ color: '#b45309' }}>{tPassengers.toLocaleString()} Persons</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* TABLE */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '11.5px', fontWeight: '600' }}>
+                    <th style={{ padding: '10px 20px', textAlign: 'left', width: '28%' }}>Transport Fleet Parameter</th>
+                    {prevPeriod && (
+                      <th style={{ padding: '10px 14px', textAlign: 'right', width: '15%' }}>
+                        {prevPeriod.period_label} (Baseline)
+                      </th>
+                    )}
+                    <th style={{ padding: '10px 14px', textAlign: 'center', width: '18%', color: '#ea580c', fontWeight: '700' }}>
+                      {activePeriodObj?.period_label} • Edit Value
+                    </th>
+                    <th style={{ padding: '10px 12px', textAlign: 'center', width: '16%' }}>
+                      MoM Delta
+                    </th>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', width: '23%' }}>
+                      Parameter Specification
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Row: Number of Vehicles */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Number of Vehicles (Fleet)
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {prevT.vehicles_count || '18+1'}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="18+1"
+                        value={tVehicles}
+                        onChange={(e) => handleTransportCensusChange?.('vehicles_count', e.target.value)}
+                        disabled={activePeriodObj?.is_closed}
+                        style={{ width: '130px', padding: '5px 8px', borderRadius: '5px', border: '1.5px solid #ea580c', textAlign: 'center', fontWeight: '700', fontSize: '12px' }}
+                      />
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#c2410c' }}>Active Fleet</span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      18 Institute Buses + 1 Ambulance / Van
+                    </td>
+                  </tr>
+
+                  {/* Highlight Row: Total Passengers */}
+                  <tr style={{ backgroundColor: '#fff7ed', borderBottom: '1.5px solid #fed7aa' }}>
+                    <td style={{ padding: '12px 20px', fontWeight: '800', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Award size={15} color="#ea580c" />
+                      <span>Number of Students & Staff Travelling</span>
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '12px 14px', textAlign: 'right', color: '#9a3412', fontWeight: '800' }}>
+                        {pPassengers !== null ? pPassengers.toLocaleString() : '—'}
+                      </td>
+                    )}
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                      <input
+                        type="number"
+                        placeholder="Passengers"
+                        value={tPassengers}
+                        onChange={(e) => handleTransportCensusChange?.('passengers_count', e.target.value)}
+                        disabled={activePeriodObj?.is_closed}
+                        style={{ width: '130px', padding: '6px 10px', borderRadius: '6px', border: '1.5px solid #ea580c', textAlign: 'right', fontWeight: '800', fontSize: '13px' }}
+                      />
+                    </td>
+                    <td style={{ padding: '12px 12px', textAlign: 'center' }}>
+                      {renderDiffBadge(tPassengers, pPassengers)}
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', fontWeight: '700', color: '#c2410c' }}>
+                      Registered campus bus commuters
+                    </td>
+                  </tr>
+
+                  {/* Row: Trip Kilometres */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Trip Kilometres (Approved / Actual / Addl)
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {pActKms !== null ? `${pActKms.toLocaleString()} KMs` : '—'}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="Approved"
+                          value={tApprKms}
+                          onChange={(e) => handleTransportCensusChange?.('approved_kms', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Approved Trip KMs"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #ea580c', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Actual"
+                          value={tActKms}
+                          onChange={(e) => handleTransportCensusChange?.('actual_kms', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Actual Trip KMs"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #ea580c', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#ea580c' }}>
+                        Addl: {tAddKms} KMs
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Approved: {tApprKms} | Actual: {tActKms}
+                    </td>
+                  </tr>
+
+                  {/* Row: Diesel Purchase */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Fuel size={14} color="#ea580c" />
+                      <span>Diesel Purchase Qty & Fuel Cost</span>
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {pDieselLtr !== null ? `${pDieselLtr.toLocaleString()} Ltrs` : '—'}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Litres"
+                          value={tDieselLtr}
+                          onChange={(e) => handleTransportCensusChange?.('diesel_litres', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Diesel Qty Litres"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #ea580c', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Cost"
+                          value={tFuelCost}
+                          onChange={(e) => handleTransportCensusChange?.('fuel_expenses', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Fuel Cost INR"
+                          style={{ width: '75px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #ea580c', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      {renderDiffBadge(tDieselLtr, pDieselLtr)}
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }} className="currency-font">
+                      Fuel Spend: {formatINR(tFuelCost)}
+                    </td>
+                  </tr>
+
+                  {/* Row: Service Tickets */}
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Service Tickets (Raised / Closed / Open)
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>
+                        {(parseInt(prevT.service_tickets_raised, 10) || 38).toLocaleString()}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          placeholder="Raised"
+                          value={tTicketsRaised}
+                          onChange={(e) => handleTransportCensusChange?.('service_tickets_raised', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Tickets Raised"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #ea580c', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Closed"
+                          value={tTicketsClosed}
+                          onChange={(e) => handleTransportCensusChange?.('service_tickets_closed', e.target.value)}
+                          disabled={activePeriodObj?.is_closed}
+                          title="Tickets Closed"
+                          style={{ width: '65px', padding: '5px 6px', borderRadius: '5px', border: '1.5px solid #ea580c', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: '700', color: tTicketsOpen > 0 ? '#b91c1c' : '#15803d' }}>
+                        Open: {tTicketsOpen} | Compl: {tCompliance}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Incidents reported: {tIncidents}
+                    </td>
+                  </tr>
+
+                  {/* Row: Annual Approved Budget */}
+                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 20px', fontWeight: '700', color: '#1e293b' }}>
+                      Transport Approved Budget & Balance
+                    </td>
+                    {prevPeriod && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b', fontWeight: '600' }} className="currency-font">
+                        {formatINR(tApprovedBudget)}
+                      </td>
+                    )}
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <input
+                        type="number"
+                        placeholder="Approved Budget"
+                        value={tApprovedBudget}
+                        onChange={(e) => handleTransportCensusChange?.('approved_budget', e.target.value)}
+                        disabled={activePeriodObj?.is_closed}
+                        style={{ width: '130px', padding: '5px 8px', borderRadius: '5px', border: '1.5px solid #64748b', textAlign: 'right', fontWeight: '700', fontSize: '12px' }}
+                      />
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857' }}>
+                        Bal: {formatINR(tBudgetBalance)}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 16px', textAlign: 'left', fontSize: '11.5px', color: '#64748b' }}>
+                      Cumulative Spent: {formatINR(tSpentBudget)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* COMPARATIVE UNIT METRICS STRIP */}
+            {parseFloat(tActKms) > 0 && (
+              <div style={{
+                padding: '12px 20px',
+                backgroundColor: '#f8fafc',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                fontSize: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569' }}>
+                  <span style={{ fontWeight: '700', color: '#1e293b' }}>Transport Fleet Mileage & Efficiency:</span>
+                  <span style={{ color: '#94a3b8' }}>({activePeriodObj?.period_label})</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#64748b' }}>KM / Vehicle / Day:</span>
+                    <strong style={{ color: '#0f172a' }}>
+                      {(parseFloat(tActKms) / 19 / 30).toFixed(1)} KMs
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Diesel / 100 KM:</span>
+                    <strong style={{ color: '#ea580c' }}>
+                      {((parseFloat(tDieselLtr) / parseFloat(tActKms)) * 100).toFixed(2)} Litres
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Fuel Cost / KM:</span>
+                    <strong style={{ color: '#059669' }}>
+                      ₹{(parseFloat(tFuelCost) / parseFloat(tActKms)).toFixed(2)} / KM
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Expense / Passenger:</span>
+                    <strong style={{ color: '#2563eb' }}>
+                      {formatINR(Math.round(parseFloat(tFuelCost) / (parseInt(tPassengers, 10) || 1)))}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
