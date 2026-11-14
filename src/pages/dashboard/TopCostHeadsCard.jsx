@@ -7,16 +7,19 @@ export default function TopCostHeadsCard({ computedMatrix }) {
   // Flatten and sort cost heads by total expenditure
   const items = [];
   computedMatrix.categories.forEach(cat => {
-    cat.items.forEach(it => {
+    cat.items?.forEach(it => {
       items.push({
         cost_head_id: it.cost_head_id,
-        name: it.description,
-        total: it.total || 0,
+        name: it.description || it.name,
+        total: Number(it.total || 0),
         category: cat.category_name,
         category_id: cat.category_id
       });
     });
   });
+
+  // Sort descending by total expenditure
+  items.sort((a, b) => (b.total || 0) - (a.total || 0));
 
   const numPeriods = computedMatrix.periods?.length || 0;
   const hasExpenses = items.some(it => (it.total || 0) > 0);

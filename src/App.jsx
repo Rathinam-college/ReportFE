@@ -353,7 +353,7 @@ export default function App() {
       }
 
       const [ovRes, matRes, varRes, mastRes, flagRes] = await Promise.all([
-        fetch('/api/overview'),
+        fetch(`/api/overview?module=${activeMod}`),
         fetch(`/api/matrix?module=${activeMod}`),
         fetch('/api/mom-variance'),
         fetch('/api/master-data'),
