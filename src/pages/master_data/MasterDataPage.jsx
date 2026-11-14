@@ -25,6 +25,7 @@ export default function MasterDataPage({
   openAddCostHeadModal,
   openEditCostHeadModal,
   handleDeleteCostHead,
+  handleBatchDeleteCostHeads,
   showCostHeadModal,
   setShowCostHeadModal,
   editingCostHead,
@@ -41,6 +42,7 @@ export default function MasterDataPage({
   openManageCategoriesModal,
   handleUpdateCategory,
   handleDeleteCategory,
+  handleBatchDeleteCategories,
   // Periods props
   openEditPeriodModal,
   handleDeletePeriod,
@@ -147,6 +149,7 @@ export default function MasterDataPage({
           openAddCostHeadModal={openAddCostHeadModal}
           openEditCostHeadModal={openEditCostHeadModal}
           handleDeleteCostHead={handleDeleteCostHead}
+          handleBatchDeleteCostHeads={handleBatchDeleteCostHeads}
           showCostHeadModal={showCostHeadModal}
           setShowCostHeadModal={setShowCostHeadModal}
           editingCostHead={editingCostHead}
@@ -184,6 +187,7 @@ export default function MasterDataPage({
         categoriesList={categoriesList}
         onUpdateCategory={handleUpdateCategory}
         onDeleteCategory={handleDeleteCategory}
+        onBatchDeleteCategories={handleBatchDeleteCategories}
         openAddCategoryModal={openAddCategoryModal}
       />
 

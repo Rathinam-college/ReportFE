@@ -14,6 +14,7 @@ export default function CostHeadsManager({
   openAddCostHeadModal,
   openEditCostHeadModal,
   handleDeleteCostHead,
+  handleBatchDeleteCostHeads,
   showCostHeadModal,
   setShowCostHeadModal,
   editingCostHead,
@@ -25,11 +26,36 @@ export default function CostHeadsManager({
   moduleName = 'Food & Dining'
 }) {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // Filter cost heads by category if a pill is clicked
   const filteredCostHeads = selectedCategoryFilter === 'all'
     ? costHeadsList
     : costHeadsList.filter(ch => String(ch.category_id) === String(selectedCategoryFilter));
+
+  const isAllSelected = filteredCostHeads.length > 0 && filteredCostHeads.every(ch => selectedIds.includes(ch.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      const filteredSet = new Set(filteredCostHeads.map(ch => ch.id));
+      setSelectedIds(prev => prev.filter(id => !filteredSet.has(id)));
+    } else {
+      const combined = new Set([...selectedIds, ...filteredCostHeads.map(ch => ch.id)]);
+      setSelectedIds(Array.from(combined));
+    }
+  };
+
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleConfirmBatchDelete = async () => {
+    if (!handleBatchDeleteCostHeads || selectedIds.length === 0) return;
+    await handleBatchDeleteCostHeads(selectedIds);
+    setSelectedIds([]);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -222,19 +248,124 @@ export default function CostHeadsManager({
         </button>
       </div>
 
+      {/* BATCH ACTION BANNER (SELECTED & DELETE) */}
+      {selectedIds.length > 0 && (
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1.5px solid #fca5a5',
+          borderRadius: '10px',
+          padding: '14px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          boxShadow: '0 2px 8px rgba(220, 38, 38, 0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{
+              backgroundColor: '#dc2626',
+              color: '#ffffff',
+              fontWeight: '800',
+              fontSize: '12.5px',
+              padding: '4px 12px',
+              borderRadius: '9999px',
+              letterSpacing: '0.02em'
+            }}>
+              {selectedIds.length} Selected
+            </span>
+            <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#991b1b' }}>
+              {selectedIds.length} line item(s) chosen from master data
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              style={{
+                padding: '7px 14px',
+                borderRadius: '6px',
+                backgroundColor: '#ffffff',
+                color: '#475569',
+                border: '1px solid #cbd5e1',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Clear Selection
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmBatchDelete}
+              style={{
+                padding: '7px 18px',
+                borderRadius: '6px',
+                backgroundColor: '#dc2626',
+                color: '#ffffff',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 5px rgba(220, 38, 38, 0.3)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+            >
+              <Trash2 size={15} />
+              <span>Delete Selected ({selectedIds.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* DRAG AND DROP REORDER TABLE */}
       <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <GripVertical size={18} color="#2563eb" />
             <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
               Line Items Order ({filteredCostHeads.length} Items)
             </h3>
+            {selectedIds.length > 0 && (
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', backgroundColor: '#fef2f2', padding: '2px 8px', borderRadius: '4px', border: '1px solid #fecaca' }}>
+                {selectedIds.length} selected
+              </span>
+            )}
           </div>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            {selectedCategoryFilter === 'all'
-              ? '✋ Grab handle or use ⬆️ ⬇️ to reorder • Auto-saves to PostgreSQL'
-              : `Showing items under filtered category`}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={handleConfirmBatchDelete}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <Trash2 size={13} />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </button>
+            )}
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              {selectedCategoryFilter === 'all'
+                ? '✋ Grab handle or use ⬆️ ⬇️ to reorder • Auto-saves to PostgreSQL'
+                : `Showing items under filtered category`}
+            </div>
           </div>
         </div>
 
@@ -242,9 +373,18 @@ export default function CostHeadsManager({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#475569', fontWeight: '700' }}>
-                <th style={{ padding: '12px 16px', width: '10%', textAlign: 'center' }}>Reorder</th>
-                <th style={{ padding: '12px 16px', width: '8%', textAlign: 'center' }}>#</th>
-                <th style={{ padding: '12px 20px', width: '36%', textAlign: 'left' }}>Category</th>
+                <th style={{ padding: '12px 14px', width: '5%', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleToggleSelectAll}
+                    title="Select / Deselect All Line Items"
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#dc2626' }}
+                  />
+                </th>
+                <th style={{ padding: '12px 16px', width: '8%', textAlign: 'center' }}>Reorder</th>
+                <th style={{ padding: '12px 16px', width: '6%', textAlign: 'center' }}>#</th>
+                <th style={{ padding: '12px 20px', width: '35%', textAlign: 'left' }}>Category</th>
                 <th style={{ padding: '12px 20px', width: '34%', textAlign: 'left' }}>Description / Cost Head</th>
                 <th style={{ padding: '12px 16px', width: '12%', textAlign: 'center' }}>Actions</th>
               </tr>
@@ -254,6 +394,7 @@ export default function CostHeadsManager({
                 const originalIdx = costHeadsList.findIndex(x => x.id === ch.id);
                 const isDragging = draggedIdx === originalIdx;
                 const isOver = dragOverIdx === originalIdx;
+                const isSelected = selectedIds.includes(ch.id);
 
                 return (
                   <tr
@@ -265,12 +406,22 @@ export default function CostHeadsManager({
                     onDrop={(e) => handleDrop(e, originalIdx)}
                     style={{
                       borderBottom: '1px solid #f1f5f9',
-                      backgroundColor: isOver ? '#eff6ff' : (isDragging ? '#e2e8f0' : (idx % 2 === 0 ? '#ffffff' : '#fafafa')),
+                      backgroundColor: isSelected
+                        ? '#fef2f2'
+                        : (isOver ? '#eff6ff' : (isDragging ? '#e2e8f0' : (idx % 2 === 0 ? '#ffffff' : '#fafafa'))),
                       opacity: isDragging ? 0.5 : 1,
                       transition: 'background-color 0.15s ease',
                       cursor: selectedCategoryFilter === 'all' ? 'grab' : 'default'
                     }}
                   >
+                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelect(ch.id)}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#dc2626' }}
+                      />
+                    </td>
                     <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                         <span title={selectedCategoryFilter === 'all' ? "Drag to reorder" : "Clear filter to drag"} style={{ cursor: selectedCategoryFilter === 'all' ? 'grab' : 'default', color: '#94a3b8' }}>

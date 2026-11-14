@@ -951,6 +951,30 @@ export default function App() {
     await fetchData(activeMod);
   };
 
+  const handleBatchDeleteCategories = async (ids) => {
+    if (!ids || ids.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${ids.length} selected category(ies)?`)) return;
+    const activeMod = masterDataSubTab;
+
+    try {
+      const res = await fetch('/api/master/categories/batch-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to delete selected categories');
+      }
+      const data = await res.json();
+      setMasterMessage({ type: 'success', text: data.message || `Deleted ${ids.length} selected categories.` });
+      await fetchMasterDetails(activeMod);
+      await fetchData(activeMod);
+    } catch (err) {
+      alert(err.message || 'Error deleting selected categories');
+    }
+  };
+
   const openAddCostHeadModal = (defaultCategoryId = null) => {
     setEditingCostHead(null);
     setCostHeadForm({
@@ -1060,6 +1084,30 @@ export default function App() {
       fetchData(activeMod);
     } catch (err) {
       alert(err.message || 'Error deleting line item');
+    }
+  };
+
+  const handleBatchDeleteCostHeads = async (ids) => {
+    if (!ids || ids.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${ids.length} selected line item(s)?`)) return;
+    const activeMod = masterDataSubTab;
+
+    try {
+      const res = await fetch('/api/master/cost-heads/batch-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to delete selected line items');
+      }
+      const data = await res.json();
+      setMasterMessage({ type: 'success', text: data.message || `Deleted ${ids.length} line items.` });
+      await fetchMasterDetails(activeMod);
+      await fetchData(activeMod);
+    } catch (err) {
+      alert(err.message || 'Error deleting line items');
     }
   };
 
@@ -1385,6 +1433,7 @@ export default function App() {
             openAddCostHeadModal={openAddCostHeadModal}
             openEditCostHeadModal={openEditCostHeadModal}
             handleDeleteCostHead={handleDeleteCostHead}
+            handleBatchDeleteCostHeads={handleBatchDeleteCostHeads}
             showCostHeadModal={showCostHeadModal}
             setShowCostHeadModal={setShowCostHeadModal}
             editingCostHead={editingCostHead}
@@ -1400,6 +1449,7 @@ export default function App() {
             openManageCategoriesModal={openManageCategoriesModal}
             handleUpdateCategory={handleUpdateCategory}
             handleDeleteCategory={handleDeleteCategory}
+            handleBatchDeleteCategories={handleBatchDeleteCategories}
             openEditPeriodModal={openEditPeriodModal}
             handleDeletePeriod={handleDeletePeriod}
             showEditPeriodModal={showEditPeriodModal}

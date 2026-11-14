@@ -7,14 +7,43 @@ export default function ManageCategoriesModal({
   categoriesList = [],
   onUpdateCategory,
   onDeleteCategory,
+  onBatchDeleteCategories,
   openAddCategoryModal
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
   const [actionMsg, setActionMsg] = useState(null);
+  const [selectedCatIds, setSelectedCatIds] = useState([]);
 
   if (!isOpen) return null;
+
+  const isAllSelected = categoriesList.length > 0 && categoriesList.every(c => selectedCatIds.includes(c.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedCatIds([]);
+    } else {
+      setSelectedCatIds(categoriesList.map(c => c.id));
+    }
+  };
+
+  const handleToggleSelect = (id) => {
+    setSelectedCatIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleConfirmBatchDelete = async () => {
+    if (!onBatchDeleteCategories || selectedCatIds.length === 0) return;
+    try {
+      await onBatchDeleteCategories(selectedCatIds);
+      setSelectedCatIds([]);
+      setActionMsg({ type: 'success', text: `Successfully deleted selected categories.` });
+    } catch (err) {
+      setActionMsg({ type: 'error', text: err.message || 'Failed to delete selected categories' });
+    }
+  };
 
   const startEdit = (cat) => {
     setEditingId(cat.id);
@@ -108,33 +137,72 @@ export default function ManageCategoriesModal({
         {/* Content Body */}
         <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
-              Showing {categoriesList.length} operational categories
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                openAddCategoryModal();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                backgroundColor: '#2563eb',
-                color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: '700',
-                border: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              <Plus size={14} />
-              <span>+ Add New Category</span>
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                Showing {categoriesList.length} operational categories
+              </span>
+              {selectedCatIds.length > 0 && (
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  color: '#dc2626',
+                  backgroundColor: '#fef2f2',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid #fecaca'
+                }}>
+                  {selectedCatIds.length} chosen
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {selectedCatIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleConfirmBatchDelete}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    backgroundColor: '#dc2626',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Trash2 size={13} />
+                  <span>Delete Selected ({selectedCatIds.length})</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  openAddCategoryModal();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  backgroundColor: '#2563eb',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <Plus size={14} />
+                <span>+ Add New Category</span>
+              </button>
+            </div>
           </div>
 
           {actionMsg && (
@@ -160,24 +228,42 @@ export default function ManageCategoriesModal({
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', color: '#475569', fontWeight: '700' }}>
+                  <th style={{ padding: '10px 12px', textAlign: 'center', width: '6%' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleToggleSelectAll}
+                      title="Select / Deselect All Categories"
+                      style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#dc2626' }}
+                    />
+                  </th>
                   <th style={{ padding: '10px 14px', textAlign: 'center', width: '8%' }}>#</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', width: '50%' }}>Category Name</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '22%' }}>Attached Items</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', width: '46%' }}>Category Name</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '20%' }}>Attached Items</th>
                   <th style={{ padding: '10px 14px', textAlign: 'center', width: '20%' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {categoriesList.map((cat, idx) => {
                   const isEditing = editingId === cat.id;
+                  const isSelected = selectedCatIds.includes(cat.id);
 
                   return (
                     <tr
                       key={cat.id}
                       style={{
                         borderBottom: '1px solid #f1f5f9',
-                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafafa'
+                        backgroundColor: isSelected ? '#fef2f2' : (idx % 2 === 0 ? '#ffffff' : '#fafafa')
                       }}
                     >
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(cat.id)}
+                          style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#dc2626' }}
+                        />
+                      </td>
                       <td style={{ padding: '10px 14px', textAlign: 'center', fontFamily: 'monospace', color: '#64748b' }}>
                         #{cat.id}
                       </td>
