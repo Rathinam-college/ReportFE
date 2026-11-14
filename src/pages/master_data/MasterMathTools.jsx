@@ -770,3 +770,4 @@ export default function MasterMathTools({ onClose, moduleName = 'Food & Dining' 
     </div>
   );
 }
+

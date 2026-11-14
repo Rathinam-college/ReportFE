@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Layers, Edit, Trash2, Check, AlertCircle, Plus } from 'lucide-react';
+import { X, Layers, Edit, Trash2, Check, AlertCircle, Plus, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 
 export default function ManageCategoriesModal({
   isOpen,
@@ -8,6 +8,7 @@ export default function ManageCategoriesModal({
   onUpdateCategory,
   onDeleteCategory,
   onBatchDeleteCategories,
+  onReorderCategories,
   openAddCategoryModal
 }) {
   const [editingId, setEditingId] = useState(null);
@@ -15,8 +16,81 @@ export default function ManageCategoriesModal({
   const [saving, setSaving] = useState(false);
   const [actionMsg, setActionMsg] = useState(null);
   const [selectedCatIds, setSelectedCatIds] = useState([]);
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
 
   if (!isOpen) return null;
+
+  const handleMoveStep = async (idx, step) => {
+    const targetIdx = idx + step;
+    if (targetIdx < 0 || targetIdx >= categoriesList.length) return;
+
+    if (onReorderCategories) {
+      await onReorderCategories(idx, targetIdx);
+    } else {
+      const reordered = [...categoriesList];
+      const [moved] = reordered.splice(idx, 1);
+      reordered.splice(targetIdx, 0, moved);
+      try {
+        const category_ids = reordered.map(c => c.id);
+        await fetch('/api/master/categories/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category_ids })
+        });
+        setActionMsg({ type: 'success', text: 'Category order updated & saved to database.' });
+      } catch (err) {
+        setActionMsg({ type: 'error', text: 'Failed to save new category order.' });
+      }
+    }
+  };
+
+  const handleDragStart = (e, idx) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === idx) return;
+    setDragOverIdx(idx);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDrop = async (e, targetIdx) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    const fromIdx = draggedIdx;
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+
+    if (onReorderCategories) {
+      await onReorderCategories(fromIdx, targetIdx);
+    } else {
+      const reordered = [...categoriesList];
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(targetIdx, 0, moved);
+      try {
+        const category_ids = reordered.map(c => c.id);
+        await fetch('/api/master/categories/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category_ids })
+        });
+        setActionMsg({ type: 'success', text: 'Category order updated & saved to database.' });
+      } catch (err) {
+        setActionMsg({ type: 'error', text: 'Failed to save new category order.' });
+      }
+    }
+  };
 
   const isAllSelected = categoriesList.length > 0 && categoriesList.every(c => selectedCatIds.includes(c.id));
 
@@ -223,6 +297,22 @@ export default function ManageCategoriesModal({
             </div>
           )}
 
+          {/* Reorder / Action Instruction Banner */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '6px 12px',
+            backgroundColor: '#f8fafc',
+            borderRadius: '6px',
+            border: '1px solid #e2e8f0',
+            fontSize: '11.5px',
+            color: '#64748b'
+          }}>
+            <span>✋ Grab handle or use ⬆️ ⬇️ to reorder categories</span>
+            <span style={{ fontWeight: '600', color: '#4f46e5' }}>Auto-saves to database</span>
+          </div>
+
           {/* Categories List */}
           <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -237,23 +327,35 @@ export default function ManageCategoriesModal({
                       style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#dc2626' }}
                     />
                   </th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '8%' }}>#</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', width: '46%' }}>Category Name</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '20%' }}>Attached Items</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '20%' }}>Actions</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '18%' }}>Reorder</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', width: '40%' }}>Category Name</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '18%' }}>Attached Items</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '18%' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {categoriesList.map((cat, idx) => {
                   const isEditing = editingId === cat.id;
                   const isSelected = selectedCatIds.includes(cat.id);
+                  const isDragging = draggedIdx === idx;
+                  const isOver = dragOverIdx === idx;
 
                   return (
                     <tr
                       key={cat.id}
+                      draggable={!isEditing}
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e) => handleDrop(e, idx)}
                       style={{
                         borderBottom: '1px solid #f1f5f9',
-                        backgroundColor: isSelected ? '#fef2f2' : (idx % 2 === 0 ? '#ffffff' : '#fafafa')
+                        backgroundColor: isSelected
+                          ? '#fef2f2'
+                          : (isOver ? '#eff6ff' : (isDragging ? '#e2e8f0' : (idx % 2 === 0 ? '#ffffff' : '#fafafa'))),
+                        opacity: isDragging ? 0.5 : 1,
+                        transition: 'background-color 0.15s ease',
+                        cursor: isEditing ? 'default' : 'grab'
                       }}
                     >
                       <td style={{ padding: '10px 12px', textAlign: 'center' }}>
@@ -264,8 +366,63 @@ export default function ManageCategoriesModal({
                           style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#dc2626' }}
                         />
                       </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'center', fontFamily: 'monospace', color: '#64748b' }}>
-                        #{cat.id}
+                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                          <span
+                            title="Drag to reorder"
+                            style={{ cursor: 'grab', color: '#94a3b8', display: 'flex', alignItems: 'center' }}
+                          >
+                            <GripVertical size={15} />
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleMoveStep(idx, -1); }}
+                            disabled={idx === 0}
+                            title="Move Category Up"
+                            style={{
+                              padding: '3px 4px',
+                              borderRadius: '4px',
+                              backgroundColor: idx === 0 ? '#f8fafc' : '#f1f5f9',
+                              color: idx === 0 ? '#cbd5e1' : '#334155',
+                              cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleMoveStep(idx, 1); }}
+                            disabled={idx === categoriesList.length - 1}
+                            title="Move Category Down"
+                            style={{
+                              padding: '3px 4px',
+                              borderRadius: '4px',
+                              backgroundColor: idx === categoriesList.length - 1 ? '#f8fafc' : '#f1f5f9',
+                              color: idx === categoriesList.length - 1 ? '#cbd5e1' : '#334155',
+                              cursor: idx === categoriesList.length - 1 ? 'not-allowed' : 'pointer',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            color: '#475569',
+                            backgroundColor: '#f1f5f9',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            minWidth: '20px',
+                            textAlign: 'center'
+                          }}>
+                            {idx + 1}
+                          </span>
+                        </div>
                       </td>
 
                       <td style={{ padding: '10px 16px', fontWeight: '600', color: '#0f172a' }}>

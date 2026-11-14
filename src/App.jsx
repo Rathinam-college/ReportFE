@@ -53,6 +53,14 @@ export default function App() {
     }
   });
 
+  const [dashboardSubTab, setDashboardSubTab] = useState(() => {
+    try {
+      return localStorage.getItem('rathinam_dashboard_subtab') || 'food';
+    } catch {
+      return 'food';
+    }
+  });
+
   const [dataEntrySubTab, setDataEntrySubTab] = useState(() => {
     try {
       return localStorage.getItem('rathinam_data_entry_subtab') || 'food';
@@ -158,7 +166,7 @@ export default function App() {
   useEffect(() => {
     let titleStr = 'Dashboard';
     if (activeTab === 'dashboard') {
-      titleStr = 'Dashboard';
+      titleStr = `Dashboard (${dashboardSubTab === 'food' ? 'Food & Dining' : dashboardSubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
     } else if (activeTab === 'data_entry') {
       titleStr = `Data Entry (${dataEntrySubTab === 'food' ? 'Food & Dining' : dataEntrySubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
     } else if (activeTab === 'master_data') {
@@ -167,7 +175,7 @@ export default function App() {
       titleStr = 'System Settings';
     }
     document.title = `Report / ${titleStr} • Rathinam Group`;
-  }, [activeTab, dataEntrySubTab, masterDataSubTab]);
+  }, [activeTab, dashboardSubTab, dataEntrySubTab, masterDataSubTab]);
 
   // --------------------------------------------------------------------------
   // PERSISTENCE & URL HASH SYNCHRONIZATION
@@ -196,6 +204,16 @@ export default function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  useEffect(() => {
+    if (dashboardSubTab) {
+      try {
+        localStorage.setItem('rathinam_dashboard_subtab', dashboardSubTab);
+      } catch {
+        // ignore
+      }
+    }
+  }, [dashboardSubTab]);
 
   useEffect(() => {
     if (dataEntrySubTab) {
@@ -269,7 +287,10 @@ export default function App() {
   // --------------------------------------------------------------------------
   const fetchMasterDetails = async (mod = null) => {
     try {
-      const activeMod = mod || (activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab);
+      const activeMod = mod || (
+        activeTab === 'dashboard' ? (dashboardSubTab || 'food') :
+        activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab
+      );
       const [chRes, catRes] = await Promise.all([
         fetch(`/api/master/cost-heads?module=${activeMod}`),
         fetch(`/api/master/categories?module=${activeMod}`)
@@ -314,7 +335,10 @@ export default function App() {
 
   const fetchData = async (mod = null) => {
     setLoading(true);
-    const activeMod = mod || (activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab);
+    const activeMod = mod || (
+      activeTab === 'dashboard' ? (dashboardSubTab || 'food') :
+      activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab
+    );
     try {
       try {
         const healthRes = await fetch('/api/health');
@@ -384,13 +408,13 @@ export default function App() {
 
   useEffect(() => {
     if (currentUser) {
-      const activeMod = activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab;
+      const activeMod = activeTab === 'dashboard' ? (dashboardSubTab || 'food') : (activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab);
       fetchData(activeMod);
       fetchMasterDetails(activeMod);
       fetchUsers();
       fetchPermissions();
     }
-  }, [currentUser, dataEntrySubTab, masterDataSubTab, activeTab]);
+  }, [currentUser, dashboardSubTab, dataEntrySubTab, masterDataSubTab, activeTab]);
 
   // --------------------------------------------------------------------------
   // LIVE COMPUTED MATRIX
@@ -975,6 +999,30 @@ export default function App() {
     }
   };
 
+  const handleReorderCategories = async (fromIdx, toIdx) => {
+    const activeMod = masterDataSubTab;
+    const reordered = [...categoriesList];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    setCategoriesList(reordered);
+
+    try {
+      const category_ids = reordered.map(c => c.id);
+      const res = await fetch('/api/master/categories/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category_ids })
+      });
+      if (res.ok) {
+        setMasterMessage({ type: 'success', text: 'Category order updated & saved to database.' });
+        await fetchMasterDetails(activeMod);
+        await fetchData(activeMod);
+      }
+    } catch (err) {
+      console.error('Failed to reorder categories:', err);
+    }
+  };
+
   const openAddCostHeadModal = (defaultCategoryId = null) => {
     setEditingCostHead(null);
     setCostHeadForm({
@@ -1343,9 +1391,11 @@ export default function App() {
         permissions={pagePermissions}
       />
 
-      {/* 2. SUB-NAVIGATION BAR (DATA ENTRY & MASTER DATA ONLY) */}
+      {/* 2. SUB-NAVIGATION BAR (DASHBOARD, DATA ENTRY & MASTER DATA) */}
       <SubNav
         activeTab={activeTab}
+        dashboardSubTab={dashboardSubTab}
+        setDashboardSubTab={setDashboardSubTab}
         dataEntrySubTab={dataEntrySubTab}
         setDataEntrySubTab={setDataEntrySubTab}
         masterDataSubTab={masterDataSubTab}
@@ -1358,6 +1408,8 @@ export default function App() {
         {/* DASHBOARD PAGE */}
         {activeTab === 'dashboard' && (
           <DashboardPage
+            selectedModule={dashboardSubTab || 'food'}
+            onSelectModule={setDashboardSubTab}
             overview={overview}
             dashView={dashView}
             setDashView={setDashView}
@@ -1372,7 +1424,10 @@ export default function App() {
             setCompareBasePeriod={setCompareBasePeriod}
             compareTargetPeriod={compareTargetPeriod}
             setCompareTargetPeriod={setCompareTargetPeriod}
-            onOpenDataEntry={() => setActiveTab('data_entry')}
+            onOpenDataEntry={() => {
+              setDataEntrySubTab(dashboardSubTab || 'food');
+              setActiveTab('data_entry');
+            }}
           />
         )}
 
@@ -1450,6 +1505,7 @@ export default function App() {
             handleUpdateCategory={handleUpdateCategory}
             handleDeleteCategory={handleDeleteCategory}
             handleBatchDeleteCategories={handleBatchDeleteCategories}
+            handleReorderCategories={handleReorderCategories}
             openEditPeriodModal={openEditPeriodModal}
             handleDeletePeriod={handleDeletePeriod}
             showEditPeriodModal={showEditPeriodModal}

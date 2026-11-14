@@ -3,12 +3,14 @@ import { Utensils, Home, Bus } from 'lucide-react';
 
 export default function SubNav({
   activeTab,
+  dashboardSubTab,
+  setDashboardSubTab,
   dataEntrySubTab,
   setDataEntrySubTab,
   masterDataSubTab,
   setMasterDataSubTab
 }) {
-  if (activeTab !== 'data_entry' && activeTab !== 'master_data') {
+  if (activeTab !== 'dashboard' && activeTab !== 'data_entry' && activeTab !== 'master_data') {
     return null;
   }
 
@@ -18,7 +20,9 @@ export default function SubNav({
     { id: 'transport', label: 'Transport Fleet', icon: Bus, status: 'Active' }
   ];
 
-  const currentSub = activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab;
+  const currentSub = activeTab === 'dashboard' 
+    ? (dashboardSubTab || 'food') 
+    : (activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab);
 
   return (
     <div style={{
@@ -33,7 +37,7 @@ export default function SubNav({
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginRight: '6px' }}>
-          {activeTab === 'data_entry' ? 'Data Entry Module:' : 'Master Data Module:'}
+          {activeTab === 'dashboard' ? 'Dashboard Module:' : (activeTab === 'data_entry' ? 'Data Entry Module:' : 'Master Data Module:')}
         </span>
 
         {modules.map(mod => {
@@ -44,7 +48,8 @@ export default function SubNav({
             <button
               key={mod.id}
               onClick={() => {
-                if (activeTab === 'data_entry') setDataEntrySubTab(mod.id);
+                if (activeTab === 'dashboard') setDashboardSubTab?.(mod.id);
+                else if (activeTab === 'data_entry') setDataEntrySubTab(mod.id);
                 else setMasterDataSubTab(mod.id);
               }}
               style={{
@@ -69,6 +74,7 @@ export default function SubNav({
       </div>
 
       <div style={{ fontSize: '12px', color: '#64748b' }}>
+        {activeTab === 'dashboard' && `Overview & Executive KPIs for ${currentSub === 'food' ? 'Food & Dining' : currentSub === 'hostel' ? 'Hostel Resident Facilities' : 'Transport Fleet Operations'}`}
         {activeTab === 'data_entry' && 'Matrix Entry: Select month to edit • Subtotals & Totals update live'}
         {activeTab === 'master_data' && 'Drag & Drop rows to reorder • Add/Edit Category & Description'}
       </div>

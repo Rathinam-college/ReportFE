@@ -22,6 +22,8 @@ import TopCostHeadsCard from './TopCostHeadsCard';
 import ModulesGrid from './ModulesGrid';
 
 export default function DashboardPage({
+  selectedModule = 'food',
+  onSelectModule,
   overview,
   computedMatrix,
   comparisonData,
@@ -35,8 +37,36 @@ export default function DashboardPage({
   const [activePeriod, setActivePeriod] = useState('all'); // 'all' or period id
   const [showDataTable, setShowDataTable] = useState(true);
 
+  const currentModule = selectedModule || 'food';
+
   const periods = computedMatrix?.periods || [];
   const categories = computedMatrix?.categories || [];
+
+  const moduleMeta = {
+    food: {
+      title: 'Food & Dining Operations Dashboard',
+      subtitle: `Food & Dining overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
+      badge: 'Food & Dining',
+      badgeColor: '#4f46e5',
+      badgeBg: '#eef2ff'
+    },
+    hostel: {
+      title: 'Hostel Resident Operations Dashboard',
+      subtitle: `Hostel Resident Facilities overview • ${periods[0]?.period_label || "Sept'25"} – ${periods[periods.length - 1]?.period_label || "Dec'25"} • FY 2025-2026 • Currency INR (₹)`,
+      badge: 'Hostel Operations',
+      badgeColor: '#059669',
+      badgeBg: '#ecfdf5'
+    },
+    transport: {
+      title: 'Transport Fleet Operations Dashboard',
+      subtitle: `Transport Fleet & Mileage overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
+      badge: 'Transport Fleet',
+      badgeColor: '#2563eb',
+      badgeBg: '#eff6ff'
+    }
+  };
+
+  const currentMeta = moduleMeta[currentModule] || moduleMeta.food;
 
   // Active or latest period for KPI cards
   const latestPeriod = periods[periods.length - 1];
@@ -197,7 +227,61 @@ export default function DashboardPage({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
       
-      {/* 1. OPERATIONS DASHBOARD HEADER */}
+      {/* 1. TOP MODULE FILTER PILLS (FOOD / HOSTEL / TRANSPORT SEPARATE) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#ffffff',
+        borderRadius: '12px',
+        padding: '12px 20px',
+        border: '1px solid #cbd5e1',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Dashboard View:
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {[
+              { id: 'food', label: '🍲 Food & Dining' },
+              { id: 'hostel', label: '🏢 Hostel Occupancy' },
+              { id: 'transport', label: '🚌 Transport Fleet' }
+            ].map(m => {
+              const isSel = currentModule === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => onSelectModule?.(m.id)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    fontSize: '12.5px',
+                    fontWeight: isSel ? '800' : '600',
+                    backgroundColor: isSel ? '#4f46e5' : '#f8fafc',
+                    color: isSel ? '#ffffff' : '#475569',
+                    border: isSel ? '1.5px solid #4f46e5' : '1px solid #cbd5e1',
+                    cursor: 'pointer',
+                    boxShadow: isSel ? '0 2px 6px rgba(79,70,229,0.28)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ fontSize: '12px', color: '#64748b' }}>
+          Showing <strong>{currentMeta.badge}</strong> segregated analytics & KPIs
+        </div>
+      </div>
+
+      {/* 2. OPERATIONS DASHBOARD HEADER */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -206,11 +290,24 @@ export default function DashboardPage({
         gap: '14px'
       }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-            Operations Dashboard
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+              {currentMeta.title}
+            </h1>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: '700',
+              padding: '2px 9px',
+              borderRadius: '9999px',
+              backgroundColor: currentMeta.badgeBg,
+              color: currentMeta.badgeColor,
+              border: `1px solid ${currentMeta.badgeColor}33`
+            }}>
+              {currentMeta.badge}
+            </span>
+          </div>
           <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>
-            Food & Dining overview • Jun'26 – Oct'26 • FY 2026-2027 • Currency INR (₹)
+            {currentMeta.subtitle}
           </p>
         </div>
 
@@ -244,7 +341,7 @@ export default function DashboardPage({
                 cursor: 'pointer'
               }}
             >
-              <option value="all">5-Mo Aggregate</option>
+              <option value="all">{periods.length}-Mo Aggregate</option>
               {periods.map(p => (
                 <option key={p.id} value={p.id}>{p.period_label}</option>
               ))}
@@ -291,7 +388,7 @@ export default function DashboardPage({
         </div>
       </div>
 
-      {/* 2. TOP 4 EXECUTIVE KPI CARDS (IMAGE 1 STYLE) */}
+      {/* 3. TOP 4 EXECUTIVE KPI CARDS (IMAGE 1 STYLE) */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -386,7 +483,97 @@ export default function DashboardPage({
         </div>
       </div>
 
-      {/* 3. MIDDLE SECTION: SPLIT VIEW (CHART + TOP COST HEADS RANKING) */}
+      {/* OPERATIONAL PARAMETERS & VOLUME RIBBON (MODULE-SPECIFIC) */}
+      <div style={{
+        backgroundColor: currentModule === 'food' ? '#f8fafc' : currentModule === 'hostel' ? '#f0fdf4' : '#eff6ff',
+        borderRadius: '12px',
+        border: `1.5px solid ${currentModule === 'food' ? '#e2e8f0' : currentModule === 'hostel' ? '#bbf7d0' : '#bfdbfe'}`,
+        padding: '14px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '20px' }}>
+            {currentModule === 'food' ? '🍲' : currentModule === 'hostel' ? '🏢' : '🚌'}
+          </span>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+              {currentModule === 'food' && 'Food Dining Volume & Unit Economics'}
+              {currentModule === 'hostel' && 'Hostel Capacity, Occupancy & Utilities'}
+              {currentModule === 'transport' && 'Transport Fleet, Passengers & Fuel Efficiency'}
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+              {currentModule === 'food' && 'Operating across campus mess facilities, daily fresh supply & manpower allocation'}
+              {currentModule === 'hostel' && 'Campus residential census, power/water consumption & facilities maintenance'}
+              {currentModule === 'transport' && 'Daily commuter bus operations, routes, fuel mileage & trip statistics'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          {currentModule === 'food' && (
+            <>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Active Diners</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>2,690 Students & Staff</div>
+              </div>
+              <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Avg Monthly Meals</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>~72,400 Plates</div>
+              </div>
+              <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Raw Material Share</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#4f46e5' }}>52.8% of Total</div>
+              </div>
+            </>
+          )}
+
+          {currentModule === 'hostel' && (
+            <>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Total Bed Capacity</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>3,119 Beds (2,223 B | 896 G)</div>
+              </div>
+              <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Current Occupancy</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#059669' }}>3,039 Residents (97.4%)</div>
+              </div>
+              <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Power & DG Usage</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>125,422 Units (₹16.59L)</div>
+              </div>
+            </>
+          )}
+
+          {currentModule === 'transport' && (
+            <>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Active Fleet</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>18 Buses + 1 Van</div>
+              </div>
+              <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Commuters</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#2563eb' }}>447 Passengers</div>
+              </div>
+              <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Actual KMs & Diesel</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>25,777 KM • 5,184.8L (4.97 km/l)</div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 4. MIDDLE SECTION: SPLIT VIEW (CHART + TOP COST HEADS RANKING) */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1fr)',
@@ -415,20 +602,18 @@ export default function DashboardPage({
               </p>
             </div>
 
-            {/* Category Color Legend */}
+            {/* Dynamic Category Color Legend */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#6366f1' }} />
-                <span>Food Material</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#10b981' }} />
-                <span>Food Labour</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#f59e0b' }} />
-                <span>FC / Power / Water</span>
-              </div>
+              {categories.length > 0 ? (
+                categories.slice(0, 6).map((cat, idx) => (
+                  <div key={cat.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
+                    <span style={{ width: '9px', height: '9px', borderRadius: '2px', backgroundColor: DASH_COLORS[idx % DASH_COLORS.length] }} />
+                    <span style={{ fontWeight: '600' }}>{cat.name}</span>
+                  </div>
+                ))
+              ) : (
+                <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>Loading categories...</span>
+              )}
             </div>
           </div>
 

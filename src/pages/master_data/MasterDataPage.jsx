@@ -44,6 +44,7 @@ export default function MasterDataPage({
   handleUpdateCategory,
   handleDeleteCategory,
   handleBatchDeleteCategories,
+  handleReorderCategories,
   // Periods props
   openEditPeriodModal,
   handleDeletePeriod,
@@ -239,6 +240,7 @@ export default function MasterDataPage({
         onUpdateCategory={handleUpdateCategory}
         onDeleteCategory={handleDeleteCategory}
         onBatchDeleteCategories={handleBatchDeleteCategories}
+        onReorderCategories={handleReorderCategories}
         openAddCategoryModal={openAddCategoryModal}
       />
 
