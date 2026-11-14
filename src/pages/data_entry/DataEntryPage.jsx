@@ -2,7 +2,6 @@ import React from 'react';
 import { formatINR } from '../../utils/formatters';
 import { Plus } from 'lucide-react';
 import MatrixTable from './MatrixTable';
-import CostMixSidebar from './CostMixSidebar';
 import AddMonthModal from './AddMonthModal';
 
 export default function DataEntryPage({
@@ -37,7 +36,8 @@ export default function DataEntryPage({
   newMonthForm,
   setNewMonthForm,
   handleStartDateChange,
-  handleAddNewMonth
+  handleAddNewMonth,
+  fetchData
 }) {
   if (!computedMatrix) return null;
 
@@ -47,27 +47,6 @@ export default function DataEntryPage({
   const periods = computedMatrix.periods || [];
   const currentIdx = periods.findIndex(p => p.id === editingPeriodId);
   const prevPeriod = currentIdx > 0 ? periods[currentIdx - 1] : null;
-
-  // Active month total
-  let editingTotal = 0;
-  let prevTotal = 0;
-  let grandTotal5Mo = 0;
-
-  computedMatrix.categories?.forEach(cat => {
-    cat.items?.forEach(it => {
-      const draftVal = matrixDraft[it.cost_head_id]?.[editingPeriodId];
-      const curVal = it.amounts?.[editingPeriodId];
-      const numVal = draftVal !== undefined && draftVal !== '' ? parseFloat(draftVal) || 0 : (curVal || 0);
-      editingTotal += numVal;
-
-      if (prevPeriod) {
-        prevTotal += it.amounts?.[prevPeriod.id] || 0;
-      }
-      grandTotal5Mo += it.total || 0;
-    });
-  });
-
-  const monthlyAvg = periods.length > 0 ? grandTotal5Mo / periods.length : 0;
   const isClosed = !!activePeriodObj?.is_closed;
 
   return (
@@ -233,101 +212,6 @@ export default function DataEntryPage({
         </div>
       </div>
 
-      {/* 3. TOP 4 KPI CARDS (IMAGE 2 STYLE) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-        gap: '14px'
-      }}>
-        {/* Card 1: Editing Month Total */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '16px 20px',
-          border: '1px solid #eef2f6',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#4f46e5' }} />
-          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>
-            {activePeriodObj?.period_label} Total (editing)
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0' }} className="currency-font">
-            {formatINR(editingTotal)}
-          </div>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>
-            {isDirty ? 'Pending unsaved edits' : (editingTotal > 0 ? 'Saved in ledger' : 'Blank draft • manual entry')}
-          </div>
-        </div>
-
-        {/* Card 2: Previous Month Total */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '16px 20px',
-          border: '1px solid #eef2f6',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
-          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>
-            {prevPeriod?.period_label || 'Previous'} Total
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0' }} className="currency-font">
-            {formatINR(prevTotal || editingTotal)}
-          </div>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>
-            Previous cycle
-          </div>
-        </div>
-
-        {/* Card 3: 5-Month Total */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '16px 20px',
-          border: '1px solid #eef2f6',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#f59e0b' }} />
-          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>
-            {periods.length > 0 ? `${periods.length}-Month Total` : 'All Cycles Total'}
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0' }} className="currency-font">
-            {formatINR(grandTotal5Mo)}
-          </div>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>
-            {periods.length > 0 ? `${periods[0]?.period_label} – ${periods[periods.length - 1]?.period_label}` : 'No periods recorded in DB'}
-          </div>
-        </div>
-
-        {/* Card 4: Monthly Average */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '16px 20px',
-          border: '1px solid #eef2f6',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ec4899' }} />
-          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>
-            Monthly Average
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0' }} className="currency-font">
-            {formatINR(monthlyAvg)}
-          </div>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>
-            {periods.length > 0 ? `Across ${periods.length} cycle${periods.length > 1 ? 's' : ''}` : '0 cycles'}
-          </div>
-        </div>
-      </div>
-
       {entryMessage && (
         <div style={{
           padding: '12px 18px',
@@ -342,52 +226,33 @@ export default function DataEntryPage({
         </div>
       )}
 
-      {/* 4. MAIN WORKSPACE: 2-COLUMN SPLIT */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) 280px',
-        gap: '20px',
-        alignItems: 'flex-start'
-      }}>
-        {/* Left Column: Category Blocks Table */}
-        <div style={{ width: '100%', minWidth: 0 }}>
-          <MatrixTable
-            selectedModule={selectedModule}
-            computedMatrix={computedMatrix}
-            editingPeriodId={editingPeriodId}
-            setEditingPeriodId={setEditingPeriodId}
-            activePeriodObj={activePeriodObj}
-            matrixDraft={matrixDraft}
-            remarksDraft={remarksDraft}
-            censusDraft={censusDraft}
-            handleCensusChange={handleCensusChange}
-            hostelCensusDraft={hostelCensusDraft}
-            transportCensusDraft={transportCensusDraft}
-            handleHostelCensusChange={handleHostelCensusChange}
-            handleTransportCensusChange={handleTransportCensusChange}
-            openAddCostHeadModal={openAddCostHeadModal}
-            handleDeleteCostHead={handleDeleteCostHead}
-            openAddCategoryModal={openAddCategoryModal}
-            categoriesList={categoriesList}
-            handleCellChange={handleCellChange}
-            handleRemarkChange={handleRemarkChange}
-            handleSaveActiveMonth={handleSaveActiveMonth}
-            savingBatch={savingBatch}
-            isDirty={isDirty}
-          />
-        </div>
-
-        {/* Right Column: Cost Mix & Entry Status Sidebar */}
-        <div style={{ width: '100%', minWidth: 0, position: 'sticky', top: '20px' }}>
-          <CostMixSidebar
-            computedMatrix={computedMatrix}
-            editingPeriodId={editingPeriodId}
-            activePeriodObj={activePeriodObj}
-            isDirty={isDirty}
-            handleSaveActiveMonth={handleSaveActiveMonth}
-            savingBatch={savingBatch}
-          />
-        </div>
+      {/* 3. MASTER DATA SPREADSHEET (FULL WIDTH FIT TO SCREEN) */}
+      <div style={{ width: '100%', minWidth: 0 }}>
+        <MatrixTable
+          selectedModule={selectedModule}
+          computedMatrix={computedMatrix}
+          editingPeriodId={editingPeriodId}
+          setEditingPeriodId={setEditingPeriodId}
+          activePeriodObj={activePeriodObj}
+          matrixDraft={matrixDraft}
+          remarksDraft={remarksDraft}
+          censusDraft={censusDraft}
+          handleCensusChange={handleCensusChange}
+          hostelCensusDraft={hostelCensusDraft}
+          transportCensusDraft={transportCensusDraft}
+          handleHostelCensusChange={handleHostelCensusChange}
+          handleTransportCensusChange={handleTransportCensusChange}
+          openAddCostHeadModal={openAddCostHeadModal}
+          handleDeleteCostHead={handleDeleteCostHead}
+          openAddCategoryModal={openAddCategoryModal}
+          categoriesList={categoriesList}
+          handleCellChange={handleCellChange}
+          handleRemarkChange={handleRemarkChange}
+          handleSaveActiveMonth={handleSaveActiveMonth}
+          savingBatch={savingBatch}
+          isDirty={isDirty}
+          fetchData={fetchData}
+        />
       </div>
 
       {/* MODAL: ADD NEW MONTH */}

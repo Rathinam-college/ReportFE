@@ -543,8 +543,8 @@ export default function App() {
     setIsDirty(true);
   };
 
-  const handleHostelCensusChange = (fieldOrObj, value) => {
-    const pIdStr = String(editingPeriodId);
+  const handleHostelCensusChange = (fieldOrObj, value, targetPeriodId = null) => {
+    const pIdStr = String(targetPeriodId || editingPeriodId);
     setHostelCensusDraft(prev => {
       const current = prev[pIdStr] || {};
       let updated;
@@ -561,15 +561,21 @@ export default function App() {
     setIsDirty(true);
   };
 
-  const handleTransportCensusChange = (field, value) => {
-    const pIdStr = String(editingPeriodId);
-    setTransportCensusDraft(prev => ({
-      ...prev,
-      [pIdStr]: {
-        ...(prev[pIdStr] || {}),
-        [field]: value
+  const handleTransportCensusChange = (fieldOrObj, value, targetPeriodId = null) => {
+    const pIdStr = String(targetPeriodId || editingPeriodId);
+    setTransportCensusDraft(prev => {
+      const current = prev[pIdStr] || {};
+      let updated;
+      if (typeof fieldOrObj === 'object' && fieldOrObj !== null) {
+        updated = { ...current, ...fieldOrObj };
+      } else {
+        updated = { ...current, [fieldOrObj]: value };
       }
-    }));
+      return {
+        ...prev,
+        [pIdStr]: updated
+      };
+    });
     setIsDirty(true);
   };
 
@@ -1409,7 +1415,14 @@ export default function App() {
       />
 
       {/* 3. MAIN WORKSPACE CONTENT */}
-      <main style={{ flex: 1, padding: '24px 32px', maxWidth: '1600px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      <main style={{
+        flex: 1,
+        padding: activeTab === 'data_entry' ? '18px 24px' : '24px 32px',
+        maxWidth: activeTab === 'data_entry' ? '100%' : '1600px',
+        width: '100%',
+        margin: '0 auto',
+        boxSizing: 'border-box'
+      }}>
         
         {/* DASHBOARD PAGE */}
         {activeTab === 'dashboard' && (
@@ -1472,6 +1485,7 @@ export default function App() {
             setNewMonthForm={setNewMonthForm}
             handleStartDateChange={handleStartDateChange}
             handleAddNewMonth={handleAddNewMonth}
+            fetchData={fetchData}
           />
         )}
 

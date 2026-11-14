@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { formatINR } from '../../utils/formatters';
-import { Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Droplets, BedDouble, AlertCircle, FileText } from 'lucide-react';
+import { 
+  Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Droplets, 
+  BedDouble, AlertCircle, FileText, Check, ArrowRight, Layers, Table
+} from 'lucide-react';
 
 export default function HostelSpreadsheetEntry({
   activePeriodObj,
@@ -11,253 +14,484 @@ export default function HostelSpreadsheetEntry({
   handleHostelCensusChange,
   handleSaveActiveMonth,
   savingBatch,
-  isDirty
+  isDirty,
+  fetchData
 }) {
   const [activeSubTab, setActiveSubTab] = useState('combined'); // 'combined', 'template', 'utilities'
   const [localMessage, setLocalMessage] = useState(null);
+  const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  const currStr = String(editingPeriodId);
-  const currH = hostelCensusDraft?.[currStr] || {};
   const isClosed = !!activePeriodObj?.is_closed;
+  const periods = computedMatrix?.periods || [];
+  const currStr = String(editingPeriodId);
 
-  // Helper to update draft
-  const updateField = (field, value) => {
-    if (isClosed) return;
-    handleHostelCensusChange?.(field, value);
+  // --- HELPER: Parse numeric safely ---
+  const num = (v, defaultVal = 0) => {
+    if (v === undefined || v === null || v === '') return defaultVal;
+    if (typeof v === 'number') return isNaN(v) ? defaultVal : v;
+    const cleaned = String(v).replace(/,/g, '').replace(/%/g, '').trim();
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? defaultVal : parsed;
   };
 
-  // --- 1. RESIDENT CENSUS VALUES & AUTO-CALCULATIONS ---
-  const bed_capacity_boys = parseInt(currH.bed_capacity_boys !== undefined ? currH.bed_capacity_boys : 2223, 10) || 0;
-  const bed_capacity_girls = parseInt(currH.bed_capacity_girls !== undefined ? currH.bed_capacity_girls : 896, 10) || 0;
-  const bed_capacity_total = bed_capacity_boys + bed_capacity_girls; // 3,119
+  // --- PURE FORMULA ENGINE: Calculates all formulas matching hostel.xlsx ---
+  const getHostelMetrics = (periodId) => {
+    const pStr = String(periodId);
+    const d = hostelCensusDraft[pStr] || {};
 
-  const students_boys = parseInt(currH.students_boys !== undefined ? currH.students_boys : 2075, 10) || 0;
-  const students_girls = parseInt(currH.students_girls !== undefined ? currH.students_girls : 768, 10) || 0;
-  const students_total = students_boys + students_girls; // 2,843
+    // 1. Bed Capacity (Row 3)
+    const bed_capacity_boys = num(d.bed_capacity_boys, 2223);
+    const bed_capacity_girls = num(d.bed_capacity_girls, 896);
+    const bed_capacity_total = bed_capacity_boys + bed_capacity_girls; // 3,119
 
-  const staff_boys = parseInt(currH.staff_boys !== undefined ? currH.staff_boys : 72, 10) || 0;
-  const staff_girls = parseInt(currH.staff_girls !== undefined ? currH.staff_girls : 59, 10) || 0;
-  const staff_total = staff_boys + staff_girls; // 131
+    // 2. Students (Row 4)
+    const students_boys = num(d.students_boys, 2075);
+    const students_girls = num(d.students_girls, 768);
+    const students_total = students_boys + students_girls; // 2,843
 
-  const total_occupied_boys = students_boys + staff_boys; // 2,147
-  const total_occupied_girls = students_girls + staff_girls; // 827
-  const total_occupied = total_occupied_boys + total_occupied_girls; // 2,974
+    // 3. Staffs (Row 5)
+    const staff_boys = num(d.staff_boys, 72);
+    const staff_girls = num(d.staff_girls, 59);
+    const staff_total = staff_boys + staff_girls; // 131
 
-  const vacant_boys = bed_capacity_boys - total_occupied_boys; // 76
-  const vacant_girls = bed_capacity_girls - total_occupied_girls; // 69
-  const vacant_total = bed_capacity_total - total_occupied; // 145
+    // 4. Total Occupied (Row 6)
+    const total_occupied_boys = students_boys + staff_boys; // 2,147
+    const total_occupied_girls = students_girls + staff_girls; // 827
+    const total_occupied = total_occupied_boys + total_occupied_girls; // 2,974
 
-  const vacant_college_boys = currH.vacant_college_boys !== undefined ? currH.vacant_college_boys : -41;
-  const vacant_college_girls = currH.vacant_college_girls !== undefined ? currH.vacant_college_girls : 69;
-  const vacant_college_total = (parseInt(vacant_college_boys, 10) || 0) + (parseInt(vacant_college_girls, 10) || 0); // 28
+    // 5. Vacant (Row 7)
+    const vacant_boys = bed_capacity_boys - total_occupied_boys; // 76
+    const vacant_girls = bed_capacity_girls - total_occupied_girls; // 69
+    const vacant_total = vacant_boys + vacant_girls; // 145
 
-  const vacant_sports_boys = currH.vacant_sports_boys !== undefined ? currH.vacant_sports_boys : '';
-  const vacant_sports_girls = currH.vacant_sports_girls !== undefined ? currH.vacant_sports_girls : '';
-  const vacant_sports_total = (parseInt(vacant_sports_boys, 10) || 0) + (parseInt(vacant_sports_girls, 10) || 0);
+    // 6. Vacant for College Students (Row 8)
+    const vacant_college_boys = d.vacant_college_boys !== undefined && d.vacant_college_boys !== '' 
+      ? num(d.vacant_college_boys) 
+      : (vacant_boys - 41); // 35
+    const vacant_college_girls = d.vacant_college_girls !== undefined && d.vacant_college_girls !== '' 
+      ? num(d.vacant_college_girls) 
+      : vacant_girls; // 69
+    const vacant_college_total = vacant_college_boys + vacant_college_girls; // 104
 
-  const vacant_school_boys = currH.vacant_school_boys !== undefined ? currH.vacant_school_boys : '';
-  const vacant_school_girls = currH.vacant_school_girls !== undefined ? currH.vacant_school_girls : '';
-  const vacant_school_total = (parseInt(vacant_school_boys, 10) || 0) + (parseInt(vacant_school_girls, 10) || 0);
+    // 7. Vacant for College Sports (Row 9)
+    const vacant_sports_boys = num(d.vacant_sports_boys, 0);
+    const vacant_sports_girls = num(d.vacant_sports_girls, 0);
+    const vacant_sports_total = vacant_sports_boys + vacant_sports_girls;
 
-  const occupied_pct_boys = bed_capacity_boys > 0 ? ((total_occupied_boys / bed_capacity_boys) * 100).toFixed(1) : '#VALUE!';
-  const occupied_pct_girls = bed_capacity_girls > 0 ? ((total_occupied_girls / bed_capacity_girls) * 100).toFixed(0) + '%' : '0%';
-  const occupied_pct_total = bed_capacity_total > 0 ? ((total_occupied / bed_capacity_total) * 100).toFixed(0) + '%' : '0%';
+    // 8. Vacant for School Students (Row 10)
+    const vacant_school_boys = num(d.vacant_school_boys, 0);
+    const vacant_school_girls = num(d.vacant_school_girls, 0);
+    const vacant_school_total = vacant_school_boys + vacant_school_girls;
 
-  const vacant_pct_boys = bed_capacity_boys > 0 ? ((vacant_boys / bed_capacity_boys) * 100).toFixed(0) + '%' : '0%';
-  const vacant_pct_girls = bed_capacity_girls > 0 ? ((vacant_girls / bed_capacity_girls) * 100).toFixed(0) + '%' : '0%';
-  const vacant_pct_total = bed_capacity_total > 0 ? ((vacant_total / bed_capacity_total) * 100).toFixed(0) + '%' : '0%';
+    // 9. Occupied % (Row 11)
+    const occupied_pct_boys = bed_capacity_boys > 0 ? (total_occupied_boys / bed_capacity_boys * 100) : 0;
+    const occupied_pct_girls = bed_capacity_girls > 0 ? (total_occupied_girls / bed_capacity_girls * 100) : 0;
+    const occupied_pct_total = bed_capacity_total > 0 ? (total_occupied / bed_capacity_total * 100) : 0;
 
-  const students_vacated = currH.students_vacated !== undefined ? currH.students_vacated : 86;
+    // 10. Vacant % (Row 12)
+    const vacant_pct_boys = bed_capacity_boys > 0 ? (vacant_boys / bed_capacity_boys * 100) : 0;
+    const vacant_pct_girls = bed_capacity_girls > 0 ? (vacant_girls / bed_capacity_girls * 100) : 0;
+    const vacant_pct_total = bed_capacity_total > 0 ? (vacant_total / bed_capacity_total * 100) : 0;
 
-  // --- 2. MAINTENANCE & QUALITY TICKETS VALUES ---
-  const tickets_received = parseInt(currH.tickets_received !== undefined ? currH.tickets_received : 176, 10) || 0;
-  const tickets_closed = parseInt(currH.tickets_closed !== undefined ? currH.tickets_closed : 176, 10) || 0;
-  const tickets_open = Math.max(0, tickets_received - tickets_closed); // 0
-  const total_hours_close = currH.total_hours_close !== undefined ? currH.total_hours_close : '';
-  const tat_hours = currH.tat_hours !== undefined ? currH.tat_hours : 62.29;
+    // 11. Students Vacated (Row 13)
+    const students_vacated = num(d.students_vacated, 86);
 
-  const quality_issues_received = parseInt(currH.quality_issues_received !== undefined ? currH.quality_issues_received : 5, 10) || 0;
-  const quality_issues_closed = parseInt(currH.quality_issues_closed !== undefined ? currH.quality_issues_closed : 3, 10) || 0;
-  const quality_issues_open = Math.max(0, quality_issues_received - quality_issues_closed); // 2
-  const incidents_count = parseInt(currH.incidents_count !== undefined ? currH.incidents_count : 0, 10) || 0;
+    // 12. Maintenance Tickets (Rows 14-18)
+    const tickets_received = num(d.tickets_received, 176);
+    const tickets_closed = num(d.tickets_closed, 176);
+    const tickets_open = Math.max(0, tickets_received - tickets_closed);
+    const total_hours_close = num(d.total_hours_close, 0);
+    const tat_hours = d.tat_hours !== undefined && d.tat_hours !== '' 
+      ? num(d.tat_hours) 
+      : (total_hours_close > 0 && tickets_closed > 0 ? (total_hours_close / tickets_closed) : 62.29);
 
-  // --- 3. UTILITIES & BUDGET VALUES ---
-  const power_units = currH.power_units !== undefined ? currH.power_units : 108201;
-  const power_cost = currH.power_cost !== undefined ? currH.power_cost : 1325151;
-  const water_purchase_cost = currH.water_purchase_cost !== undefined ? currH.water_purchase_cost : 248765;
-  const maintenance_expenses = currH.maintenance_expenses !== undefined ? currH.maintenance_expenses : 119394;
-  const expenses_occurred = currH.expenses_occurred !== undefined ? currH.expenses_occurred : 9349172;
+    // 13. Quality Issues (Rows 19-21)
+    const quality_issues_received = num(d.quality_issues_received, 5);
+    const quality_issues_closed = num(d.quality_issues_closed, 3);
+    const quality_issues_open = Math.max(0, quality_issues_received - quality_issues_closed);
+    const incidents_count = num(d.incidents_count, 0);
 
-  const approved_budget = currH.approved_budget !== undefined ? currH.approved_budget : 131788118;
-  const cumulative_budget_spent = currH.cumulative_budget_spent !== undefined ? currH.cumulative_budget_spent : 34527814;
-  const balance = (parseFloat(approved_budget) || 0) - (parseFloat(cumulative_budget_spent) || 0); // 9,72,60,304
+    // 14. Consumption & Expenses (Rows 23-26)
+    const power_units = num(d.power_units, 105116);
+    const power_cost = num(d.power_cost, 1469211);
+    const water_purchase_cost = num(d.water_purchase_cost, 248765);
+    const maintenance_expenses = num(d.maintenance_expenses, 119394);
+    const expenses_occurred = num(d.expenses_occurred, 9349172);
 
-  // --- 4. UNIT ECONOMICS & EFFICIENCY ---
-  const sq_feet = parseFloat(currH.sq_feet !== undefined ? currH.sq_feet : 231701) || 231701;
-  const per_student_cost_month = students_total > 0 ? Math.round((parseFloat(expenses_occurred) || 0) / students_total) : 3288;
-  const per_student_cost_day = Math.round(per_student_cost_month / 30); // 110
-  const sq_feet_per_occupant = total_occupied > 0 ? (sq_feet / total_occupied).toFixed(0) : '81';
+    // 15. Budget & Balance (Rows 27-29)
+    const approved_budget = num(d.approved_budget, 131788118);
+    const cumulative_budget_spent = num(d.cumulative_budget_spent, 34527814);
+    const balance = approved_budget - cumulative_budget_spent; // 9,72,60,304
 
-  const normal_water_litres = parseFloat(currH.normal_water_litres !== undefined ? currH.normal_water_litres : 8202000) || 0;
-  const normal_water_cost = parseFloat(currH.normal_water_cost !== undefined ? currH.normal_water_cost : 820200) || 0;
-  const drinking_water_litres = parseFloat(currH.drinking_water_litres !== undefined ? currH.drinking_water_litres : 92800) || 0;
-  const drinking_water_cost = parseFloat(currH.drinking_water_cost !== undefined ? currH.drinking_water_cost : 23200) || 0;
+    // 16. Unit Economics (Rows 30-34)
+    const number_of_students = students_total;
+    const per_student_cost_month = number_of_students > 0 ? Math.round(expenses_occurred / number_of_students) : 3288;
+    const per_student_cost_day = Math.round(per_student_cost_month / 30); // 110
+    const sq_feet = num(d.sq_feet, 231701);
+    const sq_feet_per_occupant = total_occupied > 0 ? (sq_feet / total_occupied).toFixed(1) : '81.5';
 
-  const normal_water_student_ltrs = currH.normal_water_student_ltrs !== undefined ? currH.normal_water_student_ltrs : 0;
-  const normal_water_student_cost = currH.normal_water_student_cost !== undefined ? currH.normal_water_student_cost : 88;
+    // 17. Water Consumption (Rows 35 & 45-54)
+    const normal_water_litres = num(d.normal_water_litres, 8202000);
+    const normal_water_cost = num(d.normal_water_cost, 820200);
+    const drinking_water_litres = num(d.drinking_water_litres, 92800);
+    const drinking_water_cost = num(d.drinking_water_cost, 23200);
 
-  // Detailed Efficiency Metrics for Image 1:
-  const power_cost_sqft = sq_feet > 0 ? ((parseFloat(power_cost) || 0) / sq_feet).toFixed(1) : '6.3';
-  const units_per_occupant = total_occupied > 0 ? ((parseFloat(power_units) || 0) / total_occupied).toFixed(1) : '35.3';
-  const power_cost_occupant = total_occupied > 0 ? Math.round((parseFloat(power_cost) || 0) / total_occupied) : 494;
+    const normal_water_student_ltrs = number_of_students > 0 ? Math.round(normal_water_litres / number_of_students) : 0;
+    const normal_water_student_cost = number_of_students > 0 ? Math.round(normal_water_cost / number_of_students) : num(d.normal_water_student_cost, 88);
 
-  const normal_water_ltr_day = total_occupied > 0 ? (normal_water_litres / total_occupied / 30).toFixed(2) : '91.93';
-  const normal_water_cost_day = total_occupied > 0 ? (normal_water_cost / total_occupied / 30).toFixed(2) : '9.19';
+    // 18. Multi-Month Analytics (Rows 38-54)
+    const power_cost_sqft = sq_feet > 0 ? (power_cost / sq_feet).toFixed(2) : '6.34';
+    const units_per_occupant = total_occupied > 0 ? (power_units / total_occupied).toFixed(1) : '35.3';
+    const power_cost_occupant = total_occupied > 0 ? Math.round(power_cost / total_occupied) : 494;
 
-  const drinking_water_ltr_day = total_occupied > 0 ? (drinking_water_litres / total_occupied / 30).toFixed(2) : '1.04';
-  const drinking_water_cost_day = total_occupied > 0 ? (drinking_water_cost / total_occupied / 30).toFixed(2) : '0.26';
+    const normal_water_ltr_day = total_occupied > 0 ? (normal_water_litres / total_occupied / 30).toFixed(2) : '91.93';
+    const normal_water_cost_day = total_occupied > 0 ? (normal_water_cost / total_occupied / 30).toFixed(2) : '9.19';
 
-  // Dedicated Save Handler for Hostel Template
-  const handleDirectSave = async () => {
+    const drinking_water_ltr_day = total_occupied > 0 ? (drinking_water_litres / total_occupied / 30).toFixed(2) : '1.04';
+    const drinking_water_cost_day = total_occupied > 0 ? (drinking_water_cost / total_occupied / 30).toFixed(2) : '0.26';
+
+    return {
+      raw: d,
+      bed_capacity_boys,
+      bed_capacity_girls,
+      bed_capacity_total,
+      students_boys,
+      students_girls,
+      students_total,
+      staff_boys,
+      staff_girls,
+      staff_total,
+      total_occupied_boys,
+      total_occupied_girls,
+      total_occupied,
+      vacant_boys,
+      vacant_girls,
+      vacant_total,
+      vacant_college_boys,
+      vacant_college_girls,
+      vacant_college_total,
+      vacant_sports_boys,
+      vacant_sports_girls,
+      vacant_sports_total,
+      vacant_school_boys,
+      vacant_school_girls,
+      vacant_school_total,
+      occupied_pct_boys,
+      occupied_pct_girls,
+      occupied_pct_total,
+      vacant_pct_boys,
+      vacant_pct_girls,
+      vacant_pct_total,
+      students_vacated,
+      tickets_received,
+      tickets_closed,
+      tickets_open,
+      total_hours_close,
+      tat_hours,
+      quality_issues_received,
+      quality_issues_closed,
+      quality_issues_open,
+      incidents_count,
+      power_units,
+      power_cost,
+      water_purchase_cost,
+      maintenance_expenses,
+      expenses_occurred,
+      approved_budget,
+      cumulative_budget_spent,
+      balance,
+      number_of_students,
+      per_student_cost_month,
+      per_student_cost_day,
+      sq_feet,
+      sq_feet_per_occupant,
+      normal_water_litres,
+      normal_water_cost,
+      drinking_water_litres,
+      drinking_water_cost,
+      normal_water_student_ltrs,
+      normal_water_student_cost,
+      power_cost_sqft,
+      units_per_occupant,
+      power_cost_occupant,
+      normal_water_ltr_day,
+      normal_water_cost_day,
+      drinking_water_ltr_day,
+      drinking_water_cost_day
+    };
+  };
+
+  // Current active period metrics
+  const activeM = getHostelMetrics(editingPeriodId);
+
+  // --- CELL INPUT HANDLER ---
+  const handleUpdate = (field, value, targetPeriodId = null) => {
+    if (isClosed && (!targetPeriodId || targetPeriodId === editingPeriodId)) return;
+    const pid = targetPeriodId || editingPeriodId;
+    handleHostelCensusChange?.(field, value, pid);
+  };
+
+  // --- DIRECT SAVE HANDLER FOR ACTIVE MONTH ---
+  const handleDirectSaveActive = async () => {
     try {
+      setIsSavingLocal(true);
       setLocalMessage(null);
-      // Synchronize all computed values to draft
-      handleHostelCensusChange?.({
-        bed_capacity_boys,
-        bed_capacity_girls,
-        bed_capacity_total,
-        students_boys,
-        students_girls,
-        students_total,
-        staff_boys,
-        staff_girls,
-        staff_total,
-        total_occupied,
-        vacant_total,
-        vacant_college: vacant_college_total,
-        vacant_college_boys: parseInt(vacant_college_boys, 10) || 0,
-        vacant_college_girls: parseInt(vacant_college_girls, 10) || 0,
-        vacant_sports_boys: parseInt(vacant_sports_boys, 10) || 0,
-        vacant_sports_girls: parseInt(vacant_sports_girls, 10) || 0,
-        vacant_sports_total,
-        vacant_school_boys: parseInt(vacant_school_boys, 10) || 0,
-        vacant_school_girls: parseInt(vacant_school_girls, 10) || 0,
-        vacant_school_total,
-        occupied_pct: parseFloat(occupied_pct_total) || 95.35,
-        vacant_pct: parseFloat(vacant_pct_total) || 4.65,
-        students_vacated: parseInt(students_vacated, 10) || 0,
-        tickets_received,
-        tickets_closed,
-        tickets_open,
-        total_hours_close: parseFloat(total_hours_close) || 0,
-        tat_hours: parseFloat(tat_hours) || 62.29,
-        quality_issues_received,
-        quality_issues_closed,
-        quality_issues_open,
-        incidents_count,
-        power_units: parseInt(power_units, 10) || 0,
-        power_cost: parseFloat(power_cost) || 0,
-        water_purchase_cost: parseFloat(water_purchase_cost) || 0,
-        maintenance_expenses: parseFloat(maintenance_expenses) || 0,
-        expenses_occurred: parseFloat(expenses_occurred) || 0,
-        approved_budget: parseFloat(approved_budget) || 0,
-        cumulative_budget_spent: parseFloat(cumulative_budget_spent) || 0,
-        sq_feet,
-        normal_water_litres,
-        normal_water_cost,
-        drinking_water_litres,
-        drinking_water_cost,
-        normal_water_student_ltrs: parseFloat(normal_water_student_ltrs) || 0,
-        normal_water_student_cost: parseFloat(normal_water_student_cost) || 88
+
+      const m = getHostelMetrics(editingPeriodId);
+      const payload = {
+        bed_capacity_boys: m.bed_capacity_boys,
+        bed_capacity_girls: m.bed_capacity_girls,
+        bed_capacity_total: m.bed_capacity_total,
+        students_boys: m.students_boys,
+        students_girls: m.students_girls,
+        students_total: m.students_total,
+        staff_boys: m.staff_boys,
+        staff_girls: m.staff_girls,
+        staff_total: m.staff_total,
+        total_occupied_boys: m.total_occupied_boys,
+        total_occupied_girls: m.total_occupied_girls,
+        total_occupied: m.total_occupied,
+        vacant_boys: m.vacant_boys,
+        vacant_girls: m.vacant_girls,
+        vacant_total: m.vacant_total,
+        vacant_college_boys: m.vacant_college_boys,
+        vacant_college_girls: m.vacant_college_girls,
+        vacant_college: m.vacant_college_total,
+        vacant_sports_boys: m.vacant_sports_boys,
+        vacant_sports_girls: m.vacant_sports_girls,
+        vacant_sports_total: m.vacant_sports_total,
+        vacant_school_boys: m.vacant_school_boys,
+        vacant_school_girls: m.vacant_school_girls,
+        vacant_school_total: m.vacant_school_total,
+        occupied_pct_boys: m.occupied_pct_boys,
+        occupied_pct_girls: m.occupied_pct_girls,
+        occupied_pct: m.occupied_pct_total,
+        vacant_pct_boys: m.vacant_pct_boys,
+        vacant_pct_girls: m.vacant_pct_girls,
+        vacant_pct: m.vacant_pct_total,
+        students_vacated: m.students_vacated,
+        tickets_received: m.tickets_received,
+        tickets_closed: m.tickets_closed,
+        tickets_open: m.tickets_open,
+        total_hours_close: m.total_hours_close,
+        tat_hours: m.tat_hours,
+        quality_issues_received: m.quality_issues_received,
+        quality_issues_closed: m.quality_issues_closed,
+        quality_issues_open: m.quality_issues_open,
+        incidents_count: m.incidents_count,
+        power_units: m.power_units,
+        power_cost: m.power_cost,
+        water_purchase_cost: m.water_purchase_cost,
+        maintenance_expenses: m.maintenance_expenses,
+        expenses_occurred: m.expenses_occurred,
+        approved_budget: m.approved_budget,
+        cumulative_budget_spent: m.cumulative_budget_spent,
+        balance: m.balance,
+        normal_water_litres: m.normal_water_litres,
+        normal_water_cost: m.normal_water_cost,
+        drinking_water_litres: m.drinking_water_litres,
+        drinking_water_cost: m.drinking_water_cost,
+        sq_feet: m.sq_feet,
+        per_student_cost_month: m.per_student_cost_month,
+        per_student_cost_day: m.per_student_cost_day,
+        sq_feet_per_occupant: parseFloat(m.sq_feet_per_occupant) || 0,
+        normal_water_student_ltrs: m.normal_water_student_ltrs,
+        normal_water_student_cost: m.normal_water_student_cost,
+        power_cost_sqft: parseFloat(m.power_cost_sqft) || 0,
+        units_per_occupant: parseFloat(m.units_per_occupant) || 0,
+        power_cost_occupant: m.power_cost_occupant,
+        normal_water_ltr_day: parseFloat(m.normal_water_ltr_day) || 0,
+        normal_water_cost_day: parseFloat(m.normal_water_cost_day) || 0,
+        drinking_water_ltr_day: parseFloat(m.drinking_water_ltr_day) || 0,
+        drinking_water_cost_day: parseFloat(m.drinking_water_cost_day) || 0
+      };
+
+      const res = await fetch(`/api/hostel-census/${editingPeriodId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
-      // Call parent handleSaveActiveMonth
-      if (handleSaveActiveMonth) {
-        await handleSaveActiveMonth();
-        setLocalMessage({ type: 'success', text: `Hostel operational parameters saved to PostgreSQL successfully!` });
-        setTimeout(() => setLocalMessage(null), 4000);
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to save hostel census data');
       }
+
+      setLocalMessage({
+        type: 'success',
+        text: `✓ Successfully saved all parameters, formulas, and totals for ${activePeriodObj?.period_label} into PostgreSQL database!`
+      });
+
+      if (fetchData) await fetchData();
+      setTimeout(() => setLocalMessage(null), 5000);
     } catch (err) {
-      setLocalMessage({ type: 'error', text: err.message || 'Error saving hostel operational parameters' });
+      setLocalMessage({ type: 'error', text: err.message || 'Error saving hostel parameters' });
+    } finally {
+      setIsSavingLocal(false);
     }
   };
 
-  // Reusable inline editable input cell
-  const renderCellInput = (field, currentVal, placeholder = '', isNumeric = true, width = '100%') => (
-    <input
-      type={isNumeric ? 'number' : 'text'}
-      value={currentVal !== undefined && currentVal !== null ? currentVal : ''}
-      placeholder={placeholder}
-      onChange={(e) => updateField(field, isNumeric ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
-      disabled={isClosed}
-      style={{
-        width: width,
-        padding: '3px 6px',
-        border: '1px solid #cbd5e1',
-        borderRadius: '4px',
-        textAlign: isNumeric ? 'center' : 'left',
-        fontSize: '13px',
-        fontWeight: '600',
-        backgroundColor: isClosed ? '#f8fafc' : '#ffffff',
-        color: '#0f172a',
-        outline: 'none',
-        boxSizing: 'border-box'
-      }}
-    />
-  );
+  // --- BULK SAVE HANDLER FOR ALL MONTHS IN MULTI-MONTH TABLE ---
+  const handleBulkSaveAllMonths = async () => {
+    try {
+      setIsSavingLocal(true);
+      setLocalMessage(null);
+
+      const monthsMap = {};
+      periods.forEach(p => {
+        const m = getHostelMetrics(p.id);
+        monthsMap[p.id] = {
+          bed_capacity_boys: m.bed_capacity_boys,
+          bed_capacity_girls: m.bed_capacity_girls,
+          bed_capacity_total: m.bed_capacity_total,
+          students_boys: m.students_boys,
+          students_girls: m.students_girls,
+          students_total: m.students_total,
+          staff_boys: m.staff_boys,
+          staff_girls: m.staff_girls,
+          staff_total: m.staff_total,
+          total_occupied: m.total_occupied,
+          vacant_total: m.vacant_total,
+          vacant_college_boys: m.vacant_college_boys,
+          vacant_college_girls: m.vacant_college_girls,
+          power_units: m.power_units,
+          power_cost: m.power_cost,
+          water_purchase_cost: m.water_purchase_cost,
+          maintenance_expenses: m.maintenance_expenses,
+          expenses_occurred: m.expenses_occurred,
+          approved_budget: m.approved_budget,
+          cumulative_budget_spent: m.cumulative_budget_spent,
+          normal_water_litres: m.normal_water_litres,
+          normal_water_cost: m.normal_water_cost,
+          drinking_water_litres: m.drinking_water_litres,
+          drinking_water_cost: m.drinking_water_cost,
+          sq_feet: m.sq_feet
+        };
+      });
+
+      const res = await fetch('/api/hostel-census-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ months: monthsMap })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to bulk save all months');
+      }
+
+      setLocalMessage({
+        type: 'success',
+        text: `✓ Successfully saved all ${periods.length} months of hostel operational parameters & formulas into PostgreSQL database!`
+      });
+
+      if (fetchData) await fetchData();
+      setTimeout(() => setLocalMessage(null), 5000);
+    } catch (err) {
+      setLocalMessage({ type: 'error', text: err.message || 'Error saving months in bulk' });
+    } finally {
+      setIsSavingLocal(false);
+    }
+  };
+
+  // Reusable inline input cell component
+  const renderCellInput = (field, currentVal, placeholder = '', isNumeric = true, width = '100%', targetPeriodId = null) => {
+    const rawVal = targetPeriodId 
+      ? hostelCensusDraft[String(targetPeriodId)]?.[field] 
+      : hostelCensusDraft[currStr]?.[field];
+    const displayVal = rawVal !== undefined && rawVal !== null ? rawVal : (currentVal !== undefined ? currentVal : '');
+
+    return (
+      <input
+        type={isNumeric ? 'number' : 'text'}
+        value={displayVal}
+        placeholder={placeholder}
+        onChange={(e) => {
+          const val = isNumeric ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value;
+          handleUpdate(field, val, targetPeriodId);
+        }}
+        disabled={isClosed && (!targetPeriodId || targetPeriodId === editingPeriodId)}
+        style={{
+          width: width,
+          padding: '4px 6px',
+          border: '1px solid #000000',
+          borderRadius: '3px',
+          textAlign: isNumeric ? 'center' : 'left',
+          fontSize: '13px',
+          fontWeight: '700',
+          backgroundColor: '#fff2df',
+          color: '#000000',
+          outline: 'none',
+          boxSizing: 'border-box',
+          transition: 'all 0.15s ease'
+        }}
+        onFocus={(e) => {
+          e.target.style.borderColor = '#00a2e8';
+          e.target.style.backgroundColor = '#ffffff';
+          e.target.style.boxShadow = '0 0 0 2px rgba(0, 162, 232, 0.25)';
+        }}
+        onBlur={(e) => {
+          e.target.style.borderColor = '#000000';
+          e.target.style.backgroundColor = '#fff2df';
+          e.target.style.boxShadow = 'none';
+        }}
+      />
+    );
+  };
 
   return (
     <div style={{
       backgroundColor: '#ffffff',
       borderRadius: '12px',
-      border: '1.5px solid #059669',
-      boxShadow: '0 4px 12px rgba(5, 150, 105, 0.08)',
+      border: '1.5px solid #00a2e8',
+      boxShadow: '0 4px 16px rgba(0, 162, 232, 0.1)',
       overflow: 'hidden',
-      marginBottom: '20px'
+      marginBottom: '22px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       {/* 1. TOP SPREADSHEET HEADER & ACTION BAR */}
       <div style={{
-        padding: '12px 18px',
-        backgroundColor: '#ecfdf5',
-        borderBottom: '1.5px solid #a7f3d0',
+        backgroundColor: '#00a2e8',
+        padding: '14px 20px',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '12px'
+        gap: '12px',
+        color: '#ffffff'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '6px',
-            backgroundColor: '#059669',
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            backgroundColor: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#ffffff'
+            color: '#00a2e8',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
           }}>
-            <FileSpreadsheet size={18} />
+            <BedDouble size={20} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 style={{ fontSize: '15px', fontWeight: '800', color: '#064e3b', margin: 0 }}>
-                Hostel Operations & Resident Census Master Ledger
+              <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#ffffff', margin: 0 }}>
+                Hostel Operations Master Spreadsheet
               </h2>
               <span style={{
                 fontSize: '11px',
-                fontWeight: '700',
-                color: '#047857',
-                backgroundColor: '#d1fae5',
+                fontWeight: '800',
                 padding: '2px 8px',
                 borderRadius: '4px',
-                border: '1px solid #6ee7b7'
+                backgroundColor: '#ffffff',
+                color: '#0284c7'
               }}>
-                hostel.xlsx (Sheet 1)
+                Rathinam Report Excel Grid
               </span>
             </div>
-            <p style={{ fontSize: '11.5px', color: '#047857', margin: '2px 0 0 0' }}>
-              Editing Cycle: <strong>{activePeriodObj?.period_label}</strong> • Auto-calculates Bed Occupancy, Utilities, Tickets, & Budget Balance
+            <p style={{ fontSize: '11.5px', color: '#e0f2fe', margin: '2px 0 0 0' }}>
+              Full Editable Matrix • Resident Census, Bed Capacity & Utilities • Direct DB Save
             </p>
           </div>
         </div>
@@ -266,314 +500,421 @@ export default function HostelSpreadsheetEntry({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <div style={{
             display: 'inline-flex',
-            backgroundColor: '#d1fae5',
-            borderRadius: '6px',
-            padding: '2px',
-            border: '1px solid #a7f3d0'
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            borderRadius: '8px',
+            padding: '3px',
+            border: '1px solid rgba(255, 255, 255, 0.3)'
           }}>
             <button
               type="button"
               onClick={() => setActiveSubTab('combined')}
               style={{
-                padding: '4px 10px',
-                borderRadius: '4px',
+                padding: '5px 12px',
+                borderRadius: '6px',
                 fontSize: '11.5px',
-                fontWeight: activeSubTab === 'combined' ? '700' : '500',
+                fontWeight: '700',
                 backgroundColor: activeSubTab === 'combined' ? '#ffffff' : 'transparent',
-                color: activeSubTab === 'combined' ? '#065f46' : '#047857',
+                color: activeSubTab === 'combined' ? '#0087c2' : '#ffffff',
                 border: 'none',
-                cursor: 'pointer',
-                boxShadow: activeSubTab === 'combined' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                cursor: 'pointer'
               }}
             >
-              Combined View
+              All Tables (Combined)
             </button>
             <button
               type="button"
               onClick={() => setActiveSubTab('template')}
               style={{
-                padding: '4px 10px',
-                borderRadius: '4px',
+                padding: '5px 12px',
+                borderRadius: '6px',
                 fontSize: '11.5px',
-                fontWeight: activeSubTab === 'template' ? '700' : '500',
+                fontWeight: '700',
                 backgroundColor: activeSubTab === 'template' ? '#ffffff' : 'transparent',
-                color: activeSubTab === 'template' ? '#065f46' : '#047857',
+                color: activeSubTab === 'template' ? '#0087c2' : '#ffffff',
                 border: 'none',
-                cursor: 'pointer',
-                boxShadow: activeSubTab === 'template' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                cursor: 'pointer'
               }}
             >
-              Master Template (Image 2)
+              Table 1: Master Parameters
             </button>
             <button
               type="button"
               onClick={() => setActiveSubTab('utilities')}
               style={{
-                padding: '4px 10px',
-                borderRadius: '4px',
+                padding: '5px 12px',
+                borderRadius: '6px',
                 fontSize: '11.5px',
-                fontWeight: activeSubTab === 'utilities' ? '700' : '500',
+                fontWeight: '700',
                 backgroundColor: activeSubTab === 'utilities' ? '#ffffff' : 'transparent',
-                color: activeSubTab === 'utilities' ? '#065f46' : '#047857',
+                color: activeSubTab === 'utilities' ? '#0087c2' : '#ffffff',
                 border: 'none',
-                cursor: 'pointer',
-                boxShadow: activeSubTab === 'utilities' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                cursor: 'pointer'
               }}
             >
-              Power & Water Analytics (Image 1)
+              Table 2: Utilities Multi-Month
             </button>
           </div>
 
           <button
             type="button"
-            onClick={handleDirectSave}
-            disabled={savingBatch || isClosed}
+            onClick={handleDirectSaveActive}
+            disabled={savingBatch || isSavingLocal || isClosed}
             style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              backgroundColor: isClosed ? '#94a3b8' : '#059669',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: isClosed ? 'not-allowed' : 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 2px 5px rgba(5, 150, 105, 0.25)'
+              padding: '8px 18px',
+              borderRadius: '6px',
+              backgroundColor: '#ffffff',
+              color: '#0087c2',
+              fontSize: '13px',
+              fontWeight: '800',
+              border: 'none',
+              cursor: isClosed ? 'not-allowed' : 'pointer',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.18)'
             }}
           >
             <Save size={14} />
-            <span>{savingBatch ? 'Saving Data...' : '💾 Save Hostel Operational Parameters'}</span>
+            <span>{isSavingLocal || savingBatch ? 'Saving...' : `💾 Save ${activePeriodObj?.period_label || 'Month'} to DB`}</span>
           </button>
         </div>
       </div>
 
+      {/* 2. MONTH SELECTOR PILL ROW */}
+      <div style={{
+        backgroundColor: '#f0f9ff',
+        padding: '10px 20px',
+        borderBottom: '1px solid #bae6fd',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            📅 Active Focus Month:
+          </span>
+          {periods.map(p => {
+            const isSel = p.id === editingPeriodId;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setEditingPeriodId(p.id)}
+                style={{
+                  padding: '5px 14px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  border: isSel ? '2px solid #00a2e8' : '1px solid #cbd5e1',
+                  backgroundColor: isSel ? '#00a2e8' : '#ffffff',
+                  color: isSel ? '#ffffff' : '#334155',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: isSel ? '0 2px 4px rgba(0, 162, 232, 0.25)' : 'none'
+                }}
+              >
+                <span>{p.period_label}</span>
+                {isSel && <Check size={12} color="#ffffff" />}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{
+            fontSize: '11px',
+            fontWeight: '700',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: isDirty ? '#fff7ed' : '#f0fdf4',
+            color: isDirty ? '#c2410c' : '#166534',
+            border: `1px solid ${isDirty ? '#ffedd5' : '#bbf7d0'}`
+          }}>
+            {isDirty ? '● Unsaved Edits' : '✓ Synced with PostgreSQL'}
+          </span>
+        </div>
+      </div>
+
+      {/* 3. FORMULA BAR RIBBON */}
+      <div style={{
+        padding: '8px 20px',
+        backgroundColor: '#ffffff',
+        borderBottom: '1px solid #e2e8f0',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        fontSize: '12px'
+      }}>
+        <div style={{ fontWeight: '800', color: '#00a2e8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span>fx</span>
+        </div>
+        <div style={{ height: '14px', width: '1px', backgroundColor: '#e2e8f0' }} />
+        <div style={{ fontFamily: 'monospace', color: '#475569', fontSize: '11.5px', flex: 1 }}>
+          <strong>Total Occupied:</strong> =SUM(Students + Staff) | <strong>Vacant:</strong> =Bed Capacity - Total Occupied | <strong>Balance:</strong> =Approved Budget - Cumulative Budget Spent | <strong>Per Student Cost:</strong> =Expenses Occurred / Students
+        </div>
+      </div>
+
+      {/* SUCCESS / ERROR NOTIFICATION BANNER */}
       {localMessage && (
         <div style={{
-          padding: '8px 18px',
+          padding: '10px 18px',
           backgroundColor: localMessage.type === 'success' ? '#dcfce7' : '#fee2e2',
           color: localMessage.type === 'success' ? '#15803d' : '#b91c1c',
-          fontSize: '12px',
+          fontSize: '12.5px',
           fontWeight: '700',
-          borderBottom: '1px solid rgba(0,0,0,0.05)'
+          borderBottom: '1px solid rgba(0,0,0,0.05)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          {localMessage.text}
+          {localMessage.type === 'success' ? <CheckCircle2 size={16} color="#15803d" /> : <AlertCircle size={16} color="#b91c1c" />}
+          <span>{localMessage.text}</span>
         </div>
       )}
 
-      {/* 2. MASTER HOSTEL TEMPLATE (IMAGE 2 REPLICA) */}
+      {/* 2. TABLE 1: MASTER HOSTEL PARAMETERS TEMPLATE (EXCEL ROWS 1-35) */}
       {(activeSubTab === 'combined' || activeSubTab === 'template') && (
         <div style={{ overflowX: 'auto', padding: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>
-              📊 Excel Template Grid: Hostel Resident Census, Tickets & Budget
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+            <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#1e293b' }}>
+              📊 Table 1: Master Parameters, Resident Census & Operational Expenses (Rows 1 to 35)
             </span>
             <span style={{ fontSize: '11px', color: '#64748b' }}>
-              Interactive editable cells • Auto-recalculates all sums and ratios live
+              Cycle: <strong style={{ color: '#059669' }}>{activePeriodObj?.period_label}</strong> • All SUMs, Occupancy %, TAT & Balances recalculate live
             </span>
           </div>
 
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
-            fontSize: '12.5px',
-            fontFamily: 'inherit',
-            border: '1.5px solid #000000',
+            fontSize: '13px',
+            border: '2px solid #000000',
             backgroundColor: '#ffffff'
           }}>
             <thead>
-              <tr style={{ backgroundColor: '#ffffff', borderBottom: '1.5px solid #000000' }}>
-                <th style={{ width: '45px', borderRight: '1px solid #000000', padding: '8px 4px', textAlign: 'center', fontWeight: '800' }}>S.No</th>
-                <th style={{ width: '360px', borderRight: '1px solid #000000', padding: '8px 10px', textAlign: 'left', fontWeight: '800' }}>Parameters</th>
-                <th style={{ width: '110px', borderRight: '1px solid #000000', padding: '8px 6px', textAlign: 'center', fontWeight: '800' }}>Boys</th>
-                <th style={{ width: '110px', borderRight: '1px solid #000000', padding: '8px 6px', textAlign: 'center', fontWeight: '800' }}>Girls</th>
-                <th style={{ width: '120px', borderRight: '1px solid #000000', padding: '8px 6px', textAlign: 'center', fontWeight: '800' }}>Total</th>
-                <th style={{ width: '220px', padding: '8px 10px', textAlign: 'center', fontWeight: '800' }}>Cost / Notes</th>
+              <tr style={{
+                backgroundColor: '#00a2e8',
+                color: '#000000',
+                borderBottom: '2px solid #000000',
+                fontWeight: '800',
+                fontSize: '13px'
+              }}>
+                <th style={{ width: '50px', borderRight: '1px solid #000000', padding: '10px 4px', textAlign: 'center' }}>S.No</th>
+                <th style={{ minWidth: '320px', borderRight: '1px solid #000000', padding: '10px 12px', textAlign: 'left' }}>Parameters / Operational Census</th>
+                <th style={{ width: '120px', borderRight: '1px solid #000000', padding: '10px 8px', textAlign: 'center' }}>Boys</th>
+                <th style={{ width: '120px', borderRight: '1px solid #000000', padding: '10px 8px', textAlign: 'center' }}>Girls</th>
+                <th style={{ width: '130px', borderRight: '1px solid #000000', padding: '10px 8px', textAlign: 'center', backgroundColor: '#0284c7', color: '#ffffff' }}>Total</th>
+                <th style={{ width: '260px', padding: '10px 12px', textAlign: 'center' }}>Cost / Standard Reference</th>
               </tr>
             </thead>
             <tbody>
               {/* Row 1: Bed Capacity */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>1</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Bed Capacity</td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>1</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>Bed Capacity</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('bed_capacity_boys', bed_capacity_boys, '2223')}
+                  {renderCellInput('bed_capacity_boys', activeM.bed_capacity_boys, '2223')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('bed_capacity_girls', bed_capacity_girls, '896')}
+                  {renderCellInput('bed_capacity_girls', activeM.bed_capacity_girls, '896')}
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', backgroundColor: '#f8fafc' }}>
-                  {bed_capacity_total.toLocaleString()}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
+                  {activeM.bed_capacity_total.toLocaleString()}
                 </td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}>—</td>
+                <td style={{ padding: '6px 10px', color: '#475569', textAlign: 'center', fontSize: '11.5px', fontFamily: 'monospace' }}>
+                  =SUM(Boys + Girls)
+                </td>
               </tr>
 
               {/* Row 2: No. of students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>2</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>No. of students</td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>2</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>No. of students</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('students_boys', students_boys, '2075')}
+                  {renderCellInput('students_boys', activeM.students_boys, '2075')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('students_girls', students_girls, '768')}
+                  {renderCellInput('students_girls', activeM.students_girls, '768')}
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', backgroundColor: '#f8fafc' }}>
-                  {students_total.toLocaleString()}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
+                  {activeM.students_total.toLocaleString()}
                 </td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}>—</td>
+                <td style={{ padding: '6px 10px', color: '#475569', textAlign: 'center', fontSize: '11.5px', fontFamily: 'monospace' }}>
+                  =SUM(Boys + Girls)
+                </td>
               </tr>
 
               {/* Row 3: No. of staffs */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>3</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>No. of staffs</td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>3</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>No. of staffs</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('staff_boys', staff_boys, '72')}
+                  {renderCellInput('staff_boys', activeM.staff_boys, '72')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('staff_girls', staff_girls, '59')}
+                  {renderCellInput('staff_girls', activeM.staff_girls, '59')}
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', backgroundColor: '#f8fafc' }}>
-                  {staff_total.toLocaleString()}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
+                  {activeM.staff_total.toLocaleString()}
                 </td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}>—</td>
+                <td style={{ padding: '6px 10px', color: '#475569', textAlign: 'center', fontSize: '11.5px', fontFamily: 'monospace' }}>
+                  =SUM(Boys + Girls)
+                </td>
               </tr>
 
-              {/* Row 4: Total Occupied */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#f8fafc' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800' }}>4</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '800', color: '#0f172a' }}>Total Occupied</td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#0f172a' }}>
-                  {total_occupied_boys.toLocaleString()}
+              {/* Row 4: Total Occupied (SUBTOTAL: BRIGHT LIME GREEN) */}
+              <tr style={{ backgroundColor: '#00ff00', borderBottom: '2px solid #000000', color: '#000000', fontWeight: '800' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '7px', fontWeight: '900' }}>4</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '7px 12px', fontWeight: '900', color: '#000000' }}>Total Occupied</td>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '900', color: '#000000' }}>
+                  {activeM.total_occupied_boys.toLocaleString()}
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#0f172a' }}>
-                  {total_occupied_girls.toLocaleString()}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '900', color: '#000000' }}>
+                  {activeM.total_occupied_girls.toLocaleString()}
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#047857', backgroundColor: '#dcfce7' }}>
-                  {total_occupied.toLocaleString()}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '900', color: '#000000', fontSize: '13.5px' }}>
+                  {activeM.total_occupied.toLocaleString()}
                 </td>
-                <td style={{ padding: '6px 10px', color: '#64748b', fontSize: '11px', textAlign: 'center' }}>Auto: Students + Staff</td>
+                <td style={{ padding: '6px 10px', color: '#000000', fontSize: '12px', textAlign: 'center', fontWeight: '800' }}>
+                  =Students + Staff ({activeM.students_total} + {activeM.staff_total})
+                </td>
               </tr>
 
               {/* Row 5: Vacant */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>5</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Vacant</td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>5</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>Vacant</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>
-                  {vacant_boys}
+                  {activeM.vacant_boys}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>
-                  {vacant_girls}
+                  {activeM.vacant_girls}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800' }}>
-                  {vacant_total}
+                  {activeM.vacant_total}
                 </td>
-                <td style={{ padding: '6px 10px', color: '#64748b', fontSize: '11px', textAlign: 'center' }}>Auto: Capacity - Occupied</td>
+                <td style={{ padding: '6px 10px', color: '#475569', fontSize: '11.5px', textAlign: 'center', fontFamily: 'monospace' }}>
+                  =Bed Capacity - Total Occupied
+                </td>
               </tr>
 
               {/* Row 6: Vacant for college students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>6</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Vacant for college students</td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>6</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '600', color: '#000000' }}>Vacant for college students</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('vacant_college_boys', vacant_college_boys, '-41')}
+                  {renderCellInput('vacant_college_boys', activeM.vacant_college_boys, '35')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('vacant_college_girls', vacant_college_girls, '69')}
+                  {renderCellInput('vacant_college_girls', activeM.vacant_college_girls, '69')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>
-                  {vacant_college_total}
+                  {activeM.vacant_college_total}
                 </td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}>—</td>
+                <td style={{ padding: '6px 10px', color: '#475569', fontSize: '11.5px', textAlign: 'center' }}>
+                  Boys (=Vacant-41) | Girls (=Vacant)
+                </td>
               </tr>
 
               {/* Row 7: Vacant for college sports students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', color: '#475569' }}>Vacant for college sports students (KPM hostel)</td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>—</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', color: '#334155' }}>Vacant for college sports students (KPM hostel)</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('vacant_sports_boys', vacant_sports_boys, '0')}
+                  {renderCellInput('vacant_sports_boys', activeM.vacant_sports_boys, '0')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('vacant_sports_girls', vacant_sports_girls, '0')}
+                  {renderCellInput('vacant_sports_girls', activeM.vacant_sports_girls, '0')}
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>
-                  {vacant_sports_total || '—'}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '600' }}>
+                  {activeM.vacant_sports_total || '—'}
                 </td>
                 <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}>—</td>
               </tr>
 
               {/* Row 8: Vacant for school students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', color: '#475569' }}>Vacant for school students</td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>—</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', color: '#334155' }}>Vacant for school students</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('vacant_school_boys', vacant_school_boys, '0')}
+                  {renderCellInput('vacant_school_boys', activeM.vacant_school_boys, '0')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('vacant_school_girls', vacant_school_girls, '0')}
+                  {renderCellInput('vacant_school_girls', activeM.vacant_school_girls, '0')}
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>
-                  {vacant_school_total || '—'}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '600' }}>
+                  {activeM.vacant_school_total || '—'}
                 </td>
                 <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}>—</td>
               </tr>
 
-              {/* Row 9: Occupied % */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700' }}>Occupied %</td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700', color: '#047857' }}>
-                  {occupied_pct_boys !== '#VALUE!' ? `${occupied_pct_boys}%` : '#VALUE!'}
+              {/* Row 9: Occupied % (SILVER / GREY CATEGORY STYLE) */}
+              <tr style={{ backgroundColor: '#dcdde1', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>—</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '800', color: '#000000' }}>Occupied %</td>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
+                  {activeM.occupied_pct_boys.toFixed(1)}%
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700', color: '#047857' }}>
-                  {occupied_pct_girls}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
+                  {activeM.occupied_pct_girls.toFixed(1)}%
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#047857' }}>
-                  {occupied_pct_total}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '900', color: '#000000' }}>
+                  {activeM.occupied_pct_total.toFixed(2)}%
                 </td>
-                <td style={{ padding: '6px 10px', color: '#64748b', fontSize: '11px', textAlign: 'center' }}>Auto: Occupied / Capacity</td>
+                <td style={{ padding: '6px 10px', color: '#000000', fontSize: '11.5px', textAlign: 'center', fontWeight: '700', fontFamily: 'monospace' }}>
+                  =Total Occupied / Bed Capacity
+                </td>
               </tr>
 
-              {/* Row 10: Vacant % */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700' }}>Vacant %</td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700', color: '#b45309' }}>
-                  {vacant_pct_boys}
+              {/* Row 10: Vacant % (SILVER / GREY CATEGORY STYLE) */}
+              <tr style={{ backgroundColor: '#dcdde1', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>—</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '800', color: '#000000' }}>Vacant %</td>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
+                  {activeM.vacant_pct_boys.toFixed(1)}%
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700', color: '#b45309' }}>
-                  {vacant_pct_girls}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
+                  {activeM.vacant_pct_girls.toFixed(1)}%
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#b45309' }}>
-                  {vacant_pct_total}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '900', color: '#000000' }}>
+                  {activeM.vacant_pct_total.toFixed(2)}%
                 </td>
-                <td style={{ padding: '6px 10px', color: '#64748b', fontSize: '11px', textAlign: 'center' }}>Auto: Vacant / Capacity</td>
+                <td style={{ padding: '6px 10px', color: '#000000', fontSize: '11.5px', textAlign: 'center', fontWeight: '700', fontFamily: 'monospace' }}>
+                  =Vacant / Bed Capacity
+                </td>
               </tr>
 
               {/* Row 11: Students Vacated */}
-              <tr style={{ borderBottom: '1.5px solid #000000' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Students Vacated</td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '2px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>7</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>Students Vacated</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>—</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>—</td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('students_vacated', students_vacated, '86')}
+                  {renderCellInput('students_vacated', activeM.students_vacated, '86')}
                 </td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}>—</td>
+                <td style={{ padding: '6px 10px', color: '#475569', textAlign: 'center', fontSize: '11.5px' }}>Hostel departures count</td>
               </tr>
 
-              {/* --- YELLOW BLOCK: SPACE BASIC TICKETS (Rows 8 to 16) --- */}
+              {/* --- SECTION BANNER: MAINTENANCE & SERVICE TICKETS (GOLDEN YELLOW) --- */}
+              <tr style={{ backgroundColor: '#ffc90e', borderBottom: '1px solid #000000', color: '#000000', fontWeight: '800' }}>
+                <td colSpan={6} style={{ padding: '8px 14px', letterSpacing: '0.03em', fontSize: '12.5px' }}>
+                  🛠️ MAINTENANCE & SERVICE TICKETS (SPACE BASIC)
+                </td>
+              </tr>
+
               {/* Row 8: Maintenance Tickets Received */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1px solid #eab308' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>8</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   No. of Maintenance Tickets Received
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('tickets_received', tickets_received, '176')}
+                  {renderCellInput('tickets_received', activeM.tickets_received, '176')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
@@ -581,317 +922,335 @@ export default function HostelSpreadsheetEntry({
                   verticalAlign: 'middle',
                   textAlign: 'center',
                   padding: '10px',
-                  backgroundColor: '#fef08a',
+                  backgroundColor: '#fff2df',
                   borderLeft: '1px solid #000000',
-                  borderBottom: '1px solid #eab308'
+                  borderBottom: '1px solid #000000'
                 }}>
-                  <a
-                    href="#tickets-log"
-                    onClick={(e) => { e.preventDefault(); alert("Referencing Space basic tickets log for active period."); }}
-                    style={{
-                      color: '#2563eb',
-                      textDecoration: 'underline',
-                      fontWeight: '700',
-                      fontSize: '12px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <FileText size={13} />
-                    Space basic tickets {activePeriodObj?.period_label}.csv
-                  </a>
+                  <div style={{
+                    color: '#00a2e8',
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <FileText size={14} />
+                    <span>Space basic tickets {activePeriodObj?.period_label}.csv</span>
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#000000', marginTop: '4px', fontWeight: '700' }}>
+                    Open Tickets: <strong>{activeM.tickets_open}</strong> • TAT: <strong>{activeM.tat_hours} hrs</strong>
+                  </div>
                 </td>
               </tr>
 
               {/* Row 9: Maintenance Tickets closed */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1px solid #eab308' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>9</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   No. of Maintenance Tickets closed
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('tickets_closed', tickets_closed, '176')}
+                  {renderCellInput('tickets_closed', activeM.tickets_closed, '176')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
               </tr>
 
               {/* Row 10: Maintenance Tickets in Open */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1px solid #eab308' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>10</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '800', color: '#000000' }}>
                   No. of Maintenance Tickets in Open
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: tickets_open > 0 ? '#b91c1c' : '#15803d' }}>
-                  {tickets_open}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '900', color: activeM.tickets_open > 0 ? '#b91c1c' : '#15803d' }}>
+                  {activeM.tickets_open}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
               </tr>
 
               {/* Row 11: Total Hours taken to close tickets */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1px solid #eab308' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>11</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   Total Hours taken to close the tickets
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('total_hours_close', total_hours_close, 'Hours')}
+                  {renderCellInput('total_hours_close', activeM.total_hours_close, '0')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
               </tr>
 
               {/* Row 12: TAT Hours */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1px solid #eab308' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>12</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   TAT (Turnaround Time)Hours
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('tat_hours', tat_hours, '62.29')}
+                  {renderCellInput('tat_hours', activeM.tat_hours, '62.29')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
               </tr>
 
               {/* Row 13: Quality issues Received */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1px solid #eab308' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>13</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   No. of Quality issues Received
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('quality_issues_received', quality_issues_received, '5')}
+                  {renderCellInput('quality_issues_received', activeM.quality_issues_received, '5')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}></td>
+                <td style={{ padding: '6px 10px', color: '#475569', textAlign: 'center' }}>Hostel amenities complaints</td>
               </tr>
 
               {/* Row 14: Quality issues Closed */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1px solid #eab308' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>14</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   No. of Quality issues Closed
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('quality_issues_closed', quality_issues_closed, '3')}
+                  {renderCellInput('quality_issues_closed', activeM.quality_issues_closed, '3')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}></td>
+                <td style={{ padding: '6px 10px', color: '#475569', textAlign: 'center' }}>Resolved complaints</td>
               </tr>
 
               {/* Row 15: Quality issues in Open */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1px solid #eab308' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>15</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '800', color: '#000000' }}>
                   No. of Quality issues in Open
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: quality_issues_open > 0 ? '#b91c1c' : '#15803d' }}>
-                  {quality_issues_open}
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '900', color: activeM.quality_issues_open > 0 ? '#b91c1c' : '#15803d' }}>
+                  {activeM.quality_issues_open}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}></td>
+                <td style={{ padding: '6px 10px', color: '#000000', fontSize: '11.5px', textAlign: 'center', fontWeight: '700', fontFamily: 'monospace' }}>
+                  =Received - Closed
+                </td>
               </tr>
 
               {/* Row 16: No. of Incidents */}
-              <tr style={{ backgroundColor: '#fff3a8', borderBottom: '1.5px solid #000000' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '2px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>16</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#713f12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   No. of Incidents
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
-                  {renderCellInput('incidents_count', incidents_count, '0')}
+                  {renderCellInput('incidents_count', activeM.incidents_count, '0')}
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
-                <td style={{ padding: '6px 10px', color: '#94a3b8', textAlign: 'center' }}></td>
+                <td style={{ padding: '6px 10px', color: '#475569', textAlign: 'center' }}>Safety & disciplinary incidents</td>
               </tr>
 
-              {/* --- ORANGE BLOCK: UTILITIES & CONSUMPTION EXPENSES (Rows 17 to 20) --- */}
+              {/* --- SECTION BANNER: UTILITIES & CONSUMPTION EXPENSES (GOLDEN YELLOW) --- */}
+              <tr style={{ backgroundColor: '#ffc90e', borderBottom: '1px solid #000000', color: '#000000', fontWeight: '800' }}>
+                <td colSpan={6} style={{ padding: '8px 14px', letterSpacing: '0.03em', fontSize: '12.5px' }}>
+                  ⚡ UTILITIES & CONSUMPTION EXPENSES (POWER & WATER)
+                </td>
+              </tr>
+
               {/* Row 17: Power Consumption */}
-              <tr style={{ backgroundColor: '#fed7aa', borderBottom: '1px solid #ea580c' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>17</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#7c2d12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   Power Consumption
                 </td>
                 <td colSpan={2} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '11px', color: '#7c2d12', fontWeight: '700' }}>Units:</span>
-                    {renderCellInput('power_units', power_units, '108201', true, '110px')}
+                    <span style={{ fontSize: '11.5px', color: '#000000', fontWeight: '700' }}>Units:</span>
+                    {renderCellInput('power_units', activeM.power_units, '105116', true, '110px')}
                   </div>
                 </td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#7c2d12' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
                   ₹
                 </td>
                 <td style={{ padding: '4px 10px', textAlign: 'right' }}>
-                  {renderCellInput('power_cost', power_cost, '1325151', true, '140px')}
+                  {renderCellInput('power_cost', activeM.power_cost, '1469211', true, '150px')}
                 </td>
               </tr>
 
               {/* Row 18: Water Purchase Expenses */}
-              <tr style={{ backgroundColor: '#fed7aa', borderBottom: '1px solid #ea580c' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>18</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#7c2d12' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   Water Purchase Expenses
                 </td>
                 <td colSpan={2} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#7c2d12' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
                   ₹
                 </td>
                 <td style={{ padding: '4px 10px', textAlign: 'right' }}>
-                  {renderCellInput('water_purchase_cost', water_purchase_cost, '248765', true, '140px')}
+                  {renderCellInput('water_purchase_cost', activeM.water_purchase_cost, '248765', true, '150px')}
                 </td>
               </tr>
 
               {/* Row: Maintenance Expenses */}
-              <tr style={{ backgroundColor: '#fed7aa', borderBottom: '1px solid #ea580c' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#7c2d12' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>19</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   Maintenance Expenses
                 </td>
                 <td colSpan={2} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#7c2d12' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800', color: '#000000' }}>
                   ₹
                 </td>
                 <td style={{ padding: '4px 10px', textAlign: 'right' }}>
-                  {renderCellInput('maintenance_expenses', maintenance_expenses, '119394', true, '140px')}
+                  {renderCellInput('maintenance_expenses', activeM.maintenance_expenses, '119394', true, '150px')}
                 </td>
               </tr>
 
-              {/* Row 20: Expenses occurred (Pinkish/Salmon Row) */}
-              <tr style={{ backgroundColor: '#fecdd3', borderBottom: '1.5px solid #000000' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '800' }}>20</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '800', color: '#881337' }}>
-                  Expenses occurred
+              {/* Row 20: Expenses occurred (SUBTOTAL: BRIGHT LIME GREEN) */}
+              <tr style={{ backgroundColor: '#00ff00', borderBottom: '2px solid #000000', color: '#000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '7px', fontWeight: '900' }}>20</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '7px 12px', fontWeight: '900', color: '#000000' }}>
+                  Total Expenses Occurred
                 </td>
-                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#881337', fontSize: '11px', fontWeight: '600' }}>
+                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#000000', fontSize: '12px', fontWeight: '800' }}>
                   Total Operational Outflow
                 </td>
                 <td style={{ padding: '4px 10px', textAlign: 'right' }}>
-                  {renderCellInput('expenses_occurred', expenses_occurred, '9349172', true, '140px')}
+                  {renderCellInput('expenses_occurred', activeM.expenses_occurred, '9349172', true, '150px')}
                 </td>
               </tr>
 
-              {/* --- GREEN BLOCK: APPROVED BUDGET & BALANCE (Rows 22 to 24) --- */}
+              {/* --- SECTION BANNER: APPROVED BUDGET & BALANCE (SKY BLUE) --- */}
+              <tr style={{ backgroundColor: '#a8d8ea', borderBottom: '1px solid #000000', color: '#000000', fontWeight: '800' }}>
+                <td colSpan={6} style={{ padding: '8px 14px', letterSpacing: '0.03em', fontSize: '12.5px' }}>
+                  💰 APPROVED BUDGET & REMAINING BALANCE
+                </td>
+              </tr>
+
               {/* Row 22: Approved Budget */}
-              <tr style={{ backgroundColor: '#bbf7d0', borderBottom: '1px solid #16a34a' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>22</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#14532d' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   Approved Budget
                 </td>
                 <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
                 <td style={{ padding: '4px 10px', textAlign: 'right' }}>
-                  {renderCellInput('approved_budget', approved_budget, '131788118', true, '140px')}
+                  {renderCellInput('approved_budget', activeM.approved_budget, '131788118', true, '150px')}
                 </td>
               </tr>
 
               {/* Row 23: Cumulative Budget spent */}
-              <tr style={{ backgroundColor: '#bbf7d0', borderBottom: '1px solid #16a34a' }}>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>23</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '700', color: '#14532d' }}>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>
                   Cumulative Budget spent (Actual expenses) till now
                 </td>
                 <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
                 <td style={{ padding: '4px 10px', textAlign: 'right' }}>
-                  {renderCellInput('cumulative_budget_spent', cumulative_budget_spent, '34527814', true, '140px')}
+                  {renderCellInput('cumulative_budget_spent', activeM.cumulative_budget_spent, '34527814', true, '150px')}
                 </td>
               </tr>
 
-              {/* Row 24: Balance */}
-              <tr style={{ backgroundColor: '#86efac', borderBottom: '1.5px solid #000000' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '7px', fontWeight: '900' }}>24</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '7px 10px', fontWeight: '900', color: '#052e16', fontSize: '13.5px' }}>
-                  Balance
+              {/* Row 24: Balance (GRAND TOTAL: DEEP TEAL) */}
+              <tr style={{ backgroundColor: '#00a896', borderBottom: '2px solid #000000', color: '#000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '8px', fontWeight: '900' }}>24</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '8px 12px', fontWeight: '900', color: '#000000', fontSize: '13.5px' }}>
+                  Balance Budget
                 </td>
-                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#14532d', fontSize: '11px', fontWeight: '700' }}>
-                  Auto: Approved Budget - Cumulative Spent
+                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#000000', fontSize: '12px', fontWeight: '800' }}>
+                  =Approved Budget - Cumulative Budget spent
                 </td>
-                <td style={{ padding: '7px 14px', textAlign: 'right', fontWeight: '900', fontSize: '14px', color: balance >= 0 ? '#052e16' : '#991b1b' }}>
-                  {formatINR(balance)}
+                <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '900', fontSize: '14.5px', color: '#000000' }}>
+                  {formatINR(activeM.balance)}
                 </td>
               </tr>
 
-              {/* --- WHITE BLOCK: UNIT ECONOMICS & AREA (Rows 25 to 27) --- */}
+              {/* --- SECTION BANNER: UNIT ECONOMICS & EFFICIENCY (SOFT MINT) --- */}
+              <tr style={{ backgroundColor: '#d4edda', borderBottom: '1px solid #000000', color: '#000000', fontWeight: '800' }}>
+                <td colSpan={6} style={{ padding: '8px 14px', letterSpacing: '0.03em', fontSize: '12.5px' }}>
+                  📐 UNIT ECONOMICS, OCCUPANT SPEND & WATER METRICS
+                </td>
+              </tr>
+
               {/* Row 25: Number of students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>25</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Number of students</td>
-                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#64748b', fontSize: '11.5px' }}>
-                  Synced from Row 2 Total Students
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>25</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '600', color: '#000000' }}>Number of students</td>
+                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#475569', fontSize: '11.5px', fontFamily: 'monospace' }}>
+                  =Row 2 Total Students (Boys + Girls)
                 </td>
-                <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
-                  {students_total.toLocaleString()}
+                <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000' }}>
+                  {activeM.number_of_students.toLocaleString()}
                 </td>
               </tr>
 
               {/* Row 26: Per student cost per month */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>26</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Per student cost per month</td>
-                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#64748b', fontSize: '11.5px' }}>
-                  Expenses occurred / Number of students
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>26</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>Per student cost per month</td>
+                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#475569', fontSize: '11.5px', fontFamily: 'monospace' }}>
+                  =Expenses occurred / Number of students
                 </td>
-                <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
-                  ₹{per_student_cost_month.toLocaleString()}
+                <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000' }}>
+                  ₹{activeM.per_student_cost_month.toLocaleString()}
                 </td>
               </tr>
 
               {/* Row 27: Per student cost per day */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}>27</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Per student cost per day</td>
-                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#64748b', fontSize: '11.5px' }}>
-                  Per student month cost / 30 days
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>27</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '700', color: '#000000' }}>Per student cost per day</td>
+                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#475569', fontSize: '11.5px', fontFamily: 'monospace' }}>
+                  =Per student month cost / 30 days
                 </td>
-                <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
-                  ₹{per_student_cost_day}
+                <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000' }}>
+                  ₹{activeM.per_student_cost_day}
                 </td>
               </tr>
 
               {/* Row: Sq feet */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Sq feet</td>
-                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>—</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '600', color: '#000000' }}>Sq feet Hostel</td>
+                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#475569', fontSize: '11.5px' }}>Campus Hostel Built-up Area</td>
                 <td style={{ padding: '4px 10px', textAlign: 'right' }}>
-                  {renderCellInput('sq_feet', sq_feet, '231701', true, '140px')}
+                  {renderCellInput('sq_feet', activeM.sq_feet, '231701', true, '150px')}
                 </td>
               </tr>
 
               {/* Row: Sq feet per occupant in hostel */}
-              <tr style={{ borderBottom: '1.5px solid #000000' }}>
-                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px' }}></td>
-                <td style={{ borderRight: '1px solid #000000', padding: '6px 10px', fontWeight: '600' }}>Sq feet per occupant in hostel</td>
-                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#64748b', fontSize: '11.5px' }}>
-                  Sq feet / Total Occupied
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', fontWeight: '700' }}>—</td>
+                <td style={{ borderRight: '1px solid #000000', padding: '6px 12px', fontWeight: '600', color: '#000000' }}>Sq feet per occupant in hostel</td>
+                <td colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '6px', color: '#475569', fontSize: '11.5px', fontFamily: 'monospace' }}>
+                  =Sq feet / Total Occupied
                 </td>
-                <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
-                  {sq_feet_per_occupant} sq.ft
+                <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000' }}>
+                  {activeM.sq_feet_per_occupant} sq.ft
                 </td>
               </tr>
 
-              {/* --- YELLOW BLOCK: WATER METRIC (Row 28) --- */}
-              <tr style={{ backgroundColor: '#fef08a', borderBottom: '1.5px solid #000000' }}>
+              {/* Row 28: Normal Water Metric */}
+              <tr style={{ backgroundColor: '#fff2df', borderBottom: '2px solid #000000' }}>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '7px', fontWeight: '800' }}>28</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '7px 10px', fontWeight: '800', color: '#713f12' }}>
-                  Normal water per student per month(Ltrs& cost)
+                <td style={{ borderRight: '1px solid #000000', padding: '7px 12px', fontWeight: '800', color: '#000000' }}>
+                  Normal water per student per month(Ltrs & cost)
                 </td>
                 <td colSpan={2} style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '11px', color: '#713f12', fontWeight: '700' }}>Ltrs:</span>
-                    {renderCellInput('normal_water_student_ltrs', normal_water_student_ltrs, '0', true, '80px')}
+                    <span style={{ fontSize: '11.5px', color: '#000000', fontWeight: '700' }}>Ltrs:</span>
+                    {renderCellInput('normal_water_student_ltrs', activeM.normal_water_student_ltrs, '0', true, '80px')}
                   </div>
                 </td>
                 <td style={{ textAlign: 'center', borderRight: '1px solid #000000', padding: '4px' }}></td>
                 <td style={{ padding: '4px 10px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                    <span style={{ fontSize: '11px', color: '#713f12', fontWeight: '700' }}>Cost ₹:</span>
-                    {renderCellInput('normal_water_student_cost', normal_water_student_cost, '88', true, '100px')}
+                    <span style={{ fontSize: '11.5px', color: '#000000', fontWeight: '700' }}>Cost ₹:</span>
+                    {renderCellInput('normal_water_student_cost', activeM.normal_water_student_cost, '88', true, '100px')}
                   </div>
                 </td>
               </tr>
@@ -900,228 +1259,427 @@ export default function HostelSpreadsheetEntry({
         </div>
       )}
 
-      {/* 3. DETAILED POWER & WATER CONSUMPTION BREAKDOWN (IMAGE 1 REPLICA) */}
+      {/* 3. TABLE 2: POWER & WATER ANALYTICS MULTI-MONTH COMPARISON GRID (EXCEL ROWS 37-54) */}
       {(activeSubTab === 'combined' || activeSubTab === 'utilities') && (
-        <div style={{ padding: '16px', borderTop: activeSubTab === 'combined' ? '1.5px solid #e2e8f0' : 'none' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{
+          padding: '16px',
+          borderTop: activeSubTab === 'combined' ? '2px solid #bae6fd' : 'none',
+          backgroundColor: '#ffffff'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
             <div>
-              <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#1e293b' }}>
-                ⚡ Image 1: Hostel Utilities & Unit Efficiency Metrics Breakdown
-              </span>
-              <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-                Granular power consumption, normal water, RO drinking water, and per-day occupancy costs
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Zap size={16} color="#00a2e8" />
+                  <span>Table 2: Multi-Month Power & Water Consumption & Unit Efficiency Ledger (Rows 37 to 54)</span>
+                </h3>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#0284c7', backgroundColor: '#e0f2fe', padding: '2px 8px', borderRadius: '4px' }}>
+                  hostel.xlsx Grid
+                </span>
+              </div>
+              <p style={{ fontSize: '11.5px', color: '#64748b', margin: '3px 0 0 0' }}>
+                Side-by-side comparison across all periods • Direct in-cell editing for any month • Recalculates all daily usage and per-occupant costs live
               </p>
             </div>
-            <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#047857', backgroundColor: '#dcfce7', padding: '3px 10px', borderRadius: '4px' }}>
-              Cycle: {activePeriodObj?.period_label}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={handleBulkSaveAllMonths}
+                disabled={savingBatch || isSavingLocal}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '6px',
+                  backgroundColor: '#00a2e8',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(0, 162, 232, 0.25)'
+                }}
+              >
+                <Save size={14} />
+                <span>Save All Months (Bulk)</span>
+              </button>
             </div>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '16px',
-            alignItems: 'start'
-          }}>
-            {/* Table A: Power Consumption (Blue Block) */}
-            <div style={{
-              borderRadius: '8px',
-              border: '1.5px solid #3b82f6',
-              overflow: 'hidden',
-              backgroundColor: '#ffffff'
-            }}>
-              <div style={{
-                padding: '8px 12px',
-                backgroundColor: '#93c5fd',
-                color: '#1e3a8a',
-                fontWeight: '800',
-                fontSize: '12.5px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <Zap size={15} color="#1d4ed8" />
-                <span>Power Consumption & Efficiency (EB + DG)</span>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <tbody>
-                  <tr style={{ backgroundColor: '#dbeafe', borderBottom: '1px solid #bfdbfe' }}>
-                    <td style={{ padding: '7px 12px', fontWeight: '600', color: '#1e3a8a', width: '65%' }}>
-                      Power consumption units(EB + DG) Hostel
-                    </td>
-                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #bfdbfe' }}>
-                      {renderCellInput('power_units', power_units, '105116', true, '110px')}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#dbeafe', borderBottom: '1px solid #bfdbfe' }}>
-                    <td style={{ padding: '7px 12px', fontWeight: '600', color: '#1e3a8a' }}>
-                      Power consumption cost(EB + DG) Hostel
-                    </td>
-                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #bfdbfe' }}>
-                      {renderCellInput('power_cost', power_cost, '1469211', true, '110px')}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#eff6ff', borderBottom: '1px solid #bfdbfe' }}>
-                    <td style={{ padding: '7px 12px', color: '#334155' }}>No of Students+ staff in Hostel</td>
-                    <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #bfdbfe' }}>
-                      {total_occupied.toLocaleString()}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#eff6ff', borderBottom: '1px solid #bfdbfe' }}>
-                    <td style={{ padding: '7px 12px', color: '#334155' }}>Sq feet Hostel</td>
-                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #bfdbfe' }}>
-                      {renderCellInput('sq_feet', sq_feet, '231701', true, '110px')}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#dbeafe', borderBottom: '1px solid #bfdbfe' }}>
-                    <td style={{ padding: '7px 12px', fontWeight: '800', color: '#0f172a' }}>Power cost per sq feet</td>
-                    <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: '800', color: '#1e40af', borderLeft: '1px solid #bfdbfe' }}>
-                      {power_cost_sqft}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#dbeafe', borderBottom: '1px solid #bfdbfe' }}>
-                    <td style={{ padding: '7px 12px', fontWeight: '800', color: '#0f172a' }}>Units per occupant per month - Hostel</td>
-                    <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: '800', color: '#1e40af', borderLeft: '1px solid #bfdbfe' }}>
-                      {units_per_occupant}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#bfdbfe', borderBottom: '1px solid #93c5fd' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: '900', color: '#1e3a8a' }}>Power cost Per occupant per month - Hostel</td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a', fontSize: '13px', borderLeft: '1px solid #93c5fd' }}>
-                      ₹{power_cost_occupant}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div style={{ overflowX: 'auto', backgroundColor: '#ffffff', borderRadius: '8px', border: '2px solid #000000' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#00a2e8', color: '#000000', borderBottom: '2px solid #000000' }}>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', minWidth: '320px', borderRight: '1px solid #000000', fontWeight: '800', color: '#000000' }}>
+                    Utilities & Efficiency Parameter
+                  </th>
+                  {periods.map(p => {
+                    const isSel = p.id === editingPeriodId;
+                    return (
+                      <th
+                        key={p.id}
+                        style={{
+                          padding: '10px 10px',
+                          textAlign: 'center',
+                          minWidth: '125px',
+                          borderRight: '1px solid #000000',
+                          fontWeight: '800',
+                          backgroundColor: isSel ? '#0ea5e9' : '#00a2e8',
+                          color: '#000000'
+                        }}
+                      >
+                        <div>{p.period_label.toUpperCase()} {isSel && '★'}</div>
+                        {isSel && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', color: '#000000', textTransform: 'uppercase' }}>
+                            (Active Edit)
+                          </span>
+                        )}
+                      </th>
+                    );
+                  })}
+                  <th style={{ padding: '10px 14px', textAlign: 'left', minWidth: '180px', fontWeight: '800', backgroundColor: '#0284c7', color: '#ffffff' }}>
+                    Formula Specification
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* --- SECTION A: POWER CONSUMPTION (GOLDEN YELLOW) --- */}
+                <tr style={{ backgroundColor: '#ffc90e', borderBottom: '1px solid #000000', color: '#000000', fontWeight: '800' }}>
+                  <td colSpan={periods.length + 2} style={{ padding: '8px 14px', fontWeight: '800', color: '#000000', fontSize: '12.5px', letterSpacing: '0.03em' }}>
+                    ⚡ SECTION A: POWER CONSUMPTION & EFFICIENCY (EB + DG)
+                  </td>
+                </tr>
 
-            {/* Table B: Normal Water Consumption (Green Block) */}
-            <div style={{
-              borderRadius: '8px',
-              border: '1.5px solid #22c55e',
-              overflow: 'hidden',
-              backgroundColor: '#ffffff'
-            }}>
-              <div style={{
-                padding: '8px 12px',
-                backgroundColor: '#86efac',
-                color: '#14532d',
-                fontWeight: '800',
-                fontSize: '12.5px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <Droplets size={15} color="#15803d" />
-                <span>Normal Water Consumption & Daily Usage</span>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <tbody>
-                  <tr style={{ backgroundColor: '#dcfce7', borderBottom: '1px solid #bbf7d0' }}>
-                    <td style={{ padding: '7px 12px', fontWeight: '600', color: '#14532d', width: '65%' }}>
-                      Normal Water Consumption Ltr Hostels
-                    </td>
-                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #bbf7d0' }}>
-                      {renderCellInput('normal_water_litres', normal_water_litres, '8202000', true, '110px')}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#dcfce7', borderBottom: '1px solid #bbf7d0' }}>
-                    <td style={{ padding: '7px 12px', fontWeight: '600', color: '#14532d' }}>
-                      Normal Water Consumption Cost Hostels
-                    </td>
-                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #bbf7d0' }}>
-                      {renderCellInput('normal_water_cost', normal_water_cost, '820200', true, '110px')}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#f0fdf4', borderBottom: '1px solid #bbf7d0' }}>
-                    <td style={{ padding: '7px 12px', color: '#334155' }}>No of Students in Hostels</td>
-                    <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #bbf7d0' }}>
-                      {total_occupied.toLocaleString()}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#dcfce7', borderBottom: '1px solid #bbf7d0' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: '900', color: '#14532d' }}>
-                      Normal water Ltr per student per day - Hostels
-                    </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '900', color: '#15803d', fontSize: '13px', borderLeft: '1px solid #bbf7d0' }}>
-                      {normal_water_ltr_day} Ltrs
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#bbf7d0', borderBottom: '1px solid #86efac' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: '900', color: '#14532d' }}>
-                      Normal Water cost Per student per day Hostels
-                    </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '900', color: '#14532d', fontSize: '13px', borderLeft: '1px solid #86efac' }}>
-                      ₹{normal_water_cost_day}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                {/* Row 38: Power units */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Power consumption units(EB + DG) Hostel
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                        {renderCellInput('power_units', m.power_units, 'Units', true, '110px', p.id)}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569' }}>
+                    Total EB + DG Units
+                  </td>
+                </tr>
 
-            {/* Table C: Drinking Water Consumption (Cyan Block) */}
-            <div style={{
-              borderRadius: '8px',
-              border: '1.5px solid #06b6d4',
-              overflow: 'hidden',
-              backgroundColor: '#ffffff'
-            }}>
-              <div style={{
-                padding: '8px 12px',
-                backgroundColor: '#67e8f9',
-                color: '#164e63',
-                fontWeight: '800',
-                fontSize: '12.5px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <Droplets size={15} color="#0891b2" />
-                <span>Drinking Water Consumption (RO Purified)</span>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <tbody>
-                  <tr style={{ backgroundColor: '#cffafe', borderBottom: '1px solid #a5f3fc' }}>
-                    <td style={{ padding: '7px 12px', fontWeight: '600', color: '#164e63', width: '65%' }}>
-                      Drinking Water Consumption Litres Hostels
-                    </td>
-                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #a5f3fc' }}>
-                      {renderCellInput('drinking_water_litres', drinking_water_litres, '92800', true, '110px')}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#cffafe', borderBottom: '1px solid #a5f3fc' }}>
-                    <td style={{ padding: '7px 12px', fontWeight: '600', color: '#164e63' }}>
-                      Drinking Water Consumption Cost Hostels
-                    </td>
-                    <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #a5f3fc' }}>
-                      {renderCellInput('drinking_water_cost', drinking_water_cost, '23200', true, '110px')}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#ecfeff', borderBottom: '1px solid #a5f3fc' }}>
-                    <td style={{ padding: '7px 12px', color: '#334155' }}>No of Students in Hostels</td>
-                    <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: '700', borderLeft: '1px solid #a5f3fc' }}>
-                      {total_occupied.toLocaleString()}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#cffafe', borderBottom: '1px solid #a5f3fc' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: '900', color: '#164e63' }}>
-                      Drinking water Litres per student per day- Hostels
-                    </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '900', color: '#0e7490', fontSize: '13px', borderLeft: '1px solid #a5f3fc' }}>
-                      {drinking_water_ltr_day} Ltrs
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: '#a5f3fc', borderBottom: '1px solid #67e8f9' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: '900', color: '#164e63' }}>
-                      Drinking Water cost Per student per day Hostels
-                    </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '900', color: '#164e63', fontSize: '13px', borderLeft: '1px solid #67e8f9' }}>
-                      ₹{drinking_water_cost_day}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                {/* Row 39: Power cost */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Power consumption cost(EB + DG) Hostel
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                        {renderCellInput('power_cost', m.power_cost, 'Cost ₹', true, '110px', p.id)}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569' }}>
+                    Total EB + DG Electricity Bill (₹)
+                  </td>
+                </tr>
+
+                {/* Row 40: Students + staff */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '600', borderRight: '1px solid #000000', color: '#000000' }}>
+                    No of Students+ staff in Hostel
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '6px 10px', textAlign: 'center', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                        {m.total_occupied.toLocaleString()}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569', fontFamily: 'monospace' }}>
+                    =Total Occupied (Students + Staff)
+                  </td>
+                </tr>
+
+                {/* Row 41: Sq feet */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '600', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Sq feet Hostel
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                        {renderCellInput('sq_feet', m.sq_feet, '231701', true, '110px', p.id)}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569' }}>
+                    Campus Hostel Built-up Area
+                  </td>
+                </tr>
+
+                {/* Row 42: Power cost per sq feet */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '7px 14px', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Power cost per sq feet
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '7px 10px', textAlign: 'center', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                        ₹{m.power_cost_sqft}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569', fontFamily: 'monospace' }}>
+                    =Power cost / Sq feet
+                  </td>
+                </tr>
+
+                {/* Row 43: Units per occupant */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '7px 14px', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Units per occupant per month - Hostel
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '7px 10px', textAlign: 'center', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                        {m.units_per_occupant}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569', fontFamily: 'monospace' }}>
+                    =Power units / Total Occupants
+                  </td>
+                </tr>
+
+                {/* Row 44: Power cost per occupant (SUBTOTAL: BRIGHT LIME GREEN) */}
+                <tr style={{ backgroundColor: '#00ff00', borderBottom: '2px solid #000000', color: '#000000' }}>
+                  <td style={{ padding: '8px 14px', fontWeight: '900', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Power cost Per occupant per month - Hostel
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '900', borderRight: '1px solid #000000', color: '#000000', fontSize: '13.5px' }}>
+                        ₹{m.power_cost_occupant.toLocaleString()}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '8px 14px', fontSize: '12px', color: '#000000', fontWeight: '800', fontFamily: 'monospace' }}>
+                    =Power cost / Total Occupants
+                  </td>
+                </tr>
+
+                {/* --- SECTION B: NORMAL WATER CONSUMPTION (SILVER / GREY) --- */}
+                <tr style={{ backgroundColor: '#dcdde1', borderBottom: '1px solid #000000', color: '#000000', fontWeight: '800' }}>
+                  <td colSpan={periods.length + 2} style={{ padding: '8px 14px', fontWeight: '800', color: '#000000', fontSize: '12.5px', letterSpacing: '0.03em' }}>
+                    💧 SECTION B: NORMAL WATER CONSUMPTION & DAILY USAGE (ROWS 45 TO 49)
+                  </td>
+                </tr>
+
+                {/* Row 45: Normal water litres */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Normal Water Consumption Ltr Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                        {renderCellInput('normal_water_litres', m.normal_water_litres, 'Litres', true, '110px', p.id)}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569' }}>
+                    Metered / Borewell normal water (Ltrs)
+                  </td>
+                </tr>
+
+                {/* Row 46: Normal water cost */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Normal Water Consumption Cost Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                        {renderCellInput('normal_water_cost', m.normal_water_cost, 'Cost ₹', true, '110px', p.id)}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569' }}>
+                    Total normal water spend (₹)
+                  </td>
+                </tr>
+
+                {/* Row 47: No of students */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '600', borderRight: '1px solid #000000', color: '#000000' }}>
+                    No of Students in Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '6px 10px', textAlign: 'center', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                        {m.total_occupied.toLocaleString()}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569', fontFamily: 'monospace' }}>
+                    =Total Residents (Occupants)
+                  </td>
+                </tr>
+
+                {/* Row 48: Normal water Ltr per student per day */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '7px 14px', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Normal water Ltr per student per day - Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '7px 10px', textAlign: 'center', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                        {m.normal_water_ltr_day} Ltrs
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569', fontFamily: 'monospace' }}>
+                    =Normal Ltrs / Occupants / 30
+                  </td>
+                </tr>
+
+                {/* Row 49: Normal water cost per student per day (SUBTOTAL: BRIGHT LIME GREEN) */}
+                <tr style={{ backgroundColor: '#00ff00', borderBottom: '2px solid #000000', color: '#000000' }}>
+                  <td style={{ padding: '8px 14px', fontWeight: '900', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Normal Water cost Per student per day Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '900', borderRight: '1px solid #000000', color: '#000000', fontSize: '13.5px' }}>
+                        ₹{m.normal_water_cost_day}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '8px 14px', fontSize: '12px', color: '#000000', fontWeight: '800', fontFamily: 'monospace' }}>
+                    =Normal Cost / Occupants / 30
+                  </td>
+                </tr>
+
+                {/* --- SECTION C: DRINKING WATER CONSUMPTION (SOFT SKY BLUE) --- */}
+                <tr style={{ backgroundColor: '#a8d8ea', borderBottom: '1px solid #000000', color: '#000000', fontWeight: '800' }}>
+                  <td colSpan={periods.length + 2} style={{ padding: '8px 14px', fontWeight: '800', color: '#000000', fontSize: '12.5px', letterSpacing: '0.03em' }}>
+                    🚰 SECTION C: DRINKING WATER CONSUMPTION (RO PURIFIED) (ROWS 50 TO 54)
+                  </td>
+                </tr>
+
+                {/* Row 50: Drinking water litres */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Drinking Water Consumption Litres Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                        {renderCellInput('drinking_water_litres', m.drinking_water_litres, 'Litres', true, '110px', p.id)}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569' }}>
+                    RO Purified drinking water volume (Ltrs)
+                  </td>
+                </tr>
+
+                {/* Row 51: Drinking water cost */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Drinking Water Consumption Cost Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                        {renderCellInput('drinking_water_cost', m.drinking_water_cost, 'Cost ₹', true, '110px', p.id)}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569' }}>
+                    Total RO water purchase cost (₹)
+                  </td>
+                </tr>
+
+                {/* Row 52: No of students */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '6px 14px', fontWeight: '600', borderRight: '1px solid #000000', color: '#000000' }}>
+                    No of Students in Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '6px 10px', textAlign: 'center', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                        {m.total_occupied.toLocaleString()}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569', fontFamily: 'monospace' }}>
+                    =Total Residents (Occupants)
+                  </td>
+                </tr>
+
+                {/* Row 53: Drinking water litres per student per day */}
+                <tr style={{ backgroundColor: '#fff2df', borderBottom: '1px solid #000000' }}>
+                  <td style={{ padding: '7px 14px', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Drinking water Litres per student per day- Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '7px 10px', textAlign: 'center', fontWeight: '800', borderRight: '1px solid #000000', color: '#000000' }}>
+                        {m.drinking_water_ltr_day} Ltrs
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '6px 14px', fontSize: '11.5px', color: '#475569', fontFamily: 'monospace' }}>
+                    =Drinking Ltrs / Occupants / 30
+                  </td>
+                </tr>
+
+                {/* Row 54: Drinking water cost per student per day (SUBTOTAL: BRIGHT LIME GREEN) */}
+                <tr style={{ backgroundColor: '#00ff00', borderBottom: '2px solid #000000', color: '#000000' }}>
+                  <td style={{ padding: '8px 14px', fontWeight: '900', borderRight: '1px solid #000000', color: '#000000' }}>
+                    Drinking Water cost Per student per day Hostels
+                  </td>
+                  {periods.map(p => {
+                    const m = getHostelMetrics(p.id);
+                    return (
+                      <td key={p.id} style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '900', borderRight: '1px solid #000000', color: '#000000', fontSize: '13.5px' }}>
+                        ₹{m.drinking_water_cost_day}
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '8px 14px', fontSize: '12px', color: '#000000', fontWeight: '800', fontFamily: 'monospace' }}>
+                    =Drinking Cost / Occupants / 30
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -1129,7 +1687,7 @@ export default function HostelSpreadsheetEntry({
       {/* 4. FOOTER STATUS BAR WITH DEDICATED SAVE BUTTON */}
       <div style={{
         padding: '12px 20px',
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#ffffff',
         borderTop: '1.5px solid #e2e8f0',
         display: 'flex',
         alignItems: 'center',
@@ -1141,19 +1699,19 @@ export default function HostelSpreadsheetEntry({
           <span style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '4px',
-            color: isDirty ? '#ea580c' : '#15803d',
+            gap: '5px',
+            color: isDirty ? '#ea580c' : '#0284c7',
             fontWeight: '700'
           }}>
             {isDirty ? (
               <>
-                <AlertCircle size={14} color="#ea580c" />
+                <AlertCircle size={15} color="#ea580c" />
                 <span>Pending unsaved edits in hostel operational parameters</span>
               </>
             ) : (
               <>
-                <CheckCircle2 size={14} color="#15803d" />
-                <span>All hostel operational metrics synced with PostgreSQL</span>
+                <CheckCircle2 size={15} color="#0284c7" />
+                <span>All hostel operational metrics & formulas synced with PostgreSQL database</span>
               </>
             )}
           </span>
@@ -1162,25 +1720,49 @@ export default function HostelSpreadsheetEntry({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            onClick={handleDirectSave}
-            disabled={savingBatch || isClosed}
+            onClick={handleBulkSaveAllMonths}
+            disabled={savingBatch || isSavingLocal}
             style={{
-              padding: '7px 20px',
+              padding: '8px 16px',
               borderRadius: '6px',
-              backgroundColor: isClosed ? '#94a3b8' : '#059669',
-              color: '#ffffff',
+              backgroundColor: '#ffffff',
+              border: '1.5px solid #00a2e8',
+              color: '#0087c2',
               fontSize: '12.5px',
-              fontWeight: '700',
+              fontWeight: '800',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+            }}
+          >
+            <Table size={14} />
+            <span>Save All Months (Bulk)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDirectSaveActive}
+            disabled={savingBatch || isSavingLocal || isClosed}
+            style={{
+              padding: '8px 22px',
+              borderRadius: '6px',
+              backgroundColor: isClosed ? '#cbd5e1' : '#00a2e8',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: '800',
               border: 'none',
               cursor: isClosed ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 2px 6px rgba(5, 150, 105, 0.3)'
+              boxShadow: isClosed ? 'none' : '0 2px 6px rgba(0, 162, 232, 0.3)',
+              transition: 'all 0.15s ease'
             }}
           >
             <Save size={15} />
-            <span>{savingBatch ? 'Saving...' : `Save Hostel Data for ${activePeriodObj?.period_label || 'Month'}`}</span>
+            <span>{isSavingLocal || savingBatch ? 'Saving...' : `💾 Save Hostel Data for ${activePeriodObj?.period_label || 'Month'}`}</span>
           </button>
         </div>
       </div>
