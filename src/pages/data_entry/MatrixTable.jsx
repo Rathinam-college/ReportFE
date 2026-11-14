@@ -4,6 +4,7 @@ import {
   MessageSquare, Users, Utensils, Award, Trash2, Plus, 
   Home, Bus, Fuel, Droplet, Zap, Wrench, ShieldCheck, CheckCircle2, BedDouble, AlertCircle 
 } from 'lucide-react';
+import HostelSpreadsheetEntry from './HostelSpreadsheetEntry';
 
 export default function MatrixTable({
   selectedModule = 'food',
@@ -23,7 +24,11 @@ export default function MatrixTable({
   handleTransportCensusChange,
   openAddCostHeadModal,
   handleDeleteCostHead,
-  openAddCategoryModal
+  openAddCategoryModal,
+  categoriesList = [],
+  handleSaveActiveMonth,
+  savingBatch,
+  isDirty
 }) {
   if (!computedMatrix || !computedMatrix.categories) return null;
 
@@ -112,6 +117,21 @@ export default function MatrixTable({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+
+      {/* 3. HOSTEL RESIDENT CENSUS, OPERATIONAL TEMPLATE & UTILITIES (from hostel.xlsx & image templates) */}
+      {selectedModule === 'hostel' && (
+        <HostelSpreadsheetEntry
+          activePeriodObj={activePeriodObj}
+          computedMatrix={computedMatrix}
+          editingPeriodId={editingPeriodId}
+          setEditingPeriodId={setEditingPeriodId}
+          hostelCensusDraft={hostelCensusDraft}
+          handleHostelCensusChange={handleHostelCensusChange}
+          handleSaveActiveMonth={handleSaveActiveMonth}
+          savingBatch={savingBatch}
+          isDirty={isDirty}
+        />
+      )}
 
       {/* 4. TRANSPORT FLEET OPERATIONS & FLEET METRICS CARD (from transport.xlsx) */}
       {selectedModule === 'transport' && (() => {

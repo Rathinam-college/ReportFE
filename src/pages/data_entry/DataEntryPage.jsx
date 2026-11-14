@@ -371,6 +371,9 @@ export default function DataEntryPage({
             categoriesList={categoriesList}
             handleCellChange={handleCellChange}
             handleRemarkChange={handleRemarkChange}
+            handleSaveActiveMonth={handleSaveActiveMonth}
+            savingBatch={savingBatch}
+            isDirty={isDirty}
           />
         </div>
 

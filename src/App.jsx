@@ -543,15 +543,21 @@ export default function App() {
     setIsDirty(true);
   };
 
-  const handleHostelCensusChange = (field, value) => {
+  const handleHostelCensusChange = (fieldOrObj, value) => {
     const pIdStr = String(editingPeriodId);
-    setHostelCensusDraft(prev => ({
-      ...prev,
-      [pIdStr]: {
-        ...(prev[pIdStr] || {}),
-        [field]: value
+    setHostelCensusDraft(prev => {
+      const current = prev[pIdStr] || {};
+      let updated;
+      if (typeof fieldOrObj === 'object' && fieldOrObj !== null) {
+        updated = { ...current, ...fieldOrObj };
+      } else {
+        updated = { ...current, [fieldOrObj]: value };
       }
-    }));
+      return {
+        ...prev,
+        [pIdStr]: updated
+      };
+    });
     setIsDirty(true);
   };
 
