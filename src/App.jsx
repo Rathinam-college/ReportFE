@@ -848,11 +848,13 @@ export default function App() {
   const handleAddNewMonth = async (e) => {
     if (e) e.preventDefault();
     try {
+      const activeMod = activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab;
       const payload = {
         period_label: newMonthForm.period_label.trim(),
         period_code: newMonthForm.period_code.trim(),
         start_date: newMonthForm.start_date,
         end_date: newMonthForm.end_date,
+        module: activeMod,
         clone_from_period_id: null // Explicitly null: Do NOT clone values on month creation
       };
 
