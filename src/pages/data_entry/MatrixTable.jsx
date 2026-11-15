@@ -128,12 +128,19 @@ export default function MatrixTable({
           computedMatrix={computedMatrix}
           editingPeriodId={editingPeriodId}
           setEditingPeriodId={setEditingPeriodId}
+          matrixDraft={matrixDraft}
+          remarksDraft={remarksDraft}
           hostelCensusDraft={hostelCensusDraft}
+          handleCellChange={handleCellChange}
+          handleRemarkChange={handleRemarkChange}
           handleHostelCensusChange={handleHostelCensusChange}
           handleSaveActiveMonth={handleSaveActiveMonth}
           savingBatch={savingBatch}
           isDirty={isDirty}
           fetchData={fetchData}
+          openAddCostHeadModal={openAddCostHeadModal}
+          handleDeleteCostHead={handleDeleteCostHead}
+          openAddCategoryModal={openAddCategoryModal}
         />
       )}
 
@@ -144,12 +151,19 @@ export default function MatrixTable({
           computedMatrix={computedMatrix}
           editingPeriodId={editingPeriodId}
           setEditingPeriodId={setEditingPeriodId}
+          matrixDraft={matrixDraft}
+          remarksDraft={remarksDraft}
           transportCensusDraft={transportCensusDraft}
+          handleCellChange={handleCellChange}
+          handleRemarkChange={handleRemarkChange}
           handleTransportCensusChange={handleTransportCensusChange}
           handleSaveActiveMonth={handleSaveActiveMonth}
           savingBatch={savingBatch}
           isDirty={isDirty}
           fetchData={fetchData}
+          openAddCostHeadModal={openAddCostHeadModal}
+          handleDeleteCostHead={handleDeleteCostHead}
+          openAddCategoryModal={openAddCategoryModal}
         />
       )}
     {/* 2. FOOD OPERATIONS SPREADSHEET (from user's Excel mockup image) */}

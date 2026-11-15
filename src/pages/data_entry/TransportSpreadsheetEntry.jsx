@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { formatINR } from '../../utils/formatters';
 import { 
-  Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Bus,
-  AlertCircle, FileText, Check, ArrowRight, Layers, Table, Fuel, DollarSign, Gauge
+  Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Bus, 
+  AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, Users, Fuel, Wrench, ShieldCheck, DollarSign
 } from 'lucide-react';
 
 export default function TransportSpreadsheetEntry({
@@ -10,22 +10,35 @@ export default function TransportSpreadsheetEntry({
   computedMatrix,
   editingPeriodId,
   setEditingPeriodId,
+  matrixDraft = {},
+  remarksDraft = {},
   transportCensusDraft = {},
+  handleCellChange,
+  handleRemarkChange,
   handleTransportCensusChange,
   handleSaveActiveMonth,
   savingBatch,
   isDirty,
-  fetchData
+  fetchData,
+  openAddCostHeadModal,
+  handleDeleteCostHead,
+  openAddCategoryModal
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('combined'); // 'combined', 'template', 'multi_month'
+  const [activeSubTab, setActiveSubTab] = useState('excel_grid'); // 'excel_grid', 'single_month', 'census'
   const [localMessage, setLocalMessage] = useState(null);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
+  // Inline editing state for Cost Head descriptions and Category names
+  const [editedCostHeadNames, setEditedCostHeadNames] = useState({}); // { [cost_head_id]: new_name }
+  const [editedCategoryNames, setEditedCategoryNames] = useState({}); // { [category_id]: new_name }
+  const [newRowDrafts, setNewRowDrafts] = useState([]); // [ { temp_id, category_id, name, amounts: {} } ]
+
   const isClosed = !!activePeriodObj?.is_closed;
   const periods = computedMatrix?.periods || [];
+  const categories = computedMatrix?.categories || [];
   const currStr = String(editingPeriodId);
 
-  // --- HELPER: Parse numeric safely ---
+  // --- Helper: Parse numeric safely ---
   const num = (v, defaultVal = 0) => {
     if (v === undefined || v === null || v === '') return defaultVal;
     if (typeof v === 'number') return isNaN(v) ? defaultVal : v;
@@ -34,77 +47,268 @@ export default function TransportSpreadsheetEntry({
     return isNaN(parsed) ? defaultVal : parsed;
   };
 
-  // --- PURE FORMULA ENGINE: Calculates all formulas matching transport.xlsx ---
-  const getTransportMetrics = (periodId) => {
+  // --- Helper: Get value of a cell with draft priority ---
+  const getCellAmount = (costHeadId, periodId) => {
+    const draftVal = matrixDraft[costHeadId]?.[periodId];
+    if (draftVal !== undefined && draftVal !== null && draftVal !== '') {
+      const parsedNum = parseFloat(String(draftVal).replace(/,/g, ''));
+      return isNaN(parsedNum) ? 0 : parsedNum;
+    }
+    // Find in categories
+    for (const cat of categories) {
+      const item = cat.items?.find(it => it.cost_head_id === costHeadId);
+      if (item) {
+        const amt = item.amounts?.[periodId] ?? item.amounts?.[String(periodId)] ?? 0;
+        return Number(amt) || 0;
+      }
+    }
+    return 0;
+  };
+
+  // --- Category Color Palette matching user's Excel style ---
+  const getCategoryColor = (catName, idx) => {
+    const nameLower = (catName || '').toLowerCase();
+    if (nameLower.includes('fuel') || nameLower.includes('toll')) {
+      return { headerBg: '#ffc90e', text: '#000000', rowBg: '#fff2df' }; // Golden yellow
+    }
+    if (nameLower.includes('maintenance') || nameLower.includes('spare') || nameLower.includes('fleet')) {
+      return { headerBg: '#dcdde1', text: '#000000', rowBg: '#fff2df' }; // Silver / Grey
+    }
+    if (nameLower.includes('manpower') || nameLower.includes('crew') || nameLower.includes('employee')) {
+      return { headerBg: '#a8d8ea', text: '#000000', rowBg: '#fff2df' }; // Soft sky blue
+    }
+    if (nameLower.includes('statutory') || nameLower.includes('insurance') || nameLower.includes('compliance')) {
+      return { headerBg: '#d4edda', text: '#000000', rowBg: '#fff2df' }; // Soft mint green
+    }
+    const fallbacks = [
+      { headerBg: '#fef08a', text: '#000000', rowBg: '#fff2df' },
+      { headerBg: '#e2e8f0', text: '#000000', rowBg: '#fff2df' },
+      { headerBg: '#bfdbfe', text: '#000000', rowBg: '#fff2df' },
+      { headerBg: '#bbf7d0', text: '#000000', rowBg: '#fff2df' },
+      { headerBg: '#fed7aa', text: '#000000', rowBg: '#fff2df' }
+    ];
+    return fallbacks[idx % fallbacks.length];
+  };
+
+  // --- Calculate live category subtotals across all periods ---
+  const categorySubtotals = useMemo(() => {
+    const subs = {};
+    categories.forEach(cat => {
+      subs[cat.category_id] = {};
+      periods.forEach(p => {
+        let pSum = 0;
+        cat.items?.forEach(it => {
+          pSum += getCellAmount(it.cost_head_id, p.id);
+        });
+        // Include any new draft rows for this category
+        newRowDrafts.filter(nr => nr.category_id === cat.category_id).forEach(nr => {
+          const amt = parseFloat(nr.amounts?.[p.id] || 0);
+          if (!isNaN(amt)) pSum += amt;
+        });
+        subs[cat.category_id][p.id] = pSum;
+      });
+    });
+    return subs;
+  }, [categories, periods, matrixDraft, newRowDrafts]);
+
+  // --- Calculate live Grand Total for each period ---
+  const grandTotalsByPeriod = useMemo(() => {
+    const totals = {};
+    let overallGrand = 0;
+    periods.forEach(p => {
+      let pSum = 0;
+      categories.forEach(cat => {
+        pSum += categorySubtotals[cat.category_id]?.[p.id] || 0;
+      });
+      totals[p.id] = pSum;
+      overallGrand += pSum;
+    });
+    return { totals, overallGrand };
+  }, [periods, categories, categorySubtotals]);
+
+  // --- Handle inline description change ---
+  const handleCostHeadNameChange = (costHeadId, newName) => {
+    setEditedCostHeadNames(prev => ({
+      ...prev,
+      [costHeadId]: newName
+    }));
+  };
+
+  // --- Handle inline category name change ---
+  const handleCategoryNameChange = (categoryId, newName) => {
+    setEditedCategoryNames(prev => ({
+      ...prev,
+      [categoryId]: newName
+    }));
+  };
+
+  // --- Add a new row to a category ---
+  const handleAddNewRow = (categoryId) => {
+    const tempId = `temp_${Date.now()}`;
+    setNewRowDrafts(prev => [
+      ...prev,
+      {
+        temp_id: tempId,
+        category_id: categoryId,
+        name: 'New Transport Line Item',
+        amounts: {}
+      }
+    ]);
+  };
+
+  // --- Discard draft row ---
+  const handleRemoveDraftRow = (tempId) => {
+    setNewRowDrafts(prev => prev.filter(r => r.temp_id !== tempId));
+  };
+
+  // --- Update amount in draft row ---
+  const handleDraftRowAmountChange = (tempId, periodId, val) => {
+    setNewRowDrafts(prev => prev.map(r => {
+      if (r.temp_id === tempId) {
+        return {
+          ...r,
+          amounts: {
+            ...r.amounts,
+            [periodId]: val
+          }
+        };
+      }
+      return r;
+    }));
+  };
+
+  // --- Master Save: Persists all text changes, descriptions, formulas, cell values, and census to DB ---
+  const handleSaveAllSpreadsheetData = async () => {
+    setIsSavingLocal(true);
+    setLocalMessage(null);
+    try {
+      // 1. Prepare updated cost heads
+      const updatedCostHeads = Object.keys(editedCostHeadNames).map(id => ({
+        id: parseInt(id, 10),
+        name: editedCostHeadNames[id]
+      }));
+
+      // 2. Prepare updated categories
+      const updatedCategories = Object.keys(editedCategoryNames).map(id => ({
+        id: parseInt(id, 10),
+        name: editedCategoryNames[id]
+      }));
+
+      // 3. Prepare new cost heads
+      const newCostHeads = newRowDrafts.map(nr => ({
+        temp_id: nr.temp_id,
+        category_id: nr.category_id,
+        name: nr.name
+      }));
+
+      // 4. Prepare entries by period
+      const entriesByPeriod = {};
+      periods.forEach(p => {
+        const pEntries = [];
+        categories.forEach(cat => {
+          cat.items?.forEach(it => {
+            const amt = getCellAmount(it.cost_head_id, p.id);
+            const rmk = remarksDraft[it.cost_head_id]?.[p.id] ?? it.remarks?.[p.id] ?? '';
+            pEntries.push({
+              cost_head_id: it.cost_head_id,
+              amount: amt,
+              remarks: rmk
+            });
+          });
+        });
+        // Include new row draft entries
+        newRowDrafts.forEach(nr => {
+          const amt = parseFloat(nr.amounts?.[p.id] || 0) || 0;
+          pEntries.push({
+            cost_head_id: nr.temp_id,
+            amount: amt,
+            remarks: ''
+          });
+        });
+        entriesByPeriod[p.id] = pEntries;
+      });
+
+      // 5. Prepare transport census by period
+      const transportCensusByPeriod = {};
+      periods.forEach(p => {
+        const pStr = String(p.id);
+        if (transportCensusDraft[pStr]) {
+          transportCensusByPeriod[p.id] = transportCensusDraft[pStr];
+        }
+      });
+
+      const payload = {
+        module: 'transport',
+        updated_cost_heads: updatedCostHeads,
+        updated_categories: updatedCategories,
+        new_cost_heads: newCostHeads,
+        entries_by_period: entriesByPeriod,
+        transport_census_by_period: transportCensusByPeriod
+      };
+
+      const res = await fetch('/api/workstation/spreadsheet-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to save transport spreadsheet');
+      }
+
+      const resData = await res.json();
+      setLocalMessage({
+        type: 'success',
+        text: resData.message || 'Saved all transport spreadsheet rows, content descriptions, and values to database successfully!'
+      });
+
+      // Clear local edit buffers
+      setEditedCostHeadNames({});
+      setEditedCategoryNames({});
+      setNewRowDrafts([]);
+
+      if (fetchData) fetchData();
+    } catch (err) {
+      setLocalMessage({ type: 'error', text: err.message || 'Save failed' });
+    } finally {
+      setIsSavingLocal(false);
+      setTimeout(() => setLocalMessage(null), 6000);
+    }
+  };
+
+  // --- Transport Fleet Operational Census Metrics for Active Month ---
+  const getTransportCensusMetrics = (periodId) => {
     const pStr = String(periodId);
     const d = transportCensusDraft[pStr] || {};
 
-    // 1. Fleet & Commuters (Rows 2-3)
     const vehicles_count = d.vehicles_count !== undefined && d.vehicles_count !== '' ? String(d.vehicles_count) : '18+1';
     const passengers_count = num(d.passengers_count, 447);
     const students_count = num(d.students_count, 412);
     const staff_count = num(d.staff_count, 35);
 
-    // 2. Trip Mileage (Rows 4-8)
     const approved_kms = num(d.approved_kms, 26691);
     const actual_kms = num(d.actual_kms, 25777);
     const additional_kms = num(d.additional_kms, 2481);
     const excess_kms_rps = num(d.excess_kms_rps, 0);
-    const excess_km_billed_rps = num(d.excess_km_billed_rps, 0);
 
-    // 3. Operating Expenses (Rows 9-14)
+    const diesel_litres = num(d.diesel_litres, 5184.84);
     const fuel_expenses = num(d.fuel_expenses, 487375);
-    const fc_cost = num(d.fc_cost, 0);
-    const statutory_cost = num(d.statutory_cost, 0);
-    const repair_maintenance_cost = num(d.repair_maintenance_cost, 0);
-    const other_cost = num(d.other_cost, 0);
-    const employee_cost = num(d.employee_cost, 0);
 
-    // Row 15: Total Expenses = SUM(fuel + fc + statutory + repair + other + employee)
-    const total_expenses = fuel_expenses + fc_cost + statutory_cost + repair_maintenance_cost + other_cost + employee_cost;
+    const fee_demand = num(d.fee_demand, 12500000);
+    const fee_collected = num(d.fee_collected, 8900000);
+    const fee_unpaid = Math.max(0, fee_demand - fee_collected);
 
-    // 4. Revenue & Collections (Rows 16-25 & 38-42)
-    const fee_demand = num(d.fee_demand, 0);
-    const fee_discount = num(d.fee_discount, 0);
-    const fee_collected = num(d.fee_collected, 0);
-    const fee_unpaid = Math.max(0, fee_demand - fee_discount - fee_collected);
-
-    const rps_monthly_billing = num(d.rps_monthly_billing, 0);
-    const staff_travel_deduction = num(d.staff_travel_deduction, 0);
-    const additional_kms_billed_rps = num(d.additional_kms_billed_rps, 0);
-    const additional_kms_others_billing = num(d.additional_kms_others_billing, 0);
-    const cab_billing = num(d.cab_billing, 0);
-
-    // Row 25: Cumulative Income
-    const cumulative_income = fee_collected + rps_monthly_billing + staff_travel_deduction + 
-                              additional_kms_billed_rps + additional_kms_others_billing + cab_billing;
-
-    // 5. Budget & Balance (Rows 26-28)
     const approved_budget = num(d.approved_budget, 13730137.73);
-    const cumulative_budget_spent = num(d.cumulative_budget_spent, total_expenses > 0 ? total_expenses : 6600000);
+    const cumulative_budget_spent = num(d.cumulative_budget_spent, 6600000);
     const balance = approved_budget - cumulative_budget_spent;
 
-    // 6. Tickets & Quality (Rows 29-34)
     const service_tickets_raised = num(d.service_tickets_raised, 38);
     const service_tickets_closed = num(d.service_tickets_closed, 38);
     const service_tickets_open = Math.max(0, service_tickets_raised - service_tickets_closed);
 
-    const quality_issues_received = num(d.quality_issues_received, 0);
-    const quality_issues_closed = num(d.quality_issues_closed, 0);
-    const quality_issues_open = Math.max(0, quality_issues_received - quality_issues_closed);
-
-    // 7. Safety & Compliance (Rows 35-37)
-    const statutory_compliance = num(d.statutory_compliance, 1);
     const incidents_count = num(d.incidents_count, 1);
-    const diesel_litres = num(d.diesel_litres, 5184.84);
-
-    // 8. Unit Economics & Efficiency Ratios (Rows 43-49)
-    const per_student_cost_expenses = passengers_count > 0 ? (total_expenses / passengers_count).toFixed(2) : '0.00';
-    const per_student_fee_year = students_count > 0 ? (fee_demand / students_count).toFixed(2) : '0.00';
-    const demand_per_km_day = actual_kms > 0 ? (fee_demand / (actual_kms * 30)).toFixed(2) : '0.00';
-    const km_per_veh_day = (actual_kms / (19 * 30)).toFixed(2);
-    const fuel_cost_per_km = actual_kms > 0 ? (fuel_expenses / actual_kms).toFixed(2) : '0.00';
-    const diesel_per_100km = actual_kms > 0 ? ((diesel_litres / actual_kms) * 100).toFixed(2) : '0.00';
+    const statutory_compliance = num(d.statutory_compliance, 1);
 
     return {
       vehicles_count,
@@ -115,194 +319,23 @@ export default function TransportSpreadsheetEntry({
       actual_kms,
       additional_kms,
       excess_kms_rps,
-      excess_km_billed_rps,
+      diesel_litres,
       fuel_expenses,
-      fc_cost,
-      statutory_cost,
-      repair_maintenance_cost,
-      other_cost,
-      employee_cost,
-      total_expenses,
       fee_demand,
-      fee_discount,
       fee_collected,
       fee_unpaid,
-      rps_monthly_billing,
-      staff_travel_deduction,
-      additional_kms_billed_rps,
-      additional_kms_others_billing,
-      cab_billing,
-      cumulative_income,
       approved_budget,
       cumulative_budget_spent,
       balance,
       service_tickets_raised,
       service_tickets_closed,
       service_tickets_open,
-      quality_issues_received,
-      quality_issues_closed,
-      quality_issues_open,
-      statutory_compliance,
       incidents_count,
-      diesel_litres,
-      per_student_cost_expenses,
-      per_student_fee_year,
-      demand_per_km_day,
-      km_per_veh_day,
-      fuel_cost_per_km,
-      diesel_per_100km,
-      remarks: d.remarks || ''
+      statutory_compliance
     };
   };
 
-  const currM = getTransportMetrics(editingPeriodId);
-
-  // Field change handler for active month
-  const handleChange = (field, value) => {
-    handleTransportCensusChange(field, value, editingPeriodId);
-  };
-
-  // Field change handler for arbitrary target month
-  const handleCellChange = (periodId, field, value) => {
-    handleTransportCensusChange(field, value, periodId);
-  };
-
-  // Save current month directly to DB
-  const handleSaveCurrentMonthDirect = async () => {
-    setIsSavingLocal(true);
-    setLocalMessage(null);
-    try {
-      const payload = {
-        ...transportCensusDraft[currStr],
-        ...currM
-      };
-      const res = await fetch(`/api/transport-census/${editingPeriodId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Failed to save transport fleet data');
-      }
-      setLocalMessage({ type: 'success', text: `Saved transport fleet metrics for ${activePeriodObj?.period_label || 'current cycle'} directly to DB!` });
-      if (fetchData) fetchData();
-    } catch (err) {
-      setLocalMessage({ type: 'error', text: err.message || 'Save error' });
-    } finally {
-      setIsSavingLocal(false);
-      setTimeout(() => setLocalMessage(null), 5000);
-    }
-  };
-
-  // Save all months in multi-month grid
-  const handleSaveAllMonthsBulk = async () => {
-    setIsSavingLocal(true);
-    setLocalMessage(null);
-    try {
-      const allDrafts = {};
-      periods.forEach(p => {
-        const pStr = String(p.id);
-        const m = getTransportMetrics(p.id);
-        allDrafts[pStr] = {
-          ...(transportCensusDraft[pStr] || {}),
-          ...m
-        };
-      });
-
-      const res = await fetch('/api/transport-census-bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ months: allDrafts })
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Bulk save failed');
-      }
-      const data = await res.json();
-      setLocalMessage({ type: 'success', text: `Bulk Save Success: ${data.message || 'All transport fleet periods saved to DB!'}` });
-      if (fetchData) fetchData();
-    } catch (err) {
-      setLocalMessage({ type: 'error', text: err.message || 'Bulk save failed' });
-    } finally {
-      setIsSavingLocal(false);
-      setTimeout(() => setLocalMessage(null), 5000);
-    }
-  };
-
-  // Clear / Reset Active Month
-  const handleClearMonth = () => {
-    if (window.confirm(`Are you sure you want to reset transport entries for ${activePeriodObj?.period_label}?`)) {
-      handleTransportCensusChange({
-        vehicles_count: '18+1',
-        passengers_count: 447,
-        students_count: 412,
-        staff_count: 35,
-        approved_kms: 26691,
-        actual_kms: 25777,
-        additional_kms: 2481,
-        excess_kms_rps: 0,
-        fuel_expenses: 487375,
-        diesel_litres: 5184.84,
-        fc_cost: 0,
-        statutory_cost: 0,
-        repair_maintenance_cost: 0,
-        employee_cost: 0,
-        other_cost: 0,
-        service_tickets_raised: 38,
-        service_tickets_closed: 38,
-        quality_issues_received: 0,
-        quality_issues_closed: 0,
-        statutory_compliance: 1,
-        incidents_count: 1,
-        approved_budget: 13730137.73,
-        cumulative_budget_spent: 0,
-        remarks: ''
-      }, null, editingPeriodId);
-      setLocalMessage({ type: 'success', text: `Reset ${activePeriodObj?.period_label} to transport baseline!` });
-    }
-  };
-
-  // Reusable inline input cell component matching Excel Grid style
-  const renderCellInput = (field, currentVal, placeholder = '', isNumeric = true, width = '140px') => {
-    return (
-      <input
-        type={isNumeric ? 'number' : 'text'}
-        step={isNumeric ? '0.01' : undefined}
-        value={currentVal !== undefined && currentVal !== null ? currentVal : ''}
-        placeholder={placeholder}
-        onChange={(e) => {
-          const val = isNumeric ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value;
-          handleChange(field, val);
-        }}
-        disabled={isClosed}
-        style={{
-          width: width,
-          padding: '4px 8px',
-          border: '1px solid #000000',
-          borderRadius: '3px',
-          textAlign: isNumeric ? 'right' : 'center',
-          fontSize: '12.5px',
-          fontWeight: '700',
-          backgroundColor: '#fff2df',
-          color: '#000000',
-          outline: 'none',
-          boxSizing: 'border-box',
-          transition: 'all 0.15s ease'
-        }}
-        onFocus={(e) => {
-          e.target.style.borderColor = '#00a2e8';
-          e.target.style.backgroundColor = '#ffffff';
-          e.target.style.boxShadow = '0 0 0 2px rgba(0, 162, 232, 0.25)';
-        }}
-        onBlur={(e) => {
-          e.target.style.borderColor = '#000000';
-          e.target.style.backgroundColor = '#fff2df';
-          e.target.style.boxShadow = 'none';
-        }}
-      />
-    );
-  };
+  const activeTransportMetrics = getTransportCensusMetrics(editingPeriodId);
 
   return (
     <div style={{
@@ -314,7 +347,7 @@ export default function TransportSpreadsheetEntry({
       marginBottom: '22px',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      {/* 1. SPREADSHEET HEADER & ACTION BAR */}
+      {/* 1. SPREADSHEET TOOLBAR & HEADER */}
       <div style={{
         backgroundColor: '#00a2e8',
         padding: '14px 20px',
@@ -331,83 +364,64 @@ export default function TransportSpreadsheetEntry({
             height: '36px',
             borderRadius: '8px',
             backgroundColor: '#ffffff',
+            color: '#00a2e8',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#00a2e8',
             boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
           }}>
             <Bus size={20} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#ffffff', margin: 0 }}>
-                Transport Fleet Master Spreadsheet
+              <h2 style={{ fontSize: '17px', fontWeight: '800', margin: 0, letterSpacing: '-0.01em', color: '#ffffff' }}>
+                Transport Operations Master Spreadsheet
               </h2>
               <span style={{
                 fontSize: '11px',
-                fontWeight: '800',
+                fontWeight: '700',
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
                 padding: '2px 8px',
-                borderRadius: '4px',
-                backgroundColor: '#ffffff',
-                color: '#0284c7'
+                borderRadius: '12px',
+                color: '#ffffff'
               }}>
-                Rathinam Report Excel Grid
+                Excel Mode
               </span>
             </div>
-            <p style={{ fontSize: '11.5px', color: '#e0f2fe', margin: '2px 0 0 0' }}>
-              Full Excel formula calculations • Rows 1–50 Master Parameters • Multi-Month Comparison & Persistence
+            <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#e0f2fe' }}>
+              Live multi-cycle matrix • Direct database persistence • Inline editable descriptions & formulas
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={handleClearMonth}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              padding: '7px 12px',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              border: '1px solid rgba(255, 255, 255, 0.4)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer'
-            }}
-          >
-            <span>Clear / Reset</span>
-          </button>
+          {openAddCategoryModal && (
+            <button
+              type="button"
+              onClick={openAddCategoryModal}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '7px 12px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer'
+              }}
+            >
+              <Plus size={13} />
+              <span>Add Category</span>
+            </button>
+          )}
 
           <button
             type="button"
-            onClick={handleSaveAllMonthsBulk}
-            disabled={isSavingLocal}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(255, 255, 255, 0.25)',
-              border: '1px solid rgba(255, 255, 255, 0.45)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '800',
-              cursor: isSavingLocal ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <Layers size={13} />
-            <span>Save All Months (Bulk)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSaveCurrentMonthDirect}
+            onClick={handleSaveAllSpreadsheetData}
             disabled={isSavingLocal}
             style={{
               display: 'inline-flex',
@@ -448,7 +462,7 @@ export default function TransportSpreadsheetEntry({
         </div>
       )}
 
-      {/* 3. MONTH SELECTOR SUBBAR */}
+      {/* 3. CYCLE SELECTION & VIEW TOGGLE */}
       <div style={{
         backgroundColor: '#f0f9ff',
         padding: '10px 20px',
@@ -461,7 +475,7 @@ export default function TransportSpreadsheetEntry({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            📅 Active Month:
+            📅 Active Focus Month:
           </span>
           {periods.map(p => {
             const isSel = String(p.id) === currStr;
@@ -475,14 +489,14 @@ export default function TransportSpreadsheetEntry({
                   borderRadius: '20px',
                   fontSize: '12px',
                   fontWeight: '800',
-                  border: isSel ? '2px solid #00a2e8' : '1px solid #bae6fd',
+                  border: isSel ? '2px solid #00a2e8' : '1px solid #cbd5e1',
                   backgroundColor: isSel ? '#00a2e8' : '#ffffff',
-                  color: isSel ? '#ffffff' : '#0369a1',
+                  color: isSel ? '#ffffff' : '#334155',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: isSel ? '0 2px 4px rgba(0, 162, 232, 0.3)' : 'none'
+                  boxShadow: isSel ? '0 2px 4px rgba(0, 162, 232, 0.25)' : 'none'
                 }}
               >
                 <span>{p.period_label}</span>
@@ -493,10 +507,10 @@ export default function TransportSpreadsheetEntry({
         </div>
 
         {/* View mode toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
           <button
             type="button"
-            onClick={() => setActiveSubTab('combined')}
+            onClick={() => setActiveSubTab('excel_grid')}
             style={{
               padding: '4px 12px',
               borderRadius: '6px',
@@ -504,15 +518,15 @@ export default function TransportSpreadsheetEntry({
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'combined' ? '#00a2e8' : 'transparent',
-              color: activeSubTab === 'combined' ? '#ffffff' : '#0369a1'
+              backgroundColor: activeSubTab === 'excel_grid' ? '#00a2e8' : 'transparent',
+              color: activeSubTab === 'excel_grid' ? '#ffffff' : '#64748b'
             }}
           >
-            All Views
+            📊 Multi-Month Excel Grid
           </button>
           <button
             type="button"
-            onClick={() => setActiveSubTab('template')}
+            onClick={() => setActiveSubTab('single_month')}
             style={{
               padding: '4px 12px',
               borderRadius: '6px',
@@ -520,15 +534,15 @@ export default function TransportSpreadsheetEntry({
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'template' ? '#00a2e8' : 'transparent',
-              color: activeSubTab === 'template' ? '#ffffff' : '#0369a1'
+              backgroundColor: activeSubTab === 'single_month' ? '#00a2e8' : 'transparent',
+              color: activeSubTab === 'single_month' ? '#ffffff' : '#64748b'
             }}
           >
-            Table 1: Master Parameters
+            Focused Month ({activePeriodObj?.period_label})
           </button>
           <button
             type="button"
-            onClick={() => setActiveSubTab('multi_month')}
+            onClick={() => setActiveSubTab('census')}
             style={{
               padding: '4px 12px',
               borderRadius: '6px',
@@ -536,11 +550,11 @@ export default function TransportSpreadsheetEntry({
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'multi_month' ? '#00a2e8' : 'transparent',
-              color: activeSubTab === 'multi_month' ? '#ffffff' : '#0369a1'
+              backgroundColor: activeSubTab === 'census' ? '#00a2e8' : 'transparent',
+              color: activeSubTab === 'census' ? '#ffffff' : '#64748b'
             }}
           >
-            Table 2: Multi-Month Grid
+            🚌 Fleet Assets & Mileage Census
           </button>
         </div>
       </div>
@@ -548,7 +562,7 @@ export default function TransportSpreadsheetEntry({
       {/* 4. FORMULA BAR RIBBON */}
       <div style={{
         padding: '8px 20px',
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#ffffff',
         borderBottom: '1px solid #e2e8f0',
         display: 'flex',
         alignItems: 'center',
@@ -558,839 +572,718 @@ export default function TransportSpreadsheetEntry({
         <div style={{ fontWeight: '800', color: '#00a2e8', display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span>fx</span>
         </div>
-        <div style={{ height: '14px', width: '1px', backgroundColor: '#cbd5e1' }} />
-        <div style={{ fontFamily: 'monospace', color: '#334155', fontSize: '11.5px', flex: 1 }}>
-          <strong>Total Expenses:</strong> =SUM(Fuel + FC + Statutory + Repair + Other + Employee) | <strong>Unpaid:</strong> =Demand - Discount - Paid | <strong>Balance:</strong> =Approved Budget - Budget Spent
+        <div style={{ height: '14px', width: '1px', backgroundColor: '#e2e8f0' }} />
+        <div style={{ fontFamily: 'monospace', color: '#475569', fontSize: '11.5px', flex: 1 }}>
+          <strong>Total Fuel & Tolls:</strong> =SUM(Diesel + Toll) | <strong>Fleet Maintenance:</strong> =SUM(Repair + Spares + Ops) | <strong>Manpower:</strong> =SUM(Employees + Allowances) | <strong>Statutory:</strong> =SUM(FC + Insurance) | <strong>Total Expenses:</strong> =SUM(All Categories)
         </div>
       </div>
 
-      {/* 5. TABLE 1: MASTER PARAMETERS & TRIP METRICS (transport.xlsx Rows 1-50) */}
-      {(activeSubTab === 'combined' || activeSubTab === 'template') && (
-        <div style={{ padding: '16px 20px', borderBottom: '2px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FileSpreadsheet size={16} color="#00a2e8" />
-              <span>Table 1: Transport Parameters Specification & Operational Census ({activePeriodObj?.period_label})</span>
-            </h3>
-            <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-              Editable inputs recalculate all formulas live in real time
-            </span>
-          </div>
+      {/* 5. MULTI-MONTH EXCEL SPREADSHEET TABLE (IMAGE 1 EXACT DESIGN) */}
+      {(activeSubTab === 'excel_grid' || activeSubTab === 'single_month') && (
+        <div style={{ overflowX: 'auto', padding: '16px 20px' }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: '13px',
+            border: '2px solid #000000',
+            backgroundColor: '#ffffff'
+          }}>
+            {/* Table Header: Cyan matching user's Excel mockup */}
+            <thead>
+              <tr style={{
+                backgroundColor: '#00a2e8',
+                color: '#000000',
+                borderBottom: '2px solid #000000',
+                fontWeight: '800',
+                fontSize: '13px'
+              }}>
+                <th style={{ padding: '10px 14px', width: '180px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                  Category
+                </th>
+                <th style={{ padding: '10px 16px', minWidth: '220px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                  Description
+                </th>
 
-          <div style={{ overflowX: 'auto', border: '2px solid #000000', borderRadius: '4px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', backgroundColor: '#ffffff' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#00a2e8', borderBottom: '2px solid #000000', color: '#000000', fontWeight: '800' }}>
-                  <th style={{ padding: '8px 12px', textAlign: 'center', width: '60px', borderRight: '1px solid #000000' }}>S.No</th>
-                  <th style={{ padding: '8px 16px', textAlign: 'left', borderRight: '1px solid #000000' }}>Parameters</th>
-                  <th style={{ padding: '8px 16px', textAlign: 'center', width: '220px', backgroundColor: '#00a2e8', color: '#000000', borderRight: '1px solid #000000' }}>
-                    {activePeriodObj?.period_label} • Value / Input
-                  </th>
-                  <th style={{ padding: '8px 16px', textAlign: 'left', width: '240px', color: '#000000' }}>
-                    Excel Formula / Reference
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-
-                {/* --- SECTION: FLEET SIZE & COMMUTERS --- */}
-                <tr style={{ backgroundColor: '#ffc90e', fontWeight: '800', color: '#000000', borderBottom: '1px solid #000000' }}>
-                  <td colSpan={4} style={{ padding: '6px 14px', letterSpacing: '0.04em', fontSize: '11.5px' }}>
-                    🚌 FLEET ASSETS & COMMUTER VOLUME
-                  </td>
-                </tr>
-
-                {/* Row 2: Number of vehicles */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>1</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Number of vehicles</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('vehicles_count', currM.vehicles_count, '18+1', false, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Fleet configuration (18 buses + 1 spare)</td>
-                </tr>
-
-                {/* Row 3: Number of students & staff travelling */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>2</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Number of students & staff travelling</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('passengers_count', currM.passengers_count, '447', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Total Commuter Pass Holders</td>
-                </tr>
-
-                {/* --- SECTION: TRIP MILEAGE & RPS RUNS --- */}
-                <tr style={{ backgroundColor: '#dcdde1', fontWeight: '800', color: '#000000', borderBottom: '1px solid #000000' }}>
-                  <td colSpan={4} style={{ padding: '6px 14px', letterSpacing: '0.04em', fontSize: '11.5px' }}>
-                    🗺️ TRIP DISTANCE & KILOMETERS LOG
-                  </td>
-                </tr>
-
-                {/* Row 4: Approved trip KMs */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>3</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Approved trip KMs</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('approved_kms', currM.approved_kms, '26691', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Monthly approved route mileage target</td>
-                </tr>
-
-                {/* Row 5: Actual trip KMs */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>4</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Actual trip KMs</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('actual_kms', currM.actual_kms, '25777', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Odometer verified actual run KMs</td>
-                </tr>
-
-                {/* Row 6: Excess/minus KMs run for RPS */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>5</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Excess/ minus KMs run for RPS</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('excess_kms_rps', currM.excess_kms_rps, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>RPS excess/deficit adjustment</td>
-                </tr>
-
-                {/* Row 7: Excess KM to be billed for RPS */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>6</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Excess KM to be billed for RPS</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('excess_km_billed_rps', currM.excess_km_billed_rps, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Billed to Rathinam Public School</td>
-                </tr>
-
-                {/* Row 8: Additional KMs run */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>7</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Additional KMs run</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('additional_kms', currM.additional_kms, '2481', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Extra academic, athletic & special trips</td>
-                </tr>
-
-                {/* --- SECTION: OPERATIONAL EXPENSES (ROWS 9-15) --- */}
-                <tr style={{ backgroundColor: '#ffc90e', fontWeight: '800', color: '#000000', borderBottom: '1px solid #000000' }}>
-                  <td colSpan={4} style={{ padding: '6px 14px', letterSpacing: '0.04em', fontSize: '11.5px' }}>
-                    ⛽ OPERATIONAL EXPENSES (RS)
-                  </td>
-                </tr>
-
-                {/* Row 9: Fuel expenses (Rs) */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>8</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Fuel expenses (Rs)</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('fuel_expenses', currM.fuel_expenses, '487375', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Sheet1!$H$4 (Diesel bulk purchase cost)</td>
-                </tr>
-
-                {/* Row 10: FC 2025-2026 */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>9</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>FC 2025-2026</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('fc_cost', currM.fc_cost, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Fitness certificate compliance fee</td>
-                </tr>
-
-                {/* Row 11: Vehicle Statutory */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>10</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Vehicle Statutory</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('statutory_cost', currM.statutory_cost, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>RTO taxes, road permits & insurance</td>
-                </tr>
-
-                {/* Row 12: Repair & Maintenance */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>11</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Repair & Maintenance</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('repair_maintenance_cost', currM.repair_maintenance_cost, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Fleet service, tyres, batteries & parts</td>
-                </tr>
-
-                {/* Row 13: Others */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>12</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Others</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('other_cost', currM.other_cost, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Tolls, fastag, washing & miscellaneous</td>
-                </tr>
-
-                {/* Row 14: Transport Employees Cost */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>13</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Transport Employees Cost</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('employee_cost', currM.employee_cost, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Drivers & cleaners salaries</td>
-                </tr>
-
-                {/* Row 15: Total Expenses = SUM(C9:C14) */}
-                <tr style={{ backgroundColor: '#00ff00', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', fontWeight: '800' }}>
-                  <td style={{ padding: '8px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>14</td>
-                  <td style={{ padding: '8px 16px', color: '#000000', fontSize: '13px', borderRight: '1px solid #000000' }}>
-                    Total Expenses
-                  </td>
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000', fontSize: '14px', borderRight: '1px solid #000000' }} className="currency-font">
-                    <strong>{formatINR(currM.total_expenses)}</strong>
-                  </td>
-                  <td style={{ padding: '8px 16px', color: '#000000', fontWeight: '700', fontFamily: 'monospace' }}>
-                    =SUM(C9:C14)
-                  </td>
-                </tr>
-
-                {/* --- SECTION: REVENUE, BILLING & COLLECTIONS (ROWS 16-25 & 38-42) --- */}
-                <tr style={{ backgroundColor: '#a8d8ea', fontWeight: '800', color: '#000000', borderBottom: '1px solid #000000' }}>
-                  <td colSpan={4} style={{ padding: '6px 14px', letterSpacing: '0.04em', fontSize: '11.5px' }}>
-                    💰 COMMUTER BILLING & REVENUE COLLECTION
-                  </td>
-                </tr>
-
-                {/* Row 18/39: Demand */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>17</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Fee Demand</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('fee_demand', currM.fee_demand, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Total student & staff transport fees demanded</td>
-                </tr>
-
-                {/* Row 40: Discount */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>31</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Discount / Concession</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('fee_discount', currM.fee_discount, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Scholarship & staff concessions</td>
-                </tr>
-
-                {/* Row 19/41: Paid */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>18</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Paid (Collected)</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('fee_collected', currM.fee_collected, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Fees realized in transport account</td>
-                </tr>
-
-                {/* Row 20/42: Unpaid */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>19</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }}>Unpaid Outstanding</td>
-                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }} className="currency-font">
-                    {formatINR(currM.fee_unpaid)}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontWeight: '700', fontFamily: 'monospace' }}>
-                    =Demand - Discount - Paid
-                  </td>
-                </tr>
-
-                {/* Row 21: RPS monthly billing */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>20</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>RPS monthly billing</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('rps_monthly_billing', currM.rps_monthly_billing, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Rathinam Public School contract invoice</td>
-                </tr>
-
-                {/* Row 22: Staff Travel Deduction */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>21</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Staff Travel Deduction</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('staff_travel_deduction', currM.staff_travel_deduction, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Payroll transport deductions</td>
-                </tr>
-
-                {/* Row 23: Additional KMs Billed for RPS */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>22</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Additional KMs Billed for RPS</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('additional_kms_billed_rps', currM.additional_kms_billed_rps, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Special events & weekend trips billed</td>
-                </tr>
-
-                {/* Row 24: Additional KMs run for others Billing */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>23</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Additional KMs run for others Billing</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('additional_kms_others_billing', currM.additional_kms_others_billing, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>External hires & corporate booking</td>
-                </tr>
-
-                {/* Row 50: Cab request Billing */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>37</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Cab request Billing</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('cab_billing', currM.cab_billing, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Sheet1!$E$12 (Airport & VIP cabs)</td>
-                </tr>
-
-                {/* Row 25: Cumulative Income */}
-                <tr style={{ backgroundColor: '#00ff00', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', fontWeight: '800' }}>
-                  <td style={{ padding: '8px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>24</td>
-                  <td style={{ padding: '8px 16px', color: '#000000', fontSize: '13px', borderRight: '1px solid #000000' }}>
-                    Cumulative Income
-                  </td>
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000', fontSize: '14px', borderRight: '1px solid #000000' }} className="currency-font">
-                    <strong>{formatINR(currM.cumulative_income)}</strong>
-                  </td>
-                  <td style={{ padding: '8px 16px', color: '#000000', fontWeight: '700', fontFamily: 'monospace' }}>
-                    =SUM(Paid + RPS + Staff + Addl KMs + Cabs)
-                  </td>
-                </tr>
-
-                {/* --- SECTION: BUDGET & BALANCE (ROWS 26-28) --- */}
-                <tr style={{ backgroundColor: '#d4edda', fontWeight: '800', color: '#000000', borderBottom: '1px solid #000000' }}>
-                  <td colSpan={4} style={{ padding: '6px 14px', letterSpacing: '0.04em', fontSize: '11.5px' }}>
-                    📊 APPROVED BUDGET & REMAINING BALANCE
-                  </td>
-                </tr>
-
-                {/* Row 26: Approved Budget */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>25</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Approved Budget</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('approved_budget', currM.approved_budget, '13730137.73', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Annual Approved Transport Operating Budget</td>
-                </tr>
-
-                {/* Row 27: Cumulative Budget spent */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>26</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Cumulative Budget spent (till now)</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('cumulative_budget_spent', currM.cumulative_budget_spent, '0', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Actual expenses utilized to date</td>
-                </tr>
-
-                {/* Row 28: Balance = C26-C27 */}
-                <tr style={{ backgroundColor: '#00a896', borderTop: '2px solid #000000', borderBottom: '2px solid #000000', fontWeight: '800' }}>
-                  <td style={{ padding: '8px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>27</td>
-                  <td style={{ padding: '8px 16px', color: '#000000', fontSize: '13px', borderRight: '1px solid #000000' }}>
-                    Balance Budget
-                  </td>
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000', fontSize: '14px', borderRight: '1px solid #000000' }} className="currency-font">
-                    <strong>{formatINR(currM.balance)}</strong>
-                  </td>
-                  <td style={{ padding: '8px 16px', color: '#000000', fontWeight: '700', fontFamily: 'monospace' }}>
-                    =C26 - C27 (Approved - Spent)
-                  </td>
-                </tr>
-
-                {/* --- SECTION: TICKETS, QUALITY & SAFETY (ROWS 29-37) --- */}
-                <tr style={{ backgroundColor: '#ffc90e', fontWeight: '800', color: '#000000', borderBottom: '1px solid #000000' }}>
-                  <td colSpan={4} style={{ padding: '6px 14px', letterSpacing: '0.04em', fontSize: '11.5px' }}>
-                    🛠️ SERVICE TICKETS, QUALITY ISSUES & FUEL CONSUMPTION
-                  </td>
-                </tr>
-
-                {/* Row 29: No. of Service Tickets Raised */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>30</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>No. of Service Tickets Raised</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('service_tickets_raised', currM.service_tickets_raised, '38', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Maintenance & repair breakdown requests</td>
-                </tr>
-
-                {/* Row 30: No. of Service Tickets closed */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>31</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>No. of Service Tickets closed</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('service_tickets_closed', currM.service_tickets_closed, '38', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Repairs resolved & buses back on road</td>
-                </tr>
-
-                {/* Row 31: No. of Service Tickets in Open */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>32</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }}>No. of Service Tickets in Open</td>
-                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: currM.service_tickets_open > 0 ? '#dc2626' : '#000000', borderRight: '1px solid #000000' }}>
-                    {currM.service_tickets_open} Tickets
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontWeight: '700', fontFamily: 'monospace' }}>
-                    =C29 - C30 (Raised - Closed)
-                  </td>
-                </tr>
-
-                {/* Row 32-34: Quality issues */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>33-35</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Quality issues (Rec / Cls / Opn)</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    <div style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
-                      <input
-                        type="number"
-                        placeholder="Rec"
-                        title="Quality issues Received"
-                        value={currM.quality_issues_received}
-                        onChange={(e) => handleChange('quality_issues_received', e.target.value)}
-                        disabled={isClosed}
-                        style={{
-                          width: '44px',
-                          textAlign: 'center',
-                          padding: '4px 2px',
-                          borderRadius: '3px',
-                          border: '1px solid #000000',
-                          backgroundColor: '#fff2df',
-                          color: '#000000',
-                          fontWeight: '700'
-                        }}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Cls"
-                        title="Quality issues Closed"
-                        value={currM.quality_issues_closed}
-                        onChange={(e) => handleChange('quality_issues_closed', e.target.value)}
-                        disabled={isClosed}
-                        style={{
-                          width: '44px',
-                          textAlign: 'center',
-                          padding: '4px 2px',
-                          borderRadius: '3px',
-                          border: '1px solid #000000',
-                          backgroundColor: '#fff2df',
-                          color: '#000000',
-                          fontWeight: '700'
-                        }}
-                      />
-                      <span style={{ padding: '4px 6px', fontWeight: '800', color: currM.quality_issues_open > 0 ? '#dc2626' : '#000000' }}>
-                        Opn: {currM.quality_issues_open}
-                      </span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Passenger comfort & route complaints</td>
-                </tr>
-
-                {/* Row 35: Statutory compliance */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>28</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Statutory compliance</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    <select
-                      value={currM.statutory_compliance}
-                      onChange={(e) => handleChange('statutory_compliance', parseInt(e.target.value, 10))}
-                      disabled={isClosed}
-                      style={{
-                        width: '140px',
-                        padding: '4px 8px',
-                        borderRadius: '3px',
-                        border: '1px solid #000000',
-                        fontWeight: '700',
-                        backgroundColor: '#fff2df',
-                        color: '#000000'
-                      }}
-                    >
-                      <option value={1}>1 - Compliant</option>
-                      <option value={0}>0 - Pending Review</option>
-                    </select>
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>1 = Valid FC, Insurance & Pollution</td>
-                </tr>
-
-                {/* Row 36: No. of Incidents */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>29</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>No. of Incidents</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('incidents_count', currM.incidents_count, '1', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px' }}>Minor breakdowns or route delays</td>
-                </tr>
-
-                {/* Row 37: Diesel Purchase Qty (Litres) */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', fontWeight: '700', borderRight: '1px solid #000000' }}>36</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Diesel Purchase Qty (Litres)</td>
-                  <td style={{ padding: '4px 10px', textAlign: 'center', backgroundColor: '#fff2df', borderRight: '1px solid #000000' }}>
-                    {renderCellInput('diesel_litres', currM.diesel_litres, '5184.84', true, '140px')}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px', fontWeight: '700' }}>
-                    Total litres pumped for active fleet
-                  </td>
-                </tr>
-
-                {/* --- SECTION: UNIT METRICS & RATIOS (ROWS 43-49) --- */}
-                <tr style={{ backgroundColor: '#dcdde1', fontWeight: '800', color: '#000000', borderBottom: '1px solid #000000' }}>
-                  <td colSpan={4} style={{ padding: '6px 14px', letterSpacing: '0.04em', fontSize: '11.5px' }}>
-                    📐 UNIT METRICS & FUEL EFFICIENCY RATIOS
-                  </td>
-                </tr>
-
-                {/* Row 43: Per student cost expenses */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>34</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Per student cost expenses</td>
-                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }} className="currency-font">
-                    {formatINR(currM.per_student_cost_expenses)}
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px', fontFamily: 'monospace' }}>
-                    =Total Expenses / Commuters ({currM.passengers_count})
-                  </td>
-                </tr>
-
-                {/* Row 46: km/veh/day */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>—</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>km/veh/day</td>
-                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }}>
-                    {currM.km_per_veh_day} KM / day
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px', fontFamily: 'monospace' }}>
-                    =Actual KMs / (19 vehicles * 30 days)
-                  </td>
-                </tr>
-
-                {/* Fuel cost / KM */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>—</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Fuel cost / KM</td>
-                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }}>
-                    ₹{currM.fuel_cost_per_km} / KM
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px', fontFamily: 'monospace' }}>
-                    =Fuel Expenses / Actual trip KMs
-                  </td>
-                </tr>
-
-                {/* Diesel / 100 KM */}
-                <tr style={{ backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: '#000000', borderRight: '1px solid #000000' }}>—</td>
-                  <td style={{ padding: '6px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>Diesel / 100 KM</td>
-                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }}>
-                    {currM.diesel_per_100km} L / 100 KM
-                  </td>
-                  <td style={{ padding: '6px 16px', color: '#000000', fontSize: '11.5px', fontFamily: 'monospace' }}>
-                    =(Diesel Litres / Actual KMs) * 100
-                  </td>
-                </tr>
-
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* 6. TABLE 2: MULTI-MONTH FLEET & FUEL COMPARISON GRID */}
-      {(activeSubTab === 'combined' || activeSubTab === 'multi_month') && (
-        <div style={{ padding: '16px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Table size={16} color="#00a2e8" />
-              <span>Table 2: Multi-Month Fleet Operations & Efficiency Comparison Grid</span>
-            </h3>
-            <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-              Side-by-side progression across all billing periods
-            </span>
-          </div>
-
-          <div style={{ overflowX: 'auto', border: '2px solid #000000', borderRadius: '4px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', backgroundColor: '#ffffff' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#00a2e8', borderBottom: '2px solid #000000', color: '#000000', fontWeight: '800' }}>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', minWidth: '220px', borderRight: '1px solid #000000' }}>
-                    Fleet Parameter
-                  </th>
-                  {periods.map(p => {
+                {/* Display columns: If 'excel_grid', show all periods; if 'single_month', show active month */}
+                {activeSubTab === 'excel_grid' ? (
+                  periods.map(p => {
                     const isSel = String(p.id) === currStr;
                     return (
                       <th
                         key={p.id}
                         style={{
                           padding: '10px 14px',
-                          textAlign: 'right',
-                          minWidth: '120px',
+                          minWidth: '125px',
+                          textAlign: 'center',
                           borderRight: '1px solid #000000',
                           backgroundColor: isSel ? '#0ea5e9' : '#00a2e8',
-                          color: isSel ? '#ffffff' : '#000000'
+                          color: '#000000',
+                          fontWeight: '800'
                         }}
                       >
                         {p.period_label} {isSel && '★'}
                       </th>
                     );
-                  })}
-                  <th style={{ padding: '10px 14px', textAlign: 'right', minWidth: '130px', backgroundColor: '#00a2e8', color: '#000000' }}>
-                    Formula / Trend
+                  })
+                ) : (
+                  <th style={{ padding: '10px 16px', minWidth: '150px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#0ea5e9' }}>
+                    {activePeriodObj?.period_label} • Amount (₹)
                   </th>
-                </tr>
-              </thead>
-              <tbody>
+                )}
 
-                {/* Fleet Size */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Active Vehicles
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
+                <th style={{ padding: '10px 16px', width: '130px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#0284c7', color: '#ffffff' }}>
+                  Total Spend
+                </th>
+                <th style={{ padding: '10px 10px', width: '70px', textAlign: 'center' }}>
+                  Action
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {categories.map((cat, catIdx) => {
+                const colorTheme = getCategoryColor(cat.category_name, catIdx);
+                const categoryItems = cat.items || [];
+                const draftItemsInCat = newRowDrafts.filter(nr => nr.category_id === cat.category_id);
+                const allItemsCount = categoryItems.length + draftItemsInCat.length;
+
+                const catDisplayName = editedCategoryNames[cat.category_id] !== undefined
+                  ? editedCategoryNames[cat.category_id]
+                  : cat.category_name;
+
+                return (
+                  <React.Fragment key={cat.category_id}>
+                    {/* Render Category Items */}
+                    {categoryItems.map((item, itemIdx) => {
+                      const itemDisplayName = editedCostHeadNames[item.cost_head_id] !== undefined
+                        ? editedCostHeadNames[item.cost_head_id]
+                        : item.description;
+
+                      // Calculate item total across periods
+                      let itemTotal = 0;
+                      periods.forEach(p => {
+                        itemTotal += getCellAmount(item.cost_head_id, p.id);
+                      });
+
+                      return (
+                        <tr key={item.cost_head_id} style={{ borderBottom: '1px solid #000000' }}>
+                          {/* Merged Category Column on the first row of category */}
+                          {itemIdx === 0 && (
+                            <td
+                              rowSpan={allItemsCount > 0 ? allItemsCount : 1}
+                              style={{
+                                padding: '12px 14px',
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                                backgroundColor: colorTheme.headerBg,
+                                color: colorTheme.text,
+                                fontWeight: '800',
+                                fontSize: '13.5px',
+                                borderRight: '1px solid #000000',
+                                borderBottom: '1px solid #000000'
+                              }}
+                            >
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                <input
+                                  type="text"
+                                  value={catDisplayName}
+                                  onChange={(e) => handleCategoryNameChange(cat.category_id, e.target.value)}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'center',
+                                    fontWeight: '800',
+                                    backgroundColor: 'transparent',
+                                    border: '1px dashed rgba(0,0,0,0.3)',
+                                    borderRadius: '4px',
+                                    padding: '3px 4px',
+                                    fontSize: '13px',
+                                    color: colorTheme.text
+                                  }}
+                                  title="Click to edit category title"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddNewRow(cat.category_id)}
+                                  title={`Add new row in ${cat.category_name}`}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: 'rgba(0,0,0,0.08)',
+                                    border: '1px solid rgba(0,0,0,0.15)',
+                                    fontSize: '10.5px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <Plus size={10} /> Add Row
+                                </button>
+                              </div>
+                            </td>
+                          )}
+
+                          {/* Editable Description Column */}
+                          <td style={{
+                            padding: '6px 12px',
+                            backgroundColor: colorTheme.headerBg,
+                            fontWeight: '700',
+                            color: '#000000',
+                            borderRight: '1px solid #000000'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <input
+                                type="text"
+                                value={itemDisplayName}
+                                onChange={(e) => handleCostHeadNameChange(item.cost_head_id, e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '4px 6px',
+                                  borderRadius: '4px',
+                                  border: '1px dashed rgba(0,0,0,0.25)',
+                                  backgroundColor: 'rgba(255,255,255,0.7)',
+                                  fontWeight: '700',
+                                  fontSize: '12.5px',
+                                  color: '#000000'
+                                }}
+                                title="Click to edit line item description"
+                              />
+                            </div>
+                          </td>
+
+                          {/* Data Cells: Peach/Cream Background with Crisp Borders */}
+                          {activeSubTab === 'excel_grid' ? (
+                            periods.map(p => {
+                              const amt = getCellAmount(item.cost_head_id, p.id);
+                              const isSel = String(p.id) === currStr;
+                              return (
+                                <td
+                                  key={p.id}
+                                  style={{
+                                    padding: '4px 8px',
+                                    textAlign: 'right',
+                                    backgroundColor: isSel ? '#ffedd5' : '#fff2df',
+                                    borderRight: '1px solid #000000'
+                                  }}
+                                >
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={amt || ''}
+                                    onChange={(e) => handleCellChange(item.cost_head_id, p.id, e.target.value)}
+                                    disabled={isClosed}
+                                    style={{
+                                      width: '100%',
+                                      textAlign: 'right',
+                                      padding: '4px 6px',
+                                      borderRadius: '4px',
+                                      border: isSel ? '1.5px solid #00a2e8' : '1px solid #cbd5e1',
+                                      backgroundColor: '#ffffff',
+                                      fontWeight: '700',
+                                      color: '#000000',
+                                      fontSize: '12.5px'
+                                    }}
+                                    className="currency-font"
+                                  />
+                                </td>
+                              );
+                            })
+                          ) : (
+                            <td style={{
+                              padding: '4px 10px',
+                              textAlign: 'right',
+                              backgroundColor: '#ffedd5',
+                              borderRight: '1px solid #000000'
+                            }}>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={getCellAmount(item.cost_head_id, editingPeriodId) || ''}
+                                onChange={(e) => handleCellChange(item.cost_head_id, editingPeriodId, e.target.value)}
+                                disabled={isClosed}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'right',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  border: '1.5px solid #00a2e8',
+                                  backgroundColor: '#ffffff',
+                                  fontWeight: '800',
+                                  color: '#000000',
+                                  fontSize: '13px'
+                                }}
+                                className="currency-font"
+                              />
+                            </td>
+                          )}
+
+                          {/* Total Spend */}
+                          <td style={{
+                            padding: '6px 14px',
+                            textAlign: 'right',
+                            fontWeight: '800',
+                            backgroundColor: '#fafafa',
+                            color: '#000000',
+                            borderRight: '1px solid #000000'
+                          }} className="currency-font">
+                            {formatINR(itemTotal)}
+                          </td>
+
+                          {/* Delete Action */}
+                          <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                            {handleDeleteCostHead && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCostHead({ id: item.cost_head_id, name: item.description })}
+                                title={`Delete "${item.description}"`}
+                                style={{
+                                  border: 'none',
+                                  background: 'none',
+                                  cursor: 'pointer',
+                                  color: '#94a3b8',
+                                  padding: '2px'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#dc2626'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* Render New Added Rows in this Category */}
+                    {draftItemsInCat.map((nr) => {
+                      let nrTotal = 0;
+                      periods.forEach(p => {
+                        nrTotal += parseFloat(nr.amounts?.[p.id] || 0) || 0;
+                      });
+
+                      return (
+                        <tr key={nr.temp_id} style={{ borderBottom: '1px solid #000000', backgroundColor: '#fef9c3' }}>
+                          <td style={{ padding: '6px 12px', borderRight: '1px solid #000000', backgroundColor: colorTheme.headerBg }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <input
+                                type="text"
+                                value={nr.name}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setNewRowDrafts(prev => prev.map(r => r.temp_id === nr.temp_id ? { ...r, name: val } : r));
+                                }}
+                                placeholder="Enter transport item name..."
+                                style={{
+                                  width: '100%',
+                                  padding: '4px 6px',
+                                  borderRadius: '4px',
+                                  border: '1.5px solid #eab308',
+                                  backgroundColor: '#ffffff',
+                                  fontWeight: '700',
+                                  fontSize: '12.5px'
+                                }}
+                              />
+                            </div>
+                          </td>
+
+                          {/* Draft Cells */}
+                          {activeSubTab === 'excel_grid' ? (
+                            periods.map(p => (
+                              <td key={p.id} style={{ padding: '4px 8px', borderRight: '1px solid #000000', backgroundColor: '#fff2df' }}>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  value={nr.amounts?.[p.id] || ''}
+                                  onChange={(e) => handleDraftRowAmountChange(nr.temp_id, p.id, e.target.value)}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'right',
+                                    padding: '4px 6px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #cbd5e1',
+                                    backgroundColor: '#ffffff',
+                                    fontWeight: '700'
+                                  }}
+                                />
+                              </td>
+                            ))
+                          ) : (
+                            <td style={{ padding: '4px 8px', borderRight: '1px solid #000000', backgroundColor: '#fff2df' }}>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={nr.amounts?.[editingPeriodId] || ''}
+                                onChange={(e) => handleDraftRowAmountChange(nr.temp_id, editingPeriodId, e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'right',
+                                  padding: '4px 6px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #cbd5e1',
+                                  backgroundColor: '#ffffff',
+                                  fontWeight: '700'
+                                }}
+                              />
+                            </td>
+                          )}
+
+                          <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }} className="currency-font">
+                            {formatINR(nrTotal)}
+                          </td>
+
+                          <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDraftRow(nr.temp_id)}
+                              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626' }}
+                              title="Discard draft row"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* CATEGORY SUBTOTAL ROW: Bright Lime Green matching Image 1 */}
+                    <tr style={{
+                      backgroundColor: '#00ff00',
+                      color: '#000000',
+                      borderTop: '2px solid #000000',
+                      borderBottom: '2px solid #000000',
+                      fontWeight: '800',
+                      fontSize: '13px'
+                    }}>
+                      <td colSpan={2} style={{
+                        padding: '9px 18px',
+                        textAlign: 'center',
+                        borderRight: '1px solid #000000',
+                        letterSpacing: '0.02em'
+                      }}>
+                        Total {cat.category_name}
+                      </td>
+
+                      {/* Subtotal columns per period */}
+                      {activeSubTab === 'excel_grid' ? (
+                        periods.map(p => {
+                          const subVal = categorySubtotals[cat.category_id]?.[p.id] || 0;
+                          return (
+                            <td
+                              key={p.id}
+                              style={{
+                                padding: '9px 12px',
+                                textAlign: 'right',
+                                borderRight: '1px solid #000000',
+                                fontWeight: '800'
+                              }}
+                              className="currency-font"
+                            >
+                              {formatINR(subVal)}
+                            </td>
+                          );
+                        })
+                      ) : (
+                        <td style={{
+                          padding: '9px 14px',
+                          textAlign: 'right',
+                          borderRight: '1px solid #000000',
+                          fontWeight: '800'
+                        }} className="currency-font">
+                          {formatINR(categorySubtotals[cat.category_id]?.[editingPeriodId] || 0)}
+                        </td>
+                      )}
+
+                      {/* Overall Category Total */}
+                      <td style={{
+                        padding: '9px 14px',
+                        textAlign: 'right',
+                        borderRight: '1px solid #000000',
+                        fontWeight: '800'
+                      }} className="currency-font">
+                        {formatINR(
+                          periods.reduce((acc, p) => acc + (categorySubtotals[cat.category_id]?.[p.id] || 0), 0)
+                        )}
+                      </td>
+                      <td style={{ padding: '9px 8px' }}></td>
+                    </tr>
+                  </React.Fragment>
+                );
+              })}
+
+              {/* BOTTOM GRAND TOTAL ROW: Deep Emerald / Teal matching Image 1 */}
+              <tr style={{
+                backgroundColor: '#00b894',
+                color: '#000000',
+                borderTop: '3px solid #000000',
+                fontWeight: '900',
+                fontSize: '13.5px'
+              }}>
+                <td colSpan={2} style={{
+                  padding: '12px 18px',
+                  textAlign: 'center',
+                  borderRight: '1px solid #000000',
+                  letterSpacing: '0.04em'
+                }}>
+                  Total Transport Expenses
+                </td>
+
+                {/* Grand Total per period */}
+                {activeSubTab === 'excel_grid' ? (
+                  periods.map(p => {
+                    const gVal = grandTotalsByPeriod.totals[p.id] || 0;
                     return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                        {m.vehicles_count}
+                      <td
+                        key={p.id}
+                        style={{
+                          padding: '12px 12px',
+                          textAlign: 'right',
+                          borderRight: '1px solid #000000',
+                          fontWeight: '900'
+                        }}
+                        className="currency-font"
+                      >
+                        {formatINR(gVal)}
                       </td>
                     );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000' }}>Buses + Spare</td>
-                </tr>
-
-                {/* Passengers */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Total Commuters
+                  })
+                ) : (
+                  <td style={{
+                    padding: '12px 14px',
+                    textAlign: 'right',
+                    borderRight: '1px solid #000000',
+                    fontWeight: '900'
+                  }} className="currency-font">
+                    {formatINR(grandTotalsByPeriod.totals[editingPeriodId] || 0)}
                   </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                        {m.passengers_count.toLocaleString()}
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000' }}>Students + Staff</td>
-                </tr>
+                )}
 
-                {/* Actual KMs */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Actual Trip KMs
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                        {m.actual_kms.toLocaleString()} KM
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000' }}>Odometer Run</td>
-                </tr>
-
-                {/* Additional KMs */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Additional KMs
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', color: '#000000', borderRight: '1px solid #000000' }}>
-                        {m.additional_kms.toLocaleString()} KM
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000' }}>Extra trips</td>
-                </tr>
-
-                {/* Diesel Litres */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Diesel Litres Purchased
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '800', color: '#000000', borderRight: '1px solid #000000' }}>
-                        {m.diesel_litres.toLocaleString()} L
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000', fontWeight: '700' }}>Bulk Diesel</td>
-                </tr>
-
-                {/* Fuel Expenses */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Fuel Expenses (Rs)
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }} className="currency-font">
-                        {formatINR(m.fuel_expenses)}
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000' }}>Direct Fuel Cost</td>
-                </tr>
-
-                {/* Total Expenses */}
-                <tr style={{ borderBottom: '2px solid #000000', borderTop: '2px solid #000000', backgroundColor: '#00ff00', fontWeight: '800' }}>
-                  <td style={{ padding: '8px 16px', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Total Fleet Expenses
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', color: '#000000', borderRight: '1px solid #000000' }} className="currency-font">
-                        {formatINR(m.total_expenses)}
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000', fontFamily: 'monospace' }}>
-                    =SUM(Expenses)
-                  </td>
-                </tr>
-
-                {/* Fuel Cost / KM */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Fuel Cost / KM
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                        ₹{m.fuel_cost_per_km} / KM
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000' }}>Fuel / Actual KM</td>
-                </tr>
-
-                {/* Diesel / 100 KM */}
-                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Diesel Consumption / 100 KM
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                        {m.diesel_per_100km} L
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000' }}>(L / KM) * 100</td>
-                </tr>
-
-                {/* Service Tickets Open */}
-                <tr style={{ backgroundColor: '#fff2df' }}>
-                  <td style={{ padding: '8px 16px', fontWeight: '700', color: '#000000', borderRight: '1px solid #000000' }}>
-                    Open Tickets / Incidents
-                  </td>
-                  {periods.map(p => {
-                    const m = getTransportMetrics(p.id);
-                    return (
-                      <td key={p.id} style={{ padding: '8px 14px', textAlign: 'right', fontWeight: '700', color: m.service_tickets_open > 0 ? '#dc2626' : '#000000', borderRight: '1px solid #000000' }}>
-                        {m.service_tickets_open} open • {m.incidents_count} inc
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: '8px 14px', textAlign: 'right', color: '#000000' }}>Open Maintenance</td>
-                </tr>
-
-              </tbody>
-            </table>
-          </div>
+                <td style={{
+                  padding: '12px 14px',
+                  textAlign: 'right',
+                  borderRight: '1px solid #000000',
+                  fontWeight: '900'
+                }} className="currency-font">
+                  {formatINR(grandTotalsByPeriod.overallGrand)}
+                </td>
+                <td style={{ padding: '12px 8px' }}></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* 7. BOTTOM ACTION & STATUS BAR */}
-      <div style={{
-        padding: '12px 20px',
-        backgroundColor: '#f0f9ff',
-        borderTop: '1px solid #bae6fd',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '12.5px', color: '#0369a1', fontWeight: '600' }}>
-            Active Cycle: <strong>{activePeriodObj?.period_label || 'Current Period'}</strong>
-            {isClosed ? ' (Locked)' : ' • Ready for Data Entry'}
-          </span>
+      {/* 6. TRANSPORT FLEET ASSETS & MILEAGE CENSUS SUB-TAB */}
+      {activeSubTab === 'census' && (
+        <div style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Bus size={18} color="#00a2e8" />
+              <span>Transport Fleet Assets & Mileage Census ({activePeriodObj?.period_label})</span>
+            </h3>
+            <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+              Key fleet metrics saved automatically when saving spreadsheet
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            {/* Card 1: Fleet Size & Commuter Census */}
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Users size={15} /> Fleet Size & Commuter Census
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Vehicles Count</label>
+                  <input
+                    type="text"
+                    value={activeTransportMetrics.vehicles_count}
+                    onChange={(e) => handleTransportCensusChange?.('vehicles_count', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Total Passengers</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.passengers_count}
+                    onChange={(e) => handleTransportCensusChange?.('passengers_count', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Students Count</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.students_count}
+                    onChange={(e) => handleTransportCensusChange?.('students_count', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Staff Count</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.staff_count}
+                    onChange={(e) => handleTransportCensusChange?.('staff_count', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Trip Mileage & Fuel Consumption */}
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Fuel size={15} /> Trip Mileage & Diesel Fuel
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Approved KMs</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.approved_kms}
+                    onChange={(e) => handleTransportCensusChange?.('approved_kms', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Actual Run KMs</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.actual_kms}
+                    onChange={(e) => handleTransportCensusChange?.('actual_kms', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Additional KMs</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.additional_kms}
+                    onChange={(e) => handleTransportCensusChange?.('additional_kms', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Diesel Litres</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={activeTransportMetrics.diesel_litres}
+                    onChange={(e) => handleTransportCensusChange?.('diesel_litres', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Revenue, Passes & Operating Budget */}
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#047857', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <DollarSign size={15} /> Student Passes & Fleet Budget
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Pass Fee Demand (₹)</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.fee_demand}
+                    onChange={(e) => handleTransportCensusChange?.('fee_demand', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Pass Fee Collected (₹)</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.fee_collected}
+                    onChange={(e) => handleTransportCensusChange?.('fee_collected', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Approved Budget (₹)</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.approved_budget}
+                    onChange={(e) => handleTransportCensusChange?.('approved_budget', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Budget Spent (₹)</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.cumulative_budget_spent}
+                    onChange={(e) => handleTransportCensusChange?.('cumulative_budget_spent', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Service Tickets & Safety Compliance */}
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ShieldCheck size={15} /> Service Tickets & Safety Compliance
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Service Tickets Raised</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.service_tickets_raised}
+                    onChange={(e) => handleTransportCensusChange?.('service_tickets_raised', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Service Tickets Closed</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.service_tickets_closed}
+                    onChange={(e) => handleTransportCensusChange?.('service_tickets_closed', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Safety Incidents</label>
+                  <input
+                    type="number"
+                    value={activeTransportMetrics.incidents_count}
+                    onChange={(e) => handleTransportCensusChange?.('incidents_count', e.target.value, editingPeriodId)}
+                    disabled={isClosed}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Statutory Compliance</label>
+                  <div style={{ padding: '6px 8px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', fontWeight: '800', color: '#166534' }}>
+                    100% Compliant
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={handleSaveAllMonthsBulk}
-            disabled={savingBatch || isSavingLocal}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              backgroundColor: '#ffffff',
-              border: '1.5px solid #00a2e8',
-              color: '#0087c2',
-              fontSize: '12.5px',
-              fontWeight: '800',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
-            }}
-          >
-            <Table size={14} />
-            <span>Save All Months (Bulk)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSaveCurrentMonthDirect}
-            disabled={savingBatch || isSavingLocal || isClosed}
-            style={{
-              padding: '8px 22px',
-              borderRadius: '6px',
-              backgroundColor: isClosed ? '#cbd5e1' : '#00a2e8',
-              color: '#ffffff',
-              fontSize: '13px',
-              fontWeight: '800',
-              border: 'none',
-              cursor: isClosed ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: isClosed ? 'none' : '0 2px 6px rgba(0, 162, 232, 0.3)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Save size={15} />
-            <span>{isSavingLocal || savingBatch ? 'Saving...' : `💾 Save Transport Data for ${activePeriodObj?.period_label || 'Month'}`}</span>
-          </button>
-        </div>
-      </div>
-
+      )}
     </div>
   );
 }
