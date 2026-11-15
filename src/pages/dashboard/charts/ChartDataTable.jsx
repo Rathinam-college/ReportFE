@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { formatINR } from '../../../utils/formatters';
 import { 
-  Download, Search, MessageSquare, X, Filter, Table, Layers, 
-  ArrowUpDown, Check, Maximize2, Minimize2 
+  Download, Search, X, Maximize2, Minimize2, Sparkles, Filter
 } from 'lucide-react';
 
 export default function ChartDataTable({
@@ -13,7 +12,6 @@ export default function ChartDataTable({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
-  const [activeCommentPopover, setActiveCommentPopover] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const containerRef = useRef(null);
 
@@ -73,40 +71,68 @@ export default function ChartDataTable({
     };
   }, [isFullScreen]);
 
-  // Category Color Palette matching user's uploaded Excel report mockup (Image 1)
-  const getCategoryColor = (catName, idx) => {
+  // Transparent UI Category Theme Palette (Refined Glass Accents)
+  const getCategoryTheme = (catName, idx) => {
     const nameLower = (catName || '').toLowerCase();
-    if (nameLower.includes('material')) {
-      return { headerBg: '#ffc90e', text: '#000000', rowBg: '#fff2df' }; // Golden Yellow
+    if (nameLower.includes('material') || nameLower.includes('fuel')) {
+      return {
+        badgeBg: 'rgba(59, 130, 246, 0.08)',
+        badgeBorder: 'rgba(59, 130, 246, 0.25)',
+        badgeText: '#1d4ed8',
+        subtotalBg: 'rgba(59, 130, 246, 0.05)',
+        dotColor: '#3b82f6'
+      };
     }
-    if (nameLower.includes('labour') || nameLower.includes('labor')) {
-      return { headerBg: '#dcdde1', text: '#000000', rowBg: '#fff2df' }; // Silver / Light Grey
+    if (nameLower.includes('labour') || nameLower.includes('labor') || nameLower.includes('driver') || nameLower.includes('crew') || nameLower.includes('manpower')) {
+      return {
+        badgeBg: 'rgba(139, 92, 246, 0.08)',
+        badgeBorder: 'rgba(139, 92, 246, 0.25)',
+        badgeText: '#6d28d9',
+        subtotalBg: 'rgba(139, 92, 246, 0.05)',
+        dotColor: '#8b5cf6'
+      };
     }
-    if (nameLower.includes('maintenance') || nameLower.includes('fc') || nameLower.includes('power')) {
-      return { headerBg: '#ffc90e', text: '#000000', rowBg: '#fff2df' }; // Golden Yellow
+    if (nameLower.includes('maintenance') || nameLower.includes('fc') || nameLower.includes('power') || nameLower.includes('repair')) {
+      return {
+        badgeBg: 'rgba(245, 158, 11, 0.08)',
+        badgeBorder: 'rgba(245, 158, 11, 0.25)',
+        badgeText: '#b45309',
+        subtotalBg: 'rgba(245, 158, 11, 0.05)',
+        dotColor: '#f59e0b'
+      };
     }
-    if (nameLower.includes('event')) {
-      return { headerBg: '#a8d8ea', text: '#000000', rowBg: '#fff2df' }; // Soft Sky Blue
+    if (nameLower.includes('event') || nameLower.includes('water') || nameLower.includes('statutory') || nameLower.includes('insurance')) {
+      return {
+        badgeBg: 'rgba(16, 185, 129, 0.08)',
+        badgeBorder: 'rgba(16, 185, 129, 0.25)',
+        badgeText: '#047857',
+        subtotalBg: 'rgba(16, 185, 129, 0.05)',
+        dotColor: '#10b981'
+      };
     }
-    if (nameLower.includes('festival')) {
-      return { headerBg: '#d4edda', text: '#000000', rowBg: '#fff2df' }; // Soft Mint Green
+    if (nameLower.includes('festival') || nameLower.includes('resident')) {
+      return {
+        badgeBg: 'rgba(236, 72, 153, 0.08)',
+        badgeBorder: 'rgba(236, 72, 153, 0.25)',
+        badgeText: '#be185d',
+        subtotalBg: 'rgba(236, 72, 153, 0.05)',
+        dotColor: '#ec4899'
+      };
     }
-    // Fallbacks for Transport / Hostel
     const fallbacks = [
-      { headerBg: '#ffc90e', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#dcdde1', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#a8d8ea', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#d4edda', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#fed7aa', text: '#000000', rowBg: '#fff2df' }
+      { badgeBg: 'rgba(59, 130, 246, 0.08)', badgeBorder: 'rgba(59, 130, 246, 0.25)', badgeText: '#1d4ed8', subtotalBg: 'rgba(59, 130, 246, 0.05)', dotColor: '#3b82f6' },
+      { badgeBg: 'rgba(139, 92, 246, 0.08)', badgeBorder: 'rgba(139, 92, 246, 0.25)', badgeText: '#6d28d9', subtotalBg: 'rgba(139, 92, 246, 0.05)', dotColor: '#8b5cf6' },
+      { badgeBg: 'rgba(245, 158, 11, 0.08)', badgeBorder: 'rgba(245, 158, 11, 0.25)', badgeText: '#b45309', subtotalBg: 'rgba(245, 158, 11, 0.05)', dotColor: '#f59e0b' },
+      { badgeBg: 'rgba(16, 185, 129, 0.08)', badgeBorder: 'rgba(16, 185, 129, 0.25)', badgeText: '#047857', subtotalBg: 'rgba(16, 185, 129, 0.05)', dotColor: '#10b981' }
     ];
     return fallbacks[idx % fallbacks.length];
   };
 
-  // Indian currency formatting without currency symbol for clean Excel grid (e.g. 58,39,162)
+  // Indian currency formatting (e.g. 58,39,162)
   const formatIndianNumber = (val) => {
-    if (val === undefined || val === null || val === '' || val === 0) return '';
+    if (val === undefined || val === null || val === '' || val === 0) return '—';
     const num = Number(val);
-    if (isNaN(num)) return '';
+    if (isNaN(num) || num === 0) return '—';
     return num.toLocaleString('en-IN', { maximumFractionDigits: 0 });
   };
 
@@ -152,74 +178,7 @@ export default function ChartDataTable({
     return subs;
   }, [categories, periods]);
 
-  // Flatten rows with rich month-by-month values for detailed ledger
-  const flatRows = useMemo(() => {
-    const list = [];
-    const grandTot = monthlyGrandTotals.grandOverall || 1;
-
-    categories.forEach(cat => {
-      cat.items?.forEach(it => {
-        const amountsByPeriod = {};
-        let itemTotal = 0;
-
-        periods.forEach(p => {
-          const amt = Number(it.amounts?.[p.id] ?? it.amounts?.[String(p.id)] ?? 0);
-          amountsByPeriod[p.id] = amt;
-          itemTotal += amt;
-        });
-
-        const avgAmt = periods.length > 0 ? (itemTotal / periods.length) : (it.avg || 0);
-        const sharePct = grandTot > 0 ? (itemTotal / grandTot) * 100 : 0;
-
-        const remarksList = [];
-        if (it.remarks) {
-          Object.keys(it.remarks).forEach(pid => {
-            const txt = it.remarks[pid];
-            if (txt && !txt.startsWith('Entry via Operational Matrix') && !txt.startsWith('Cloned from')) {
-              const pLabel = periods.find(p => String(p.id) === String(pid))?.period_label || pid;
-              remarksList.push({ periodLabel: pLabel, text: txt });
-            }
-          });
-        }
-
-        let momGrowth = 0;
-        if (periods.length >= 2) {
-          const firstVal = amountsByPeriod[periods[0].id] || 0;
-          const lastVal = amountsByPeriod[periods[periods.length - 1].id] || 0;
-          if (firstVal > 0) {
-            momGrowth = ((lastVal - firstVal) / firstVal) * 100;
-          }
-        }
-
-        list.push({
-          cost_head_id: it.cost_head_id,
-          description: it.description,
-          category: cat.category_name,
-          amountsByPeriod,
-          total: itemTotal,
-          avgAmt,
-          sharePct,
-          momGrowth,
-          remarksList
-        });
-      });
-    });
-
-    return list;
-  }, [categories, periods, monthlyGrandTotals]);
-
-  // Filtered rows
-  const filteredRows = useMemo(() => {
-    return flatRows.filter(r => {
-      const matchesSearch = !searchTerm.trim() || 
-        r.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.category.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCat = selectedCategoryFilter === 'all' || r.category === selectedCategoryFilter;
-      return matchesSearch && matchesCat;
-    });
-  }, [flatRows, searchTerm, selectedCategoryFilter]);
-
-  // Grouped by Category for the exact Image 1 table
+  // Grouped by Category for Transparent UI presentation
   const groupedCategories = useMemo(() => {
     const list = [];
     categories.forEach((cat, idx) => {
@@ -236,7 +195,7 @@ export default function ChartDataTable({
       list.push({
         categoryId: cat.category_id,
         categoryName: cat.category_name,
-        colorTheme: getCategoryColor(cat.category_name, idx),
+        theme: getCategoryTheme(cat.category_name, idx),
         items: items,
         subtotal: categorySubtotals[cat.category_id] || {}
       });
@@ -244,8 +203,8 @@ export default function ChartDataTable({
     return list;
   }, [categories, categorySubtotals, selectedCategoryFilter, searchTerm]);
 
-  // Special Combined Subtotals matching Image 1:
-  // In the image: Food Material + Food Labour are summed as "Total Food Expenses"
+  // Special Combined Subtotals:
+  // Food Material + Food Labour summed as "Total Food Expenses"
   const foodCombinedSubtotal = useMemo(() => {
     const totals = {};
     let allTotal = 0;
@@ -266,78 +225,67 @@ export default function ChartDataTable({
   // Export to CSV
   const handleExportCSV = () => {
     const periodHeaders = periods.map(p => `"${p.period_label} (INR)"`);
-    const headers = ['"S.No"', '"Category"', '"Description / Cost Head"', ...periodHeaders, '"Total Spend (INR)"', '"Avg / Month (INR)"', '"Share %"'];
-    
-    const rows = filteredRows.map((r, idx) => {
-      const pCols = periods.map(p => (r.amountsByPeriod[p.id] || 0).toFixed(2));
-      return [
-        idx + 1,
-        `"${r.category}"`,
-        `"${r.description}"`,
-        ...pCols,
-        r.total.toFixed(2),
-        r.avgAmt.toFixed(2),
-        r.sharePct.toFixed(2) + '%'
-      ];
+    const headers = ['"Category"', '"Description"', ...periodHeaders, '"Total Spend (INR)"', '"Avg / Month (INR)"'];
+    const rows = [];
+
+    groupedCategories.forEach(grp => {
+      grp.items.forEach(it => {
+        const pCols = periods.map(p => Number(it.amounts?.[p.id] ?? 0).toFixed(2));
+        const itTotal = periods.reduce((acc, p) => acc + Number(it.amounts?.[p.id] ?? 0), 0);
+        const itAvg = periods.length > 0 ? itTotal / periods.length : 0;
+        rows.push([
+          `"${grp.categoryName}"`,
+          `"${it.description}"`,
+          ...pCols,
+          itTotal.toFixed(2),
+          itAvg.toFixed(2)
+        ]);
+      });
     });
 
     const grandPCols = periods.map(p => (monthlyGrandTotals.byPeriod[p.id] || 0).toFixed(2));
     rows.push([
-      '""',
-      '"TOTAL EXPENSES"',
       '"ALL CATEGORIES"',
+      '"TOTAL EXPENSES"',
       ...grandPCols,
       monthlyGrandTotals.grandOverall.toFixed(2),
-      monthlyGrandTotals.avgMonthly.toFixed(2),
-      '"100.0%"'
+      monthlyGrandTotals.avgMonthly.toFixed(2)
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `rathinam_monthly_report_${selectedModule}.csv`);
+    link.setAttribute('download', `rathinam_${selectedModule}_expenditure_ledger.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      style={isFullScreen ? {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 999999,
-        backgroundColor: '#ffffff',
-        overflowY: 'hidden',
-        overflowX: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: 0,
-        border: 'none',
-        boxShadow: 'none',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      } : {
-        backgroundColor: '#ffffff',
-        borderRadius: '12px',
-        border: '2px solid #00a2e8',
-        boxShadow: '0 4px 14px rgba(0, 162, 232, 0.08)',
+      style={{
+        backgroundColor: isFullScreen ? '#ffffff' : 'rgba(255, 255, 255, 0.72)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderRadius: '16px',
+        border: '1px solid rgba(226, 232, 240, 0.85)',
+        boxShadow: isFullScreen 
+          ? 'none' 
+          : '0 10px 30px -5px rgba(99, 102, 241, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.02)',
         overflow: 'hidden',
         position: 'relative',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}
     >
-      {/* 1. HEADER CONTROL BAR */}
+      {/* 1. GLASS HEADER CONTROL BAR */}
       <div style={{
-        padding: '14px 20px',
-        backgroundColor: '#f0f9ff',
-        borderBottom: '2px solid #bae6fd',
+        padding: '14px 22px',
+        backgroundColor: 'rgba(248, 250, 252, 0.75)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -351,54 +299,55 @@ export default function ChartDataTable({
           <div style={{
             width: '32px',
             height: '32px',
-            borderRadius: '6px',
-            backgroundColor: '#00a2e8',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#ffffff'
+            color: '#4f46e5'
           }}>
-            <Table size={18} />
+            <Sparkles size={16} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                Month-by-Month Expenditure Report
+              <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>
+                Month-by-Month Expenditure Data Sheet
               </h3>
               <span style={{
                 fontSize: '11px',
-                fontWeight: '800',
+                fontWeight: '700',
                 padding: '2px 8px',
-                borderRadius: '4px',
-                backgroundColor: '#00a2e8',
-                color: '#ffffff'
+                borderRadius: '9999px',
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                color: '#4338ca',
+                border: '1px solid rgba(99, 102, 241, 0.2)'
               }}>
-                Excel Format
+                Transparent Glass UI
               </span>
               {isFullScreen && (
                 <span style={{
                   fontSize: '11px',
                   fontWeight: '700',
                   padding: '2px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: '#10b981',
-                  color: '#ffffff',
-                  boxShadow: '0 1px 3px rgba(16, 185, 129, 0.3)'
+                  borderRadius: '9999px',
+                  backgroundColor: '#ecfdf5',
+                  color: '#047857',
+                  border: '1px solid #a7f3d0'
                 }}>
-                  Full Screen Mode Active • Press Esc to exit
+                  Full Screen • Press Esc to exit
                 </span>
               )}
             </div>
             <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-              Full month-by-month financial progression • Side-by-side columns matching Rathinam Excel reports
+              Translucent multi-cycle financial ledger • Smooth line-by-line progression & category subtotals
             </p>
           </div>
         </div>
 
-        {/* View mode toggle, search, filter, export & FULL SCREEN TOGGLE */}
+        {/* View mode controls: Search, Category filter, CSV & Full Screen */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          
-          {/* Search box */}
+          {/* Transparent Search box */}
           <div style={{ position: 'relative' }}>
             <Search size={13} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
@@ -409,11 +358,12 @@ export default function ChartDataTable({
               style={{
                 padding: '5px 10px 5px 28px',
                 fontSize: '12px',
-                borderRadius: '6px',
-                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                border: '1px solid rgba(203, 213, 225, 0.7)',
                 outline: 'none',
                 width: '160px',
-                backgroundColor: '#ffffff'
+                backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                color: '#1e293b'
               }}
             />
             {searchTerm && (
@@ -427,7 +377,7 @@ export default function ChartDataTable({
             )}
           </div>
 
-          {/* Category Dropdown */}
+          {/* Transparent Category Filter Dropdown */}
           <select
             value={selectedCategoryFilter}
             onChange={(e) => setSelectedCategoryFilter(e.target.value)}
@@ -435,9 +385,9 @@ export default function ChartDataTable({
               padding: '5px 10px',
               fontSize: '12px',
               fontWeight: '600',
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              border: '1px solid rgba(203, 213, 225, 0.7)',
+              backgroundColor: 'rgba(255, 255, 255, 0.85)',
               color: '#334155',
               cursor: 'pointer'
             }}
@@ -448,7 +398,7 @@ export default function ChartDataTable({
             ))}
           </select>
 
-          {/* Export CSV */}
+          {/* CSV Export */}
           <button
             type="button"
             onClick={handleExportCSV}
@@ -457,20 +407,21 @@ export default function ChartDataTable({
               alignItems: 'center',
               gap: '5px',
               padding: '5px 12px',
-              borderRadius: '6px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.85)',
+              border: '1px solid rgba(203, 213, 225, 0.8)',
               color: '#334155',
               fontSize: '12px',
               fontWeight: '700',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.12s ease'
             }}
           >
-            <Download size={13} />
+            <Download size={13} color="#475569" />
             <span>CSV</span>
           </button>
 
-          {/* Small Fullscreen Icon in Top Right Corner */}
+          {/* Full Screen Toggle Button */}
           <button
             type="button"
             onClick={toggleFullScreen}
@@ -482,408 +433,504 @@ export default function ChartDataTable({
               justifyContent: 'center',
               width: '32px',
               height: '32px',
-              borderRadius: '6px',
-              backgroundColor: isFullScreen ? '#00a2e8' : '#ffffff',
-              border: isFullScreen ? '1.5px solid #0087c2' : '1.5px solid #00a2e8',
-              color: isFullScreen ? '#ffffff' : '#00a2e8',
+              borderRadius: '8px',
+              backgroundColor: isFullScreen ? '#4f46e5' : 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(203, 213, 225, 0.8)',
+              color: isFullScreen ? '#ffffff' : '#4f46e5',
               cursor: 'pointer',
-              boxShadow: isFullScreen ? '0 2px 6px rgba(0, 162, 232, 0.4)' : '0 1px 3px rgba(0, 162, 232, 0.15)',
+              boxShadow: isFullScreen ? '0 2px 6px rgba(79, 70, 229, 0.3)' : '0 1px 2px rgba(0,0,0,0.03)',
               transition: 'all 0.15s ease'
             }}
           >
-            {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            {isFullScreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           </button>
         </div>
       </div>
 
-      {/* 2. TABLE PRESENTATION */}
+      {/* 2. TRANSPARENT TABLE PRESENTATION */}
       <div style={{ 
         overflowX: 'auto', 
         overflowY: isFullScreen ? 'auto' : 'visible',
-        padding: isFullScreen ? '16px 24px' : '16px 20px',
+        padding: isFullScreen ? '16px 24px' : '0',
         flex: isFullScreen ? 1 : undefined,
         maxHeight: isFullScreen ? 'calc(100vh - 72px)' : undefined
       }}>
-
-        {/* --- RATHINAM EXCEL REPORT VIEW (EXACT MATCH TO USER'S UPLOADED IMAGE) --- */}
         <table style={{
           width: '100%',
-          borderCollapse: 'collapse',
+          borderCollapse: 'separate',
+          borderSpacing: 0,
           fontSize: '13px',
-          border: '2px solid #000000',
-          backgroundColor: '#ffffff'
+          textAlign: 'left'
         }}>
-            {/* Header: Cyan / Sky Blue matching Image 1 (#00a2e8) */}
-            <thead style={isFullScreen ? { position: 'sticky', top: 0, zIndex: 10 } : undefined}>
-              <tr style={{
-                backgroundColor: '#00a2e8',
-                color: '#000000',
-                borderBottom: '2px solid #000000',
-                fontWeight: '800',
-                fontSize: '13.5px'
+          {/* Frosted Glass Table Header */}
+          <thead style={isFullScreen ? { position: 'sticky', top: 0, zIndex: 10 } : undefined}>
+            <tr style={{
+              backgroundColor: 'rgba(241, 245, 249, 0.85)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+              color: '#334155',
+              fontSize: '12.5px',
+              fontWeight: '700'
+            }}>
+              <th style={{
+                padding: '12px 18px',
+                width: '180px',
+                textAlign: 'center',
+                borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                borderRight: '1px solid rgba(226, 232, 240, 0.8)'
               }}>
-                <th style={{ padding: '10px 14px', width: '180px', textAlign: 'center', borderRight: '1px solid #000000' }}>
-                  Category
-                </th>
-                <th style={{ padding: '10px 18px', minWidth: '220px', textAlign: 'center', borderRight: '1px solid #000000' }}>
-                  Description
-                </th>
+                Category
+              </th>
+              <th style={{
+                padding: '12px 18px',
+                minWidth: '220px',
+                textAlign: 'left',
+                borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                borderRight: '1px solid rgba(226, 232, 240, 0.8)'
+              }}>
+                Description
+              </th>
 
-                {/* All Periods as columns */}
-                {periods.map(p => {
-                  const isSel = String(p.id) === String(activePeriod);
-                  return (
-                    <th
-                      key={p.id}
-                      style={{
-                        padding: '10px 14px',
-                        minWidth: '125px',
-                        textAlign: 'center',
-                        borderRight: '1px solid #000000',
-                        backgroundColor: isSel ? '#0ea5e9' : '#00a2e8',
-                        color: '#000000',
-                        fontWeight: '800'
-                      }}
-                    >
-                      {p.period_label} {isSel && '★'}
-                    </th>
-                  );
-                })}
-
-                <th style={{ padding: '10px 14px', minWidth: '130px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#0284c7', color: '#ffffff' }}>
-                  Total (All Mo)
-                </th>
-                <th style={{ padding: '10px 12px', minWidth: '110px', textAlign: 'center', backgroundColor: '#0284c7', color: '#ffffff' }}>
-                  Avg / Mo
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {groupedCategories.map((grp, grpIdx) => {
-                const colorTheme = grp.colorTheme;
-                const itemsCount = grp.items.length;
-                const isFoodLabour = grp.categoryName.toLowerCase().includes('labour') || grp.categoryName.toLowerCase().includes('labor');
-                const isFCMaintenance = grp.categoryName.toLowerCase().includes('fc maintenance') || grp.categoryName.toLowerCase().includes('maintenance');
-
+              {/* All Periods as columns */}
+              {periods.map(p => {
+                const isSel = String(p.id) === String(activePeriod);
                 return (
-                  <React.Fragment key={grp.categoryId}>
-                    {/* Items in this category */}
-                    {grp.items.map((item, itemIdx) => {
-                      let itemTotal = 0;
-                      periods.forEach(p => {
-                        const v = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
-                        itemTotal += v;
-                      });
-                      const itemAvg = periods.length > 0 ? (itemTotal / periods.length) : 0;
-
-                      return (
-                        <tr key={item.cost_head_id} style={{ borderBottom: '1px solid #000000' }}>
-                          {/* Merged Category column on first row */}
-                          {itemIdx === 0 && (
-                            <td
-                              rowSpan={itemsCount}
-                              style={{
-                                padding: '12px 14px',
-                                textAlign: 'center',
-                                verticalAlign: 'middle',
-                                backgroundColor: colorTheme.headerBg,
-                                color: colorTheme.text,
-                                fontWeight: '800',
-                                fontSize: '13.5px',
-                                borderRight: '1px solid #000000',
-                                borderBottom: '1px solid #000000'
-                              }}
-                            >
-                              {grp.categoryName}
-                            </td>
-                          )}
-
-                          {/* Description Cell */}
-                          <td style={{
-                            padding: '8px 14px',
-                            backgroundColor: colorTheme.headerBg,
-                            fontWeight: '700',
-                            color: '#000000',
-                            borderRight: '1px solid #000000'
-                          }}>
-                            {item.description}
-                          </td>
-
-                          {/* Monthly Values: Peach Background (#fff2df) matching Image 1 */}
-                          {periods.map(p => {
-                            const val = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
-                            const isSel = String(p.id) === String(activePeriod);
-                            return (
-                              <td
-                                key={p.id}
-                                style={{
-                                  padding: '8px 14px',
-                                  textAlign: 'right',
-                                  backgroundColor: isSel ? '#ffedd5' : '#fff2df',
-                                  color: '#000000',
-                                  fontWeight: val > 0 ? '700' : '400',
-                                  borderRight: '1px solid #000000'
-                                }}
-                                className="currency-font"
-                              >
-                                {val > 0 ? formatIndianNumber(val) : ''}
-                              </td>
-                            );
-                          })}
-
-                          {/* Total Spend */}
-                          <td style={{
-                            padding: '8px 14px',
-                            textAlign: 'right',
-                            fontWeight: '800',
-                            backgroundColor: '#fafafa',
-                            color: '#000000',
-                            borderRight: '1px solid #000000'
-                          }} className="currency-font">
-                            {formatIndianNumber(itemTotal)}
-                          </td>
-
-                          {/* Avg / Mo */}
-                          <td style={{
-                            padding: '8px 12px',
-                            textAlign: 'right',
-                            color: '#475569',
-                            backgroundColor: '#fafafa'
-                          }} className="currency-font">
-                            {formatIndianNumber(itemAvg)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-
-                    {/* SPECIAL CASE 1: Subtotal Row after Food Labour -> "Total Food Expenses" matching Image 1 */}
-                    {selectedModule === 'food' && isFoodLabour && (
-                      <tr style={{
-                        backgroundColor: '#00ff00',
-                        color: '#000000',
-                        borderTop: '2px solid #000000',
-                        borderBottom: '2px solid #000000',
-                        fontWeight: '900',
-                        fontSize: '13.5px'
-                      }}>
-                        <td colSpan={2} style={{
-                          padding: '10px 18px',
-                          textAlign: 'center',
-                          borderRight: '1px solid #000000',
-                          letterSpacing: '0.02em'
-                        }}>
-                          Total Food Expenses
-                        </td>
-
-                        {periods.map(p => {
-                          const tot = foodCombinedSubtotal.totals[p.id] || 0;
-                          return (
-                            <td
-                              key={p.id}
-                              style={{
-                                padding: '10px 14px',
-                                textAlign: 'right',
-                                borderRight: '1px solid #000000',
-                                fontWeight: '900'
-                              }}
-                              className="currency-font"
-                            >
-                              {formatIndianNumber(tot)}
-                            </td>
-                          );
-                        })}
-
-                        <td style={{
-                          padding: '10px 14px',
-                          textAlign: 'right',
-                          borderRight: '1px solid #000000',
-                          fontWeight: '900'
-                        }} className="currency-font">
-                          {formatIndianNumber(foodCombinedSubtotal.allTotal)}
-                        </td>
-
-                        <td style={{
-                          padding: '10px 12px',
-                          textAlign: 'right',
-                          fontWeight: '900'
-                        }} className="currency-font">
-                          {formatIndianNumber(periods.length > 0 ? (foodCombinedSubtotal.allTotal / periods.length) : 0)}
-                        </td>
-                      </tr>
-                    )}
-
-                    {/* SPECIAL CASE 2: Subtotal Row after FC Maintenance -> "Total Maintenance Expenses" */}
-                    {selectedModule === 'food' && isFCMaintenance && (
-                      <tr style={{
-                        backgroundColor: '#00ff00',
-                        color: '#000000',
-                        borderTop: '2px solid #000000',
-                        borderBottom: '2px solid #000000',
-                        fontWeight: '900',
-                        fontSize: '13.5px'
-                      }}>
-                        <td colSpan={2} style={{
-                          padding: '10px 18px',
-                          textAlign: 'center',
-                          borderRight: '1px solid #000000',
-                          letterSpacing: '0.02em'
-                        }}>
-                          Total Maintenance Expenses
-                        </td>
-
-                        {periods.map(p => {
-                          const subVal = grp.subtotal[p.id] || 0;
-                          return (
-                            <td
-                              key={p.id}
-                              style={{
-                                padding: '10px 14px',
-                                textAlign: 'right',
-                                borderRight: '1px solid #000000',
-                                fontWeight: '900'
-                              }}
-                              className="currency-font"
-                            >
-                              {formatIndianNumber(subVal)}
-                            </td>
-                          );
-                        })}
-
-                        <td style={{
-                          padding: '10px 14px',
-                          textAlign: 'right',
-                          borderRight: '1px solid #000000',
-                          fontWeight: '900'
-                        }} className="currency-font">
-                          {formatIndianNumber(grp.subtotal.total || 0)}
-                        </td>
-
-                        <td style={{
-                          padding: '10px 12px',
-                          textAlign: 'right',
-                          fontWeight: '900'
-                        }} className="currency-font">
-                          {formatIndianNumber(periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0)}
-                        </td>
-                      </tr>
-                    )}
-
-                    {/* Standard Subtotal Row for other modules or categories */}
-                    {selectedModule !== 'food' && (
-                      <tr style={{
-                        backgroundColor: '#00ff00',
-                        color: '#000000',
-                        borderTop: '2px solid #000000',
-                        borderBottom: '2px solid #000000',
-                        fontWeight: '800',
-                        fontSize: '13px'
-                      }}>
-                        <td colSpan={2} style={{
-                          padding: '9px 18px',
-                          textAlign: 'center',
-                          borderRight: '1px solid #000000'
-                        }}>
-                          Total {grp.categoryName}
-                        </td>
-
-                        {periods.map(p => {
-                          const subVal = grp.subtotal[p.id] || 0;
-                          return (
-                            <td
-                              key={p.id}
-                              style={{
-                                padding: '9px 14px',
-                                textAlign: 'right',
-                                borderRight: '1px solid #000000',
-                                fontWeight: '800'
-                              }}
-                              className="currency-font"
-                            >
-                              {formatIndianNumber(subVal)}
-                            </td>
-                          );
-                        })}
-
-                        <td style={{
-                          padding: '9px 14px',
-                          textAlign: 'right',
-                          borderRight: '1px solid #000000',
-                          fontWeight: '800'
-                        }} className="currency-font">
-                          {formatIndianNumber(grp.subtotal.total || 0)}
-                        </td>
-
-                        <td style={{
-                          padding: '9px 12px',
-                          textAlign: 'right',
-                          fontWeight: '800'
-                        }} className="currency-font">
-                          {formatIndianNumber(periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0)}
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
+                  <th
+                    key={p.id}
+                    style={{
+                      padding: '12px 14px',
+                      minWidth: '120px',
+                      textAlign: 'right',
+                      borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                      borderRight: '1px solid rgba(226, 232, 240, 0.8)',
+                      backgroundColor: isSel ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+                      color: isSel ? '#4338ca' : '#334155',
+                      fontWeight: isSel ? '800' : '700'
+                    }}
+                  >
+                    {p.period_label} {isSel && '★'}
+                  </th>
                 );
               })}
 
-              {/* BOTTOM GRAND TOTAL ROW: Deep Emerald / Teal matching Image 1 (#00b894) */}
-              <tr style={{
-                backgroundColor: '#00b894',
-                color: '#000000',
-                borderTop: '3px solid #000000',
-                fontWeight: '900',
-                fontSize: '14px'
+              <th style={{
+                padding: '12px 16px',
+                minWidth: '130px',
+                textAlign: 'right',
+                borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                borderRight: '1px solid rgba(226, 232, 240, 0.8)',
+                color: '#0f172a',
+                fontWeight: '800'
               }}>
-                <td colSpan={2} style={{
-                  padding: '12px 18px',
-                  textAlign: 'center',
-                  borderRight: '1px solid #000000',
-                  letterSpacing: '0.04em'
-                }}>
-                  Total Expenses
-                </td>
+                Total (All Mo)
+              </th>
+              <th style={{
+                padding: '12px 14px',
+                minWidth: '110px',
+                textAlign: 'right',
+                borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                color: '#475569',
+                fontWeight: '700'
+              }}>
+                Avg / Mo
+              </th>
+            </tr>
+          </thead>
 
-                {/* Grand Total per period */}
-                {periods.map(p => {
-                  const gVal = monthlyGrandTotals.byPeriod[p.id] || 0;
-                  return (
-                    <td
-                      key={p.id}
-                      style={{
-                        padding: '12px 14px',
+          <tbody>
+            {groupedCategories.map((grp) => {
+              const theme = grp.theme;
+              const itemsCount = grp.items.length;
+              const isFoodLabour = grp.categoryName.toLowerCase().includes('labour') || grp.categoryName.toLowerCase().includes('labor');
+              const isFCMaintenance = grp.categoryName.toLowerCase().includes('fc maintenance') || grp.categoryName.toLowerCase().includes('maintenance');
+
+              return (
+                <React.Fragment key={grp.categoryId}>
+                  {/* Category Line Items */}
+                  {grp.items.map((item, itemIdx) => {
+                    let itemTotal = 0;
+                    periods.forEach(p => {
+                      const v = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
+                      itemTotal += v;
+                    });
+                    const itemAvg = periods.length > 0 ? (itemTotal / periods.length) : 0;
+
+                    return (
+                      <tr
+                        key={item.cost_head_id}
+                        style={{
+                          borderBottom: '1px solid rgba(241, 245, 249, 0.85)',
+                          transition: 'background-color 0.12s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(241, 245, 249, 0.55)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        {/* Merged Category column on first row with soft transparent glass badge */}
+                        {itemIdx === 0 && (
+                          <td
+                            rowSpan={itemsCount}
+                            style={{
+                              padding: '14px 16px',
+                              textAlign: 'center',
+                              verticalAlign: 'middle',
+                              backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                              borderRight: '1px solid rgba(226, 232, 240, 0.8)',
+                              borderBottom: '1px solid rgba(226, 232, 240, 0.8)'
+                            }}
+                          >
+                            <div style={{
+                              display: 'inline-block',
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              backgroundColor: theme.badgeBg,
+                              border: `1px solid ${theme.badgeBorder}`,
+                              color: theme.badgeText,
+                              fontWeight: '800',
+                              fontSize: '12.5px',
+                              letterSpacing: '0.01em'
+                            }}>
+                              {grp.categoryName}
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Description Cell */}
+                        <td style={{
+                          padding: '10px 18px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          borderRight: '1px solid rgba(226, 232, 240, 0.7)',
+                          borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: theme.dotColor,
+                              display: 'inline-block',
+                              flexShrink: 0
+                            }} />
+                            <span>{item.description}</span>
+                          </div>
+                        </td>
+
+                        {/* Monthly Values with Transparent Glass Cells */}
+                        {periods.map(p => {
+                          const val = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
+                          const isSel = String(p.id) === String(activePeriod);
+                          return (
+                            <td
+                              key={p.id}
+                              style={{
+                                padding: '10px 14px',
+                                textAlign: 'right',
+                                backgroundColor: isSel ? 'rgba(99, 102, 241, 0.04)' : 'transparent',
+                                color: val > 0 ? '#0f172a' : '#94a3b8',
+                                fontWeight: val > 0 ? '600' : '400',
+                                borderRight: '1px solid rgba(226, 232, 240, 0.6)',
+                                borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
+                              }}
+                              className="currency-font"
+                            >
+                              {formatIndianNumber(val)}
+                            </td>
+                          );
+                        })}
+
+                        {/* Total Spend */}
+                        <td style={{
+                          padding: '10px 16px',
+                          textAlign: 'right',
+                          fontWeight: '700',
+                          color: '#0f172a',
+                          backgroundColor: 'rgba(248, 250, 252, 0.45)',
+                          borderRight: '1px solid rgba(226, 232, 240, 0.7)',
+                          borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
+                        }} className="currency-font">
+                          {formatIndianNumber(itemTotal)}
+                        </td>
+
+                        {/* Avg / Mo */}
+                        <td style={{
+                          padding: '10px 14px',
+                          textAlign: 'right',
+                          color: '#475569',
+                          backgroundColor: 'rgba(248, 250, 252, 0.45)',
+                          borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
+                        }} className="currency-font">
+                          {formatIndianNumber(itemAvg)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* SPECIAL COMBINED SUBTOTAL 1: Food Labour -> "Total Food Expenses" */}
+                  {selectedModule === 'food' && isFoodLabour && (
+                    <tr style={{
+                      backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                      backdropFilter: 'blur(8px)',
+                      color: '#0f172a',
+                      borderTop: '1.5px solid rgba(99, 102, 241, 0.25)',
+                      borderBottom: '1.5px solid rgba(99, 102, 241, 0.25)',
+                      fontWeight: '800',
+                      fontSize: '13px'
+                    }}>
+                      <td colSpan={2} style={{
+                        padding: '11px 18px',
+                        textAlign: 'left',
+                        borderRight: '1px solid rgba(99, 102, 241, 0.2)',
+                        letterSpacing: '0.01em',
+                        color: '#312e81'
+                      }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#6366f1' }} />
+                          <span>Total Food Expenses (Material + Labour)</span>
+                        </div>
+                      </td>
+
+                      {periods.map(p => {
+                        const tot = foodCombinedSubtotal.totals[p.id] || 0;
+                        const isSel = String(p.id) === String(activePeriod);
+                        return (
+                          <td
+                            key={p.id}
+                            style={{
+                              padding: '11px 14px',
+                              textAlign: 'right',
+                              borderRight: '1px solid rgba(99, 102, 241, 0.2)',
+                              fontWeight: '800',
+                              color: '#1e1b4b',
+                              backgroundColor: isSel ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
+                            }}
+                            className="currency-font"
+                          >
+                            {formatIndianNumber(tot)}
+                          </td>
+                        );
+                      })}
+
+                      <td style={{
+                        padding: '11px 16px',
                         textAlign: 'right',
-                        borderRight: '1px solid #000000',
-                        fontWeight: '900'
-                      }}
-                      className="currency-font"
-                    >
-                      {formatIndianNumber(gVal)}
-                    </td>
-                  );
-                })}
+                        borderRight: '1px solid rgba(99, 102, 241, 0.2)',
+                        fontWeight: '800',
+                        color: '#1e1b4b'
+                      }} className="currency-font">
+                        {formatIndianNumber(foodCombinedSubtotal.allTotal)}
+                      </td>
 
-                <td style={{
-                  padding: '12px 14px',
-                  textAlign: 'right',
-                  borderRight: '1px solid #000000',
-                  fontWeight: '900'
-                }} className="currency-font">
-                  {formatIndianNumber(monthlyGrandTotals.grandOverall)}
-                </td>
+                      <td style={{
+                        padding: '11px 14px',
+                        textAlign: 'right',
+                        fontWeight: '800',
+                        color: '#4338ca'
+                      }} className="currency-font">
+                        {formatIndianNumber(periods.length > 0 ? (foodCombinedSubtotal.allTotal / periods.length) : 0)}
+                      </td>
+                    </tr>
+                  )}
 
-                <td style={{
-                  padding: '12px 12px',
-                  textAlign: 'right',
-                  fontWeight: '900'
-                }} className="currency-font">
-                  {formatIndianNumber(monthlyGrandTotals.avgMonthly)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  {/* SPECIAL COMBINED SUBTOTAL 2: FC Maintenance -> "Total Maintenance Expenses" */}
+                  {selectedModule === 'food' && isFCMaintenance && (
+                    <tr style={{
+                      backgroundColor: 'rgba(245, 158, 11, 0.06)',
+                      backdropFilter: 'blur(8px)',
+                      color: '#0f172a',
+                      borderTop: '1.5px solid rgba(245, 158, 11, 0.25)',
+                      borderBottom: '1.5px solid rgba(245, 158, 11, 0.25)',
+                      fontWeight: '800',
+                      fontSize: '13px'
+                    }}>
+                      <td colSpan={2} style={{
+                        padding: '11px 18px',
+                        textAlign: 'left',
+                        borderRight: '1px solid rgba(245, 158, 11, 0.2)',
+                        letterSpacing: '0.01em',
+                        color: '#78350f'
+                      }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#f59e0b' }} />
+                          <span>Total Maintenance Expenses</span>
+                        </div>
+                      </td>
+
+                      {periods.map(p => {
+                        const subVal = grp.subtotal[p.id] || 0;
+                        const isSel = String(p.id) === String(activePeriod);
+                        return (
+                          <td
+                            key={p.id}
+                            style={{
+                              padding: '11px 14px',
+                              textAlign: 'right',
+                              borderRight: '1px solid rgba(245, 158, 11, 0.2)',
+                              fontWeight: '800',
+                              color: '#78350f',
+                              backgroundColor: isSel ? 'rgba(245, 158, 11, 0.1)' : 'transparent'
+                            }}
+                            className="currency-font"
+                          >
+                            {formatIndianNumber(subVal)}
+                          </td>
+                        );
+                      })}
+
+                      <td style={{
+                        padding: '11px 16px',
+                        textAlign: 'right',
+                        borderRight: '1px solid rgba(245, 158, 11, 0.2)',
+                        fontWeight: '800',
+                        color: '#78350f'
+                      }} className="currency-font">
+                        {formatIndianNumber(grp.subtotal.total || 0)}
+                      </td>
+
+                      <td style={{
+                        padding: '11px 14px',
+                        textAlign: 'right',
+                        fontWeight: '800',
+                        color: '#b45309'
+                      }} className="currency-font">
+                        {formatIndianNumber(periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0)}
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Standard Subtotal Row for other categories and modules */}
+                  {(!isFoodLabour && !isFCMaintenance) && (
+                    <tr style={{
+                      backgroundColor: theme.subtotalBg || 'rgba(248, 250, 252, 0.65)',
+                      backdropFilter: 'blur(8px)',
+                      color: '#0f172a',
+                      borderTop: '1.5px solid rgba(203, 213, 225, 0.8)',
+                      borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                      fontWeight: '800',
+                      fontSize: '13px'
+                    }}>
+                      <td colSpan={2} style={{
+                        padding: '10px 18px',
+                        textAlign: 'left',
+                        borderRight: '1px solid rgba(226, 232, 240, 0.8)',
+                        color: '#1e293b'
+                      }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: theme.dotColor }} />
+                          <span>Total {grp.categoryName}</span>
+                        </div>
+                      </td>
+
+                      {periods.map(p => {
+                        const subVal = grp.subtotal[p.id] || 0;
+                        const isSel = String(p.id) === String(activePeriod);
+                        return (
+                          <td
+                            key={p.id}
+                            style={{
+                              padding: '10px 14px',
+                              textAlign: 'right',
+                              borderRight: '1px solid rgba(226, 232, 240, 0.8)',
+                              fontWeight: '800',
+                              color: '#0f172a',
+                              backgroundColor: isSel ? 'rgba(99, 102, 241, 0.08)' : 'transparent'
+                            }}
+                            className="currency-font"
+                          >
+                            {formatIndianNumber(subVal)}
+                          </td>
+                        );
+                      })}
+
+                      <td style={{
+                        padding: '10px 16px',
+                        textAlign: 'right',
+                        borderRight: '1px solid rgba(226, 232, 240, 0.8)',
+                        fontWeight: '800',
+                        color: '#0f172a'
+                      }} className="currency-font">
+                        {formatIndianNumber(grp.subtotal.total || 0)}
+                      </td>
+
+                      <td style={{
+                        padding: '10px 14px',
+                        textAlign: 'right',
+                        fontWeight: '800',
+                        color: '#475569'
+                      }} className="currency-font">
+                        {formatIndianNumber(periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0)}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+
+            {/* BOTTOM GRAND TOTAL ROW: Transparent Deep Slate/Navy Glass Bar */}
+            <tr style={{
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.98) 100%)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              color: '#ffffff',
+              fontWeight: '900',
+              fontSize: '13.5px',
+              boxShadow: '0 -2px 10px rgba(0,0,0,0.06)'
+            }}>
+              <td colSpan={2} style={{
+                padding: '14px 20px',
+                textAlign: 'left',
+                borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+                letterSpacing: '0.03em',
+                color: '#ffffff'
+              }}>
+                TOTAL EXPENSES • ALL CATEGORIES
+              </td>
+
+              {periods.map(p => {
+                const gVal = monthlyGrandTotals.byPeriod[p.id] || 0;
+                const isSel = String(p.id) === String(activePeriod);
+                return (
+                  <td
+                    key={p.id}
+                    style={{
+                      padding: '14px 14px',
+                      textAlign: 'right',
+                      borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+                      fontWeight: '900',
+                      color: isSel ? '#60a5fa' : '#ffffff',
+                      backgroundColor: isSel ? 'rgba(59, 130, 246, 0.18)' : 'transparent'
+                    }}
+                    className="currency-font"
+                  >
+                    {formatIndianNumber(gVal)}
+                  </td>
+                );
+              })}
+
+              {/* Overall Grand Total */}
+              <td style={{
+                padding: '14px 16px',
+                textAlign: 'right',
+                borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+                fontWeight: '900',
+                color: '#ffffff'
+              }} className="currency-font">
+                {formatIndianNumber(monthlyGrandTotals.grandOverall)}
+              </td>
+
+              {/* Monthly Average */}
+              <td style={{
+                padding: '14px 14px',
+                textAlign: 'right',
+                fontWeight: '900',
+                color: '#93c5fd'
+              }} className="currency-font">
+                {formatIndianNumber(monthlyGrandTotals.avgMonthly)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-
     </div>
   );
 }
