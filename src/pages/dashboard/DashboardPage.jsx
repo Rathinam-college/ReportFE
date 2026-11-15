@@ -2,14 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { formatINR, formatLakhs, DASH_COLORS } from '../../utils/formatters';
 import { 
   Calendar, Layers, PieChart as PieIcon, Calculator, FileSpreadsheet, 
-  TrendingUp, Hash, Users, ArrowRight, Table, BarChart3, CheckCircle2 
+  TrendingUp, Users, ArrowRight, Table, BarChart3, CheckCircle2 
 } from 'lucide-react';
 
-// 12 Chart Components & Master Selector
+// Charts & Components
 import ChartSelectorBar from './charts/ChartSelectorBar';
 import BarChart from './charts/BarChart';
 import ColumnChart from './charts/ColumnChart';
-import StackedChart from './charts/StackedChart';
 import LineChart from './charts/LineChart';
 import AreaChart from './charts/AreaChart';
 import ComboChart from './charts/ComboChart';
@@ -18,14 +17,15 @@ import TreemapChart from './charts/TreemapChart';
 import ScatterPlotChart from './charts/ScatterPlotChart';
 import BubbleChart from './charts/BubbleChart';
 import HistogramChart from './charts/HistogramChart';
-import ChartDataTable from './charts/ChartDataTable';
 import ComparisonTool from './ComparisonTool';
 
-// Layout Cards from Design Mockup (Image 1)
+// Layout Cards matching the user's uploaded design mockup
+import ChartDataTable from './charts/ChartDataTable';
+import StackedCategoryCard from './StackedCategoryCard';
 import TopCostHeadsCard from './TopCostHeadsCard';
 
 export default function DashboardPage({
-  selectedModule = 'food',
+  selectedModule = 'transport',
   onSelectModule,
   overview,
   computedMatrix,
@@ -36,78 +36,61 @@ export default function DashboardPage({
   setCompareTargetPeriod,
   onOpenDataEntry
 }) {
-  const [activeChart, setActiveChart] = useState('stacked'); // Stacked by default matching Image 1
+  const [activeChart, setActiveChart] = useState('stacked'); // Stacked by default matching image
   const [activePeriod, setActivePeriod] = useState('all'); // 'all' or period id
   const [showDataTable, setShowDataTable] = useState(true);
 
-  const currentModule = selectedModule || 'food';
+  const currentModule = selectedModule || 'transport';
 
   const periods = computedMatrix?.periods || [];
   const categories = computedMatrix?.categories || [];
 
+  const startPeriodLabel = periods[0]?.period_label || "Jun'26";
+  const endPeriodLabel = periods[periods.length - 1]?.period_label || "Oct'26";
+
   const moduleMeta = {
     food: {
       title: 'Food & Dining Operations Dashboard',
-      subtitle: `Food & Dining overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
+      subtitle: `Food expense overview • ${startPeriodLabel} – ${endPeriodLabel} • FY 2026–2027 • Currency INR (₹) • Operational ledger`,
       badge: 'Food & Dining',
       badgeColor: '#4f46e5',
       badgeBg: '#eef2ff'
     },
     hostel: {
-      title: 'Hostel Resident Operations Dashboard',
-      subtitle: `Hostel Resident Facilities overview • ${periods[0]?.period_label || "Sept'25"} – ${periods[periods.length - 1]?.period_label || "Dec'25"} • FY 2025-2026 • Currency INR (₹)`,
-      badge: 'Hostel Operations',
+      title: 'Hostel Occupancy Operations Dashboard',
+      subtitle: `Hostel expense overview • ${startPeriodLabel} – ${endPeriodLabel} • FY 2025–2026 • Currency INR (₹) • Operational ledger`,
+      badge: 'Hostel Occupancy',
       badgeColor: '#059669',
       badgeBg: '#ecfdf5'
     },
     transport: {
       title: 'Transport Fleet Operations Dashboard',
-      subtitle: `Transport Fleet & Mileage overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
-      badge: 'Transport Fleet',
-      badgeColor: '#ea580c',
-      badgeBg: '#fff7ed'
+      subtitle: `Fleet expense overview • ${startPeriodLabel} – ${endPeriodLabel} • FY 2026–2027 • Currency INR (₹) • Operational ledger`,
+      badge: 'Transport',
+      badgeColor: '#6366f1',
+      badgeBg: '#eef2ff'
     }
   };
 
-  const currentMeta = moduleMeta[currentModule] || moduleMeta.food;
+  const currentMeta = moduleMeta[currentModule] || moduleMeta.transport;
 
-  // Active or latest period for KPI cards
+  // Active or latest period
   const latestPeriod = periods[periods.length - 1];
-  const activePeriodObj = activePeriod === 'all' ? latestPeriod : periods.find(p => String(p.id) === String(activePeriod)) || latestPeriod;
+  const activePeriodObj = activePeriod === 'all' 
+    ? latestPeriod 
+    : periods.find(p => String(p.id) === String(activePeriod)) || latestPeriod;
 
   // Active month total directly from database matrix
   const latestMonthTotal = latestPeriod 
     ? (computedMatrix?.grand_total?.amounts?.[latestPeriod.id] ?? computedMatrix?.grand_total?.amounts?.[String(latestPeriod.id)] ?? 0)
     : 0;
 
-  // Real Database Grand Total for selected period/module
+  // Real Database Grand Total
   const grandTotal = activePeriod === 'all'
     ? (computedMatrix?.grand_total?.total ?? 0)
     : (computedMatrix?.grand_total?.amounts?.[activePeriod] ?? computedMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0);
 
-  const monthlyAvg = periods.length > 0
-    ? (computedMatrix?.grand_total?.total ?? 0) / periods.length
-    : 0;
-
-  // Find largest cost head dynamically from active module's actual line items
-  const largestCostHead = useMemo(() => {
-    let largest = { name: '—', total: 0 };
-    if (computedMatrix?.categories && Array.isArray(computedMatrix.categories)) {
-      computedMatrix.categories.forEach(cat => {
-        cat.items?.forEach(it => {
-          const itTot = activePeriod === 'all'
-            ? Number(it.total || 0)
-            : Number(it.amounts?.[activePeriod] ?? it.amounts?.[String(activePeriod)] ?? 0);
-          if (itTot > largest.total) {
-            largest = { name: it.description || it.name || 'Line Item', total: itTot };
-          }
-        });
-      });
-    }
-    return largest;
-  }, [computedMatrix, activePeriod]);
-
-  // 1. Prepare Category items for Bar, Pie, Doughnut with remarks
+  // Category items for alternative chart views
   const categoryItems = useMemo(() => {
     if (!computedMatrix || !computedMatrix.categories) return [];
     return computedMatrix.categories.map((cat, idx) => {
@@ -117,103 +100,16 @@ export default function DashboardPage({
       } else {
         val = cat.subtotal.amounts[activePeriod] ?? cat.subtotal.amounts[String(activePeriod)] ?? 0;
       }
-      const catRemarks = [];
-      cat.items?.forEach(it => {
-        if (!it.remarks) return;
-        if (activePeriod === 'all') {
-          Object.keys(it.remarks).forEach(pid => {
-            const t = it.remarks[pid];
-            if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
-              const pObj = periods.find(p => String(p.id) === String(pid));
-              catRemarks.push(`${it.description} (${pObj?.period_label || pid}): ${t}`);
-            }
-          });
-        } else {
-          const t = it.remarks[activePeriod] ?? it.remarks[String(activePeriod)];
-          if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
-            catRemarks.push(`${it.description}: ${t}`);
-          }
-        }
-      });
       return {
         id: cat.category_id,
         name: cat.category_name,
         value: val,
-        color: DASH_COLORS[idx % DASH_COLORS.length],
-        remarks: catRemarks
+        color: DASH_COLORS[idx % DASH_COLORS.length]
       };
     });
-  }, [computedMatrix, activePeriod, periods]);
-
-  // Active remarks list across the current view
-  const activeRemarksList = useMemo(() => {
-    if (!computedMatrix?.categories) return [];
-    const list = [];
-    computedMatrix.categories.forEach(cat => {
-      cat.items?.forEach(it => {
-        if (!it.remarks) return;
-        if (activePeriod === 'all') {
-          Object.keys(it.remarks).forEach(pid => {
-            const t = it.remarks[pid];
-            if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
-              const pObj = periods.find(p => String(p.id) === String(pid));
-              list.push({
-                cost_head_id: it.cost_head_id,
-                description: it.description,
-                category: cat.category_name,
-                periodId: pid,
-                periodLabel: pObj?.period_label || pid,
-                text: t
-              });
-            }
-          });
-        } else {
-          const t = it.remarks[activePeriod] ?? it.remarks[String(activePeriod)];
-          if (t && !t.startsWith('Entry via Operational Matrix') && !t.startsWith('Cloned from')) {
-            const pObj = periods.find(p => String(p.id) === String(activePeriod));
-            list.push({
-              cost_head_id: it.cost_head_id,
-              description: it.description,
-              category: cat.category_name,
-              periodId: activePeriod,
-              periodLabel: pObj?.period_label || activePeriod,
-              text: t
-            });
-          }
-        }
-      });
-    });
-    return list;
-  }, [computedMatrix, activePeriod, periods]);
-
-  // 2. Prepare all line items for Treemap, Histogram
-  const allLineItems = useMemo(() => {
-    if (!computedMatrix || !computedMatrix.categories) return [];
-    const list = [];
-    computedMatrix.categories.forEach(cat => {
-      cat.items.forEach(it => {
-        let val = 0;
-        if (activePeriod === 'all') {
-          val = it.total || 0;
-        } else {
-          val = it.amounts[activePeriod] || 0;
-        }
-        list.push({
-          cost_head_id: it.cost_head_id,
-          name: it.description,
-          description: it.description,
-          category: cat.category_name,
-          value: val,
-          total: it.total || 0,
-          amounts: it.amounts,
-          remarks: it.remarks
-        });
-      });
-    });
-    return list;
   }, [computedMatrix, activePeriod]);
 
-  // 3. Comparison items for Scatter & Bubble
+  // Comparison items for Scatter & Bubble
   const comparisonItems = useMemo(() => {
     if (!comparisonData || !comparisonData.categories) return [];
     const list = [];
@@ -239,30 +135,36 @@ export default function DashboardPage({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
       
-      {/* OPERATIONS DASHBOARD HEADER */}
+      {/* 1. HERO OPERATIONS DASHBOARD HEADER CARD (IMAGE 1 TOP DESIGN) */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         flexWrap: 'wrap',
         gap: '14px',
-        backgroundColor: '#ffffff',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
         padding: '18px 24px',
-        borderRadius: '12px',
-        border: '1.5px solid #e2e8f0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        borderRadius: '16px',
+        border: '1.5px solid #e0e7ff',
+        boxShadow: '0 4px 20px -2px rgba(99, 102, 241, 0.08)'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '23px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
               {currentMeta.title}
             </h1>
             <span style={{
-              fontSize: '11px',
+              fontSize: '11.5px',
               fontWeight: '700',
-              padding: '2px 9px',
+              padding: '2px 10px',
               borderRadius: '9999px',
               backgroundColor: currentMeta.badgeBg,
               color: currentMeta.badgeColor,
@@ -284,15 +186,16 @@ export default function DashboardPage({
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            backgroundColor: '#f8fafc',
+            padding: '7px 14px',
+            borderRadius: '9999px',
+            backgroundColor: '#ffffff',
             border: '1px solid #cbd5e1',
-            fontSize: '12.5px',
+            fontSize: '12px',
             fontWeight: '600',
-            color: '#334155'
+            color: '#334155',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
           }}>
-            <Calendar size={14} color="#64748b" />
+            <Calendar size={13} color="#64748b" />
             <span style={{ color: '#64748b' }}>Cycle:</span>
             <select
               value={activePeriod}
@@ -303,7 +206,8 @@ export default function DashboardPage({
                 fontWeight: '700',
                 color: '#4f46e5',
                 backgroundColor: 'transparent',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: '12px'
               }}
             >
               <option value="all">{periods.length}-Mo Aggregate</option>
@@ -319,14 +223,15 @@ export default function DashboardPage({
             onClick={handleExportReport}
             style={{
               padding: '7px 16px',
-              borderRadius: '8px',
+              borderRadius: '9999px',
               backgroundColor: '#ffffff',
               border: '1px solid #cbd5e1',
               color: '#334155',
-              fontSize: '12.5px',
+              fontSize: '12px',
               fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              transition: 'all 0.15s ease'
             }}
           >
             Export Report
@@ -338,14 +243,15 @@ export default function DashboardPage({
             onClick={onOpenDataEntry}
             style={{
               padding: '7px 18px',
-              borderRadius: '8px',
+              borderRadius: '9999px',
               backgroundColor: '#4f46e5',
               color: '#ffffff',
-              fontSize: '12.5px',
+              fontSize: '12px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)'
+              boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
+              transition: 'all 0.15s ease'
             }}
           >
             Open Data Entry
@@ -353,458 +259,95 @@ export default function DashboardPage({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* LINE 1 (FIRST): MONTH BY MONTH SHOW THE DATA                               */}
-      {/* ========================================================================= */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              backgroundColor: '#4f46e5',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '800'
-            }}>
-              1
-            </span>
-            <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Month-by-Month Expenditure Data Sheet
-            </h2>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#4338ca', backgroundColor: '#eef2ff', padding: '2px 8px', borderRadius: '4px' }}>
-              Line-by-Line Monthly Columns
-            </span>
-          </div>
-
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Displaying each monthly cycle side-by-side with exact values & category subtotals
-          </div>
+      {/* 2. MAIN 2-COLUMN DASHBOARD GRID (IMAGE 1 EXACT SIDE-BY-SIDE LAYOUT) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1.95fr) minmax(330px, 1fr)',
+        gap: '20px',
+        alignItems: 'start'
+      }}>
+        
+        {/* LEFT COLUMN (~68% width): Month-by-Month Expenditure Table */}
+        <div style={{ minWidth: 0 }}>
+          <ChartDataTable
+            categories={categories}
+            periods={periods}
+            activePeriod={activePeriod}
+            selectedModule={currentModule}
+            computedMatrix={computedMatrix}
+          />
         </div>
 
-        {/* The Full Month-by-Month Data Table */}
-        <ChartDataTable
-          categories={categories}
-          periods={periods}
-          activePeriod={activePeriod}
-          selectedModule={currentModule}
-        />
-      </section>
+        {/* RIGHT COLUMN (~32% width): Monthly Expense by Category (Stacked) + Top Cost Heads */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
+          
+          {/* Card 1: Monthly Expense by Category (Stacked Bar Chart) */}
+          <StackedCategoryCard
+            periods={periods}
+            categories={categories}
+            activePeriod={activePeriod}
+            selectedModule={currentModule}
+            activeChart={activeChart}
+            onSwitchChart={setActiveChart}
+          />
 
-      {/* ========================================================================= */}
-      {/* LINE 2 (SECOND): MONTHLY EXPENSE BY CATEGORY                               */}
-      {/* ========================================================================= */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '800'
+          {/* Alternative chart container if user toggles away from stacked */}
+          {activeChart !== 'stacked' && (
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 20px -2px rgba(99, 102, 241, 0.05)'
             }}>
-              2
-            </span>
-            <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Monthly Expense by Category
-            </h2>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#1d4ed8', backgroundColor: '#eff6ff', padding: '2px 8px', borderRadius: '4px' }}>
-              Visual Distribution & Rankings
-            </span>
-          </div>
-
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Category expenditure breakdown, visual distributions & top spending cost heads
-          </div>
-        </div>
-
-        {/* Middle Split: Category Chart + Top Cost Heads Ranking */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1fr)',
-          gap: '20px',
-          alignItems: 'stretch'
-        }}>
-          {/* Left: Monthly Expense by Category Stacked/Selected Chart */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '20px 24px',
-            border: '1.5px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px'
-          }}>
-            {/* Chart Header & Legend */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Monthly Expense by Category Breakdown
-                </h3>
-                <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-                  Stacked totals & proportion across recorded billing cycles
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                  Alternative Chart View: {activeChart.toUpperCase()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveChart('stacked')}
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: '#eef2ff',
+                    border: '1px solid #c7d2fe',
+                    color: '#4f46e5',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Back to Stacked
+                </button>
               </div>
 
-              {/* Dynamic Category Color Legend */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                {categories.length > 0 ? (
-                  categories.slice(0, 6).map((cat, idx) => (
-                    <div key={cat.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
-                      <span style={{ width: '9px', height: '9px', borderRadius: '2px', backgroundColor: DASH_COLORS[idx % DASH_COLORS.length] }} />
-                      <span style={{ fontWeight: '600' }}>{cat.name}</span>
-                    </div>
-                  ))
-                ) : (
-                  <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>Loading categories...</span>
+              <div style={{ minHeight: '260px' }}>
+                {activeChart === 'pie' && <PieChart data={categoryItems} isDonut={false} />}
+                {activeChart === 'doughnut' && <PieChart data={categoryItems} isDonut={true} />}
+                {activeChart === 'line' && <LineChart periods={periods} categories={categories} />}
+                {activeChart === 'area' && <AreaChart periods={periods} categories={categories} />}
+                {activeChart === 'bar' && <BarChart data={categoryItems} />}
+                {activeChart === 'column' && <ColumnChart periods={periods} categories={categories} />}
+                {activeChart === 'combo' && <ComboChart periods={periods} categories={categories} />}
+                {activeChart === 'comparison' && comparisonData && (
+                  <ComparisonTool
+                    comparisonData={comparisonData}
+                    compareBasePeriod={compareBasePeriod}
+                    setCompareBasePeriod={setCompareBasePeriod}
+                    compareTargetPeriod={compareTargetPeriod}
+                    setCompareTargetPeriod={setCompareTargetPeriod}
+                    periods={periods}
+                  />
                 )}
               </div>
             </div>
+          )}
 
-            {/* Chart Selector Pills (Switch between 12 styles seamlessly) */}
-            <ChartSelectorBar
-              activeChart={activeChart}
-              setActiveChart={setActiveChart}
-              activePeriod={activePeriod}
-              setActivePeriod={setActivePeriod}
-              periods={periods}
-              showDataTable={showDataTable}
-              setShowDataTable={setShowDataTable}
-            />
-
-            {/* ACTIVE OPERATIONAL REMARKS BANNER DIRECTLY ON THE CHART SECTION */}
-            {activeRemarksList.length > 0 && (
-              <div style={{
-                backgroundColor: '#fffbeb',
-                border: '1.5px solid #fde68a',
-                borderRadius: '10px',
-                padding: '12px 18px',
-                marginTop: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <span style={{ fontSize: '18px' }}>💬</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Operational Remarks & Notes ({activePeriod === 'all' ? 'All Recorded Cycles' : (activePeriodObj?.period_label || 'Selected Cycle')}):
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
-                    {activeRemarksList.map((r, rIdx) => (
-                      <div key={rIdx} style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #fcd34d',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '12px',
-                        color: '#78350f',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                      }}>
-                        <span style={{ fontWeight: '800', color: '#b45309' }}>{r.description}</span>
-                        <span style={{ color: '#d97706' }}>•</span>
-                        <span style={{ fontWeight: '700', color: '#1e293b' }}>"{r.text}"</span>
-                        <span style={{ fontSize: '10.5px', color: '#4f46e5', backgroundColor: '#eef2ff', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
-                          {r.periodLabel}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Active Chart Component */}
-            <div style={{ flex: 1, minHeight: '340px' }}>
-              {activeChart === 'stacked' && <StackedChart periods={periods} categories={categories} />}
-              {activeChart === 'column' && <ColumnChart periods={periods} categories={categories} activePeriod={activePeriod} />}
-              {activeChart === 'bar' && <BarChart data={categoryItems} title={`Category Expenditure • ${activePeriod === 'all' ? 'All Months Aggregate' : periods.find(p => p.id === activePeriod)?.period_label || ''}`} />}
-              {activeChart === 'line' && <LineChart periods={periods} categories={categories} />}
-              {activeChart === 'area' && <AreaChart periods={periods} categories={categories} />}
-              {activeChart === 'combo' && <ComboChart periods={periods} categories={categories} />}
-              {activeChart === 'pie' && <PieChart data={categoryItems} isDonut={false} />}
-              {activeChart === 'doughnut' && <PieChart data={categoryItems} isDonut={true} />}
-              {activeChart === 'treemap' && <TreemapChart items={allLineItems} />}
-              {activeChart === 'scatter' && <ScatterPlotChart items={comparisonItems} />}
-              {activeChart === 'bubble' && <BubbleChart items={comparisonItems} />}
-              {activeChart === 'histogram' && <HistogramChart items={allLineItems} />}
-              {activeChart === 'comparison' && comparisonData && (
-                <ComparisonTool
-                  comparisonData={comparisonData}
-                  compareBasePeriod={compareBasePeriod}
-                  setCompareBasePeriod={setCompareBasePeriod}
-                  compareTargetPeriod={compareTargetPeriod}
-                  setCompareTargetPeriod={setCompareTargetPeriod}
-                  periods={periods}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Right: Top Cost Heads Ranking Card */}
-          <div style={{ height: '100%' }}>
-            <TopCostHeadsCard computedMatrix={computedMatrix} />
-          </div>
+          {/* Card 2: Top Cost Heads Ranking */}
+          <TopCostHeadsCard computedMatrix={computedMatrix} />
         </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* LINE 3 (LAST): TOTAL COUNT SHOW                                           */}
-      {/* ========================================================================= */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '800'
-            }}>
-              3
-            </span>
-            <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Total Counts & Operational Volume Summary
-            </h2>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857', backgroundColor: '#ecfdf5', padding: '2px 8px', borderRadius: '4px' }}>
-              Grand Totals & Volume Census
-            </span>
-          </div>
-
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Financial aggregate totals, student/staff population counts & operational production metrics
-          </div>
-        </div>
-
-        {/* 1. TOP 4 EXECUTIVE FINANCIAL TOTAL CARDS */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px'
-        }}>
-          {/* Card 1: Grand Total All Cycles (Emerald bar) */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '18px 22px',
-            border: '1.5px solid #bbf7d0',
-            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
-            <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {periods.length > 0 ? `Total Count • ${periods.length}-Month Spend` : 'Total Expenditure'}
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
-              {formatINR(grandTotal)}
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>
-              {periods.length > 0 ? `${periods[0]?.period_label} – ${periods[periods.length - 1]?.period_label} Cumulative` : 'All cycles recorded in DB'}
-            </div>
-          </div>
-
-          {/* Card 2: Latest Month Total (Purple bar) */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '18px 22px',
-            border: '1.5px solid #c7d2fe',
-            boxShadow: '0 2px 6px rgba(79, 70, 229, 0.06)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#4f46e5' }} />
-            <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Count` : 'Current Cycle Total'}
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
-              {formatINR(latestMonthTotal)}
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>
-              {activePeriodObj ? (activePeriodObj.is_closed ? 'Locked cycle status' : 'Active draft cycle') : 'Current cycle'}
-            </div>
-          </div>
-
-          {/* Card 3: Monthly Average (Amber bar) */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '18px 22px',
-            border: '1.5px solid #fde68a',
-            boxShadow: '0 2px 6px rgba(245, 158, 11, 0.06)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#f59e0b' }} />
-            <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Monthly Average Total
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
-              {formatINR(monthlyAvg)}
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>
-              {periods.length > 0 ? `Normalized across ${periods.length} cycle${periods.length > 1 ? 's' : ''}` : 'Average run-rate'}
-            </div>
-          </div>
-
-          {/* Card 4: Largest Cost Head Total (Rose bar) */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '18px 22px',
-            border: '1.5px solid #fbcfe8',
-            boxShadow: '0 2px 6px rgba(236, 72, 153, 0.06)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ec4899' }} />
-            <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#be185d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Largest Expense Head
-            </div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#0f172a', margin: '8px 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {largestCostHead.name}
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }} className="currency-font">
-              {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length}-month)` : '₹0.00'}
-            </div>
-          </div>
-        </div>
-
-        {/* 2. OPERATIONAL HEADCOUNT & VOLUME COUNTS RIBBON */}
-        <div style={{
-          backgroundColor: currentModule === 'food' ? '#f8fafc' : currentModule === 'hostel' ? '#f0fdf4' : '#fff7ed',
-          borderRadius: '12px',
-          border: `1.5px solid ${currentModule === 'food' ? '#cbd5e1' : currentModule === 'hostel' ? '#bbf7d0' : '#fed7aa'}`,
-          padding: '16px 22px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '24px' }}>
-              {currentModule === 'food' ? '🍲' : currentModule === 'hostel' ? '🏢' : '🚌'}
-            </span>
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
-                {currentModule === 'food' && 'Dining Headcount & Meal Production Total Counts'}
-                {currentModule === 'hostel' && 'Hostel Resident Occupancy & Utilities Total Counts'}
-                {currentModule === 'transport' && 'Fleet Commuters, Mileage & Diesel Total Counts'}
-              </div>
-              <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                {currentModule === 'food' && 'Operating across campus mess facilities, daily fresh supply & manpower allocation'}
-                {currentModule === 'hostel' && 'Campus residential census, power/water consumption & facilities maintenance'}
-                {currentModule === 'transport' && 'Daily commuter bus operations, routes, fuel mileage & trip statistics'}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '22px', flexWrap: 'wrap' }}>
-            {currentModule === 'food' && (() => {
-              const pidKey = activePeriod === 'all' ? String(latestPeriod?.id) : String(activePeriod);
-              const diners = computedMatrix?.census?.total_persons?.[pidKey] || 2690;
-              const meals = computedMatrix?.census?.production?.[pidKey] || 85000;
-              const matTotal = computedMatrix?.categories?.[0]?.subtotal?.total || 0;
-              const tot = computedMatrix?.grand_total?.total || 1;
-              const matPct = tot > 0 && matTotal > 0 ? ((matTotal / tot) * 100).toFixed(1) : '59.1';
-              return (
-                <>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Active Diners Total</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(diners).toLocaleString()} Diners</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Monthly Production Total</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(meals).toLocaleString()} Meals</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Material Cost Share</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#4f46e5' }}>{matPct}% of Total</div>
-                  </div>
-                </>
-              );
-            })()}
-
-            {currentModule === 'hostel' && (() => {
-              const pidKey = activePeriod === 'all' ? String(latestPeriod?.id) : String(activePeriod);
-              const hCensus = computedMatrix?.hostel_census?.[pidKey] || {};
-              const bedCap = hCensus.bed_capacity_total || 3119;
-              const occupied = hCensus.total_occupied || 3039;
-              const occPct = hCensus.occupied_pct || 97.4;
-              const pUnits = hCensus.power_units || 125422;
-              const pCost = hCensus.power_cost || 1659230;
-              return (
-                <>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Total Bed Capacity</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(bedCap).toLocaleString()} Beds</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Occupied Resident Count</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#059669' }}>{Number(occupied).toLocaleString()} ({occPct}%)</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Total Power Units</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(pUnits).toLocaleString()} kWh ({formatINR(pCost)})</div>
-                  </div>
-                </>
-              );
-            })()}
-
-            {currentModule === 'transport' && (() => {
-              const pidKey = activePeriod === 'all' ? String(latestPeriod?.id) : String(activePeriod);
-              const tCensus = computedMatrix?.transport_census?.[pidKey] || {};
-              const veh = tCensus.vehicles_count || '18+1';
-              const pax = tCensus.passengers_count || 447;
-              const kms = tCensus.actual_kms || 25777;
-              const diesel = tCensus.diesel_litres || 5184.8;
-              return (
-                <>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Active Fleet Count</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{veh} Vehicles</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Total Commuters Count</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#ea580c' }}>{Number(pax).toLocaleString()} Persons</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Actual Trip KMs & Fuel</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(kms).toLocaleString()} KM • {Number(diesel).toLocaleString()}L</div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      </section>
+      </div>
 
     </div>
   );

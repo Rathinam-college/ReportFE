@@ -1391,7 +1391,14 @@ export default function App() {
   // MAIN APP RENDER
   // --------------------------------------------------------------------------
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f4f6fa', display: 'flex', flexDirection: 'column' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: activeTab === 'dashboard' 
+        ? 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 30%, #f5f3ff 60%, #faf5ff 100%)' 
+        : '#f4f6fa',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
       
       {/* 1. TOP GLOBAL NAVIGATION BAR */}
       <Navbar
@@ -1417,8 +1424,8 @@ export default function App() {
       {/* 3. MAIN WORKSPACE CONTENT */}
       <main style={{
         flex: 1,
-        padding: activeTab === 'data_entry' ? '18px 24px' : '24px 32px',
-        maxWidth: activeTab === 'data_entry' ? '100%' : '1600px',
+        padding: activeTab === 'data_entry' ? '18px 24px' : '20px 28px',
+        maxWidth: '100%',
         width: '100%',
         margin: '0 auto',
         boxSizing: 'border-box'
