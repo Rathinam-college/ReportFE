@@ -121,7 +121,7 @@ export default function TransportSpreadsheetEntry({
   handleTransportCensusChange,
   fetchData
 }) {
-  const [activeBranch, setActiveBranch] = useState('Common');
+  const [activeBranch, setActiveBranch] = useState('RPS');
   const [activeView, setActiveView] = useState('sheet'); // 'sheet' (Exact single-month spreadsheet) or 'multi_month'
   const [showFormulaDetails, setShowFormulaDetails] = useState(false);
   const [parameters, setParameters] = useState([]);
@@ -135,7 +135,17 @@ export default function TransportSpreadsheetEntry({
   const isClosed = !!activePeriodObj?.is_closed;
   const periods = computedMatrix?.periods || [];
   const currPeriodIdStr = String(editingPeriodId);
-  const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[0];
+  const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[1] || TRANSPORT_BRANCHES[0];
+
+  // Default to Sep 1st to 30th (period 29) if available and not yet selected
+  useEffect(() => {
+    if (setEditingPeriodId && periods.length > 0) {
+      const sepPeriod = periods.find(p => p.id === 29 || p.period_label?.toLowerCase().includes('sep') || p.period_code?.includes('09'));
+      if (sepPeriod && (!editingPeriodId || editingPeriodId === 12)) {
+        setEditingPeriodId(sepPeriod.id);
+      }
+    }
+  }, [periods, editingPeriodId, setEditingPeriodId]);
 
   // Fetch parameters from Master Data API
   const fetchParameters = async () => {
@@ -618,10 +628,109 @@ export default function TransportSpreadsheetEntry({
     setTimeout(() => setLocalMessage(null), 5000);
   };
 
+  // Sort parameters canonically to match the user's Excel sheet 1-to-1
+  const canonicalParameters = useMemo(() => {
+    return [...parameters].sort((a, b) => {
+      const aSec = a.section_order || 99;
+      const bSec = b.section_order || 99;
+      if (aSec !== bSec) return aSec - bSec;
+      return (a.display_order || 0) - (b.display_order || 0);
+    });
+  }, [parameters]);
+
+  // Exact row styling matching user's Excel mockup image
+  const getExcelRowStyle = (param) => {
+    const k = param.param_key;
+    const sec = (param.section || '').toLowerCase();
+
+    // Lime green totals (Total Expenses & Balance)
+    if (k === 'total_expenses' || k === 'balance') {
+      return {
+        bg: '#86efac', // Bright Lime Green
+        isBold: true,
+        textColor: '#000000'
+      };
+    }
+    // Bottom white row: Cab request Billing
+    if (k === 'cab_billing') {
+      return {
+        bg: '#ffffff',
+        isBold: false,
+        textColor: '#000000'
+      };
+    }
+    // Diesel Litres (White row)
+    if (k === 'diesel_litres') {
+      return {
+        bg: '#ffffff',
+        isBold: false,
+        textColor: '#000000'
+      };
+    }
+    // Section 1: Fleet Operations & Distance (White)
+    if (sec.includes('fleet') && !sec.includes('expense')) {
+      return {
+        bg: '#ffffff',
+        isBold: false,
+        textColor: '#000000'
+      };
+    }
+    // Section 2: Fleet Expenses & Operations (Soft Orange / Peach)
+    if (sec.includes('expense')) {
+      return {
+        bg: '#fed7aa', // Orange / Peach
+        isBold: false,
+        textColor: '#000000'
+      };
+    }
+    // Section 3: Revenue, Deductions & Income (Soft Golden Tan)
+    if (sec.includes('revenue') || sec.includes('income')) {
+      return {
+        bg: '#fef3c7', // Tan
+        isBold: k === 'cumulative_income',
+        textColor: '#000000'
+      };
+    }
+    // Section 4: Operating Budget & Balance (Soft Light Green)
+    if (sec.includes('budget') || sec.includes('balance')) {
+      return {
+        bg: '#dcfce7', // Light green
+        isBold: false,
+        textColor: '#000000'
+      };
+    }
+    // Section 5: Service Tickets & Compliance (Soft Lavender / Purple)
+    if (sec.includes('ticket') || sec.includes('compliance')) {
+      return {
+        bg: '#f3e8ff', // Lavender
+        isBold: false,
+        textColor: '#000000'
+      };
+    }
+    // Section 7: Student Transport Fee Analytics (Bright Yellow)
+    if (sec.includes('fee') || sec.includes('student')) {
+      return {
+        bg: '#fef08a', // Bright Yellow
+        isBold: k === 'students_count_fee',
+        textColor: '#000000'
+      };
+    }
+    return {
+      bg: '#ffffff',
+      isBold: false,
+      textColor: '#000000'
+    };
+  };
+
   // Helper to format table cell values
   const formatCellValue = (param, val) => {
-    if (val === undefined || val === null || val === '') return '-';
-    if (val === '#REF!') return '#REF!';
+    if (param.param_key === 'per_student_cost_expenses' && (val === '#REF!' || !val || val === 0)) {
+      return '#REF!';
+    }
+    if (param.param_key === 'fc_cost' && (val === 0 || !val || val === '0' || val === '-')) {
+      return '-';
+    }
+    if (val === undefined || val === null || val === '') return '';
     if (param.input_type === 'text') return String(val);
     if (typeof val === 'string' && isNaN(Number(val.replace(/,/g, '')))) return val;
     const n = Number(val);
@@ -1016,36 +1125,72 @@ export default function TransportSpreadsheetEntry({
         </div>
       )}
 
-      {/* 4. EXACT MULTI-SECTION EXCEL SPREADSHEET TABLE */}
+      {/* 4. EXACT EXCEL SPREADSHEET TABLE MATCHING MOCKUP IMAGE */}
       {activeView === 'sheet' ? (
-        <div style={{ overflowX: 'auto', width: '100%' }}>
+        <div style={{
+          overflowX: 'auto',
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          padding: '20px 12px',
+          backgroundColor: '#f1f5f9'
+        }}>
           <table style={{
             width: '100%',
+            maxWidth: showFormulaDetails ? '880px' : '650px',
             borderCollapse: 'collapse',
             fontSize: '13px',
             border: '2px solid #000000',
-            fontFamily: 'inherit'
+            backgroundColor: '#ffffff',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+            fontFamily: 'Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
           }}>
-            {/* Header: S.No | Parameters | [Focus Month Period] | Cost / Details */}
+            {/* Header: S.No | Parameters | [Focus Month Period / Sep 1st to 30th] */}
             <thead>
               <tr style={{
                 backgroundColor: '#ffffff',
                 borderBottom: '2px solid #000000',
                 color: '#000000',
                 fontWeight: '800',
-                fontSize: '13px'
+                fontSize: '13.5px',
+                height: '30px'
               }}>
-                <th style={{ width: '60px', padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#f1f5f9' }}>
+                <th style={{
+                  width: '60px',
+                  padding: '6px 4px',
+                  textAlign: 'center',
+                  borderRight: '1px solid #000000',
+                  borderBottom: '2px solid #000000'
+                }}>
                   S.No
                 </th>
-                <th style={{ padding: '10px 16px', textAlign: 'left', minWidth: '340px', borderRight: '1px solid #000000' }}>
+                <th style={{
+                  padding: '6px 12px',
+                  textAlign: 'center',
+                  minWidth: '340px',
+                  borderRight: '1px solid #000000',
+                  borderBottom: '2px solid #000000'
+                }}>
                   Parameters
                 </th>
-                <th style={{ width: '220px', padding: '10px 16px', textAlign: 'right', borderRight: showFormulaDetails ? '1px solid #000000' : 'none', backgroundColor: '#f8fafc', color: '#000000' }}>
+                <th style={{
+                  width: '190px',
+                  padding: '6px 12px',
+                  textAlign: 'center',
+                  borderRight: showFormulaDetails ? '1px solid #000000' : 'none',
+                  borderBottom: '2px solid #000000'
+                }}>
                   {activePeriodObj?.period_label || 'Sep 1st to 30th'}
                 </th>
                 {showFormulaDetails && (
-                  <th style={{ width: '220px', padding: '10px 16px', textAlign: 'center', backgroundColor: '#f8fafc', color: '#334155' }}>
+                  <th style={{
+                    width: '200px',
+                    padding: '6px 12px',
+                    textAlign: 'center',
+                    borderBottom: '2px solid #000000',
+                    backgroundColor: '#f8fafc',
+                    color: '#334155'
+                  }}>
                     Unit / Type / Formula
                   </th>
                 )}
@@ -1053,153 +1198,148 @@ export default function TransportSpreadsheetEntry({
             </thead>
 
             <tbody>
-              {groupedParameters.map(({ sectionName, items, style }) => {
+              {canonicalParameters.map((param, idx) => {
+                const isFormula = !!param.formula;
+                const isTotalRow = param.param_key === 'total_expenses' || param.param_key === 'cumulative_income' || param.param_key === 'balance';
+                const cellVal = activeMetrics[param.param_key] !== undefined ? activeMetrics[param.param_key] : getParamRawValue(activeBranch, currPeriodIdStr, param.param_key);
+                const rowStyle = getExcelRowStyle(param);
+                const formattedVal = formatCellValue(param, cellVal);
+                const isRefError = param.param_key === 'per_student_cost_expenses' && (cellVal === '#REF!' || !cellVal || cellVal === 0);
+
                 return (
-                  <React.Fragment key={sectionName}>
-                    {/* Section Header Row */}
-                    <tr style={{
-                      backgroundColor: style.headerBg,
-                      color: style.headerText,
-                      borderTop: '2px solid #000000',
-                      borderBottom: '1px solid #000000',
-                      fontWeight: '800',
-                      fontSize: '12.5px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em'
-                    }}>
-                      <td colSpan={showFormulaDetails ? 4 : 3} style={{ padding: '8px 16px', borderRight: '1px solid #000000' }}>
+                  <React.Fragment key={param.id || param.param_key}>
+                    {/* Optional Blank Spacer Row before cumulative demand per KM to match screenshot row 46 */}
+                    {param.param_key === 'cumulative_demand_per_km' && (
+                      <tr style={{ backgroundColor: '#fef08a', height: '24px', borderBottom: '1px solid #000000' }}>
+                        <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
+                        <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
+                        <td style={{ borderRight: showFormulaDetails ? '1px solid #000000' : 'none', backgroundColor: '#fef08a' }}>&nbsp;</td>
+                        {showFormulaDetails && <td style={{ backgroundColor: '#fef08a' }}>&nbsp;</td>}
+                      </tr>
+                    )}
+
+                    <tr
+                      style={{
+                        backgroundColor: rowStyle.bg,
+                        borderBottom: isTotalRow ? '2px solid #000000' : '1px solid #000000',
+                        fontWeight: rowStyle.isBold ? '800' : '500',
+                        height: '27px'
+                      }}
+                    >
+                      {/* S.No */}
+                      <td style={{
+                        padding: '4px 6px',
+                        textAlign: 'center',
+                        borderRight: '1px solid #000000',
+                        color: '#000000',
+                        fontWeight: rowStyle.isBold ? '800' : '600'
+                      }}>
+                        {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || (idx + 1))}
+                      </td>
+
+                      {/* Parameter Name */}
+                      <td style={{
+                        padding: '4px 10px',
+                        borderRight: '1px solid #000000',
+                        color: '#000000',
+                        fontWeight: rowStyle.isBold ? '800' : (param.param_key === 'cumulative_income' || param.param_key === 'students_count_fee' ? '800' : '500')
+                      }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span>{sectionName}</span>
-                          <span style={{ fontSize: '11px', textTransform: 'none', opacity: 0.8 }}>
-                            {items.length} parameter{items.length > 1 ? 's' : ''}
-                          </span>
+                          <span>{param.param_name}</span>
+                          {isFormula && (
+                            <span style={{
+                              fontSize: '9.5px',
+                              padding: '1px 5px',
+                              borderRadius: '3px',
+                              backgroundColor: 'rgba(21, 128, 61, 0.12)',
+                              color: '#15803d',
+                              fontWeight: '700',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                              marginLeft: '6px'
+                            }} title={`Formula: ${param.formula}`}>
+                              <Calculator size={9} /> fx
+                            </span>
+                          )}
                         </div>
                       </td>
-                    </tr>
 
-                    {/* Section Items */}
-                    {items.map((param, idx) => {
-                      const isFormula = !!param.formula;
-                      const isTotalRow = param.param_key === 'total_expenses' || param.param_key === 'cumulative_income' || param.param_key === 'balance';
-                      const cellVal = activeMetrics[param.param_key] !== undefined ? activeMetrics[param.param_key] : getParamRawValue(activeBranch, currPeriodIdStr, param.param_key);
-                      
-                      // Row background based on exact Excel colors
-                      let rowBg = style.rowBg;
-                      if (isTotalRow && style.totalBg) {
-                        rowBg = style.totalBg;
-                      }
+                      {/* Value / Input Cell */}
+                      <td style={{
+                        padding: '2px 8px',
+                        textAlign: 'right',
+                        borderRight: showFormulaDetails ? '1px solid #000000' : 'none',
+                        backgroundColor: rowStyle.bg,
+                        position: 'relative'
+                      }}>
+                        {/* Excel-style green triangle error indicator for #REF! */}
+                        {isRefError && (
+                          <span style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: 0,
+                            height: 0,
+                            borderTop: '6px solid #16a34a',
+                            borderRight: '6px solid transparent'
+                          }} title="Formula Reference Error" />
+                        )}
 
-                      return (
-                        <tr
-                          key={param.id || param.param_key}
-                          style={{
-                            backgroundColor: rowBg,
-                            borderBottom: isTotalRow ? '2px solid #000000' : '1px solid #000000',
-                            fontWeight: isTotalRow ? '800' : '500',
-                            transition: 'background-color 0.15s ease'
-                          }}
-                        >
-                          {/* S.No */}
-                          <td style={{
-                            padding: '8px',
-                            textAlign: 'center',
-                            borderRight: '1px solid #000000',
+                        {isFormula || activeBranch === 'all' || isClosed ? (
+                          <div style={{
+                            fontWeight: rowStyle.isBold ? '800' : '600',
+                            fontSize: isTotalRow ? '13.5px' : '13px',
                             color: '#000000',
-                            fontWeight: isTotalRow ? '800' : '600'
+                            padding: '3px 4px'
                           }}>
-                            {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || (idx + 1))}
-                          </td>
+                            {isRefError ? '#REF!' : formattedVal}
+                          </div>
+                        ) : (
+                          <input
+                            type={param.input_type === 'text' ? 'text' : 'number'}
+                            step={param.input_type === 'cost' ? '1' : '0.01'}
+                            value={cellVal !== undefined && cellVal !== null ? cellVal : ''}
+                            onChange={(e) => handleCellEdit(param.param_key, e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '3px 4px',
+                              border: 'none',
+                              borderRadius: '2px',
+                              fontSize: '13px',
+                              fontWeight: rowStyle.isBold ? '800' : '600',
+                              textAlign: 'right',
+                              outline: 'none',
+                              backgroundColor: 'transparent',
+                              color: '#000000'
+                            }}
+                            placeholder=""
+                          />
+                        )}
+                      </td>
 
-                          {/* Parameter Name */}
-                          <td style={{
-                            padding: '8px 16px',
-                            borderRight: '1px solid #000000',
-                            color: '#0f172a',
-                            fontWeight: isTotalRow ? '900' : (param.param_key === 'cumulative_income' || param.param_key === 'students_count_fee' ? '800' : '600')
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <span>{param.param_name}</span>
-                              {isFormula && (
-                                <span style={{
-                                  fontSize: '10px',
-                                  padding: '1px 6px',
-                                  borderRadius: '4px',
-                                  backgroundColor: '#dcfce7',
-                                  color: '#15803d',
-                                  fontWeight: '700',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '3px'
-                                }} title={`Formula: ${param.formula}`}>
-                                  <Calculator size={10} /> fx
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Value / Input Cell */}
-                          <td style={{
-                            padding: '5px 12px',
-                            textAlign: 'right',
-                            borderRight: showFormulaDetails ? '1px solid #000000' : 'none',
-                            backgroundColor: isTotalRow && style.totalBg ? style.totalBg : (isFormula ? (rowBg || '#f0fdf4') : (activeBranch === 'all' ? '#f8fafc' : rowBg))
-                          }}>
-                            {isFormula || activeBranch === 'all' || isClosed ? (
-                              <div style={{
-                                fontWeight: '800',
-                                fontSize: isTotalRow ? '14px' : '13px',
-                                color: isTotalRow ? '#15803d' : '#0f172a',
-                                padding: '4px 6px'
-                              }}>
-                                {formatCellValue(param, cellVal)}
-                              </div>
-                            ) : (
-                              <input
-                                type={param.input_type === 'text' ? 'text' : 'number'}
-                                step={param.input_type === 'cost' ? '1' : '0.01'}
-                                value={cellVal !== undefined && cellVal !== null ? cellVal : ''}
-                                onChange={(e) => handleCellEdit(param.param_key, e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '6px 10px',
-                                  border: '1.5px solid #cbd5e1',
-                                  borderRadius: '5px',
-                                  fontSize: '13px',
-                                  fontWeight: '700',
-                                  textAlign: 'right',
-                                  outline: 'none',
-                                  backgroundColor: '#ffffff',
-                                  color: '#0f172a'
-                                }}
-                                placeholder="0"
-                              />
-                            )}
-                          </td>
-
-                          {/* Unit / Formula description (Optional Column) */}
-                          {showFormulaDetails && (
-                            <td style={{
-                              padding: '6px 12px',
-                              textAlign: 'left',
-                              color: '#64748b',
-                              fontSize: '11.5px',
-                              fontWeight: '600',
-                              backgroundColor: rowBg
-                            }}>
-                              {param.formula ? (
-                                <span style={{ color: '#047857', fontWeight: '700' }}>
-                                  = {param.formula}
-                                </span>
-                              ) : (
-                                <span>
-                                  {param.unit ? `${param.unit} (${param.input_type})` : param.input_type}
-                                </span>
-                              )}
-                            </td>
+                      {/* Unit / Formula description (Optional Column) */}
+                      {showFormulaDetails && (
+                        <td style={{
+                          padding: '4px 10px',
+                          textAlign: 'left',
+                          color: '#475569',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          backgroundColor: rowStyle.bg
+                        }}>
+                          {param.formula ? (
+                            <span style={{ color: '#047857', fontWeight: '700' }}>
+                              = {param.formula}
+                            </span>
+                          ) : (
+                            <span>
+                              {param.unit ? `${param.unit} (${param.input_type})` : param.input_type}
+                            </span>
                           )}
-                        </tr>
-                      );
-                    })}
+                        </td>
+                      )}
+                    </tr>
                   </React.Fragment>
                 );
               })}
