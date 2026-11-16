@@ -267,6 +267,8 @@ export default function MasterDataPage({
         onClose={() => setShowAddCategoryModal(false)}
         onAddCategory={handleAddCategory}
         moduleName={moduleName}
+        existingCategories={categoriesList}
+        computedMatrix={computedMatrix}
       />
 
       {/* MODAL: MANAGE CATEGORIES */}

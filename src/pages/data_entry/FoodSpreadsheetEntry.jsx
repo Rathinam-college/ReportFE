@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { formatINR } from '../../utils/formatters';
+import { evaluateFormula } from '../../utils/formulaEngine';
 import { 
   Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Utensils, 
   AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, Users, Award 
@@ -38,16 +39,68 @@ export default function FoodSpreadsheetEntry({
   const categories = computedMatrix?.categories || [];
   const currStr = String(editingPeriodId);
 
-  // Helper: Get value of a cell with draft priority
+  // Dynamic formula calculation for formula-based categories across periods
+  // Computes category totals for each period, incorporating any draft edits
+  const periodCategoryTotals = useMemo(() => {
+    const map = {}; // periodId -> { [categoryId or name]: sum }
+    periods.forEach(p => {
+      map[p.id] = {};
+    });
+
+    // 1. Sum up direct categories first
+    categories.forEach(cat => {
+      if (cat.category_type !== 'FORMULA') {
+        periods.forEach(p => {
+          let sum = 0;
+          cat.items?.forEach(it => {
+            const draftVal = matrixDraft[it.cost_head_id]?.[p.id];
+            if (draftVal !== undefined && draftVal !== null && draftVal !== '') {
+              const num = parseFloat(String(draftVal).replace(/,/g, ''));
+              sum += isNaN(num) ? 0 : num;
+            } else {
+              const amt = it.amounts?.[p.id] ?? it.amounts?.[String(p.id)] ?? 0;
+              sum += Number(amt) || 0;
+            }
+          });
+          map[p.id][cat.category_id] = sum;
+          map[p.id][(cat.category_name || '').trim().toLowerCase()] = sum;
+        });
+      }
+    });
+
+    // 2. Evaluate formula categories in multiple passes to support dependencies
+    const formulaCats = categories.filter(c => c.category_type === 'FORMULA');
+    const passes = Math.max(1, formulaCats.length);
+    for (let i = 0; i < passes; i++) {
+      formulaCats.forEach(fcat => {
+        periods.forEach(p => {
+          const val = evaluateFormula(fcat.formula_definition || fcat.formula_expression, map[p.id]);
+          const rounded = Math.round(val * 100) / 100;
+          map[p.id][fcat.category_id] = rounded;
+          map[p.id][(fcat.category_name || '').trim().toLowerCase()] = rounded;
+        });
+      });
+    }
+
+    return map;
+  }, [categories, periods, matrixDraft]);
+
+  // Helper: Get value of a cell with draft and formula priority
   const getCellAmount = (costHeadId, periodId) => {
+    const parentCat = categories.find(cat => cat.items?.some(it => it.cost_head_id === costHeadId));
+    if (parentCat && parentCat.category_type === 'FORMULA') {
+      const pTotals = periodCategoryTotals[periodId] || {};
+      return pTotals[parentCat.category_id] ?? 0;
+    }
+
     const draftVal = matrixDraft[costHeadId]?.[periodId];
     if (draftVal !== undefined && draftVal !== null && draftVal !== '') {
       const num = parseFloat(String(draftVal).replace(/,/g, ''));
       return isNaN(num) ? 0 : num;
     }
     // Find in categories
-    for (const cat of categories) {
-      const item = cat.items?.find(it => it.cost_head_id === costHeadId);
+    if (parentCat) {
+      const item = parentCat.items?.find(it => it.cost_head_id === costHeadId);
       if (item) {
         const amt = item.amounts?.[periodId] ?? item.amounts?.[String(periodId)] ?? 0;
         return Number(amt) || 0;
@@ -621,6 +674,23 @@ export default function FoodSpreadsheetEntry({
                               }}
                             >
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                {cat.category_type === 'FORMULA' && (
+                                  <span
+                                    title={`Auto-calculated Formula: ${cat.formula_expression || ''}`}
+                                    style={{
+                                      fontSize: '9.5px',
+                                      fontWeight: '800',
+                                      backgroundColor: '#312e81',
+                                      color: '#e0e7ff',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      letterSpacing: '0.03em',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    📐 fx FORMULA
+                                  </span>
+                                )}
                                 <input
                                   type="text"
                                   value={catDisplayName}
@@ -638,25 +708,27 @@ export default function FoodSpreadsheetEntry({
                                   }}
                                   title="Click to edit category title"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => handleAddNewRow(cat.category_id)}
-                                  title={`Add new row in ${cat.category_name}`}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '2px',
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    backgroundColor: 'rgba(0,0,0,0.08)',
-                                    border: '1px solid rgba(0,0,0,0.15)',
-                                    fontSize: '10.5px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  <Plus size={10} /> Add Row
-                                </button>
+                                {cat.category_type !== 'FORMULA' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddNewRow(cat.category_id)}
+                                    title={`Add new row in ${cat.category_name}`}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '2px',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      backgroundColor: 'rgba(0,0,0,0.08)',
+                                      border: '1px solid rgba(0,0,0,0.15)',
+                                      fontSize: '10.5px',
+                                      fontWeight: '700',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <Plus size={10} /> Add Row
+                                  </button>
+                                )}
                               </div>
                             </td>
                           )}
@@ -709,17 +781,19 @@ export default function FoodSpreadsheetEntry({
                                     step="0.01"
                                     value={amt || ''}
                                     onChange={(e) => handleCellChange(item.cost_head_id, p.id, e.target.value)}
-                                    disabled={isClosed}
+                                    disabled={isClosed || cat.category_type === 'FORMULA'}
+                                    title={cat.category_type === 'FORMULA' ? `Auto-calculated by formula: ${cat.formula_expression || ''}` : ''}
                                     style={{
                                       width: '100%',
                                       textAlign: 'right',
                                       padding: '4px 6px',
                                       borderRadius: '4px',
                                       border: isSel ? '1.5px solid #00a2e8' : '1px solid #cbd5e1',
-                                      backgroundColor: '#ffffff',
+                                      backgroundColor: cat.category_type === 'FORMULA' ? '#ecfdf5' : '#ffffff',
                                       fontWeight: '700',
-                                      color: '#000000',
-                                      fontSize: '12.5px'
+                                      color: cat.category_type === 'FORMULA' ? '#15803d' : '#000000',
+                                      fontSize: '12.5px',
+                                      cursor: cat.category_type === 'FORMULA' ? 'not-allowed' : 'text'
                                     }}
                                     className="currency-font"
                                   />
@@ -738,17 +812,19 @@ export default function FoodSpreadsheetEntry({
                                 step="0.01"
                                 value={getCellAmount(item.cost_head_id, editingPeriodId) || ''}
                                 onChange={(e) => handleCellChange(item.cost_head_id, editingPeriodId, e.target.value)}
-                                disabled={isClosed}
+                                disabled={isClosed || cat.category_type === 'FORMULA'}
+                                title={cat.category_type === 'FORMULA' ? `Auto-calculated by formula: ${cat.formula_expression || ''}` : ''}
                                 style={{
                                   width: '100%',
                                   textAlign: 'right',
                                   padding: '4px 8px',
                                   borderRadius: '4px',
                                   border: '1.5px solid #00a2e8',
-                                  backgroundColor: '#ffffff',
+                                  backgroundColor: cat.category_type === 'FORMULA' ? '#ecfdf5' : '#ffffff',
                                   fontWeight: '800',
-                                  color: '#000000',
-                                  fontSize: '13px'
+                                  color: cat.category_type === 'FORMULA' ? '#15803d' : '#000000',
+                                  fontSize: '13px',
+                                  cursor: cat.category_type === 'FORMULA' ? 'not-allowed' : 'text'
                                 }}
                                 className="currency-font"
                               />

@@ -548,7 +548,28 @@ export default function ManageCategoriesModal({
                             title="Click edit button or double-click to rename"
                             style={{ cursor: 'pointer' }}
                           >
-                            <div style={{ fontWeight: '700', color: '#0f172a' }}>{cat.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: '700', color: '#0f172a' }}>{cat.name}</span>
+                              {cat.category_type === 'FORMULA' && (
+                                <span
+                                  title={cat.formula_expression ? `Formula: ${cat.formula_expression}` : 'Formula Based Category'}
+                                  style={{
+                                    fontSize: '10px',
+                                    fontWeight: '700',
+                                    backgroundColor: '#e0e7ff',
+                                    color: '#4338ca',
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #c7d2fe',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px'
+                                  }}
+                                >
+                                  fx Formula
+                                </span>
+                              )}
+                            </div>
                             {cat.code && (
                               <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
                                 {cat.code}

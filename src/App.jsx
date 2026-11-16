@@ -940,12 +940,19 @@ export default function App() {
     setShowManageCategoriesModal(true);
   };
 
-  const handleAddCategory = async ({ name, code, module }) => {
+  const handleAddCategory = async ({ name, code, module, category_type, formula_expression, formula_definition }) => {
     const activeMod = masterDataSubTab;
     const res = await fetch('/api/master/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim(), code: code?.trim() || undefined, module: activeMod })
+      body: JSON.stringify({
+        name: name.trim(),
+        code: code?.trim() || undefined,
+        module: activeMod,
+        category_type: category_type || 'DIRECT',
+        formula_expression: formula_expression || undefined,
+        formula_definition: formula_definition || undefined
+      })
     });
     if (!res.ok) {
       const err = await res.json();
