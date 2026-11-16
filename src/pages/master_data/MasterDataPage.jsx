@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { SlidersHorizontal, Calendar, CheckCircle2, AlertTriangle, Calculator } from 'lucide-react';
+import { SlidersHorizontal, Calendar, CheckCircle2, AlertTriangle, Calculator, FileSpreadsheet } from 'lucide-react';
 import CostHeadsManager from './CostHeadsManager';
+import HostelMasterManager from './HostelMasterManager';
 import PeriodsManager from './PeriodsManager';
 import CategoryFormulaManager from './CategoryFormulaManager';
 import EditPeriodModal from './EditPeriodModal';
@@ -94,7 +95,7 @@ export default function MasterDataPage({
           }}
         >
           <SlidersHorizontal size={14} />
-          <span>Categories & Cost Heads ({costHeadsList.length} Items)</span>
+          <span>{moduleName === 'Hostel' ? 'Hostel Parameters & Template' : `Categories & Cost Heads (${costHeadsList.length} Items)`}</span>
         </button>
 
         <button
@@ -171,32 +172,36 @@ export default function MasterDataPage({
         {/* LEFT / PRIMARY: MASTER DATA MANAGER */}
         <div style={{ flex: 1, minWidth: 0 }}>
           {masterFoodView === 'cost_heads' && (
-            <CostHeadsManager
-              costHeadsList={costHeadsList}
-              categoriesList={categoriesList}
-              draggedIdx={draggedIdx}
-              dragOverIdx={dragOverIdx}
-              handleDragStart={handleDragStart}
-              handleDragOver={handleDragOver}
-              handleDragEnd={handleDragEnd}
-              handleDrop={handleDrop}
-              handleMoveStep={handleMoveStep}
-              openAddCostHeadModal={openAddCostHeadModal}
-              openEditCostHeadModal={openEditCostHeadModal}
-              handleDeleteCostHead={handleDeleteCostHead}
-              handleBatchDeleteCostHeads={handleBatchDeleteCostHeads}
-              showCostHeadModal={showCostHeadModal}
-              setShowCostHeadModal={setShowCostHeadModal}
-              editingCostHead={editingCostHead}
-              costHeadForm={costHeadForm}
-              setCostHeadForm={setCostHeadForm}
-              handleSaveCostHead={handleSaveCostHead}
-              openAddCategoryModal={openAddCategoryModal}
-              openManageCategoriesModal={openManageCategoriesModal}
-              handleUpdateCategory={handleUpdateCategory}
-              handleDeleteCategory={handleDeleteCategory}
-              moduleName={moduleName}
-            />
+            moduleName === 'Hostel' ? (
+              <HostelMasterManager />
+            ) : (
+              <CostHeadsManager
+                costHeadsList={costHeadsList}
+                categoriesList={categoriesList}
+                draggedIdx={draggedIdx}
+                dragOverIdx={dragOverIdx}
+                handleDragStart={handleDragStart}
+                handleDragOver={handleDragOver}
+                handleDragEnd={handleDragEnd}
+                handleDrop={handleDrop}
+                handleMoveStep={handleMoveStep}
+                openAddCostHeadModal={openAddCostHeadModal}
+                openEditCostHeadModal={openEditCostHeadModal}
+                handleDeleteCostHead={handleDeleteCostHead}
+                handleBatchDeleteCostHeads={handleBatchDeleteCostHeads}
+                showCostHeadModal={showCostHeadModal}
+                setShowCostHeadModal={setShowCostHeadModal}
+                editingCostHead={editingCostHead}
+                costHeadForm={costHeadForm}
+                setCostHeadForm={setCostHeadForm}
+                handleSaveCostHead={handleSaveCostHead}
+                openAddCategoryModal={openAddCategoryModal}
+                openManageCategoriesModal={openManageCategoriesModal}
+                handleUpdateCategory={handleUpdateCategory}
+                handleDeleteCategory={handleDeleteCategory}
+                moduleName={moduleName}
+              />
+            )
           )}
 
           {masterFoodView === 'periods' && (
