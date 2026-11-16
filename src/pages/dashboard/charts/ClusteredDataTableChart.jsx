@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { formatINR, formatLakhs } from '../../../utils/formatters';
 import { 
   BarChart3, Layers, Maximize2, Minimize2, Download, Check, 
@@ -30,7 +30,7 @@ export default function ClusteredDataTableChart({
   selectedModule = 'food',
   activePeriod = 'all'
 }) {
-  const [dataViewMode, setDataViewMode] = useState('categories'); // 'categories' | 'census'
+  const [dataViewMode, setDataViewMode] = useState(selectedModule === 'hostel' ? 'census' : 'categories'); // 'categories' | 'census'
   const [hoveredPeriodId, setHoveredPeriodId] = useState(null);
   const [hoveredColKey, setHoveredColKey] = useState(null);
   const [tooltip, setTooltip] = useState(null); // { x, y, title, period, value, unit }
@@ -38,22 +38,31 @@ export default function ClusteredDataTableChart({
   const [valueFormat, setValueFormat] = useState('full'); // 'full' | 'compact'
   const containerRef = useRef(null);
 
+  // Auto-switch to census mode when hostel is selected, and categories for others
+  useEffect(() => {
+    if (selectedModule === 'hostel') {
+      setDataViewMode('census');
+    } else {
+      setDataViewMode('categories');
+    }
+  }, [selectedModule]);
+
   // 1. Determine columns based on module & view mode
   const currentColumns = useMemo(() => {
     if (dataViewMode === 'census') {
       if (selectedModule === 'hostel') {
         // Exactly matches the user's uploaded "Hostel Data" Excel chart columns!
         return [
-          { key: 'bed_capacity', label: 'Bed Capacity', type: 'number', short: 'Beds' },
-          { key: 'students_count', label: 'No. of students', type: 'number', short: 'Students' },
-          { key: 'staff_count', label: 'No. of staffs', type: 'number', short: 'Staff' },
-          { key: 'total_occupied', label: 'Total Occupied', type: 'number', short: 'Occupied' },
+          { key: 'bed_capacity', label: 'Bed Capacity', type: 'number', short: 'Bed Capacity' },
+          { key: 'students_count', label: 'No. of students', type: 'number', short: 'No. of students' },
+          { key: 'staff_count', label: 'No. of staffs', type: 'number', short: 'No. of staffs' },
+          { key: 'total_occupied', label: 'Total Occupied', type: 'number', short: 'Total Occupied' },
           { key: 'vacant_total', label: 'Vacant', type: 'number', short: 'Vacant' },
           { key: 'vacant_college', label: 'Vacant for college students', type: 'number', short: 'Vacant (College)' },
-          { key: 'vacant_sports', label: 'Vacant for sports / KPM', type: 'number', short: 'Vacant (Sports)' },
-          { key: 'vacant_school', label: 'Vacant for school', type: 'number', short: 'Vacant (School)' },
-          { key: 'occupied_pct', label: 'Occupied %', type: 'percentage', short: 'Occ %' },
-          { key: 'vacant_pct', label: 'Vacant %', type: 'percentage', short: 'Vac %' }
+          { key: 'vacant_sports', label: 'Vacant for college sports students (KPM hostel)', type: 'number', short: 'Vacant (Sports)' },
+          { key: 'vacant_school', label: 'Vacant for school students', type: 'number', short: 'Vacant (School)' },
+          { key: 'occupied_pct', label: 'Occupied %', type: 'percentage', short: 'Occupied %' },
+          { key: 'vacant_pct', label: 'Vacant %', type: 'percentage', short: 'Vacant %' }
         ];
       } else if (selectedModule === 'food') {
         return [
@@ -103,17 +112,17 @@ export default function ClusteredDataTableChart({
 
       if (dataViewMode === 'census') {
         if (selectedModule === 'hostel') {
-          const hc = computedMatrix?.hostel_census?.[pStr] || {};
-          const bedCap = Number(hc.bed_capacity_total) || 3119;
-          const sCount = Number(hc.students_total) || (Number(hc.students_boys || 0) + Number(hc.students_girls || 0)) || 2843;
-          const stCount = Number(hc.staff_total) || (Number(hc.staff_boys || 0) + Number(hc.staff_girls || 0)) || 131;
-          const totOcc = Number(hc.total_occupied) || (sCount + stCount) || 2974;
-          const vacTot = Number(hc.vacant_total) || Math.max(0, bedCap - totOcc) || 145;
-          const vacCol = Number(hc.vacant_college) || (Number(hc.vacant_college_boys || 0) + Number(hc.vacant_college_girls || 0)) || 104;
-          const vacSports = Number(hc.vacant_sports_total) || 0;
-          const vacSchool = Number(hc.vacant_school_total) || 0;
-          const occPct = Number(hc.occupied_pct) || (bedCap > 0 ? (totOcc / bedCap) * 100 : 95.3);
-          const vacPct = Number(hc.vacant_pct) || (bedCap > 0 ? (vacTot / bedCap) * 100 : 4.7);
+          const hc = computedMatrix?.hostel_census?.[pStr] || computedMatrix?.hostel_census?.[p.id] || {};
+          const bedCap = Number(hc.bed_capacity_total ?? 0);
+          const sCount = Number(hc.students_total ?? (Number(hc.students_boys || 0) + Number(hc.students_girls || 0)));
+          const stCount = Number(hc.staff_total ?? (Number(hc.staff_boys || 0) + Number(hc.staff_girls || 0)));
+          const totOcc = Number(hc.total_occupied ?? (sCount + stCount));
+          const vacTot = Number(hc.vacant_total ?? (bedCap > 0 ? Math.max(0, bedCap - totOcc) : 0));
+          const vacCol = Number(hc.vacant_college ?? (Number(hc.vacant_college_boys || 0) + Number(hc.vacant_college_girls || 0)));
+          const vacSports = Number(hc.vacant_sports_total ?? 0);
+          const vacSchool = Number(hc.vacant_school_total ?? 0);
+          const occPct = Number(hc.occupied_pct ?? (bedCap > 0 ? (totOcc / bedCap) * 100 : 0));
+          const vacPct = Number(hc.vacant_pct ?? (bedCap > 0 ? (vacTot / bedCap) * 100 : 0));
 
           row.values = {
             bed_capacity: bedCap,
@@ -195,16 +204,17 @@ export default function ClusteredDataTableChart({
   }, [gridData, currentColumns]);
 
   // Helper for formatting values in cells & chart
-  const formatVal = (val, type) => {
+  const formatVal = (val, type, key) => {
     if (val === undefined || val === null || isNaN(val)) return '—';
+    if ((key === 'vacant_sports' || key === 'vacant_school') && Number(val) === 0) return '';
     if (type === 'percentage') {
-      return `${Number(val).toFixed(0)}%`;
+      return `${Math.round(Number(val))}%`;
     }
     if (type === 'currency') {
       if (valueFormat === 'compact') return formatLakhs(val);
       return formatINR(val);
     }
-    return Number(val).toLocaleString();
+    return Number(val) === 0 && (key === 'vacant_sports' || key === 'vacant_school') ? '' : Number(val).toLocaleString();
   };
 
   // Helper for Y-axis ticks
@@ -832,10 +842,10 @@ export default function ClusteredDataTableChart({
                             backgroundColor: Number(rawVal) >= 90 ? '#ecfdf5' : Number(rawVal) >= 70 ? '#fffbeb' : '#fef2f2',
                             color: Number(rawVal) >= 90 ? '#047857' : Number(rawVal) >= 70 ? '#b45309' : '#b91c1c'
                           }}>
-                            {formatVal(rawVal, col.type)}
+                            {formatVal(rawVal, col.type, col.key)}
                           </span>
                         ) : (
-                          formatVal(rawVal, col.type)
+                          formatVal(rawVal, col.type, col.key)
                         )}
                       </td>
                     );

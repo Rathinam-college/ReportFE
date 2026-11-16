@@ -525,9 +525,17 @@ export default function App() {
         amounts: grandTotalByPeriod,
         total: overallGrandTotal,
         avg: overallGrandTotal / numPeriods
+      },
+      hostel_census: {
+        ...(matrixData.hostel_census || {}),
+        ...(hostelCensusDraft || {})
+      },
+      transport_census: {
+        ...(matrixData.transport_census || {}),
+        ...(transportCensusDraft || {})
       }
     };
-  }, [matrixData, matrixDraft]);
+  }, [matrixData, matrixDraft, hostelCensusDraft, transportCensusDraft]);
 
   // --------------------------------------------------------------------------
   // DATA ENTRY ACTIONS
