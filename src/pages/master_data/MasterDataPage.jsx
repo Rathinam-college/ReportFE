@@ -7,7 +7,6 @@ import EditPeriodModal from './EditPeriodModal';
 import AddMonthModal from '../data_entry/AddMonthModal';
 import AddCategoryModal from './AddCategoryModal';
 import ManageCategoriesModal from './ManageCategoriesModal';
-import MasterMathTools from './MasterMathTools';
 
 export default function MasterDataPage({
   masterFoodView,
@@ -64,8 +63,6 @@ export default function MasterDataPage({
   handleAddNewMonth,
   moduleName = 'Food & Dining'
 }) {
-  const [showMathTool, setShowMathTool] = useState(false);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -143,32 +140,6 @@ export default function MasterDataPage({
           <Calculator size={14} />
           <span>📐 Category Formulas & Functions</span>
         </button>
-
-        {/* Math Tools Toggle Button in Master Data */}
-        <button
-          type="button"
-          onClick={() => setShowMathTool(prev => !prev)}
-          title="Open interactive calculator and operational math tools"
-          style={{
-            marginLeft: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '7px',
-            padding: '7px 18px',
-            borderRadius: '9999px',
-            fontSize: '12.5px',
-            fontWeight: '700',
-            backgroundColor: showMathTool ? '#047857' : '#f0fdf4',
-            color: showMathTool ? '#ffffff' : '#047857',
-            border: showMathTool ? '1px solid #047857' : '1.5px solid #bbf7d0',
-            cursor: 'pointer',
-            boxShadow: showMathTool ? '0 2px 8px rgba(4,120,87,0.3)' : '0 1px 3px rgba(0,0,0,0.04)',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <Calculator size={15} />
-          <span>{showMathTool ? 'Hide Math Tools' : '🧮 Math Tools & Calculator'}</span>
-        </button>
       </div>
 
       {masterMessage && (
@@ -224,8 +195,6 @@ export default function MasterDataPage({
               openManageCategoriesModal={openManageCategoriesModal}
               handleUpdateCategory={handleUpdateCategory}
               handleDeleteCategory={handleDeleteCategory}
-              onToggleMathTool={() => setShowMathTool(prev => !prev)}
-              onNavigateFormulas={() => setMasterFoodView('formulas')}
               moduleName={moduleName}
             />
           )}
@@ -248,17 +217,6 @@ export default function MasterDataPage({
             />
           )}
         </div>
-
-        {/* RIGHT / SECONDARY: INTERACTIVE MATH TOOLS (DOCKED SIMULTANEOUSLY) */}
-        {showMathTool && (
-          <MasterMathTools
-            onClose={() => setShowMathTool(false)}
-            moduleName={moduleName}
-            categoriesList={categoriesList}
-            computedMatrix={computedMatrix}
-          />
-        )}
-
       </div>
 
       {/* MODAL: ADD STANDALONE CATEGORY */}

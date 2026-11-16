@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, X, FolderPlus, Layers, Filter, Calculator, Check, AlertCircle } from 'lucide-react';
+import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, X, FolderPlus, Layers, Filter, Check, AlertCircle } from 'lucide-react';
 import EditCategoryModal from './EditCategoryModal';
 
 export default function CostHeadsManager({
@@ -154,56 +154,6 @@ export default function CostHeadsManager({
             <Plus size={16} />
             <span>+ Add Line Item</span>
           </button>
-
-          {onToggleMathTool && (
-            <button
-              type="button"
-              onClick={onToggleMathTool}
-              title="Open interactive calculator & operational math formulas side-by-side"
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                backgroundColor: '#f0fdf4',
-                color: '#047857',
-                fontSize: '13px',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                border: '1.5px solid #bbf7d0',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Calculator size={15} />
-              <span>🧮 Math Tools</span>
-            </button>
-          )}
-
-          {onNavigateFormulas && (
-            <button
-              type="button"
-              onClick={onNavigateFormulas}
-              title="Open Category Formulas & Mathematical Functions sheet"
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                backgroundColor: '#eef2ff',
-                color: '#4f46e5',
-                fontSize: '13px',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                border: '1.5px solid #c7d2fe',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Calculator size={15} />
-              <span>📐 Category Formulas</span>
-            </button>
-          )}
         </div>
       </div>
 
