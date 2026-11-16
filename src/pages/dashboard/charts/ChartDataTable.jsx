@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { formatINR } from '../../../utils/formatters';
 import { 
-  Download, Search, X, Maximize2, Minimize2, Sparkles, Filter
+  Download, Search, X, Maximize2, Minimize2, Sparkles, Filter, Percent
 } from 'lucide-react';
 
 export default function ChartDataTable({
@@ -13,6 +13,8 @@ export default function ChartDataTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [displayMode, setDisplayMode] = useState('both'); // 'both' | 'percentage_only' | 'amount_only'
+  const [percentageBasis, setPercentageBasis] = useState('month_total'); // 'month_total' | 'category_subtotal'
   const containerRef = useRef(null);
 
   // Toggle Fullscreen mode seamlessly
@@ -136,6 +138,97 @@ export default function ChartDataTable({
     return num.toLocaleString('en-IN', { maximumFractionDigits: 0 });
   };
 
+  // Safe percentage calculation
+  const computePercentage = (val, total) => {
+    if (!val || !total || total === 0) return 0;
+    const num = Number(val);
+    const tot = Number(total);
+    if (isNaN(num) || isNaN(tot) || tot === 0) return 0;
+    return (num / tot) * 100;
+  };
+
+  // Formatted percentage string (e.g. 66.8% or <0.1%)
+  const formatPercentage = (pct) => {
+    if (pct === undefined || pct === null || isNaN(pct) || pct === 0) return '0.0%';
+    if (pct < 0.05 && pct > 0) return '<0.1%';
+    return `${pct.toFixed(1)}%`;
+  };
+
+  // Unified cell renderer for amounts and percentages
+  const renderCellContent = (amount, total, isBold = false, isSubtotal = false, customBadgeTheme = null) => {
+    const num = Number(amount) || 0;
+    if (num === 0 && (!amount || amount === 0)) {
+      return <span style={{ color: '#94a3b8' }}>—</span>;
+    }
+
+    const pct = computePercentage(num, total);
+    const pctStr = formatPercentage(pct);
+
+    if (displayMode === 'percentage_only') {
+      return (
+        <span style={{
+          fontSize: isSubtotal ? '12.5px' : '12px',
+          fontWeight: isBold ? '800' : '700',
+          color: customBadgeTheme ? customBadgeTheme.text : (isSubtotal ? '#1d4ed8' : '#4338ca'),
+          backgroundColor: customBadgeTheme ? customBadgeTheme.bg : (isSubtotal ? 'rgba(37, 99, 235, 0.1)' : 'rgba(99, 102, 241, 0.08)'),
+          border: `1px solid ${customBadgeTheme ? customBadgeTheme.border : (isSubtotal ? 'rgba(37, 99, 235, 0.25)' : 'rgba(99, 102, 241, 0.2)')}`,
+          padding: '2px 8px',
+          borderRadius: '6px',
+          letterSpacing: '0.01em',
+          display: 'inline-block'
+        }}>
+          {pctStr}
+        </span>
+      );
+    }
+
+    if (displayMode === 'amount_only') {
+      return (
+        <span style={{
+          fontSize: isSubtotal ? '13px' : '12.5px',
+          fontWeight: isBold ? '800' : '600',
+          color: isSubtotal ? '#0f172a' : (num > 0 ? '#0f172a' : '#94a3b8')
+        }}>
+          {formatIndianNumber(num)}
+        </span>
+      );
+    }
+
+    // Default: 'both' (Shows both Rupee Amount and Percentage badge)
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        gap: '2px'
+      }}>
+        <span style={{
+          fontSize: isSubtotal ? '13px' : '12.5px',
+          fontWeight: isBold ? '800' : '600',
+          color: isSubtotal ? '#0f172a' : (num > 0 ? '#0f172a' : '#94a3b8')
+        }}>
+          {formatIndianNumber(num)}
+        </span>
+        {num > 0 && (
+          <span style={{
+            fontSize: '10.5px',
+            fontWeight: isSubtotal ? '800' : '700',
+            color: customBadgeTheme ? customBadgeTheme.text : (isSubtotal ? '#1d4ed8' : '#4f46e5'),
+            backgroundColor: customBadgeTheme ? customBadgeTheme.bg : (isSubtotal ? 'rgba(59, 130, 246, 0.1)' : 'rgba(99, 102, 241, 0.08)'),
+            border: `1px solid ${customBadgeTheme ? customBadgeTheme.border : (isSubtotal ? 'rgba(59, 130, 246, 0.22)' : 'rgba(99, 102, 241, 0.18)')}`,
+            padding: '1px 5px',
+            borderRadius: '4px',
+            letterSpacing: '0.01em',
+            lineHeight: '1.2'
+          }}>
+            {pctStr}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   // Unique category names for filtering
   const categoryNames = useMemo(() => {
     return categories.map(c => c.category_name);
@@ -222,34 +315,57 @@ export default function ChartDataTable({
     return { totals, allTotal };
   }, [categories, periods]);
 
-  // Export to CSV
+  // Export to CSV with percentages
   const handleExportCSV = () => {
-    const periodHeaders = periods.map(p => `"${p.period_label} (INR)"`);
-    const headers = ['"Category"', '"Description"', ...periodHeaders, '"Total Spend (INR)"', '"Avg / Month (INR)"'];
+    const periodHeaders = periods.flatMap(p => [`"${p.period_label} (INR)"`, `"${p.period_label} (%)"`]);
+    const headers = ['"Category"', '"Description"', ...periodHeaders, '"Total Spend (INR)"', '"Total (%)"', '"Avg / Month (INR)"', '"Avg (%)"'];
     const rows = [];
 
     groupedCategories.forEach(grp => {
       grp.items.forEach(it => {
-        const pCols = periods.map(p => Number(it.amounts?.[p.id] ?? 0).toFixed(2));
+        const pCols = periods.flatMap(p => {
+          const amt = Number(it.amounts?.[p.id] ?? 0);
+          const denom = percentageBasis === 'category_subtotal'
+            ? (categorySubtotals[grp.categoryId]?.[p.id] || 0)
+            : (monthlyGrandTotals.byPeriod[p.id] || 0);
+          const pct = computePercentage(amt, denom);
+          return [amt.toFixed(2), `"${pct.toFixed(1)}%"`];
+        });
         const itTotal = periods.reduce((acc, p) => acc + Number(it.amounts?.[p.id] ?? 0), 0);
+        const itTotalDenom = percentageBasis === 'category_subtotal'
+          ? (categorySubtotals[grp.categoryId]?.total || 0)
+          : (monthlyGrandTotals.grandOverall || 0);
+        const itTotalPct = computePercentage(itTotal, itTotalDenom);
         const itAvg = periods.length > 0 ? itTotal / periods.length : 0;
+        const itAvgDenom = percentageBasis === 'category_subtotal'
+          ? ((categorySubtotals[grp.categoryId]?.total || 0) / (periods.length || 1))
+          : (monthlyGrandTotals.avgMonthly || 0);
+        const itAvgPct = computePercentage(itAvg, itAvgDenom);
+
         rows.push([
           `"${grp.categoryName}"`,
           `"${it.description}"`,
           ...pCols,
           itTotal.toFixed(2),
-          itAvg.toFixed(2)
+          `"${itTotalPct.toFixed(1)}%"`,
+          itAvg.toFixed(2),
+          `"${itAvgPct.toFixed(1)}%"`
         ]);
       });
     });
 
-    const grandPCols = periods.map(p => (monthlyGrandTotals.byPeriod[p.id] || 0).toFixed(2));
+    const grandPCols = periods.flatMap(p => [
+      (monthlyGrandTotals.byPeriod[p.id] || 0).toFixed(2),
+      '"100.0%"'
+    ]);
     rows.push([
       '"ALL CATEGORIES"',
       '"TOTAL EXPENSES"',
       ...grandPCols,
       monthlyGrandTotals.grandOverall.toFixed(2),
-      monthlyGrandTotals.avgMonthly.toFixed(2)
+      '"100.0%"',
+      monthlyGrandTotals.avgMonthly.toFixed(2),
+      '"100.0%"'
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -340,12 +456,12 @@ export default function ChartDataTable({
               )}
             </div>
             <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-              Translucent multi-cycle financial ledger • Smooth line-by-line progression & category subtotals
+              Translucent multi-cycle financial ledger • Exact figures & percentage share of total expenditure
             </p>
           </div>
         </div>
 
-        {/* View mode controls: Search, Category filter, CSV & Full Screen */}
+        {/* View mode controls: Search, Category filter, Percentage Mode Switch, CSV & Full Screen */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Transparent Search box */}
           <div style={{ position: 'relative' }}>
@@ -397,6 +513,110 @@ export default function ChartDataTable({
               <option key={cn} value={cn}>{cn}</option>
             ))}
           </select>
+
+          {/* View Mode Segmented Control: [₹ + %] | [% Only] | [₹ Only] */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: 'rgba(241, 245, 249, 0.95)',
+            borderRadius: '8px',
+            padding: '2px',
+            border: '1px solid rgba(203, 213, 225, 0.8)'
+          }}>
+            <button
+              type="button"
+              onClick={() => setDisplayMode('both')}
+              title="Show both Rupee amount and percentage badge"
+              style={{
+                padding: '4px 9px',
+                borderRadius: '6px',
+                fontSize: '11.5px',
+                fontWeight: displayMode === 'both' ? '800' : '600',
+                backgroundColor: displayMode === 'both' ? '#ffffff' : 'transparent',
+                color: displayMode === 'both' ? '#4f46e5' : '#64748b',
+                boxShadow: displayMode === 'both' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.12s ease'
+              }}
+            >
+              <Percent size={12} />
+              <span>₹ + %</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDisplayMode('percentage_only')}
+              title="Show percentage values only"
+              style={{
+                padding: '4px 9px',
+                borderRadius: '6px',
+                fontSize: '11.5px',
+                fontWeight: displayMode === 'percentage_only' ? '800' : '600',
+                backgroundColor: displayMode === 'percentage_only' ? '#ffffff' : 'transparent',
+                color: displayMode === 'percentage_only' ? '#4f46e5' : '#64748b',
+                boxShadow: displayMode === 'percentage_only' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                transition: 'all 0.12s ease'
+              }}
+            >
+              <span>% Only</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDisplayMode('amount_only')}
+              title="Show Rupee amounts only"
+              style={{
+                padding: '4px 9px',
+                borderRadius: '6px',
+                fontSize: '11.5px',
+                fontWeight: displayMode === 'amount_only' ? '800' : '600',
+                backgroundColor: displayMode === 'amount_only' ? '#ffffff' : 'transparent',
+                color: displayMode === 'amount_only' ? '#4f46e5' : '#64748b',
+                boxShadow: displayMode === 'amount_only' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                transition: 'all 0.12s ease'
+              }}
+            >
+              <span>₹ Only</span>
+            </button>
+          </div>
+
+          {/* Basis Toggle: % of Month Total vs % of Category */}
+          {displayMode !== 'amount_only' && (
+            <button
+              type="button"
+              onClick={() => setPercentageBasis(prev => prev === 'month_total' ? 'category_subtotal' : 'month_total')}
+              title={percentageBasis === 'month_total' ? "Currently calculating % of Month's Total Expenses. Click to switch to % of Category Subtotal." : "Currently calculating % of Category Subtotal. Click to switch to % of Month's Total Expenses."}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
+                color: '#4338ca',
+                fontSize: '11px',
+                fontWeight: '700',
+                cursor: 'pointer'
+              }}
+            >
+              <span>{percentageBasis === 'month_total' ? 'Basis: % of Total' : 'Basis: % of Category'}</span>
+            </button>
+          )}
 
           {/* CSV Export */}
           <button
@@ -499,8 +719,8 @@ export default function ChartDataTable({
                   <th
                     key={p.id}
                     style={{
-                      padding: '12px 14px',
-                      minWidth: '120px',
+                      padding: '10px 14px',
+                      minWidth: '125px',
                       textAlign: 'right',
                       borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
                       borderRight: '1px solid rgba(226, 232, 240, 0.8)',
@@ -509,31 +729,40 @@ export default function ChartDataTable({
                       fontWeight: isSel ? '800' : '700'
                     }}
                   >
-                    {p.period_label} {isSel && '★'}
+                    <div>{p.period_label} {isSel && '★'}</div>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: isSel ? '#6366f1' : '#94a3b8', marginTop: '2px' }}>
+                      {displayMode === 'percentage_only' ? '% Share' : displayMode === 'amount_only' ? 'INR (₹)' : '₹ & % Share'}
+                    </div>
                   </th>
                 );
               })}
 
               <th style={{
-                padding: '12px 16px',
-                minWidth: '130px',
+                padding: '10px 16px',
+                minWidth: '135px',
                 textAlign: 'right',
                 borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
                 borderRight: '1px solid rgba(226, 232, 240, 0.8)',
                 color: '#0f172a',
                 fontWeight: '800'
               }}>
-                Total (All Mo)
+                <div>Total (All Mo)</div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginTop: '2px' }}>
+                  {displayMode === 'percentage_only' ? '% of Total' : displayMode === 'amount_only' ? 'INR (₹)' : '₹ & % Total'}
+                </div>
               </th>
               <th style={{
-                padding: '12px 14px',
-                minWidth: '110px',
+                padding: '10px 14px',
+                minWidth: '115px',
                 textAlign: 'right',
                 borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
                 color: '#475569',
                 fontWeight: '700'
               }}>
-                Avg / Mo
+                <div>Avg / Mo</div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginTop: '2px' }}>
+                  {displayMode === 'percentage_only' ? '% of Avg' : displayMode === 'amount_only' ? 'INR (₹)' : '₹ & % Avg'}
+                </div>
               </th>
             </tr>
           </thead>
@@ -620,48 +849,61 @@ export default function ChartDataTable({
                         {periods.map(p => {
                           const val = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
                           const isSel = String(p.id) === String(activePeriod);
+                          const periodDenom = percentageBasis === 'category_subtotal'
+                            ? (categorySubtotals[grp.categoryId]?.[p.id] || 0)
+                            : (monthlyGrandTotals.byPeriod[p.id] || 0);
+
                           return (
                             <td
                               key={p.id}
                               style={{
-                                padding: '10px 14px',
+                                padding: '9px 14px',
                                 textAlign: 'right',
                                 backgroundColor: isSel ? 'rgba(99, 102, 241, 0.04)' : 'transparent',
-                                color: val > 0 ? '#0f172a' : '#94a3b8',
-                                fontWeight: val > 0 ? '600' : '400',
                                 borderRight: '1px solid rgba(226, 232, 240, 0.6)',
                                 borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
                               }}
                               className="currency-font"
                             >
-                              {formatIndianNumber(val)}
+                              {renderCellContent(val, periodDenom, false, false)}
                             </td>
                           );
                         })}
 
                         {/* Total Spend */}
-                        <td style={{
-                          padding: '10px 16px',
-                          textAlign: 'right',
-                          fontWeight: '700',
-                          color: '#0f172a',
-                          backgroundColor: 'rgba(248, 250, 252, 0.45)',
-                          borderRight: '1px solid rgba(226, 232, 240, 0.7)',
-                          borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
-                        }} className="currency-font">
-                          {formatIndianNumber(itemTotal)}
-                        </td>
+                        {(() => {
+                          const totalDenom = percentageBasis === 'category_subtotal'
+                            ? (categorySubtotals[grp.categoryId]?.total || 0)
+                            : (monthlyGrandTotals.grandOverall || 0);
+                          return (
+                            <td style={{
+                              padding: '9px 16px',
+                              textAlign: 'right',
+                              backgroundColor: 'rgba(248, 250, 252, 0.45)',
+                              borderRight: '1px solid rgba(226, 232, 240, 0.7)',
+                              borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
+                            }} className="currency-font">
+                              {renderCellContent(itemTotal, totalDenom, true, false)}
+                            </td>
+                          );
+                        })()}
 
                         {/* Avg / Mo */}
-                        <td style={{
-                          padding: '10px 14px',
-                          textAlign: 'right',
-                          color: '#475569',
-                          backgroundColor: 'rgba(248, 250, 252, 0.45)',
-                          borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
-                        }} className="currency-font">
-                          {formatIndianNumber(itemAvg)}
-                        </td>
+                        {(() => {
+                          const avgDenom = percentageBasis === 'category_subtotal'
+                            ? ((categorySubtotals[grp.categoryId]?.total || 0) / (periods.length || 1))
+                            : (monthlyGrandTotals.avgMonthly || 0);
+                          return (
+                            <td style={{
+                              padding: '9px 14px',
+                              textAlign: 'right',
+                              backgroundColor: 'rgba(248, 250, 252, 0.45)',
+                              borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
+                            }} className="currency-font">
+                              {renderCellContent(itemAvg, avgDenom, false, false)}
+                            </td>
+                          );
+                        })()}
                       </tr>
                     );
                   })}
@@ -693,41 +935,54 @@ export default function ChartDataTable({
                       {periods.map(p => {
                         const tot = foodCombinedSubtotal.totals[p.id] || 0;
                         const isSel = String(p.id) === String(activePeriod);
+                        const periodDenom = monthlyGrandTotals.byPeriod[p.id] || 0;
                         return (
                           <td
                             key={p.id}
                             style={{
-                              padding: '11px 14px',
+                              padding: '10px 14px',
                               textAlign: 'right',
                               borderRight: '1px solid rgba(99, 102, 241, 0.2)',
-                              fontWeight: '800',
-                              color: '#1e1b4b',
                               backgroundColor: isSel ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
                             }}
                             className="currency-font"
                           >
-                            {formatIndianNumber(tot)}
+                            {renderCellContent(tot, periodDenom, true, true, {
+                              text: '#312e81',
+                              bg: 'rgba(99, 102, 241, 0.12)',
+                              border: 'rgba(99, 102, 241, 0.25)'
+                            })}
                           </td>
                         );
                       })}
 
                       <td style={{
-                        padding: '11px 16px',
+                        padding: '10px 16px',
                         textAlign: 'right',
-                        borderRight: '1px solid rgba(99, 102, 241, 0.2)',
-                        fontWeight: '800',
-                        color: '#1e1b4b'
+                        borderRight: '1px solid rgba(99, 102, 241, 0.2)'
                       }} className="currency-font">
-                        {formatIndianNumber(foodCombinedSubtotal.allTotal)}
+                        {renderCellContent(foodCombinedSubtotal.allTotal, monthlyGrandTotals.grandOverall, true, true, {
+                          text: '#312e81',
+                          bg: 'rgba(99, 102, 241, 0.12)',
+                          border: 'rgba(99, 102, 241, 0.25)'
+                        })}
                       </td>
 
                       <td style={{
-                        padding: '11px 14px',
-                        textAlign: 'right',
-                        fontWeight: '800',
-                        color: '#4338ca'
+                        padding: '10px 14px',
+                        textAlign: 'right'
                       }} className="currency-font">
-                        {formatIndianNumber(periods.length > 0 ? (foodCombinedSubtotal.allTotal / periods.length) : 0)}
+                        {renderCellContent(
+                          periods.length > 0 ? (foodCombinedSubtotal.allTotal / periods.length) : 0,
+                          monthlyGrandTotals.avgMonthly,
+                          true,
+                          true,
+                          {
+                            text: '#4338ca',
+                            bg: 'rgba(99, 102, 241, 0.12)',
+                            border: 'rgba(99, 102, 241, 0.25)'
+                          }
+                        )}
                       </td>
                     </tr>
                   )}
@@ -759,41 +1014,54 @@ export default function ChartDataTable({
                       {periods.map(p => {
                         const subVal = grp.subtotal[p.id] || 0;
                         const isSel = String(p.id) === String(activePeriod);
+                        const periodDenom = monthlyGrandTotals.byPeriod[p.id] || 0;
                         return (
                           <td
                             key={p.id}
                             style={{
-                              padding: '11px 14px',
+                              padding: '10px 14px',
                               textAlign: 'right',
                               borderRight: '1px solid rgba(245, 158, 11, 0.2)',
-                              fontWeight: '800',
-                              color: '#78350f',
                               backgroundColor: isSel ? 'rgba(245, 158, 11, 0.1)' : 'transparent'
                             }}
                             className="currency-font"
                           >
-                            {formatIndianNumber(subVal)}
+                            {renderCellContent(subVal, periodDenom, true, true, {
+                              text: '#78350f',
+                              bg: 'rgba(245, 158, 11, 0.12)',
+                              border: 'rgba(245, 158, 11, 0.25)'
+                            })}
                           </td>
                         );
                       })}
 
                       <td style={{
-                        padding: '11px 16px',
+                        padding: '10px 16px',
                         textAlign: 'right',
-                        borderRight: '1px solid rgba(245, 158, 11, 0.2)',
-                        fontWeight: '800',
-                        color: '#78350f'
+                        borderRight: '1px solid rgba(245, 158, 11, 0.2)'
                       }} className="currency-font">
-                        {formatIndianNumber(grp.subtotal.total || 0)}
+                        {renderCellContent(grp.subtotal.total || 0, monthlyGrandTotals.grandOverall, true, true, {
+                          text: '#78350f',
+                          bg: 'rgba(245, 158, 11, 0.12)',
+                          border: 'rgba(245, 158, 11, 0.25)'
+                        })}
                       </td>
 
                       <td style={{
-                        padding: '11px 14px',
-                        textAlign: 'right',
-                        fontWeight: '800',
-                        color: '#b45309'
+                        padding: '10px 14px',
+                        textAlign: 'right'
                       }} className="currency-font">
-                        {formatIndianNumber(periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0)}
+                        {renderCellContent(
+                          periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0,
+                          monthlyGrandTotals.avgMonthly,
+                          true,
+                          true,
+                          {
+                            text: '#b45309',
+                            bg: 'rgba(245, 158, 11, 0.12)',
+                            border: 'rgba(245, 158, 11, 0.25)'
+                          }
+                        )}
                       </td>
                     </tr>
                   )}
@@ -824,6 +1092,7 @@ export default function ChartDataTable({
                       {periods.map(p => {
                         const subVal = grp.subtotal[p.id] || 0;
                         const isSel = String(p.id) === String(activePeriod);
+                        const periodDenom = monthlyGrandTotals.byPeriod[p.id] || 0;
                         return (
                           <td
                             key={p.id}
@@ -831,13 +1100,15 @@ export default function ChartDataTable({
                               padding: '10px 14px',
                               textAlign: 'right',
                               borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-                              fontWeight: '800',
-                              color: '#0f172a',
                               backgroundColor: isSel ? 'rgba(99, 102, 241, 0.08)' : 'transparent'
                             }}
                             className="currency-font"
                           >
-                            {formatIndianNumber(subVal)}
+                            {renderCellContent(subVal, periodDenom, true, true, {
+                              text: theme.badgeText,
+                              bg: theme.badgeBg,
+                              border: theme.badgeBorder
+                            })}
                           </td>
                         );
                       })}
@@ -845,20 +1116,30 @@ export default function ChartDataTable({
                       <td style={{
                         padding: '10px 16px',
                         textAlign: 'right',
-                        borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-                        fontWeight: '800',
-                        color: '#0f172a'
+                        borderRight: '1px solid rgba(226, 232, 240, 0.8)'
                       }} className="currency-font">
-                        {formatIndianNumber(grp.subtotal.total || 0)}
+                        {renderCellContent(grp.subtotal.total || 0, monthlyGrandTotals.grandOverall, true, true, {
+                          text: theme.badgeText,
+                          bg: theme.badgeBg,
+                          border: theme.badgeBorder
+                        })}
                       </td>
 
                       <td style={{
                         padding: '10px 14px',
-                        textAlign: 'right',
-                        fontWeight: '800',
-                        color: '#475569'
+                        textAlign: 'right'
                       }} className="currency-font">
-                        {formatIndianNumber(periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0)}
+                        {renderCellContent(
+                          periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0,
+                          monthlyGrandTotals.avgMonthly,
+                          true,
+                          true,
+                          {
+                            text: '#475569',
+                            bg: 'rgba(241, 245, 249, 0.6)',
+                            border: 'rgba(203, 213, 225, 0.8)'
+                          }
+                        )}
                       </td>
                     </tr>
                   )}
@@ -893,7 +1174,7 @@ export default function ChartDataTable({
                   <td
                     key={p.id}
                     style={{
-                      padding: '14px 14px',
+                      padding: '12px 14px',
                       textAlign: 'right',
                       borderRight: '1px solid rgba(255, 255, 255, 0.12)',
                       fontWeight: '900',
@@ -902,30 +1183,117 @@ export default function ChartDataTable({
                     }}
                     className="currency-font"
                   >
-                    {formatIndianNumber(gVal)}
+                    {displayMode === 'percentage_only' ? (
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        color: '#93c5fd',
+                        backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                        border: '1px solid rgba(147, 197, 253, 0.35)',
+                        padding: '2px 8px',
+                        borderRadius: '6px'
+                      }}>
+                        100.0%
+                      </span>
+                    ) : displayMode === 'amount_only' ? (
+                      <span>{formatIndianNumber(gVal)}</span>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                        <span>{formatIndianNumber(gVal)}</span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: '800',
+                          color: '#93c5fd',
+                          backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          lineHeight: '1.2'
+                        }}>
+                          100.0%
+                        </span>
+                      </div>
+                    )}
                   </td>
                 );
               })}
 
               {/* Overall Grand Total */}
               <td style={{
-                padding: '14px 16px',
+                padding: '12px 16px',
                 textAlign: 'right',
                 borderRight: '1px solid rgba(255, 255, 255, 0.12)',
                 fontWeight: '900',
                 color: '#ffffff'
               }} className="currency-font">
-                {formatIndianNumber(monthlyGrandTotals.grandOverall)}
+                {displayMode === 'percentage_only' ? (
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    color: '#93c5fd',
+                    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                    border: '1px solid rgba(147, 197, 253, 0.35)',
+                    padding: '2px 8px',
+                    borderRadius: '6px'
+                  }}>
+                    100.0%
+                  </span>
+                ) : displayMode === 'amount_only' ? (
+                  <span>{formatIndianNumber(monthlyGrandTotals.grandOverall)}</span>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                    <span>{formatIndianNumber(monthlyGrandTotals.grandOverall)}</span>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: '800',
+                      color: '#93c5fd',
+                      backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                      padding: '1px 5px',
+                      borderRadius: '4px',
+                      lineHeight: '1.2'
+                    }}>
+                      100.0%
+                    </span>
+                  </div>
+                )}
               </td>
 
               {/* Monthly Average */}
               <td style={{
-                padding: '14px 14px',
+                padding: '12px 14px',
                 textAlign: 'right',
                 fontWeight: '900',
                 color: '#93c5fd'
               }} className="currency-font">
-                {formatIndianNumber(monthlyGrandTotals.avgMonthly)}
+                {displayMode === 'percentage_only' ? (
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    color: '#93c5fd',
+                    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                    border: '1px solid rgba(147, 197, 253, 0.35)',
+                    padding: '2px 8px',
+                    borderRadius: '6px'
+                  }}>
+                    100.0%
+                  </span>
+                ) : displayMode === 'amount_only' ? (
+                  <span>{formatIndianNumber(monthlyGrandTotals.avgMonthly)}</span>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                    <span>{formatIndianNumber(monthlyGrandTotals.avgMonthly)}</span>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: '800',
+                      color: '#93c5fd',
+                      backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                      padding: '1px 5px',
+                      borderRadius: '4px',
+                      lineHeight: '1.2'
+                    }}>
+                      100.0%
+                    </span>
+                  </div>
+                )}
               </td>
             </tr>
           </tbody>
