@@ -25,6 +25,8 @@ import ComparisonTool from './ComparisonTool';
 
 // Layout Cards from Design Mockup (Image 1)
 import TopCostHeadsCard from './TopCostHeadsCard';
+import HostelDashboardCensusView from './HostelDashboardCensusView';
+import TransportDashboardCensusView from './TransportDashboardCensusView';
 
 export default function DashboardPage({
   selectedModule = 'food',
@@ -368,209 +370,28 @@ export default function DashboardPage({
       </div>
 
       {/* ========================================================================= */}
-      {/* HOSTEL LIVE OPERATIONAL CENSUS & UTILITIES (EXCEL IMAGES 2 & 3 METRICS)    */}
+      {/* HOSTEL LIVE OPERATIONAL CENSUS & PARAMETERS DASHBOARD                    */}
       {/* ========================================================================= */}
-      {currentModule === 'hostel' && activeHostelCensus && (
-        <section style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          border: '1.5px solid #d1fae5',
-          boxShadow: '0 2px 8px rgba(5, 150, 105, 0.05)',
-          padding: '20px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px'
-        }}>
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: '#ecfdf5',
-                border: '1px solid #a7f3d0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#059669',
-                fontSize: '16px'
-              }}>
-                🏢
-              </div>
-              <div>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Hostel Live Operational Metrics & Parameters
-                </h3>
-                <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-                  Database values from Hostel Census • {activePeriodObj?.period_label || 'Current Billing Cycle'}
-                </p>
-              </div>
-            </div>
+      {currentModule === 'hostel' && (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <HostelDashboardCensusView
+            computedMatrix={computedMatrix}
+            activePeriodObj={activePeriodObj}
+            periods={periods}
+          />
+        </section>
+      )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '3px 10px', borderRadius: '6px' }}>
-                Total Area: {Number(activeHostelCensus.sq_feet || 231701).toLocaleString()} Sq.Ft
-              </span>
-              <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '3px 10px', borderRadius: '6px' }}>
-                Space: {activeHostelCensus.sq_feet_per_occupant || (activeHostelCensus.total_occupied ? (231701 / activeHostelCensus.total_occupied).toFixed(1) : '81.5')} Sq.Ft/Occupant
-              </span>
-            </div>
-          </div>
-
-          {/* 4 Feature Parameter Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '14px'
-          }}>
-            {/* 1. Bed Capacity & Residents */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              padding: '14px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px'
-            }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Bed Capacity & Occupancy
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                <span style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
-                  {Number(activeHostelCensus.total_occupied || 2974).toLocaleString()}
-                </span>
-                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
-                  / {Number(activeHostelCensus.bed_capacity_total || 3119).toLocaleString()} Beds
-                </span>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  color: '#047857',
-                  backgroundColor: '#d1fae5',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  marginLeft: 'auto'
-                }}>
-                  {Number(activeHostelCensus.occupied_pct || 95.3).toFixed(1)}% Occ
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Students: {Number(activeHostelCensus.students_total || 2843).toLocaleString()}</span>
-                <span>Staff: {Number(activeHostelCensus.staff_total || 131).toLocaleString()}</span>
-                <span>Vacant: {Number(activeHostelCensus.vacant_total || 145).toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* 2. Power & Energy Consumption */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              padding: '14px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px'
-            }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Power Consumption (EB + DG)
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                <span style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
-                  {formatINR(activeHostelCensus.power_cost || 1469211)}
-                </span>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: '#b45309',
-                  backgroundColor: '#fef3c7',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  marginLeft: 'auto'
-                }}>
-                  {Number(activeHostelCensus.power_units || 105116).toLocaleString()} kWh
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                <span>₹{activeHostelCensus.power_cost_sqft || '6.34'} / sq.ft</span>
-                <span>{activeHostelCensus.units_per_occupant || '35.3'} kWh / occupant</span>
-                <span>₹{activeHostelCensus.power_cost_occupant || '494'} / occupant</span>
-              </div>
-            </div>
-
-            {/* 3. Water Supply & RO Purification */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              padding: '14px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px'
-            }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Water Supply & RO Purified
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                <span style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
-                  {formatINR((Number(activeHostelCensus.normal_water_cost || 0) + Number(activeHostelCensus.drinking_water_cost || 0) + Number(activeHostelCensus.water_purchase_cost || 0)) || 1092165)}
-                </span>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: '#0369a1',
-                  backgroundColor: '#e0f2fe',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  marginLeft: 'auto'
-                }}>
-                  {(Number(activeHostelCensus.normal_water_litres || 8202000) / 100000).toFixed(2)}L Lakhs
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Normal: {activeHostelCensus.normal_water_ltr_day || '91.9'} L/day</span>
-                <span>RO: {activeHostelCensus.drinking_water_ltr_day || '1.04'} L/day</span>
-                <span>Tanker: {formatINR(activeHostelCensus.water_purchase_cost || 248765)}</span>
-              </div>
-            </div>
-
-            {/* 4. Budget & Financial Operations */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              padding: '14px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px'
-            }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Approved Budget & Run-Rate
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                <span style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
-                  {formatINR(activeHostelCensus.balance || 97260304)}
-                </span>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: '#6d28d9',
-                  backgroundColor: '#ede9fe',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  marginLeft: 'auto'
-                }}>
-                  Bal Budget
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Budget: {formatLakhs(activeHostelCensus.approved_budget || 131788118)}</span>
-                <span>Spent: {formatLakhs(activeHostelCensus.cumulative_budget_spent || 34527814)}</span>
-                <span>₹{Number(activeHostelCensus.per_student_cost_month || 3288).toLocaleString()}/stud/mo</span>
-              </div>
-            </div>
-          </div>
+      {/* ========================================================================= */}
+      {/* TRANSPORT FLEET OPERATIONS & MULTI-BRANCH CENSUS DASHBOARD               */}
+      {/* ========================================================================= */}
+      {currentModule === 'transport' && (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <TransportDashboardCensusView
+            computedMatrix={computedMatrix}
+            activePeriodObj={activePeriodObj}
+            periods={periods}
+          />
         </section>
       )}
 
