@@ -50,6 +50,7 @@ export default function MasterDataPage({
   // Periods props
   openEditPeriodModal,
   handleDeletePeriod,
+  handleBatchDeletePeriods,
   showEditPeriodModal,
   setShowEditPeriodModal,
   editingPeriodItem,
@@ -213,6 +214,7 @@ export default function MasterDataPage({
               setShowAddMonthModal={setShowAddMonthModal}
               openEditPeriodModal={openEditPeriodModal}
               handleDeletePeriod={handleDeletePeriod}
+              handleBatchDeletePeriods={handleBatchDeletePeriods}
             />
           )}
 

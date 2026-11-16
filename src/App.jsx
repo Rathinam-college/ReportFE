@@ -856,6 +856,44 @@ export default function App() {
     }
   };
 
+  const handleBatchDeletePeriods = async (periodIds, periodLabels = []) => {
+    if (!periodIds || periodIds.length === 0) return false;
+    const namesStr = periodLabels.length > 0 ? `:\n• ${periodLabels.join('\n• ')}` : '';
+    const confirmMsg = `WARNING: Are you sure you want to permanently delete the ${periodIds.length} selected billing cycle(s)${namesStr}?\n\nThis will remove all associated expense, dining census, hostel, and transport entries for these months.`;
+    if (!window.confirm(confirmMsg)) return false;
+
+    try {
+      const res = await fetch('/api/periods/batch-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period_ids: periodIds })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to delete selected periods');
+      }
+
+      const resData = await res.json();
+      setMasterMessage({ 
+        type: 'success', 
+        text: resData.message || `Successfully deleted ${periodIds.length} billing cycle(s).` 
+      });
+
+      if (periodIds.includes(editingPeriodId)) {
+        const remaining = computedMatrix?.periods?.filter(x => !periodIds.includes(x.id));
+        if (remaining && remaining.length > 0) {
+          setEditingPeriodId(remaining[0].id);
+        }
+      }
+      fetchData();
+      return true;
+    } catch (err) {
+      alert(err.message || 'Error deleting selected billing cycles');
+      return false;
+    }
+  };
+
   const openAddMonthModal = () => {
     const periods = computedMatrix?.periods || [];
     let nextYear = 2026;
@@ -1620,6 +1658,7 @@ export default function App() {
             handleReorderCategories={handleReorderCategories}
             openEditPeriodModal={openEditPeriodModal}
             handleDeletePeriod={handleDeletePeriod}
+            handleBatchDeletePeriods={handleBatchDeletePeriods}
             showEditPeriodModal={showEditPeriodModal}
             setShowEditPeriodModal={setShowEditPeriodModal}
             editingPeriodItem={editingPeriodItem}
