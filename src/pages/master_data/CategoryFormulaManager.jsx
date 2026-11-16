@@ -243,6 +243,140 @@ export default function CategoryFormulaManager({
   const formulaInputRef = useRef(null);
 
   // --------------------------------------------------------------------------
+  // FORMULA NORMALIZATION & SMART AUTO-WRAPPING
+  // --------------------------------------------------------------------------
+  // Auto-wraps bare category names in brackets and normalizes math symbols
+  const normalizeFormulaExpression = (expr) => {
+    if (!expr || typeof expr !== 'string') return '';
+    let res = expr.trim();
+
+    // 1. Convert common math symbols to standard operators
+    res = res
+      .replace(/×/g, '*')
+      .replace(/÷/g, '/')
+      .replace(/−/g, '-')
+      .replace(/–/g, '-')
+      .replace(/,/g, '');
+
+    // Replace standalone 'x' or 'X' surrounded by spaces or numbers with '*'
+    res = res.replace(/(\s|\d|\)|\])[xX](\s|\d|\(|\[)/g, '$1*$2');
+
+    // 2. Sort available categories by name length descending so longer names match first
+    const sortedCats = [...availableCategories].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
+
+    sortedCats.forEach(cat => {
+      if (!cat.name) return;
+      const escaped = cat.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // If category appears without brackets, wrap it with [Category Name]
+      const bareRegex = new RegExp(`(?<!\\[)${escaped}(?!\\])`, 'gi');
+      res = res.replace(bareRegex, `[${cat.name}]`);
+
+      if (cat.code) {
+        const escapedCode = cat.code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const codeRegex = new RegExp(`(?<!\\[)${escapedCode}(?!\\])`, 'gi');
+        res = res.replace(codeRegex, `[${cat.name}]`);
+      }
+    });
+
+    // Also support bare total / grand total
+    res = res.replace(/(?<!\[)(grand\s*total|total\s*expenses|total\s*spend|total)(?!\])/gi, '[Total]');
+
+    return res;
+  };
+
+  // --------------------------------------------------------------------------
+  // DETAILED FORMULA VALIDATION & DIAGNOSTIC CHECK
+  // --------------------------------------------------------------------------
+  const validateFormulaSyntax = (expr) => {
+    if (!expr || typeof expr !== 'string' || !expr.trim()) {
+      return { isValid: false, error: 'Please enter a formula expression.', normalized: '' };
+    }
+
+    const normalized = normalizeFormulaExpression(expr);
+
+    // 1. Check bracket balance for [ and ]
+    const openBrackets = (normalized.match(/\[/g) || []).length;
+    const closeBrackets = (normalized.match(/\]/g) || []).length;
+    if (openBrackets > closeBrackets) {
+      return { isValid: false, error: `Missing closing bracket ']'. Found ${openBrackets} '[' but only ${closeBrackets} ']'.`, normalized };
+    }
+    if (closeBrackets > openBrackets) {
+      return { isValid: false, error: `Extra closing bracket ']'. Found ${closeBrackets} ']' without opening '['.`, normalized };
+    }
+
+    // 2. Check parentheses balance for ( and )
+    const openParen = (normalized.match(/\(/g) || []).length;
+    const closeParen = (normalized.match(/\)/g) || []).length;
+    if (openParen > closeParen) {
+      return { isValid: false, error: `Missing closing parenthesis ')'. Opened ${openParen} '(' but closed only ${closeParen} ')'.`, normalized };
+    }
+    if (closeParen > openParen) {
+      return { isValid: false, error: `Extra closing parenthesis ')'. Found ${closeParen} ')' without matching '('.`, normalized };
+    }
+
+    // 3. Check for trailing operators
+    const trimmed = normalized.trim();
+    if (/[+\-*/%]$/.test(trimmed)) {
+      const lastOp = trimmed.slice(-1);
+      return { isValid: false, error: `Formula cannot end with an operator '${lastOp}'. Please add a number or category after it.`, normalized };
+    }
+
+    // 4. Check for invalid consecutive operators (e.g. ++, **, //, +*, /*)
+    const noSpaces = trimmed.replace(/\s+/g, '');
+    const consecMatch = noSpaces.match(/[+\-*/]{2,}/);
+    if (consecMatch) {
+      // Allow *- or /- for negative values, otherwise flag error
+      if (!/^[*/]-$/.test(consecMatch[0])) {
+        return { isValid: false, error: `Invalid consecutive operators '${consecMatch[0]}'. Please use a single operator between values.`, normalized };
+      }
+    }
+
+    // 5. Check all tokens inside brackets [ ... ]
+    const bracketTokens = normalized.match(/\[(.*?)\]/g) || [];
+    if (bracketTokens.length === 0 && !/[0-9]/.test(normalized)) {
+      return { isValid: false, error: 'No category or numbers found in formula. Please select a category from the dropdown and click "+ Insert Category".', normalized };
+    }
+
+    // Test with safe mock numbers (100) to verify mathematical evaluation without zero divisors
+    let mockExpr = normalized;
+    bracketTokens.forEach(t => {
+      mockExpr = mockExpr.split(t).join('(100)');
+    });
+
+    let cleanMock = mockExpr
+      .replace(/×/g, '*')
+      .replace(/÷/g, '/')
+      .replace(/−/g, '-')
+      .replace(/–/g, '-')
+      .replace(/,/g, '')
+      .trim();
+
+    // Check if there are leftover alphabetic characters outside brackets
+    const strippedLetters = cleanMock.replace(/[0-9+\-*/().\s%]/g, '').trim();
+    if (/[a-zA-Z]/.test(strippedLetters)) {
+      return { 
+        isValid: false, 
+        error: `Unrecognized text '${strippedLetters}'. Category names must match available categories or be selected from the dropdown.`,
+        normalized 
+      };
+    }
+
+    // Safely evaluate with mock numbers
+    try {
+      cleanMock = cleanMock.replace(/([0-9.]+)\s*%/g, '($1/100)');
+      // eslint-disable-next-line no-new-func
+      const testResult = Function(`'use strict'; return (${cleanMock})`)();
+      if (typeof testResult !== 'number' || isNaN(testResult)) {
+        return { isValid: false, error: 'Mathematical expression could not be evaluated. Please check operators and values.', normalized };
+      }
+    } catch (e) {
+      return { isValid: false, error: `Syntax error in formula: ${e.message}`, normalized };
+    }
+
+    return { isValid: true, error: null, normalized };
+  };
+
+  // --------------------------------------------------------------------------
   // SAFE MATHEMATICAL EVALUATION ENGINE
   // --------------------------------------------------------------------------
   const sanitizeAndEvaluate = (expr) => {
@@ -253,6 +387,7 @@ export default function CategoryFormulaManager({
         .replace(/×/g, '*')
         .replace(/÷/g, '/')
         .replace(/−/g, '-')
+        .replace(/–/g, '-')
         .replace(/,/g, '')
         .trim();
 
@@ -266,7 +401,11 @@ export default function CategoryFormulaManager({
 
       // eslint-disable-next-line no-new-func
       const result = Function(`'use strict'; return (${clean})`)();
-      if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+      if (typeof result === 'number' && !isNaN(result)) {
+        // If division by zero occurred (Infinity or -Infinity), return null safely
+        if (!isFinite(result)) {
+          return null;
+        }
         return Math.round(result * 100) / 100;
       }
       return null;
@@ -279,7 +418,7 @@ export default function CategoryFormulaManager({
   const evaluateFormulaForPeriod = (expr, periodId, scope = 'period') => {
     if (!expr || !expr.trim()) return null;
 
-    let subbed = expr;
+    let subbed = normalizeFormulaExpression(expr);
 
     // Substitute each [Category Name] or [Category Code] with its numeric figure
     availableCategories.forEach(cat => {
@@ -310,7 +449,7 @@ export default function CategoryFormulaManager({
       const pKey = String(periodId);
       grandTotVal = Number(computedMatrix?.grand_total?.amounts?.[pKey] ?? computedMatrix?.grand_total?.amounts?.[periodId] ?? 0);
     }
-    subbed = subbed.replace(/\[(total|grand\s*total)\]/gi, `(${grandTotVal})`);
+    subbed = subbed.replace(/\[(total|grand\s*total|total\s*spend|total\s*expenses)\]/gi, `(${grandTotVal})`);
 
     return sanitizeAndEvaluate(subbed);
   };
@@ -318,7 +457,7 @@ export default function CategoryFormulaManager({
   // Build full step-by-step substitution string for display
   const getSubstitutedBreakdown = (expr, periodId) => {
     if (!expr) return '';
-    let subbed = expr;
+    let subbed = normalizeFormulaExpression(expr);
     const pKey = String(periodId);
 
     availableCategories.forEach(cat => {
@@ -337,17 +476,27 @@ export default function CategoryFormulaManager({
       return { isValid: null, text: 'Enter or insert a category formula above to see instant preview', value: null };
     }
 
+    const valResult = validateFormulaSyntax(formulaExpression);
+    if (!valResult.isValid) {
+      return {
+        isValid: false,
+        text: valResult.error,
+        value: null
+      };
+    }
+
     // Pick latest period or first period for live preview
     const samplePeriod = periods[periods.length - 1] || periods[0];
     const samplePeriodId = samplePeriod?.id;
 
-    const evaluated = evaluateFormulaForPeriod(formulaExpression, samplePeriodId, 'period');
+    const evaluated = evaluateFormulaForPeriod(valResult.normalized, samplePeriodId, 'period');
 
     if (evaluated === null) {
       return {
-        isValid: false,
-        text: 'Incomplete or invalid mathematical expression. Check operators, tokens or parentheses.',
-        value: null
+        isValid: true,
+        text: `Valid syntax • ${samplePeriod?.period_label || 'Latest Month'}: (Zero divisor in this month)`,
+        value: null,
+        periodLabel: samplePeriod?.period_label || 'Latest Month'
       };
     }
 
@@ -398,16 +547,18 @@ export default function CategoryFormulaManager({
       return;
     }
 
-    // Verify mathematical validity
-    const testVal = evaluateFormulaForPeriod(formulaExpression, periods[0]?.id || 1, 'period');
-    if (testVal === null) {
-      setStatusMessage({ type: 'error', text: 'Invalid formula syntax. Please check your operators (+, -, *, /) and category brackets.' });
+    // Verify mathematical validity with smart diagnostics
+    const valResult = validateFormulaSyntax(formulaExpression);
+    if (!valResult.isValid) {
+      setStatusMessage({ type: 'error', text: valResult.error || 'Invalid formula syntax. Please check your operators (+, -, *, /) and category brackets.' });
       return;
     }
 
+    const finalExpression = valResult.normalized || formulaExpression.trim();
+
     const formulaPayload = {
       name: formulaName.trim(),
-      expression: formulaExpression.trim(),
+      expression: finalExpression,
       description: formulaDescription.trim(),
       unit_type: formulaUnit,
       module: moduleKey
