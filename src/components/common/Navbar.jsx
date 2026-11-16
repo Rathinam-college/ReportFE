@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { LogOut } from 'lucide-react';
 
 export default function Navbar({
@@ -9,6 +9,9 @@ export default function Navbar({
   permissions = [],
   dbStatus = 'connected'
 }) {
+  const [hoveredTab, setHoveredTab] = useState(null);
+  const [logoutHovered, setLogoutHovered] = useState(false);
+
   const allTabs = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'data_entry', label: 'Data Entry' },
@@ -42,28 +45,52 @@ export default function Navbar({
 
   return (
     <header style={{
-      backgroundColor: '#ffffff',
+      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
       color: '#0f172a',
-      padding: '0 32px',
+      padding: '0 28px',
       borderBottom: '1px solid #eef2f6',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      flexWrap: 'wrap',
+      flexWrap: 'nowrap',
       height: '66px',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+      minHeight: '66px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 1000,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+      boxSizing: 'border-box'
     }}>
       {/* Brand Identity */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div
+        onClick={() => setActiveTab('dashboard')}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          cursor: 'pointer',
+          flexShrink: 0,
+          userSelect: 'none'
+        }}
+        title="Go to Dashboard"
+      >
         <img
           src={`${import.meta.env.BASE_URL}rathinam_logo.png`}
           alt="Rathinam Group"
-          style={{ height: '34px', width: 'auto', objectFit: 'contain' }}
+          style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
           onError={(e) => {
             e.target.style.display = 'none';
           }}
         />
-        <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.01em' }}>
+        <div style={{
+          fontSize: '16px',
+          fontWeight: '800',
+          color: '#0f172a',
+          letterSpacing: '-0.02em',
+          lineHeight: 1.2
+        }}>
           Rathinam Group
         </div>
       </div>
@@ -75,25 +102,31 @@ export default function Navbar({
         backgroundColor: '#f1f3f9',
         padding: '4px',
         borderRadius: '9999px',
-        gap: '4px'
+        gap: '4px',
+        flexShrink: 0,
+        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.04)'
       }}>
         {visibleTabs.map(tab => {
           const isActive = activeTab === tab.id;
+          const isHovered = hoveredTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              onMouseEnter={() => setHoveredTab(tab.id)}
+              onMouseLeave={() => setHoveredTab(null)}
               style={{
-                padding: '6px 20px',
+                padding: '7px 22px',
                 borderRadius: '9999px',
                 fontSize: '13px',
                 fontWeight: isActive ? '700' : '600',
-                color: isActive ? '#ffffff' : '#475569',
-                backgroundColor: isActive ? '#4f46e5' : 'transparent',
+                color: isActive ? '#ffffff' : isHovered ? '#0f172a' : '#475569',
+                backgroundColor: isActive ? '#4f46e5' : isHovered ? '#e2e8f0' : 'transparent',
                 border: 'none',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
-                boxShadow: isActive ? '0 2px 6px rgba(79, 70, 229, 0.28)' : 'none'
+                boxShadow: isActive ? '0 2px 8px rgba(79, 70, 229, 0.32)' : 'none',
+                whiteSpace: 'nowrap'
               }}
             >
               {tab.label}
@@ -103,7 +136,12 @@ export default function Navbar({
       </nav>
 
       {/* Right Controls: Database status + Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        flexShrink: 0
+      }}>
         {/* PostgreSQL 18 Status Pill (Real DB connection state) */}
         <div style={{
           display: 'flex',
@@ -118,48 +156,47 @@ export default function Navbar({
           color: dbStatus === 'connected' ? '#047857' : dbStatus === 'checking' ? '#b45309' : '#b91c1c'
         }}>
           <span style={{
-            width: '6px',
-            height: '6px',
+            width: '6.5px',
+            height: '6.5px',
             borderRadius: '50%',
             backgroundColor: dbStatus === 'connected' ? '#10b981' : dbStatus === 'checking' ? '#f59e0b' : '#ef4444',
-            display: 'inline-block'
+            display: 'inline-block',
+            boxShadow: dbStatus === 'connected' ? '0 0 0 2px rgba(16, 185, 129, 0.2)' : 'none'
           }} />
           <span>{dbStatus === 'connected' ? 'PostgreSQL 18' : dbStatus === 'checking' ? 'Connecting...' : 'DB Offline'}</span>
         </div>
 
-        {/* Small subtle status ring */}
+        {/* Clean Subtle Vertical Divider */}
         <div style={{
-          width: '26px',
-          height: '26px',
-          borderRadius: '50%',
-          border: '1.5px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#64748b',
-          fontSize: '11px',
-          fontWeight: '700'
-        }}>
-          ●
-        </div>
+          width: '1px',
+          height: '22px',
+          backgroundColor: '#e2e8f0'
+        }} />
 
         {/* User Profile Pill */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
-            width: '28px',
-            height: '28px',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
-            backgroundColor: '#4f46e5',
+            backgroundColor: '#4338ca',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '11px',
-            fontWeight: '800'
+            fontSize: '12px',
+            fontWeight: '800',
+            letterSpacing: '0.02em',
+            boxShadow: '0 2px 4px rgba(67, 56, 202, 0.25)'
           }}>
             {getInitials(currentUser)}
           </div>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
+          <span style={{
+            fontSize: '13px',
+            fontWeight: '700',
+            color: '#0f172a',
+            whiteSpace: 'nowrap'
+          }}>
             {getRoleDisplayName(currentUser)}
           </span>
         </div>
@@ -167,15 +204,20 @@ export default function Navbar({
         {/* Logout */}
         <button
           onClick={handleLogout}
+          onMouseEnter={() => setLogoutHovered(true)}
+          onMouseLeave={() => setLogoutHovered(false)}
           title="Sign Out"
           style={{
-            padding: '6px',
-            color: '#94a3b8',
-            background: 'none',
+            padding: '7px',
+            borderRadius: '8px',
+            color: logoutHovered ? '#ef4444' : '#94a3b8',
+            backgroundColor: logoutHovered ? '#fee2e2' : 'transparent',
             border: 'none',
             cursor: 'pointer',
             display: 'flex',
-            alignItems: 'center'
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s ease'
           }}
         >
           <LogOut size={16} />
