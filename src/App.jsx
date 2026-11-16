@@ -481,6 +481,7 @@ export default function App() {
     });
 
     return {
+      ...matrixData,
       periods,
       categories,
       grand_total: {
