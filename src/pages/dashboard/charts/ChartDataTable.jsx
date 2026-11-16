@@ -8,26 +8,34 @@ export default function ChartDataTable({
   categories = [],
   periods = [],
   activePeriod = 'all',
-  selectedModule = 'food'
+  selectedModule = 'food',
+  isFullScreen: propIsFullScreen,
+  onToggleFullScreen: propOnToggleFullScreen
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
-  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [internalFullScreen, setInternalFullScreen] = useState(false);
+  const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
   const [displayMode, setDisplayMode] = useState('both'); // 'both' | 'percentage_only' | 'amount_only'
   const [percentageBasis, setPercentageBasis] = useState('month_total'); // 'month_total' | 'category_subtotal'
   const containerRef = useRef(null);
 
   // Toggle Fullscreen mode seamlessly
   const toggleFullScreen = () => {
-    if (!isFullScreen) {
-      setIsFullScreen(true);
+    const nextState = !isFullScreen;
+    if (propOnToggleFullScreen) {
+      propOnToggleFullScreen(nextState);
+    } else {
+      setInternalFullScreen(nextState);
+    }
+
+    if (nextState) {
       try {
         if (containerRef.current?.requestFullscreen) {
           containerRef.current.requestFullscreen().catch(() => {});
         }
       } catch (err) {}
     } else {
-      setIsFullScreen(false);
       try {
         if (document.fullscreenElement && document.exitFullscreen) {
           document.exitFullscreen().catch(() => {});
@@ -40,12 +48,20 @@ export default function ChartDataTable({
   useEffect(() => {
     const handleFsChange = () => {
       if (!document.fullscreenElement && isFullScreen) {
-        setIsFullScreen(false);
+        if (propOnToggleFullScreen) {
+          propOnToggleFullScreen(false);
+        } else {
+          setInternalFullScreen(false);
+        }
       }
     };
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isFullScreen) {
-        setIsFullScreen(false);
+        if (propOnToggleFullScreen) {
+          propOnToggleFullScreen(false);
+        } else {
+          setInternalFullScreen(false);
+        }
         try {
           if (document.fullscreenElement && document.exitFullscreen) {
             document.exitFullscreen().catch(() => {});
@@ -59,7 +75,7 @@ export default function ChartDataTable({
       document.removeEventListener('fullscreenchange', handleFsChange);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isFullScreen]);
+  }, [isFullScreen, propOnToggleFullScreen]);
 
   // Lock body scroll when in fullscreen
   useEffect(() => {
@@ -383,33 +399,42 @@ export default function ChartDataTable({
       ref={containerRef}
       style={{
         backgroundColor: isFullScreen ? '#ffffff' : 'rgba(255, 255, 255, 0.72)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderRadius: '16px',
-        border: '1px solid rgba(226, 232, 240, 0.85)',
+        backdropFilter: isFullScreen ? 'none' : 'blur(16px)',
+        WebkitBackdropFilter: isFullScreen ? 'none' : 'blur(16px)',
+        borderRadius: isFullScreen ? '0px' : '16px',
+        border: isFullScreen ? 'none' : '1px solid rgba(226, 232, 240, 0.85)',
         boxShadow: isFullScreen 
           ? 'none' 
           : '0 10px 30px -5px rgba(99, 102, 241, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.02)',
         overflow: 'hidden',
-        position: 'relative',
+        position: isFullScreen ? 'fixed' : 'relative',
+        top: isFullScreen ? 0 : undefined,
+        left: isFullScreen ? 0 : undefined,
+        right: isFullScreen ? 0 : undefined,
+        bottom: isFullScreen ? 0 : undefined,
+        width: isFullScreen ? '100vw' : '100%',
+        height: isFullScreen ? '100vh' : 'auto',
+        zIndex: isFullScreen ? 999999 : 1,
+        display: isFullScreen ? 'flex' : 'block',
+        flexDirection: isFullScreen ? 'column' : undefined,
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}
     >
       {/* 1. GLASS HEADER CONTROL BAR */}
       <div style={{
-        padding: '14px 22px',
-        backgroundColor: 'rgba(248, 250, 252, 0.75)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
+        padding: isFullScreen ? '14px 28px' : '14px 22px',
+        backgroundColor: isFullScreen ? '#ffffff' : 'rgba(248, 250, 252, 0.75)',
+        backdropFilter: isFullScreen ? 'none' : 'blur(12px)',
+        WebkitBackdropFilter: isFullScreen ? 'none' : 'blur(12px)',
+        borderBottom: '1.5px solid rgba(226, 232, 240, 0.85)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: '12px',
-        position: isFullScreen ? 'sticky' : 'relative',
-        top: isFullScreen ? 0 : undefined,
-        zIndex: isFullScreen ? 20 : undefined
+        flexShrink: 0,
+        position: 'relative',
+        zIndex: 35
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
@@ -641,28 +666,30 @@ export default function ChartDataTable({
             <span>CSV</span>
           </button>
 
-          {/* Full Screen Toggle Button */}
+          {/* Full Screen Toggle Button with Icon & Label */}
           <button
             type="button"
             onClick={toggleFullScreen}
-            title={isFullScreen ? "Exit Full Screen (Esc)" : "Expand Sheet to Full Screen"}
-            aria-label={isFullScreen ? "Exit Full Screen" : "Expand Sheet to Full Screen"}
+            title={isFullScreen ? "Exit Full Screen / Normal View (Esc)" : "Maximise Sheet to Full Screen & Align Columns"}
+            aria-label={isFullScreen ? "Exit Full Screen" : "Maximise Sheet"}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
+              gap: '6px',
+              padding: '6px 14px',
               borderRadius: '8px',
-              backgroundColor: isFullScreen ? '#4f46e5' : 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid rgba(203, 213, 225, 0.8)',
+              backgroundColor: isFullScreen ? '#4f46e5' : '#ffffff',
+              border: isFullScreen ? '1.5px solid #4338ca' : '1.5px solid #cbd5e1',
               color: isFullScreen ? '#ffffff' : '#4f46e5',
               cursor: 'pointer',
-              boxShadow: isFullScreen ? '0 2px 6px rgba(79, 70, 229, 0.3)' : '0 1px 2px rgba(0,0,0,0.03)',
+              fontWeight: '700',
+              fontSize: '12px',
+              boxShadow: isFullScreen ? '0 2px 8px rgba(79, 70, 229, 0.35)' : '0 1px 3px rgba(0,0,0,0.05)',
               transition: 'all 0.15s ease'
             }}
           >
-            {isFullScreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            {isFullScreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            <span>{isFullScreen ? 'Exit Fullscreen' : 'Maximise'}</span>
           </button>
         </div>
       </div>
@@ -671,42 +698,60 @@ export default function ChartDataTable({
       <div style={{ 
         overflowX: 'auto', 
         overflowY: isFullScreen ? 'auto' : 'visible',
-        padding: isFullScreen ? '16px 24px' : '0',
+        padding: isFullScreen ? '0 28px 20px 28px' : '0',
         flex: isFullScreen ? 1 : undefined,
-        maxHeight: isFullScreen ? 'calc(100vh - 72px)' : undefined
+        height: isFullScreen ? 'calc(100vh - 72px)' : undefined,
+        maxHeight: isFullScreen ? 'calc(100vh - 72px)' : undefined,
+        backgroundColor: isFullScreen ? '#ffffff' : 'transparent',
+        boxSizing: 'border-box'
       }}>
         <table style={{
           width: '100%',
+          minWidth: isFullScreen ? '100%' : '1100px',
           borderCollapse: 'separate',
           borderSpacing: 0,
           fontSize: '13px',
           textAlign: 'left'
         }}>
-          {/* Frosted Glass Table Header */}
-          <thead style={isFullScreen ? { position: 'sticky', top: 0, zIndex: 10 } : undefined}>
+          {/* Frosted Glass Table Header - Sticky when maximized */}
+          <thead style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 30,
+            backgroundColor: '#f8fafc'
+          }}>
             <tr style={{
-              backgroundColor: 'rgba(241, 245, 249, 0.85)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+              backgroundColor: '#f8fafc',
+              borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
               color: '#334155',
               fontSize: '12.5px',
-              fontWeight: '700'
+              fontWeight: '700',
+              boxShadow: isFullScreen ? '0 2px 4px rgba(0,0,0,0.04)' : 'none'
             }}>
               <th style={{
-                padding: '12px 18px',
-                width: '180px',
+                position: isFullScreen ? 'sticky' : undefined,
+                top: 0,
+                backgroundColor: '#f8fafc',
+                zIndex: 31,
+                padding: isFullScreen ? '13px 18px' : '12px 18px',
+                width: isFullScreen ? '15%' : '180px',
+                minWidth: '150px',
                 textAlign: 'center',
-                borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                 borderRight: '1px solid rgba(226, 232, 240, 0.8)'
               }}>
                 Category
               </th>
               <th style={{
-                padding: '12px 18px',
-                minWidth: '220px',
+                position: isFullScreen ? 'sticky' : undefined,
+                top: 0,
+                backgroundColor: '#f8fafc',
+                zIndex: 31,
+                padding: isFullScreen ? '13px 18px' : '12px 18px',
+                width: isFullScreen ? '23%' : '220px',
+                minWidth: '190px',
                 textAlign: 'left',
-                borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                 borderRight: '1px solid rgba(226, 232, 240, 0.8)'
               }}>
                 Description
@@ -719,12 +764,16 @@ export default function ChartDataTable({
                   <th
                     key={p.id}
                     style={{
-                      padding: '10px 14px',
-                      minWidth: '125px',
+                      position: isFullScreen ? 'sticky' : undefined,
+                      top: 0,
+                      backgroundColor: isSel ? '#eef2ff' : '#f8fafc',
+                      zIndex: 31,
+                      padding: isFullScreen ? '11px 16px' : '10px 14px',
+                      width: isFullScreen ? `${(48 / (periods.length || 1))}%` : undefined,
+                      minWidth: isFullScreen ? '105px' : '125px',
                       textAlign: 'right',
-                      borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                      borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                       borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-                      backgroundColor: isSel ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
                       color: isSel ? '#4338ca' : '#334155',
                       fontWeight: isSel ? '800' : '700'
                     }}
@@ -738,10 +787,15 @@ export default function ChartDataTable({
               })}
 
               <th style={{
-                padding: '10px 16px',
-                minWidth: '135px',
+                position: isFullScreen ? 'sticky' : undefined,
+                top: 0,
+                backgroundColor: '#f1f5f9',
+                zIndex: 31,
+                padding: isFullScreen ? '11px 18px' : '10px 16px',
+                width: isFullScreen ? '12%' : '135px',
+                minWidth: '125px',
                 textAlign: 'right',
-                borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                 borderRight: '1px solid rgba(226, 232, 240, 0.8)',
                 color: '#0f172a',
                 fontWeight: '800'
@@ -751,11 +805,17 @@ export default function ChartDataTable({
                   {displayMode === 'percentage_only' ? '% of Total' : displayMode === 'amount_only' ? 'INR (₹)' : '₹ & % Total'}
                 </div>
               </th>
+
               <th style={{
-                padding: '10px 14px',
-                minWidth: '115px',
+                position: isFullScreen ? 'sticky' : undefined,
+                top: 0,
+                backgroundColor: '#f1f5f9',
+                zIndex: 31,
+                padding: isFullScreen ? '11px 18px' : '10px 14px',
+                width: isFullScreen ? '10%' : '115px',
+                minWidth: '110px',
                 textAlign: 'right',
-                borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
+                borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                 color: '#475569',
                 fontWeight: '700'
               }}>

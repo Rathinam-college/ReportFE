@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { formatINR, formatLakhs, DASH_COLORS } from '../../utils/formatters';
 import { 
   Calendar, Layers, PieChart as PieIcon, Calculator, FileSpreadsheet, 
-  TrendingUp, Hash, Users, ArrowRight, Table, BarChart3, CheckCircle2 
+  TrendingUp, Hash, Users, ArrowRight, Table, BarChart3, CheckCircle2,
+  Maximize2, Minimize2 
 } from 'lucide-react';
 
 // 12 Chart Components & Master Selector
@@ -39,6 +40,7 @@ export default function DashboardPage({
   const [activeChart, setActiveChart] = useState('stacked'); // Stacked by default matching Image 1
   const [activePeriod, setActivePeriod] = useState('all'); // 'all' or period id
   const [showDataTable, setShowDataTable] = useState(true);
+  const [isTableFullScreen, setIsTableFullScreen] = useState(false);
 
   const currentModule = selectedModule || 'food';
 
@@ -381,8 +383,33 @@ export default function DashboardPage({
             </span>
           </div>
 
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Displaying each monthly cycle side-by-side with exact values & category subtotals
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              Displaying each monthly cycle side-by-side with exact values & category subtotals
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsTableFullScreen(prev => !prev)}
+              title={isTableFullScreen ? "Exit Fullscreen" : "Maximise Sheet & Fit to Screen"}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 12px',
+                borderRadius: '7px',
+                backgroundColor: isTableFullScreen ? '#4f46e5' : '#ffffff',
+                border: '1.5px solid #cbd5e1',
+                color: isTableFullScreen ? '#ffffff' : '#4f46e5',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {isTableFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              <span>{isTableFullScreen ? 'Exit Fullscreen' : 'Maximise Sheet'}</span>
+            </button>
           </div>
         </div>
 
@@ -392,6 +419,8 @@ export default function DashboardPage({
           periods={periods}
           activePeriod={activePeriod}
           selectedModule={currentModule}
+          isFullScreen={isTableFullScreen}
+          onToggleFullScreen={setIsTableFullScreen}
         />
       </section>
 
