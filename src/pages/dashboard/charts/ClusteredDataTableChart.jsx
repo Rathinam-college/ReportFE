@@ -447,29 +447,6 @@ export default function ClusteredDataTableChart({
             <Download size={13} />
             <span>Export CSV</span>
           </button>
-
-          {/* Fullscreen Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsFullScreen(prev => !prev)}
-            title={isFullScreen ? 'Exit Fullscreen' : 'Maximize Chart & Data Table'}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              backgroundColor: isFullScreen ? '#eff6ff' : '#ffffff',
-              border: `1px solid ${isFullScreen ? '#bfdbfe' : '#cbd5e1'}`,
-              color: isFullScreen ? '#1d4ed8' : '#334155',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            <span>{isFullScreen ? 'Exit Fullscreen' : 'Maximise'}</span>
-          </button>
         </div>
       </div>
 

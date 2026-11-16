@@ -17,7 +17,8 @@ export default function ChartDataTable({
   const [internalFullScreen, setInternalFullScreen] = useState(false);
   const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
   const [displayMode, setDisplayMode] = useState('both'); // 'both' | 'percentage_only' | 'amount_only'
-  const [percentageBasis, setPercentageBasis] = useState('month_total'); // 'month_total' | 'category_subtotal'
+  const [percentageBasis, setPercentageBasis] = useState('column_total'); // 'column_total' | 'row_total' | 'category_subtotal' | 'grand_total'
+  const [selectedCell, setSelectedCell] = useState(null); // { costHeadId, description, categoryName, periodId, periodLabel, amount, rowTotal, colTotal, catTotal, grandTotal }
   const containerRef = useRef(null);
 
   // Toggle Fullscreen mode seamlessly
@@ -170,14 +171,29 @@ export default function ChartDataTable({
     return `${pct.toFixed(1)}%`;
   };
 
-  // Unified cell renderer for amounts and percentages
-  const renderCellContent = (amount, total, isBold = false, isSubtotal = false, customBadgeTheme = null) => {
+  // Unified cell renderer for amounts and percentages with dynamic row/column basis
+  const renderCellContent = (amount, totalContext, isBold = false, isSubtotal = false, customBadgeTheme = null) => {
     const num = Number(amount) || 0;
     if (num === 0 && (!amount || amount === 0)) {
       return <span style={{ color: '#94a3b8' }}>—</span>;
     }
 
-    const pct = computePercentage(num, total);
+    let denominator = 0;
+    if (typeof totalContext === 'number') {
+      denominator = totalContext;
+    } else if (totalContext && typeof totalContext === 'object') {
+      if (percentageBasis === 'row_total') {
+        denominator = totalContext.rowTotal;
+      } else if (percentageBasis === 'category_subtotal') {
+        denominator = totalContext.catTotal;
+      } else if (percentageBasis === 'grand_total') {
+        denominator = totalContext.grandTotal;
+      } else { // default 'column_total'
+        denominator = totalContext.colTotal;
+      }
+    }
+
+    const pct = computePercentage(num, denominator);
     const pctStr = formatPercentage(pct);
 
     if (displayMode === 'percentage_only') {
@@ -619,28 +635,48 @@ export default function ChartDataTable({
             </button>
           </div>
 
-          {/* Basis Toggle: % of Month Total vs % of Category */}
+          {/* User-Selected Percentage Mode: Column % vs Row % vs Category % vs Grand % */}
           {displayMode !== 'amount_only' && (
-            <button
-              type="button"
-              onClick={() => setPercentageBasis(prev => prev === 'month_total' ? 'category_subtotal' : 'month_total')}
-              title={percentageBasis === 'month_total' ? "Currently calculating % of Month's Total Expenses. Click to switch to % of Category Subtotal." : "Currently calculating % of Category Subtotal. Click to switch to % of Month's Total Expenses."}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
-                color: '#4338ca',
-                fontSize: '11px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              <span>{percentageBasis === 'month_total' ? 'Basis: % of Total' : 'Basis: % of Category'}</span>
-            </button>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'rgba(241, 245, 249, 0.95)',
+              borderRadius: '8px',
+              padding: '2px',
+              border: '1px solid rgba(203, 213, 225, 0.8)',
+              gap: '1px'
+            }}>
+              <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '800', padding: '0 5px', textTransform: 'uppercase' }}>
+                % Basis:
+              </span>
+              {[
+                { id: 'column_total', label: 'Column % (Month)', tip: 'Percentage calculated vertically against that month\'s column total' },
+                { id: 'row_total', label: 'Row % (Item)', tip: 'Percentage calculated horizontally against that item\'s row total across months' },
+                { id: 'category_subtotal', label: 'Category %', tip: 'Percentage calculated within parent category' },
+                { id: 'grand_total', label: 'Grand %', tip: 'Percentage calculated against overall grand expenditure' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setPercentageBasis(opt.id)}
+                  title={opt.tip}
+                  style={{
+                    padding: '3px 7px',
+                    borderRadius: '5px',
+                    fontSize: '11px',
+                    fontWeight: percentageBasis === opt.id ? '800' : '600',
+                    backgroundColor: percentageBasis === opt.id ? '#ffffff' : 'transparent',
+                    color: percentageBasis === opt.id ? '#4f46e5' : '#64748b',
+                    boxShadow: percentageBasis === opt.id ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s ease'
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           )}
 
           {/* CSV Export */}
@@ -694,23 +730,101 @@ export default function ChartDataTable({
         </div>
       </div>
 
-      {/* 2. TRANSPARENT TABLE PRESENTATION */}
+      {/* USER-SELECTED ROW & COLUMN PERCENTAGE INSPECTOR BANNER */}
+      {selectedCell && (
+        <div style={{
+          margin: isFullScreen ? '12px 20px' : '10px 16px',
+          backgroundColor: '#eff6ff',
+          border: '1.5px solid #bfdbfe',
+          borderRadius: '10px',
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          boxShadow: '0 2px 6px rgba(37, 99, 235, 0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }}>🎯</span>
+            <div>
+              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#1e3a8a' }}>
+                Selected Cell: <span style={{ color: '#2563eb' }}>{selectedCell.description}</span> ({selectedCell.categoryName}) × <span style={{ color: '#059669' }}>{selectedCell.periodLabel}</span>
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '1px' }}>
+                Actual Spend: <strong style={{ color: '#0f172a' }}>{formatIndianNumber(selectedCell.amount)} INR</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Row % (Item Total)</div>
+              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#2563eb' }}>
+                {formatPercentage(computePercentage(selectedCell.amount, selectedCell.rowTotal))}
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Column % (Month Total)</div>
+              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#059669' }}>
+                {formatPercentage(computePercentage(selectedCell.amount, selectedCell.colTotal))}
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Category %</div>
+              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#7c3aed' }}>
+                {formatPercentage(computePercentage(selectedCell.amount, selectedCell.catTotal))}
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Grand %</div>
+              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#ea580c' }}>
+                {formatPercentage(computePercentage(selectedCell.amount, selectedCell.grandTotal))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedCell(null)}
+              style={{
+                padding: '4px 8px',
+                borderRadius: '6px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                fontSize: '11px',
+                fontWeight: '700',
+                color: '#64748b',
+                cursor: 'pointer'
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. TRANSPARENT TABLE PRESENTATION (Fit to Screen when Maximized, No Horizontal Scroll) */}
       <div style={{ 
-        overflowX: 'auto', 
+        overflowX: isFullScreen ? 'hidden' : 'auto', 
         overflowY: isFullScreen ? 'auto' : 'visible',
-        padding: isFullScreen ? '0 28px 20px 28px' : '0',
+        padding: isFullScreen ? '0 16px 16px 16px' : '0',
         flex: isFullScreen ? 1 : undefined,
-        height: isFullScreen ? 'calc(100vh - 72px)' : undefined,
-        maxHeight: isFullScreen ? 'calc(100vh - 72px)' : undefined,
+        height: isFullScreen ? 'calc(100vh - 80px)' : undefined,
+        maxHeight: isFullScreen ? 'calc(100vh - 80px)' : undefined,
         backgroundColor: isFullScreen ? '#ffffff' : 'transparent',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        width: '100%'
       }}>
         <table style={{
           width: '100%',
-          minWidth: isFullScreen ? '100%' : '1100px',
+          maxWidth: '100%',
+          tableLayout: isFullScreen ? 'fixed' : 'auto',
           borderCollapse: 'separate',
           borderSpacing: 0,
-          fontSize: '13px',
+          fontSize: isFullScreen ? '12px' : '13px',
           textAlign: 'left'
         }}>
           {/* Frosted Glass Table Header - Sticky when maximized */}
@@ -733,9 +847,9 @@ export default function ChartDataTable({
                 top: 0,
                 backgroundColor: '#f8fafc',
                 zIndex: 31,
-                padding: isFullScreen ? '13px 18px' : '12px 18px',
-                width: isFullScreen ? '15%' : '180px',
-                minWidth: '150px',
+                padding: isFullScreen ? '10px 10px' : '12px 18px',
+                width: isFullScreen ? '14%' : '180px',
+                minWidth: isFullScreen ? undefined : '150px',
                 textAlign: 'center',
                 borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                 borderRight: '1px solid rgba(226, 232, 240, 0.8)'
@@ -747,9 +861,9 @@ export default function ChartDataTable({
                 top: 0,
                 backgroundColor: '#f8fafc',
                 zIndex: 31,
-                padding: isFullScreen ? '13px 18px' : '12px 18px',
-                width: isFullScreen ? '23%' : '220px',
-                minWidth: '190px',
+                padding: isFullScreen ? '10px 10px' : '12px 18px',
+                width: isFullScreen ? '22%' : '220px',
+                minWidth: isFullScreen ? undefined : '190px',
                 textAlign: 'left',
                 borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                 borderRight: '1px solid rgba(226, 232, 240, 0.8)'
@@ -768,9 +882,9 @@ export default function ChartDataTable({
                       top: 0,
                       backgroundColor: isSel ? '#eef2ff' : '#f8fafc',
                       zIndex: 31,
-                      padding: isFullScreen ? '11px 16px' : '10px 14px',
-                      width: isFullScreen ? `${(48 / (periods.length || 1))}%` : undefined,
-                      minWidth: isFullScreen ? '105px' : '125px',
+                      padding: isFullScreen ? '8px 8px' : '10px 14px',
+                      width: isFullScreen ? `${(46 / (periods.length || 1))}%` : undefined,
+                      minWidth: isFullScreen ? undefined : '125px',
                       textAlign: 'right',
                       borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                       borderRight: '1px solid rgba(226, 232, 240, 0.8)',
@@ -791,9 +905,9 @@ export default function ChartDataTable({
                 top: 0,
                 backgroundColor: '#f1f5f9',
                 zIndex: 31,
-                padding: isFullScreen ? '11px 18px' : '10px 16px',
-                width: isFullScreen ? '12%' : '135px',
-                minWidth: '125px',
+                padding: isFullScreen ? '10px 10px' : '10px 16px',
+                width: isFullScreen ? '10%' : '135px',
+                minWidth: isFullScreen ? undefined : '125px',
                 textAlign: 'right',
                 borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                 borderRight: '1px solid rgba(226, 232, 240, 0.8)',
@@ -811,9 +925,9 @@ export default function ChartDataTable({
                 top: 0,
                 backgroundColor: '#f1f5f9',
                 zIndex: 31,
-                padding: isFullScreen ? '11px 18px' : '10px 14px',
-                width: isFullScreen ? '10%' : '115px',
-                minWidth: '110px',
+                padding: isFullScreen ? '10px 10px' : '10px 14px',
+                width: isFullScreen ? '8%' : '115px',
+                minWidth: isFullScreen ? undefined : '110px',
                 textAlign: 'right',
                 borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
                 color: '#475569',
@@ -905,62 +1019,113 @@ export default function ChartDataTable({
                           </div>
                         </td>
 
-                        {/* Monthly Values with Transparent Glass Cells */}
+                        {/* Monthly Values with Transparent Glass Cells & User Selection */}
                         {periods.map(p => {
                           const val = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
                           const isSel = String(p.id) === String(activePeriod);
-                          const periodDenom = percentageBasis === 'category_subtotal'
-                            ? (categorySubtotals[grp.categoryId]?.[p.id] || 0)
-                            : (monthlyGrandTotals.byPeriod[p.id] || 0);
+                          const periodColTotal = monthlyGrandTotals.byPeriod[p.id] || 0;
+                          const periodCatTotal = categorySubtotals[grp.categoryId]?.[p.id] || 0;
+                          const grandOverall = monthlyGrandTotals.grandOverall || 0;
+
+                          const isCellSelected = selectedCell && 
+                            selectedCell.costHeadId === item.cost_head_id && 
+                            String(selectedCell.periodId) === String(p.id);
 
                           return (
                             <td
                               key={p.id}
+                              onClick={() => setSelectedCell({
+                                costHeadId: item.cost_head_id,
+                                description: item.description,
+                                categoryName: grp.categoryName,
+                                periodId: p.id,
+                                periodLabel: p.period_label,
+                                amount: val,
+                                rowTotal: itemTotal,
+                                colTotal: periodColTotal,
+                                catTotal: periodCatTotal,
+                                grandTotal: grandOverall
+                              })}
                               style={{
-                                padding: '9px 14px',
+                                padding: isFullScreen ? '6px 8px' : '9px 14px',
                                 textAlign: 'right',
-                                backgroundColor: isSel ? 'rgba(99, 102, 241, 0.04)' : 'transparent',
+                                backgroundColor: isCellSelected 
+                                  ? 'rgba(79, 70, 229, 0.15)' 
+                                  : (isSel ? 'rgba(99, 102, 241, 0.04)' : 'transparent'),
+                                outline: isCellSelected ? '2px solid #4f46e5' : 'none',
+                                outlineOffset: '-2px',
                                 borderRight: '1px solid rgba(226, 232, 240, 0.6)',
-                                borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
+                                borderBottom: '1px solid rgba(241, 245, 249, 0.9)',
+                                cursor: 'pointer',
+                                transition: 'all 0.12s ease'
                               }}
                               className="currency-font"
                             >
-                              {renderCellContent(val, periodDenom, false, false)}
+                              {renderCellContent(val, {
+                                rowTotal: itemTotal,
+                                colTotal: periodColTotal,
+                                catTotal: periodCatTotal,
+                                grandTotal: grandOverall
+                              }, false, false)}
                             </td>
                           );
                         })}
 
                         {/* Total Spend */}
                         {(() => {
-                          const totalDenom = percentageBasis === 'category_subtotal'
-                            ? (categorySubtotals[grp.categoryId]?.total || 0)
-                            : (monthlyGrandTotals.grandOverall || 0);
+                          const isTotalSelected = selectedCell && selectedCell.costHeadId === item.cost_head_id && selectedCell.periodId === 'total';
                           return (
-                            <td style={{
-                              padding: '9px 16px',
-                              textAlign: 'right',
-                              backgroundColor: 'rgba(248, 250, 252, 0.45)',
-                              borderRight: '1px solid rgba(226, 232, 240, 0.7)',
-                              borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
-                            }} className="currency-font">
-                              {renderCellContent(itemTotal, totalDenom, true, false)}
+                            <td
+                              onClick={() => setSelectedCell({
+                                costHeadId: item.cost_head_id,
+                                description: item.description,
+                                categoryName: grp.categoryName,
+                                periodId: 'total',
+                                periodLabel: 'All Months Combined',
+                                amount: itemTotal,
+                                rowTotal: itemTotal,
+                                colTotal: monthlyGrandTotals.grandOverall || 0,
+                                catTotal: categorySubtotals[grp.categoryId]?.total || 0,
+                                grandTotal: monthlyGrandTotals.grandOverall || 0
+                              })}
+                              style={{
+                                padding: isFullScreen ? '6px 8px' : '9px 16px',
+                                textAlign: 'right',
+                                backgroundColor: isTotalSelected ? 'rgba(79, 70, 229, 0.15)' : 'rgba(248, 250, 252, 0.45)',
+                                outline: isTotalSelected ? '2px solid #4f46e5' : 'none',
+                                outlineOffset: '-2px',
+                                borderRight: '1px solid rgba(226, 232, 240, 0.7)',
+                                borderBottom: '1px solid rgba(241, 245, 249, 0.9)',
+                                cursor: 'pointer'
+                              }}
+                              className="currency-font"
+                            >
+                              {renderCellContent(itemTotal, {
+                                rowTotal: itemTotal,
+                                colTotal: monthlyGrandTotals.grandOverall || 0,
+                                catTotal: categorySubtotals[grp.categoryId]?.total || 0,
+                                grandTotal: monthlyGrandTotals.grandOverall || 0
+                              }, true, false)}
                             </td>
                           );
                         })()}
 
                         {/* Avg / Mo */}
                         {(() => {
-                          const avgDenom = percentageBasis === 'category_subtotal'
-                            ? ((categorySubtotals[grp.categoryId]?.total || 0) / (periods.length || 1))
-                            : (monthlyGrandTotals.avgMonthly || 0);
+                          const avgCatTotal = (categorySubtotals[grp.categoryId]?.total || 0) / (periods.length || 1);
                           return (
                             <td style={{
-                              padding: '9px 14px',
+                              padding: isFullScreen ? '6px 8px' : '9px 14px',
                               textAlign: 'right',
                               backgroundColor: 'rgba(248, 250, 252, 0.45)',
                               borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
                             }} className="currency-font">
-                              {renderCellContent(itemAvg, avgDenom, false, false)}
+                              {renderCellContent(itemAvg, {
+                                rowTotal: itemTotal,
+                                colTotal: monthlyGrandTotals.avgMonthly || 0,
+                                catTotal: avgCatTotal,
+                                grandTotal: monthlyGrandTotals.avgMonthly || 0
+                              }, false, false)}
                             </td>
                           );
                         })()}

@@ -388,29 +388,6 @@ export default function DashboardPage({
             <span style={{ fontSize: '12px', color: '#64748b' }}>
               Displaying each monthly cycle side-by-side with exact values & category subtotals
             </span>
-            <button
-              type="button"
-              onClick={() => setIsTableFullScreen(prev => !prev)}
-              title={isTableFullScreen ? "Exit Fullscreen" : "Maximise Sheet & Fit to Screen"}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '5px 12px',
-                borderRadius: '7px',
-                backgroundColor: isTableFullScreen ? '#4f46e5' : '#ffffff',
-                border: '1.5px solid #cbd5e1',
-                color: isTableFullScreen ? '#ffffff' : '#4f46e5',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {isTableFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-              <span>{isTableFullScreen ? 'Exit Fullscreen' : 'Maximise Sheet'}</span>
-            </button>
           </div>
         </div>
 
