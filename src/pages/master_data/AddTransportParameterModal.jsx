@@ -21,6 +21,7 @@ export default function AddTransportParameterModal({
   const sections = Array.from(new Set([...defaultSections, ...existingSections]));
 
   const [formData, setFormData] = useState({
+    s_no: '',
     param_name: '',
     section: 'Custom Fleet Parameters',
     new_section: '',
@@ -46,6 +47,7 @@ export default function AddTransportParameterModal({
       : formData.section;
 
     onAddParameter({
+      s_no: formData.s_no.trim() || undefined,
       param_name: formData.param_name.trim(),
       section: finalSection,
       input_type: formData.input_type,
@@ -141,30 +143,55 @@ export default function AddTransportParameterModal({
             </div>
           )}
 
-          {/* Parameter Name */}
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-              Parameter Name *
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Battery Replacement Cost, Toll FASTag Fees, GPS Device Charges"
-              value={formData.param_name}
-              onChange={(e) => {
-                setFormData({ ...formData, param_name: e.target.value });
-                setError('');
-              }}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-              required
-            />
+          {/* Parameter Name & S.No */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Parameter Name *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Battery Replacement Cost, Toll FASTag Fees"
+                value={formData.param_name}
+                onChange={(e) => {
+                  setFormData({ ...formData, param_name: e.target.value });
+                  setError('');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                S.No
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 48"
+                value={formData.s_no}
+                onChange={(e) => setFormData({ ...formData, s_no: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  textAlign: 'center',
+                  fontWeight: '700',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
           </div>
 
           {/* Section Selection */}

@@ -83,11 +83,13 @@ export default function TransportMasterManager() {
   const handleStartEdit = (param) => {
     setEditingParamId(param.id);
     setEditForm({
+      s_no: param.s_no !== undefined && param.s_no !== null ? param.s_no : '',
       param_name: param.param_name,
       section: param.section,
       input_type: param.input_type,
       unit: param.unit || '',
-      formula: param.formula || ''
+      formula: param.formula || '',
+      display_order: param.display_order || 50
     });
   };
 
@@ -391,8 +393,37 @@ export default function TransportMasterManager() {
                       }}
                     >
                       {/* S.No */}
-                      <td style={{ padding: '10px 16px', fontWeight: '700', color: '#94a3b8' }}>
-                        {pIdx + 1}
+                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.s_no !== undefined ? editForm.s_no : ''}
+                            onChange={(e) => setEditForm({ ...editForm, s_no: e.target.value })}
+                            placeholder="S.No"
+                            style={{
+                              width: '46px',
+                              padding: '5px 4px',
+                              borderRadius: '6px',
+                              border: '1.5px solid #ea580c',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              textAlign: 'center',
+                              outline: 'none'
+                            }}
+                          />
+                        ) : (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: '#f1f5f9',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            color: '#334155'
+                          }}>
+                            {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || pIdx + 1)}
+                          </span>
+                        )}
                       </td>
 
                       {/* Parameter Name */}

@@ -65,9 +65,9 @@ const SECTION_STYLES = {
     accent: '#3b82f6'
   },
   'Fleet Expenses & Operations': {
-    headerBg: '#ffedd5',
+    headerBg: '#fed7aa',
     headerText: '#9a3412',
-    rowBg: '#fff7ed',
+    rowBg: '#ffedd5',
     border: '#fdba74',
     accent: '#ea580c',
     totalBg: '#86efac' // Bright lime green total row
@@ -75,23 +75,23 @@ const SECTION_STYLES = {
   'Revenue, Deductions & Income': {
     headerBg: '#fef3c7',
     headerText: '#92400e',
-    rowBg: '#fffbeb',
+    rowBg: '#fef3c7',
     border: '#fde68a',
     accent: '#d97706',
-    totalBg: '#fde047'
+    totalBg: '#fef3c7'
   },
   'Operating Budget & Balance': {
     headerBg: '#dcfce7',
     headerText: '#166534',
-    rowBg: '#f0fdf4',
+    rowBg: '#dcfce7',
     border: '#86efac',
     accent: '#16a34a',
-    totalBg: '#86efac'
+    totalBg: '#86efac' // Bright lime green balance row
   },
   'Service Tickets & Compliance': {
     headerBg: '#f3e8ff',
     headerText: '#6b21a8',
-    rowBg: '#faf5ff',
+    rowBg: '#f3e8ff',
     border: '#d8b4fe',
     accent: '#9333ea'
   },
@@ -105,7 +105,7 @@ const SECTION_STYLES = {
   'Student Transport Fee Analytics': {
     headerBg: '#fef08a',
     headerText: '#854d0e',
-    rowBg: '#fefce8',
+    rowBg: '#fef08a',
     border: '#facc15',
     accent: '#ca8a04',
     totalBg: '#86efac'
@@ -123,6 +123,7 @@ export default function TransportSpreadsheetEntry({
 }) {
   const [activeBranch, setActiveBranch] = useState('Common');
   const [activeView, setActiveView] = useState('sheet'); // 'sheet' (Exact single-month spreadsheet) or 'multi_month'
+  const [showFormulaDetails, setShowFormulaDetails] = useState(false);
   const [parameters, setParameters] = useState([]);
   const [loadingParams, setLoadingParams] = useState(true);
   const [localMessage, setLocalMessage] = useState(null);
@@ -304,7 +305,7 @@ export default function TransportSpreadsheetEntry({
         fee_discount: totFeeDiscount,
         paid_fee: totFeePaid,
         unpaid_fee: totFeeUnpaid,
-        per_student_cost_expenses: totPassengers > 0 ? Math.round(totExpenses / totPassengers) : 0,
+        per_student_cost_expenses: totPassengers > 0 ? Math.round(totExpenses / totPassengers) : '#REF!',
         per_student_fee_year: totPassengers > 0 ? Math.round(totFeeDemand / totPassengers) : 0,
         demand_per_km_day: totActualKms > 0 ? (totFeeDemand / (totActualKms * 30)).toFixed(2) : '0.00',
         km_per_veh_day: (totActualKms / (64 * 30)).toFixed(2),
@@ -381,7 +382,7 @@ export default function TransportSpreadsheetEntry({
     const unpaid_fee = Math.max(0, demand_fee - fee_discount - paid_fee);
 
     // Formula: Per student cost expenses = Total Expenses / Students Count
-    const per_student_cost_expenses = students_count_income > 0 ? Math.round(total_expenses / students_count_income) : 0;
+    const per_student_cost_expenses = students_count_income > 0 ? Math.round(total_expenses / students_count_income) : '#REF!';
     const per_student_fee_year = students_count_income > 0 ? Math.round(demand_fee / students_count_income) : 0;
     const demand_per_km_day = actual_kms > 0 ? (demand_fee / (actual_kms * 30)).toFixed(2) : '0.00';
     const numVehicles = parseFloat(vehicles_count) || 19;
@@ -620,6 +621,7 @@ export default function TransportSpreadsheetEntry({
   // Helper to format table cell values
   const formatCellValue = (param, val) => {
     if (val === undefined || val === null || val === '') return '-';
+    if (val === '#REF!') return '#REF!';
     if (param.input_type === 'text') return String(val);
     if (typeof val === 'string' && isNaN(Number(val.replace(/,/g, '')))) return val;
     const n = Number(val);
@@ -927,6 +929,26 @@ export default function TransportSpreadsheetEntry({
           >
             📊 Multi-Month Comparison Grid
           </button>
+          {activeView === 'sheet' && (
+            <button
+              type="button"
+              onClick={() => setShowFormulaDetails(prev => !prev)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '700',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: showFormulaDetails ? '#0284c7' : 'transparent',
+                color: showFormulaDetails ? '#ffffff' : '#64748b',
+                transition: 'all 0.15s ease'
+              }}
+              title="Toggle Formula & Definition column"
+            >
+              📐 {showFormulaDetails ? 'Hide Formulas' : 'Show Formulas'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1017,14 +1039,16 @@ export default function TransportSpreadsheetEntry({
                   S.No
                 </th>
                 <th style={{ padding: '10px 16px', textAlign: 'left', minWidth: '340px', borderRight: '1px solid #000000' }}>
-                  Parameters ({activeBranchObj.label})
+                  Parameters
                 </th>
-                <th style={{ width: '220px', padding: '10px 16px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#e0f2fe', color: '#0369a1' }}>
-                  {activePeriodObj?.period_label || 'Focus Month'}
+                <th style={{ width: '220px', padding: '10px 16px', textAlign: 'right', borderRight: showFormulaDetails ? '1px solid #000000' : 'none', backgroundColor: '#f8fafc', color: '#000000' }}>
+                  {activePeriodObj?.period_label || 'Sep 1st to 30th'}
                 </th>
-                <th style={{ width: '220px', padding: '10px 16px', textAlign: 'center', backgroundColor: '#f8fafc', color: '#334155' }}>
-                  Unit / Type / Formula
-                </th>
+                {showFormulaDetails && (
+                  <th style={{ width: '220px', padding: '10px 16px', textAlign: 'center', backgroundColor: '#f8fafc', color: '#334155' }}>
+                    Unit / Type / Formula
+                  </th>
+                )}
               </tr>
             </thead>
 
@@ -1043,7 +1067,7 @@ export default function TransportSpreadsheetEntry({
                       textTransform: 'uppercase',
                       letterSpacing: '0.04em'
                     }}>
-                      <td colSpan={4} style={{ padding: '8px 16px', borderRight: '1px solid #000000' }}>
+                      <td colSpan={showFormulaDetails ? 4 : 3} style={{ padding: '8px 16px', borderRight: '1px solid #000000' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span>{sectionName}</span>
                           <span style={{ fontSize: '11px', textTransform: 'none', opacity: 0.8 }}>
@@ -1059,12 +1083,10 @@ export default function TransportSpreadsheetEntry({
                       const isTotalRow = param.param_key === 'total_expenses' || param.param_key === 'cumulative_income' || param.param_key === 'balance';
                       const cellVal = activeMetrics[param.param_key] !== undefined ? activeMetrics[param.param_key] : getParamRawValue(activeBranch, currPeriodIdStr, param.param_key);
                       
-                      // Row background based on formula or total
+                      // Row background based on exact Excel colors
                       let rowBg = style.rowBg;
                       if (isTotalRow && style.totalBg) {
                         rowBg = style.totalBg;
-                      } else if (idx % 2 === 1) {
-                        rowBg = '#ffffff';
                       }
 
                       return (
@@ -1082,10 +1104,10 @@ export default function TransportSpreadsheetEntry({
                             padding: '8px',
                             textAlign: 'center',
                             borderRight: '1px solid #000000',
-                            color: '#475569',
+                            color: '#000000',
                             fontWeight: isTotalRow ? '800' : '600'
                           }}>
-                            {param.display_order || (idx + 1)}
+                            {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || (idx + 1))}
                           </td>
 
                           {/* Parameter Name */}
@@ -1093,7 +1115,7 @@ export default function TransportSpreadsheetEntry({
                             padding: '8px 16px',
                             borderRight: '1px solid #000000',
                             color: '#0f172a',
-                            fontWeight: isTotalRow ? '900' : '600'
+                            fontWeight: isTotalRow ? '900' : (param.param_key === 'cumulative_income' || param.param_key === 'students_count_fee' ? '800' : '600')
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                               <span>{param.param_name}</span>
@@ -1109,7 +1131,7 @@ export default function TransportSpreadsheetEntry({
                                   alignItems: 'center',
                                   gap: '3px'
                                 }} title={`Formula: ${param.formula}`}>
-                                  <Calculator size={10} /> Formula
+                                  <Calculator size={10} /> fx
                                 </span>
                               )}
                             </div>
@@ -1119,8 +1141,8 @@ export default function TransportSpreadsheetEntry({
                           <td style={{
                             padding: '5px 12px',
                             textAlign: 'right',
-                            borderRight: '1px solid #000000',
-                            backgroundColor: isFormula ? '#f0fdf4' : (activeBranch === 'all' ? '#f8fafc' : '#ffffff')
+                            borderRight: showFormulaDetails ? '1px solid #000000' : 'none',
+                            backgroundColor: isTotalRow && style.totalBg ? style.totalBg : (isFormula ? (rowBg || '#f0fdf4') : (activeBranch === 'all' ? '#f8fafc' : rowBg))
                           }}>
                             {isFormula || activeBranch === 'all' || isClosed ? (
                               <div style={{
@@ -1154,25 +1176,27 @@ export default function TransportSpreadsheetEntry({
                             )}
                           </td>
 
-                          {/* Unit / Formula description */}
-                          <td style={{
-                            padding: '6px 12px',
-                            textAlign: 'left',
-                            color: '#64748b',
-                            fontSize: '11.5px',
-                            fontWeight: '600',
-                            backgroundColor: rowBg
-                          }}>
-                            {param.formula ? (
-                              <span style={{ color: '#047857', fontWeight: '700' }}>
-                                = {param.formula}
-                              </span>
-                            ) : (
-                              <span>
-                                {param.unit ? `${param.unit} (${param.input_type})` : param.input_type}
-                              </span>
-                            )}
-                          </td>
+                          {/* Unit / Formula description (Optional Column) */}
+                          {showFormulaDetails && (
+                            <td style={{
+                              padding: '6px 12px',
+                              textAlign: 'left',
+                              color: '#64748b',
+                              fontSize: '11.5px',
+                              fontWeight: '600',
+                              backgroundColor: rowBg
+                            }}>
+                              {param.formula ? (
+                                <span style={{ color: '#047857', fontWeight: '700' }}>
+                                  = {param.formula}
+                                </span>
+                              ) : (
+                                <span>
+                                  {param.unit ? `${param.unit} (${param.input_type})` : param.input_type}
+                                </span>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -1199,7 +1223,7 @@ export default function TransportSpreadsheetEntry({
                 borderBottom: '2px solid #000000',
                 fontWeight: '800'
               }}>
-                <th style={{ width: '50px', padding: '9px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>#</th>
+                <th style={{ width: '50px', padding: '9px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>S.No</th>
                 <th style={{ padding: '9px 12px', minWidth: '240px', textAlign: 'left', borderRight: '1px solid #000000' }}>
                   Parameters ({activeBranchObj.label})
                 </th>
@@ -1256,8 +1280,8 @@ export default function TransportSpreadsheetEntry({
                           fontWeight: isTotalRow ? '800' : '500'
                         }}
                       >
-                        <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #000000', color: '#64748b' }}>
-                          {param.display_order || (idx + 1)}
+                        <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #000000', color: '#000000', fontWeight: '700' }}>
+                          {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || (idx + 1))}
                         </td>
                         <td style={{ padding: '6px 12px', borderRight: '1px solid #000000', color: '#0f172a', fontWeight: isTotalRow ? '800' : '600' }}>
                           {param.param_name}
