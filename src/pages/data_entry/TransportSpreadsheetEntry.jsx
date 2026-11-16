@@ -112,6 +112,69 @@ const SECTION_STYLES = {
   }
 };
 
+export const CANONICAL_TRANSPORT_PARAMETERS = [
+  // Section 1: Fleet Operations & Distance (White)
+  { id: 1, s_no: '1', param_key: 'vehicles_count', param_name: 'Number of vehicles', section: 'Fleet Operations & Distance', section_order: 1, display_order: 1, input_type: 'text', unit: 'Fleet' },
+  { id: 2, s_no: '2', param_key: 'passengers_count', param_name: 'Number of students & staff travelling', section: 'Fleet Operations & Distance', section_order: 1, display_order: 2, input_type: 'single_count', unit: 'Persons' },
+  { id: 3, s_no: '3', param_key: 'approved_kms', param_name: 'Approved trip KMs', section: 'Fleet Operations & Distance', section_order: 1, display_order: 3, input_type: 'single_number', unit: 'KMs' },
+  { id: 4, s_no: '4', param_key: 'actual_kms', param_name: 'Actual trip KMs', section: 'Fleet Operations & Distance', section_order: 1, display_order: 4, input_type: 'single_number', unit: 'KMs' },
+  { id: 5, s_no: '5', param_key: 'excess_minus_kms_rps', param_name: 'Execess/ minus KMs run for RPS', section: 'Fleet Operations & Distance', section_order: 1, display_order: 5, input_type: 'single_number', unit: 'KMs', formula: 'actual_kms - approved_kms' },
+  { id: 6, s_no: '6', param_key: 'excess_kms_billed_rps', param_name: 'Execess KM to be billed for RPS', section: 'Fleet Operations & Distance', section_order: 1, display_order: 6, input_type: 'single_number', unit: 'KMs' },
+  { id: 7, s_no: '7', param_key: 'additional_kms', param_name: 'Additional KMs run', section: 'Fleet Operations & Distance', section_order: 1, display_order: 7, input_type: 'single_number', unit: 'KMs' },
+
+  // Section 2: Fleet Expenses & Operations (Orange, lime green total)
+  { id: 8, s_no: '8', param_key: 'fuel_expenses', param_name: 'Fuel expenses (Rs)', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 8, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 9, s_no: '9', param_key: 'fc_cost', param_name: 'FC 2025-2026', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 9, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 10, s_no: '10', param_key: 'statutory_cost', param_name: 'Vehicle Statutory', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 10, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 11, s_no: '11', param_key: 'repair_maintenance_cost', param_name: 'Repair & Maintenance', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 11, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 12, s_no: '12', param_key: 'other_cost', param_name: 'Others', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 12, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 13, s_no: '13', param_key: 'employee_cost', param_name: 'Transport Employees Cost', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 13, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 14, s_no: '14', param_key: 'total_expenses', param_name: 'Total Expenses', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 14, input_type: 'cost', unit: 'INR (₹)', formula: 'SUM(Fuel + FC + Statutory + Repair + Others + Employees Cost)' },
+
+  // Section 3: Revenue, Deductions & Income (Tan)
+  { id: 15, s_no: '15', param_key: 'students_count_income', param_name: 'Students count', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 15, input_type: 'single_count', unit: 'Students' },
+  { id: 16, s_no: '16', param_key: 'staff_count_income', param_name: 'Staff Count', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 16, input_type: 'single_count', unit: 'Staff' },
+  { id: 17, s_no: '17', param_key: 'fee_demand', param_name: 'Demand', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 17, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 18, s_no: '18', param_key: 'fee_collected', param_name: 'Paid', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 18, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 19, s_no: '19', param_key: 'fee_unpaid', param_name: 'Unpaid', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 19, input_type: 'cost', unit: 'INR (₹)', formula: 'Demand - Paid' },
+  { id: 20, s_no: '20', param_key: 'rps_monthly_billing', param_name: 'RPS monthly billing', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 20, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 21, s_no: '21', param_key: 'staff_travel_deduction', param_name: 'Staff Travel Deduction', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 21, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 22, s_no: '22', param_key: 'additional_kms_billed_rps', param_name: 'Additional KMs Billed for RPS', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 22, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 23, s_no: '23', param_key: 'additional_kms_others_billing', param_name: 'Additional KMs run for others Billing', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 23, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 24, s_no: '24', param_key: 'cumulative_income', param_name: 'Cumulative Income', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 24, input_type: 'cost', unit: 'INR (₹)', formula: 'Paid + RPS Billing + Staff Deduction + Addl KMs + Cab Billing' },
+
+  // Section 4: Operating Budget & Balance (Light Green, lime green balance)
+  { id: 25, s_no: '25', param_key: 'approved_budget', param_name: 'Approved Budget', section: 'Operating Budget & Balance', section_order: 4, display_order: 25, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 26, s_no: '26', param_key: 'cumulative_budget_spent', param_name: 'Cumulative Budget spent (Actual expenses) till now', section: 'Operating Budget & Balance', section_order: 4, display_order: 26, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 27, s_no: '27', param_key: 'balance', param_name: 'Balance', section: 'Operating Budget & Balance', section_order: 4, display_order: 27, input_type: 'cost', unit: 'INR (₹)', formula: 'Approved Budget - Cumulative Budget Spent' },
+
+  // Section 5: Service Tickets & Compliance (Purple)
+  { id: 28, s_no: '30', param_key: 'service_tickets_raised', param_name: 'No. of Service Tickets Raised', section: 'Service Tickets & Compliance', section_order: 5, display_order: 28, input_type: 'single_count', unit: 'Tickets' },
+  { id: 29, s_no: '31', param_key: 'service_tickets_closed', param_name: 'No. of Service Tickets closed', section: 'Service Tickets & Compliance', section_order: 5, display_order: 29, input_type: 'single_count', unit: 'Tickets' },
+  { id: 30, s_no: '32', param_key: 'service_tickets_open', param_name: 'No. of Service Tickets in Open', section: 'Service Tickets & Compliance', section_order: 5, display_order: 30, input_type: 'single_count', unit: 'Tickets', formula: 'Raised - Closed' },
+  { id: 31, s_no: '33', param_key: 'quality_issues_received', param_name: 'No. of Quality issues Received', section: 'Service Tickets & Compliance', section_order: 5, display_order: 31, input_type: 'single_count', unit: 'Issues' },
+  { id: 32, s_no: '34', param_key: 'quality_issues_closed', param_name: 'No. of Quality issues Closed', section: 'Service Tickets & Compliance', section_order: 5, display_order: 32, input_type: 'single_count', unit: 'Issues' },
+  { id: 33, s_no: '35', param_key: 'quality_issues_open', param_name: 'No. of Quality issues in Open', section: 'Service Tickets & Compliance', section_order: 5, display_order: 33, input_type: 'single_count', unit: 'Issues', formula: 'Received - Closed' },
+  { id: 34, s_no: '28', param_key: 'statutory_compliance', param_name: 'Statuory compliance', section: 'Service Tickets & Compliance', section_order: 5, display_order: 34, input_type: 'single_count', unit: 'Score' },
+  { id: 35, s_no: '29', param_key: 'incidents_count', param_name: 'No. of Incidents', section: 'Service Tickets & Compliance', section_order: 5, display_order: 35, input_type: 'single_count', unit: 'Incidents' },
+
+  // Section 6: Fuel & Energy Consumption (White)
+  { id: 36, s_no: '36', param_key: 'diesel_litres', param_name: 'Diesel Purchase Qty (Litres)', section: 'Fuel & Energy Consumption', section_order: 6, display_order: 36, input_type: 'single_number', unit: 'Litres' },
+
+  // Section 7: Student Transport Fee Analytics (Yellow)
+  { id: 37, s_no: '29', param_key: 'students_count_fee', param_name: 'Students count', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 37, input_type: 'single_count', unit: 'Students' },
+  { id: 38, s_no: '30', param_key: 'demand_fee', param_name: 'Demand', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 38, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 39, s_no: '31', param_key: 'fee_discount', param_name: 'Discount', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 39, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 40, s_no: '32', param_key: 'paid_fee', param_name: 'Paid', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 40, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 41, s_no: '33', param_key: 'unpaid_fee', param_name: 'Unpaid', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 41, input_type: 'cost', unit: 'INR (₹)', formula: 'Demand - Discount - Paid' },
+  { id: 42, s_no: '34', param_key: 'per_student_cost_expenses', param_name: 'Per student cost expenses', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 42, input_type: 'cost', unit: 'INR (₹)', formula: 'Total Expenses / Students Count' },
+  { id: 43, s_no: '', param_key: 'per_student_fee_year', param_name: 'per student fee per year', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 43, input_type: 'cost', unit: 'INR (₹)', formula: 'Demand / Students Count' },
+  { id: 44, s_no: '', param_key: 'demand_per_km_day', param_name: 'Demand per km per day', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 44, input_type: 'cost', unit: 'INR (₹)', formula: 'Demand / (Actual KMs * 30)' },
+  { id: 45, s_no: '', param_key: 'km_per_veh_day', param_name: 'km/veh/day', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 45, input_type: 'single_number', unit: 'KM/Veh/Day', formula: 'Actual KMs / (Vehicles * 30)' },
+  { id: 46, s_no: '', param_key: 'cumulative_demand_per_km', param_name: 'Cumulative demand per KM', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 46, input_type: 'cost', unit: 'INR (₹)', formula: 'Demand / Actual KMs' },
+  { id: 47, s_no: '37', param_key: 'cab_billing', param_name: 'Cab request Billing', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 47, input_type: 'cost', unit: 'INR (₹)' }
+];
+
 export default function TransportSpreadsheetEntry({
   activePeriodObj,
   computedMatrix,
@@ -124,7 +187,7 @@ export default function TransportSpreadsheetEntry({
   const [activeBranch, setActiveBranch] = useState('RPS');
   const [activeView, setActiveView] = useState('sheet'); // 'sheet' (Exact single-month spreadsheet) or 'multi_month'
   const [showFormulaDetails, setShowFormulaDetails] = useState(false);
-  const [parameters, setParameters] = useState([]);
+  const [parameters, setParameters] = useState(CANONICAL_TRANSPORT_PARAMETERS);
   const [loadingParams, setLoadingParams] = useState(true);
   const [localMessage, setLocalMessage] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -140,8 +203,11 @@ export default function TransportSpreadsheetEntry({
   // Default to Sep 1st to 30th (period 29) if available and not yet selected
   useEffect(() => {
     if (setEditingPeriodId && periods.length > 0) {
-      const sepPeriod = periods.find(p => p.id === 29 || p.period_label?.toLowerCase().includes('sep') || p.period_code?.includes('09'));
-      if (sepPeriod && (!editingPeriodId || editingPeriodId === 12)) {
+      const sepPeriod = periods.find(p => p.period_label && (p.period_label.toLowerCase().includes('sep') || p.period_label.toLowerCase().includes('sept')))
+        || periods.find(p => p.period_code && (p.period_code.endsWith('-09') || p.period_code.includes('09')))
+        || periods.find(p => p.id === 30 || p.id === 29)
+        || periods[0];
+      if (sepPeriod && (!editingPeriodId || editingPeriodId === 12 || editingPeriodId === 27 || editingPeriodId === 28)) {
         setEditingPeriodId(sepPeriod.id);
       }
     }
@@ -154,7 +220,9 @@ export default function TransportSpreadsheetEntry({
       const res = await fetch('/api/transport/parameters');
       if (res.ok) {
         const data = await res.json();
-        setParameters(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setParameters(data);
+        }
       }
     } catch (err) {
       console.error('Error fetching transport parameters:', err);
@@ -1348,24 +1416,38 @@ export default function TransportSpreadsheetEntry({
         </div>
       ) : (
         /* 5. MULTI-MONTH COMPARISON GRID */
-        <div style={{ overflowX: 'auto', width: '100%', maxHeight: '720px' }}>
+        <div style={{
+          overflowX: 'auto',
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          padding: '20px 12px',
+          backgroundColor: '#f1f5f9'
+        }}>
           <table style={{
             width: '100%',
+            maxWidth: showFormulaDetails ? `${550 + periods.length * 140}px` : `${480 + periods.length * 130}px`,
             borderCollapse: 'collapse',
-            fontSize: '12px',
+            fontSize: '13px',
             border: '2px solid #000000',
-            fontFamily: 'inherit'
+            backgroundColor: '#ffffff',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+            fontFamily: 'Calibri, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif'
           }}>
             <thead>
               <tr style={{
-                backgroundColor: '#00a2e8',
-                color: '#ffffff',
+                backgroundColor: '#ffffff',
                 borderBottom: '2px solid #000000',
-                fontWeight: '800'
+                color: '#000000',
+                fontWeight: '800',
+                fontSize: '13.5px',
+                height: '30px'
               }}>
-                <th style={{ width: '50px', padding: '9px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>S.No</th>
-                <th style={{ padding: '9px 12px', minWidth: '240px', textAlign: 'left', borderRight: '1px solid #000000' }}>
-                  Parameters ({activeBranchObj.label})
+                <th style={{ width: '50px', padding: '6px 4px', textAlign: 'center', borderRight: '1px solid #000000', borderBottom: '2px solid #000000' }}>
+                  S.No
+                </th>
+                <th style={{ padding: '6px 12px', minWidth: '300px', textAlign: 'center', borderRight: '1px solid #000000', borderBottom: '2px solid #000000' }}>
+                  Parameters
                 </th>
                 {periods.map(p => {
                   const isCurrent = String(p.id) === currPeriodIdStr;
@@ -1373,109 +1455,192 @@ export default function TransportSpreadsheetEntry({
                     <th
                       key={p.id}
                       style={{
-                        padding: '9px 10px',
-                        minWidth: '120px',
+                        minWidth: '125px',
+                        padding: '6px 8px',
                         textAlign: 'center',
                         borderRight: '1px solid #000000',
-                        backgroundColor: isCurrent ? '#0284c7' : '#00a2e8',
-                        color: '#ffffff'
+                        borderBottom: '2px solid #000000',
+                        backgroundColor: isCurrent ? '#f0f9ff' : '#ffffff',
+                        color: isCurrent ? '#0284c7' : '#000000'
                       }}
                     >
-                      {p.period_label} {isCurrent && '★'}
+                      {p.period_label} {isCurrent && '●'}
                     </th>
                   );
                 })}
+                {showFormulaDetails && (
+                  <th style={{
+                    width: '190px',
+                    padding: '6px 12px',
+                    textAlign: 'center',
+                    borderBottom: '2px solid #000000',
+                    backgroundColor: '#f8fafc',
+                    color: '#334155'
+                  }}>
+                    Unit / Type / Formula
+                  </th>
+                )}
               </tr>
             </thead>
 
             <tbody>
-              {groupedParameters.map(({ sectionName, items, style }) => (
-                <React.Fragment key={sectionName}>
-                  {/* Section Title */}
-                  <tr style={{
-                    backgroundColor: style.headerBg,
-                    color: style.headerText,
-                    borderTop: '2px solid #000000',
-                    borderBottom: '1px solid #000000',
-                    fontWeight: '800',
-                    fontSize: '11.5px',
-                    textTransform: 'uppercase'
-                  }}>
-                    <td colSpan={periods.length + 2} style={{ padding: '7px 12px' }}>
-                      {sectionName}
-                    </td>
-                  </tr>
+              {canonicalParameters.map((param, idx) => {
+                const isFormula = !!param.formula;
+                const isTotalRow = param.param_key === 'total_expenses' || param.param_key === 'cumulative_income' || param.param_key === 'balance';
+                const rowStyle = getExcelRowStyle(param);
 
-                  {/* Section Rows */}
-                  {items.map((param, idx) => {
-                    const isTotalRow = param.param_key === 'total_expenses' || param.param_key === 'cumulative_income' || param.param_key === 'balance';
-                    const isFormula = !!param.formula;
-
-                    return (
-                      <tr
-                        key={param.id || param.param_key}
-                        style={{
-                          backgroundColor: isTotalRow ? (style.totalBg || '#86efac') : (idx % 2 === 1 ? '#ffffff' : style.rowBg),
-                          borderBottom: isTotalRow ? '2px solid #000000' : '1px solid #000000',
-                          fontWeight: isTotalRow ? '800' : '500'
-                        }}
-                      >
-                        <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #000000', color: '#000000', fontWeight: '700' }}>
-                          {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || (idx + 1))}
-                        </td>
-                        <td style={{ padding: '6px 12px', borderRight: '1px solid #000000', color: '#0f172a', fontWeight: isTotalRow ? '800' : '600' }}>
-                          {param.param_name}
-                        </td>
-
-                        {/* Each Month Column */}
-                        {periods.map(p => {
-                          const pStr = String(p.id);
-                          const pMetrics = computeBranchMetrics(activeBranch, pStr);
-                          const mVal = pMetrics[param.param_key] !== undefined ? pMetrics[param.param_key] : getParamRawValue(activeBranch, pStr, param.param_key);
-                          const isCurrent = pStr === currPeriodIdStr;
-
-                          return (
-                            <td
-                              key={p.id}
-                              style={{
-                                padding: '4px 8px',
-                                textAlign: 'right',
-                                borderRight: '1px solid #000000',
-                                backgroundColor: isCurrent ? (isFormula ? '#dcfce7' : '#eff6ff') : (isFormula ? '#f0fdf4' : 'transparent'),
-                                fontWeight: isTotalRow ? '800' : '600'
-                              }}
-                            >
-                              {isFormula || activeBranch === 'all' || isClosed ? (
-                                <span style={{ color: isTotalRow ? '#15803d' : '#0f172a' }}>
-                                  {formatCellValue(param, mVal)}
-                                </span>
-                              ) : (
-                                <input
-                                  type={param.input_type === 'text' ? 'text' : 'number'}
-                                  value={mVal !== undefined && mVal !== null ? mVal : ''}
-                                  onChange={(e) => handleCellEdit(param.param_key, e.target.value, pStr)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px 6px',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '4px',
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    textAlign: 'right',
-                                    outline: 'none',
-                                    backgroundColor: '#ffffff'
-                                  }}
-                                  placeholder="0"
-                                />
-                              )}
-                            </td>
-                          );
-                        })}
+                return (
+                  <React.Fragment key={param.id || param.param_key}>
+                    {/* Blank Yellow Spacer Row matching row 46 of mockup */}
+                    {param.param_key === 'cumulative_demand_per_km' && (
+                      <tr style={{ backgroundColor: '#fef08a', height: '24px', borderBottom: '1px solid #000000' }}>
+                        <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
+                        <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
+                        {periods.map(p => (
+                          <td key={p.id} style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
+                        ))}
+                        {showFormulaDetails && <td style={{ backgroundColor: '#fef08a' }}>&nbsp;</td>}
                       </tr>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
+                    )}
+
+                    <tr
+                      style={{
+                        backgroundColor: rowStyle.bg,
+                        borderBottom: isTotalRow ? '2px solid #000000' : '1px solid #000000',
+                        fontWeight: rowStyle.isBold ? '800' : '500',
+                        height: '27px'
+                      }}
+                    >
+                      {/* S.No */}
+                      <td style={{
+                        padding: '4px 6px',
+                        textAlign: 'center',
+                        borderRight: '1px solid #000000',
+                        color: '#000000',
+                        fontWeight: rowStyle.isBold ? '800' : '600'
+                      }}>
+                        {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || (idx + 1))}
+                      </td>
+
+                      {/* Parameter Name */}
+                      <td style={{
+                        padding: '4px 10px',
+                        borderRight: '1px solid #000000',
+                        color: '#000000',
+                        fontWeight: rowStyle.isBold ? '800' : (param.param_key === 'cumulative_income' || param.param_key === 'students_count_fee' ? '800' : '500')
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>{param.param_name}</span>
+                          {isFormula && (
+                            <span style={{
+                              fontSize: '9.5px',
+                              padding: '1px 5px',
+                              borderRadius: '3px',
+                              backgroundColor: 'rgba(21, 128, 61, 0.12)',
+                              color: '#15803d',
+                              fontWeight: '700',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                              marginLeft: '6px'
+                            }} title={`Formula: ${param.formula}`}>
+                              <Calculator size={9} /> fx
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Each Month Column */}
+                      {periods.map(p => {
+                        const pStr = String(p.id);
+                        const pMetrics = computeBranchMetrics(activeBranch, pStr);
+                        const mVal = pMetrics[param.param_key] !== undefined ? pMetrics[param.param_key] : getParamRawValue(activeBranch, pStr, param.param_key);
+                        const isRefError = param.param_key === 'per_student_cost_expenses' && (mVal === '#REF!' || !mVal || mVal === 0);
+                        const formattedVal = formatCellValue(param, mVal);
+
+                        return (
+                          <td
+                            key={p.id}
+                            style={{
+                              padding: '2px 8px',
+                              textAlign: 'right',
+                              borderRight: '1px solid #000000',
+                              backgroundColor: rowStyle.bg,
+                              position: 'relative'
+                            }}
+                          >
+                            {/* Excel-style green triangle error indicator for #REF! */}
+                            {isRefError && (
+                              <span style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: 0,
+                                height: 0,
+                                borderTop: '6px solid #16a34a',
+                                borderRight: '6px solid transparent'
+                              }} title="Formula Reference Error" />
+                            )}
+
+                            {isFormula || activeBranch === 'all' || isClosed ? (
+                              <div style={{
+                                fontWeight: rowStyle.isBold ? '800' : '600',
+                                fontSize: isTotalRow ? '13px' : '12.5px',
+                                color: '#000000',
+                                padding: '3px 4px'
+                              }}>
+                                {isRefError ? '#REF!' : formattedVal}
+                              </div>
+                            ) : (
+                              <input
+                                type={param.input_type === 'text' ? 'text' : 'number'}
+                                step={param.input_type === 'cost' ? '1' : '0.01'}
+                                value={mVal !== undefined && mVal !== null ? mVal : ''}
+                                onChange={(e) => handleCellEdit(param.param_key, e.target.value, pStr)}
+                                style={{
+                                  width: '100%',
+                                  padding: '3px 4px',
+                                  border: 'none',
+                                  borderRadius: '2px',
+                                  fontSize: '12.5px',
+                                  fontWeight: rowStyle.isBold ? '800' : '600',
+                                  textAlign: 'right',
+                                  outline: 'none',
+                                  backgroundColor: 'transparent',
+                                  color: '#000000'
+                                }}
+                                placeholder=""
+                              />
+                            )}
+                          </td>
+                        );
+                      })}
+
+                      {/* Unit / Formula description (Optional Column) */}
+                      {showFormulaDetails && (
+                        <td style={{
+                          padding: '4px 10px',
+                          textAlign: 'left',
+                          color: '#475569',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          backgroundColor: rowStyle.bg
+                        }}>
+                          {param.formula ? (
+                            <span style={{ color: '#047857', fontWeight: '700' }}>
+                              = {param.formula}
+                            </span>
+                          ) : (
+                            <span>
+                              {param.unit ? `${param.unit} (${param.input_type})` : param.input_type}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
