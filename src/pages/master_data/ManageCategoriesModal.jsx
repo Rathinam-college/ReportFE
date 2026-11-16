@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Layers, Edit, Trash2, Check, AlertCircle, Plus, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, Layers, Edit, Trash2, Check, AlertCircle, Plus, GripVertical, ArrowUp, ArrowDown, Search } from 'lucide-react';
 
 export default function ManageCategoriesModal({
   isOpen,
@@ -18,6 +18,7 @@ export default function ManageCategoriesModal({
   const [selectedCatIds, setSelectedCatIds] = useState([]);
   const [draggedIdx, setDraggedIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   if (!isOpen) return null;
 
@@ -94,6 +95,13 @@ export default function ManageCategoriesModal({
 
   const isAllSelected = categoriesList.length > 0 && categoriesList.every(c => selectedCatIds.includes(c.id));
 
+  const displayedCategories = searchQuery.trim()
+    ? categoriesList.filter(c =>
+        c.name.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+        (c.code && c.code.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+      )
+    : categoriesList;
+
   const handleToggleSelectAll = () => {
     if (isAllSelected) {
       setSelectedCatIds([]);
@@ -131,13 +139,16 @@ export default function ManageCategoriesModal({
   };
 
   const handleSave = async (catId) => {
-    if (!editName.trim()) return;
+    if (!editName.trim()) {
+      setActionMsg({ type: 'error', text: 'Category name cannot be empty.' });
+      return;
+    }
     setSaving(true);
     setActionMsg(null);
     try {
       await onUpdateCategory(catId, { name: editName.trim() });
       setEditingId(null);
-      setActionMsg({ type: 'success', text: 'Category updated successfully!' });
+      setActionMsg({ type: 'success', text: `Category "${editName.trim()}" updated successfully!` });
     } catch (err) {
       setActionMsg({ type: 'error', text: err.message || 'Failed to update category' });
     } finally {
@@ -297,6 +308,44 @@ export default function ManageCategoriesModal({
             </div>
           )}
 
+          {/* Search Filter & Instructions */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '8px 12px'
+          }}>
+            <Search size={16} color="#64748b" />
+            <input
+              type="text"
+              placeholder="Search category by name or code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                border: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+                fontSize: '13px',
+                fontWeight: '500',
+                color: '#0f172a'
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                title="Clear Search"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
           {/* Reorder / Action Instruction Banner */}
           <div style={{
             display: 'flex',
@@ -309,7 +358,7 @@ export default function ManageCategoriesModal({
             fontSize: '11.5px',
             color: '#64748b'
           }}>
-            <span>✋ Grab handle or use ⬆️ ⬇️ to reorder categories</span>
+            <span>✋ Grab handle or use ⬆️ ⬇️ to reorder • Double-click any name to edit</span>
             <span style={{ fontWeight: '600', color: '#4f46e5' }}>Auto-saves to database</span>
           </div>
 
@@ -334,7 +383,7 @@ export default function ManageCategoriesModal({
                 </tr>
               </thead>
               <tbody>
-                {categoriesList.map((cat, idx) => {
+                {displayedCategories.map((cat, idx) => {
                   const isEditing = editingId === cat.id;
                   const isSelected = selectedCatIds.includes(cat.id);
                   const isDragging = draggedIdx === idx;
@@ -343,7 +392,7 @@ export default function ManageCategoriesModal({
                   return (
                     <tr
                       key={cat.id}
-                      draggable={!isEditing}
+                      draggable={!isEditing && !searchQuery.trim()}
                       onDragStart={(e) => handleDragStart(e, idx)}
                       onDragOver={(e) => handleDragOver(e, idx)}
                       onDragEnd={handleDragEnd}
@@ -355,7 +404,7 @@ export default function ManageCategoriesModal({
                           : (isOver ? '#eff6ff' : (isDragging ? '#e2e8f0' : (idx % 2 === 0 ? '#ffffff' : '#fafafa'))),
                         opacity: isDragging ? 0.5 : 1,
                         transition: 'background-color 0.15s ease',
-                        cursor: isEditing ? 'default' : 'grab'
+                        cursor: isEditing ? 'default' : (!searchQuery.trim() ? 'grab' : 'default')
                       }}
                     >
                       <td style={{ padding: '10px 12px', textAlign: 'center' }}>
@@ -369,22 +418,22 @@ export default function ManageCategoriesModal({
                       <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
                           <span
-                            title="Drag to reorder"
-                            style={{ cursor: 'grab', color: '#94a3b8', display: 'flex', alignItems: 'center' }}
+                            title={!searchQuery.trim() ? "Drag to reorder" : "Clear search to reorder"}
+                            style={{ cursor: !searchQuery.trim() ? 'grab' : 'default', color: '#94a3b8', display: 'flex', alignItems: 'center' }}
                           >
                             <GripVertical size={15} />
                           </span>
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleMoveStep(idx, -1); }}
-                            disabled={idx === 0}
+                            disabled={idx === 0 || !!searchQuery.trim()}
                             title="Move Category Up"
                             style={{
                               padding: '3px 4px',
                               borderRadius: '4px',
-                              backgroundColor: idx === 0 ? '#f8fafc' : '#f1f5f9',
-                              color: idx === 0 ? '#cbd5e1' : '#334155',
-                              cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                              backgroundColor: (idx === 0 || !!searchQuery.trim()) ? '#f8fafc' : '#f1f5f9',
+                              color: (idx === 0 || !!searchQuery.trim()) ? '#cbd5e1' : '#334155',
+                              cursor: (idx === 0 || !!searchQuery.trim()) ? 'not-allowed' : 'pointer',
                               border: '1px solid #e2e8f0',
                               display: 'flex',
                               alignItems: 'center'
@@ -395,14 +444,14 @@ export default function ManageCategoriesModal({
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleMoveStep(idx, 1); }}
-                            disabled={idx === categoriesList.length - 1}
+                            disabled={idx === categoriesList.length - 1 || !!searchQuery.trim()}
                             title="Move Category Down"
                             style={{
                               padding: '3px 4px',
                               borderRadius: '4px',
-                              backgroundColor: idx === categoriesList.length - 1 ? '#f8fafc' : '#f1f5f9',
-                              color: idx === categoriesList.length - 1 ? '#cbd5e1' : '#334155',
-                              cursor: idx === categoriesList.length - 1 ? 'not-allowed' : 'pointer',
+                              backgroundColor: (idx === categoriesList.length - 1 || !!searchQuery.trim()) ? '#f8fafc' : '#f1f5f9',
+                              color: (idx === categoriesList.length - 1 || !!searchQuery.trim()) ? '#cbd5e1' : '#334155',
+                              cursor: (idx === categoriesList.length - 1 || !!searchQuery.trim()) ? 'not-allowed' : 'pointer',
                               border: '1px solid #e2e8f0',
                               display: 'flex',
                               alignItems: 'center'
@@ -432,52 +481,74 @@ export default function ManageCategoriesModal({
                               type="text"
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleSave(cat.id);
+                                } else if (e.key === 'Escape') {
+                                  cancelEdit();
+                                }
+                              }}
                               style={{
                                 flex: 1,
                                 padding: '6px 10px',
-                                borderRadius: '4px',
+                                borderRadius: '6px',
                                 border: '1.5px solid #2563eb',
                                 fontSize: '13px',
                                 fontWeight: '600',
-                                color: '#0f172a'
+                                color: '#0f172a',
+                                outline: 'none',
+                                boxShadow: '0 0 0 2.5px rgba(37,99,235,0.15)'
                               }}
                               autoFocus
                             />
                             <button
                               type="button"
                               onClick={() => handleSave(cat.id)}
-                              disabled={saving}
-                              title="Save"
+                              disabled={saving || !editName.trim()}
+                              title="Save Category Name (Enter)"
                               style={{
-                                padding: '6px 8px',
-                                borderRadius: '4px',
+                                padding: '6px 12px',
+                                borderRadius: '6px',
                                 backgroundColor: '#16a34a',
                                 color: '#ffffff',
                                 border: 'none',
-                                cursor: 'pointer'
+                                cursor: saving ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '12px',
+                                fontWeight: '700'
                               }}
                             >
                               <Check size={14} />
+                              <span>{saving ? '...' : 'Save'}</span>
                             </button>
                             <button
                               type="button"
                               onClick={cancelEdit}
-                              title="Cancel"
+                              title="Cancel Edit (Esc)"
                               style={{
                                 padding: '6px 8px',
-                                borderRadius: '4px',
+                                borderRadius: '6px',
                                 backgroundColor: '#f1f5f9',
                                 color: '#475569',
                                 border: '1px solid #cbd5e1',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
                               }}
                             >
                               <X size={14} />
                             </button>
                           </div>
                         ) : (
-                          <div>
-                            <div>{cat.name}</div>
+                          <div
+                            onDoubleClick={() => startEdit(cat)}
+                            title="Click edit button or double-click to rename"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <div style={{ fontWeight: '700', color: '#0f172a' }}>{cat.name}</div>
                             {cat.code && (
                               <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
                                 {cat.code}
@@ -508,14 +579,16 @@ export default function ManageCategoriesModal({
                             <button
                               type="button"
                               onClick={() => startEdit(cat)}
-                              title="Rename Category"
+                              title="Rename / Edit Category"
                               style={{
                                 padding: '5px 8px',
                                 borderRadius: '4px',
                                 backgroundColor: '#eff6ff',
                                 color: '#2563eb',
                                 border: '1px solid #bfdbfe',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
                               }}
                             >
                               <Edit size={13} />
@@ -530,7 +603,9 @@ export default function ManageCategoriesModal({
                                 backgroundColor: '#fef2f2',
                                 color: '#ef4444',
                                 border: '1px solid #fecaca',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
                               }}
                             >
                               <Trash2 size={13} />

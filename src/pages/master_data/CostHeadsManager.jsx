@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, X, FolderPlus, Layers, Filter, Calculator } from 'lucide-react';
+import { GripVertical, ArrowUp, ArrowDown, Edit, Trash2, Plus, X, FolderPlus, Layers, Filter, Calculator, Check, AlertCircle } from 'lucide-react';
+import EditCategoryModal from './EditCategoryModal';
 
 export default function CostHeadsManager({
   costHeadsList,
@@ -23,11 +24,14 @@ export default function CostHeadsManager({
   handleSaveCostHead,
   openAddCategoryModal,
   openManageCategoriesModal,
+  handleUpdateCategory,
+  handleDeleteCategory,
   onToggleMathTool,
   moduleName = 'Food & Dining'
 }) {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [editingCategory, setEditingCategory] = useState(null);
 
   // Filter cost heads by category if a pill is clicked
   const filteredCostHeads = selectedCategoryFilter === 'all'
@@ -210,7 +214,7 @@ export default function CostHeadsManager({
             cursor: 'pointer'
           }}
         >
-          All Categories ({costHeadsList.length})
+          All Items ({costHeadsList.length})
         </button>
 
         {categoriesList.map(cat => {
@@ -218,36 +222,79 @@ export default function CostHeadsManager({
           const count = costHeadsList.filter(ch => ch.category_id === cat.id).length;
 
           return (
-            <button
+            <div
               key={cat.id}
-              type="button"
-              onClick={() => setSelectedCategoryFilter(cat.id)}
               style={{
-                padding: '5px 12px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: isSelected ? '800' : '600',
-                backgroundColor: isSelected ? '#2563eb' : '#f8fafc',
-                color: isSelected ? '#ffffff' : '#334155',
-                border: isSelected ? '1px solid #1d4ed8' : '1px solid #e2e8f0',
-                cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px'
+                borderRadius: '20px',
+                backgroundColor: isSelected ? '#2563eb' : '#f8fafc',
+                border: isSelected ? '1px solid #1d4ed8' : '1px solid #e2e8f0',
+                overflow: 'hidden',
+                transition: 'all 0.15s ease'
               }}
             >
-              <span>{cat.name}</span>
-              <span style={{
-                fontSize: '10.5px',
-                padding: '1px 6px',
-                borderRadius: '10px',
-                backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-                color: isSelected ? '#ffffff' : '#475569',
-                fontWeight: '700'
-              }}>
-                {count}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryFilter(cat.id)}
+                onDoubleClick={() => setEditingCategory(cat)}
+                title={`Filter by ${cat.name} (Double-click to rename)`}
+                style={{
+                  padding: '5px 8px 5px 12px',
+                  fontSize: '12px',
+                  fontWeight: isSelected ? '800' : '600',
+                  backgroundColor: 'transparent',
+                  color: isSelected ? '#ffffff' : '#334155',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>{cat.name}</span>
+                <span style={{
+                  fontSize: '10.5px',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                  color: isSelected ? '#ffffff' : '#475569',
+                  fontWeight: '700'
+                }}>
+                  {count}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingCategory(cat);
+                }}
+                title={`Rename / Edit Category "${cat.name}"`}
+                style={{
+                  padding: '5px 7px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderLeft: isSelected ? '1px solid rgba(255,255,255,0.3)' : '1px solid #e2e8f0',
+                  color: isSelected ? '#ffffff' : '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = isSelected ? '#ffffff' : '#2563eb';
+                  e.currentTarget.style.backgroundColor = isSelected ? 'rgba(255,255,255,0.2)' : '#e2e8f0';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = isSelected ? '#ffffff' : '#94a3b8';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <Edit size={11} />
+              </button>
+            </div>
           );
         })}
 
@@ -273,6 +320,116 @@ export default function CostHeadsManager({
           <span>New Category</span>
         </button>
       </div>
+
+      {/* ACTIVE CATEGORY ACTION BANNER (Allows direct rename & delete right on Master Data page) */}
+      {selectedCategoryFilter !== 'all' && (() => {
+        const currentCat = categoriesList.find(c => String(c.id) === String(selectedCategoryFilter));
+        if (!currentCat) return null;
+        return (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: '#eff6ff',
+            border: '1.5px solid #bfdbfe',
+            borderRadius: '10px',
+            padding: '10px 16px',
+            flexWrap: 'wrap',
+            gap: '10px',
+            boxShadow: '0 2px 6px rgba(37,99,235,0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Layers size={16} color="#2563eb" />
+                <span style={{ fontSize: '13px', color: '#1e40af', fontWeight: '600' }}>Active Filter:</span>
+                <strong style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: '800' }}>{currentCat.name}</strong>
+              </div>
+              {currentCat.code && (
+                <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace', backgroundColor: '#ffffff', padding: '2px 7px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                  {currentCat.code}
+                </span>
+              )}
+              <span style={{ fontSize: '11.5px', color: '#2563eb', fontWeight: '700', backgroundColor: '#dbeafe', padding: '2px 9px', borderRadius: '12px' }}>
+                {filteredCostHeads.length} line items attached
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setEditingCategory(currentCat)}
+                title="Rename / Edit this Category Name"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  backgroundColor: '#2563eb',
+                  color: '#ffffff',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 5px rgba(37,99,235,0.25)'
+                }}
+              >
+                <Edit size={13} />
+                <span>Rename / Edit Category</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (handleDeleteCategory) {
+                    handleDeleteCategory(currentCat);
+                    setSelectedCategoryFilter('all');
+                  }
+                }}
+                title="Delete this Category"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  backgroundColor: '#ffffff',
+                  color: '#dc2626',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  border: '1px solid #fca5a5',
+                  cursor: 'pointer'
+                }}
+              >
+                <Trash2 size={13} />
+                <span>Delete</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryFilter('all')}
+                title="Clear category filter"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: '#ffffff',
+                  color: '#64748b',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  border: '1px solid #cbd5e1',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={13} />
+                <span>Clear Filter</span>
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* BATCH ACTION BANNER (SELECTED & DELETE) */}
       {selectedIds.length > 0 && (
@@ -493,17 +650,47 @@ export default function CostHeadsManager({
                     </td>
 
                     <td style={{ padding: '12px 20px', fontWeight: '600', color: '#1e293b' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '3px 10px',
-                        borderRadius: '6px',
-                        backgroundColor: '#f1f5f9',
-                        color: '#1e293b',
-                        border: '1px solid #e2e8f0',
-                        fontSize: '12.5px'
-                      }}>
-                        {ch.category_name}
-                      </span>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '3px 10px',
+                          borderRadius: '6px',
+                          backgroundColor: '#f1f5f9',
+                          color: '#1e293b',
+                          border: '1px solid #e2e8f0',
+                          fontSize: '12.5px'
+                        }}>
+                          {ch.category_name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cat = categoriesList.find(c => c.id === ch.category_id);
+                            if (cat) setEditingCategory(cat);
+                          }}
+                          title={`Rename / Edit Category "${ch.category_name}"`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: '3px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            borderRadius: '4px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#2563eb';
+                            e.currentTarget.style.backgroundColor = '#eff6ff';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#94a3b8';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <Edit size={12} />
+                        </button>
+                      </div>
                     </td>
 
                     <td style={{ padding: '12px 20px', fontWeight: '700', color: '#0f172a' }}>
@@ -709,6 +896,14 @@ export default function CostHeadsManager({
           </div>
         </div>
       )}
+
+      {/* MODAL: EDIT / RENAME CATEGORY */}
+      <EditCategoryModal
+        isOpen={!!editingCategory}
+        onClose={() => setEditingCategory(null)}
+        category={editingCategory}
+        onUpdateCategory={handleUpdateCategory}
+      />
     </div>
   );
 }

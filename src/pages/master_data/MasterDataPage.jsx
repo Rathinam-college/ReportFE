@@ -199,6 +199,8 @@ export default function MasterDataPage({
               handleSaveCostHead={handleSaveCostHead}
               openAddCategoryModal={openAddCategoryModal}
               openManageCategoriesModal={openManageCategoriesModal}
+              handleUpdateCategory={handleUpdateCategory}
+              handleDeleteCategory={handleDeleteCategory}
               onToggleMathTool={() => setShowMathTool(prev => !prev)}
               moduleName={moduleName}
             />

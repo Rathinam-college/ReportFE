@@ -945,31 +945,40 @@ export default function App() {
     const res = await fetch('/api/master/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, code, module: activeMod })
+      body: JSON.stringify({ name: name.trim(), code: code?.trim() || undefined, module: activeMod })
     });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.detail || 'Failed to create category');
     }
-    setMasterMessage({ type: 'success', text: `Category "${name}" created successfully!` });
+    const data = await res.json();
+    setMasterMessage({ type: 'success', text: `Category "${name.trim()}" created successfully!` });
     await fetchMasterDetails(activeMod);
     await fetchData(activeMod);
+    return data;
   };
 
   const handleUpdateCategory = async (categoryId, data) => {
     const activeMod = masterDataSubTab;
+    // Optimistic UI update for immediate visual response
+    setCategoriesList(prev => prev.map(c => (c.id === categoryId ? { ...c, ...data } : c)));
+
     const res = await fetch(`/api/master/categories/${categoryId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify({ ...data, module: activeMod })
     });
     if (!res.ok) {
       const err = await res.json();
+      // Revert if API failed
+      await fetchMasterDetails(activeMod);
       throw new Error(err.detail || 'Failed to update category');
     }
-    setMasterMessage({ type: 'success', text: `Category updated successfully!` });
+    const resData = await res.json();
+    setMasterMessage({ type: 'success', text: resData.message || `Category updated successfully!` });
     await fetchMasterDetails(activeMod);
     await fetchData(activeMod);
+    return resData;
   };
 
   const handleDeleteCategory = async (cat) => {
