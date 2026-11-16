@@ -8,6 +8,7 @@ import {
 
 // 12 Chart Components & Master Selector
 import ChartSelectorBar from './charts/ChartSelectorBar';
+import ClusteredDataTableChart from './charts/ClusteredDataTableChart';
 import BarChart from './charts/BarChart';
 import ColumnChart from './charts/ColumnChart';
 import StackedChart from './charts/StackedChart';
@@ -37,7 +38,7 @@ export default function DashboardPage({
   setCompareTargetPeriod,
   onOpenDataEntry
 }) {
-  const [activeChart, setActiveChart] = useState('stacked'); // Stacked by default matching Image 1
+  const [activeChart, setActiveChart] = useState('clustered_table'); // Default: Excel-style Clustered Columns with Data Sheet
   const [activePeriod, setActivePeriod] = useState('all'); // 'all' or period id
   const [showDataTable, setShowDataTable] = useState(true);
   const [isTableFullScreen, setIsTableFullScreen] = useState(false);
@@ -460,7 +461,7 @@ export default function DashboardPage({
         {/* Middle Split: Category Chart + Top Cost Heads Ranking */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1fr)',
+          gridTemplateColumns: activeChart === 'clustered_table' ? '1fr' : 'minmax(0, 1.8fr) minmax(300px, 1fr)',
           gap: '20px',
           alignItems: 'stretch'
         }}>
@@ -482,7 +483,9 @@ export default function DashboardPage({
                   Monthly Expense by Category Breakdown
                 </h3>
                 <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-                  Stacked totals & proportion across recorded billing cycles
+                  {activeChart === 'clustered_table' 
+                    ? 'Clustered column distribution with synchronized monthly audit data sheet' 
+                    : 'Stacked totals & proportion across recorded billing cycles'}
                 </p>
               </div>
 
@@ -501,7 +504,7 @@ export default function DashboardPage({
               </div>
             </div>
 
-            {/* Chart Selector Pills (Switch between 12 styles seamlessly) */}
+            {/* Chart Selector Pills (Switch between 13 styles seamlessly) */}
             <ChartSelectorBar
               activeChart={activeChart}
               setActiveChart={setActiveChart}
@@ -559,6 +562,15 @@ export default function DashboardPage({
 
             {/* Active Chart Component */}
             <div style={{ flex: 1, minHeight: '340px' }}>
+              {activeChart === 'clustered_table' && (
+                <ClusteredDataTableChart
+                  periods={periods}
+                  categories={categories}
+                  computedMatrix={computedMatrix}
+                  selectedModule={currentModule}
+                  activePeriod={activePeriod}
+                />
+              )}
               {activeChart === 'stacked' && <StackedChart periods={periods} categories={categories} />}
               {activeChart === 'column' && <ColumnChart periods={periods} categories={categories} activePeriod={activePeriod} />}
               {activeChart === 'bar' && <BarChart data={categoryItems} title={`Category Expenditure • ${activePeriod === 'all' ? 'All Months Aggregate' : periods.find(p => p.id === activePeriod)?.period_label || ''}`} />}
@@ -584,11 +596,20 @@ export default function DashboardPage({
             </div>
           </div>
 
-          {/* Right: Top Cost Heads Ranking Card */}
-          <div style={{ height: '100%' }}>
+          {/* Right: Top Cost Heads Ranking Card (when side-by-side) */}
+          {activeChart !== 'clustered_table' && (
+            <div style={{ height: '100%' }}>
+              <TopCostHeadsCard computedMatrix={computedMatrix} />
+            </div>
+          )}
+        </div>
+
+        {/* When in Clustered Table mode, render Top Cost Heads Card below full width */}
+        {activeChart === 'clustered_table' && (
+          <div style={{ marginTop: '2px' }}>
             <TopCostHeadsCard computedMatrix={computedMatrix} />
           </div>
-        </div>
+        )}
       </section>
 
       {/* ========================================================================= */}

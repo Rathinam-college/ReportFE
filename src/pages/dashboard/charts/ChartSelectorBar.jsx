@@ -22,6 +22,7 @@ export const CHART_GROUPS = [
   {
     group: 'Bars & Columns',
     items: [
+      { id: 'clustered_table', label: 'Clustered Column + Data Sheet', icon: TableIcon, desc: 'Excel-style clustered columns with integrated audit data grid' },
       { id: 'stacked', label: 'Stacked Bar/Column', icon: Layers, desc: 'Category composition breakdown per month' },
       { id: 'column', label: 'Column Chart', icon: BarChart3, desc: 'Vertical monthly expenditure columns' },
       { id: 'bar', label: 'Horizontal Bar Chart', icon: BarChartIcon, desc: 'Ranked category spend bars' },
