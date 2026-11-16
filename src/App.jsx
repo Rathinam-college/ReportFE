@@ -369,8 +369,8 @@ export default function App() {
         const remarkMap = {};
         if (mData.categories) {
           mData.categories.forEach(cat => {
-            cat.items.forEach(it => {
-              draftMap[it.cost_head_id] = { ...it.amounts };
+            (cat.items || []).forEach(it => {
+              draftMap[it.cost_head_id] = { ...(it.amounts || {}) };
               remarkMap[it.cost_head_id] = { ...(it.remarks || {}) };
             });
           });
@@ -392,6 +392,39 @@ export default function App() {
           if (!mData.periods.some(p => p.id === editingPeriodId)) {
             setEditingPeriodId(mData.periods[mData.periods.length - 1].id);
           }
+        }
+      } else {
+        console.warn(`[fetchData] Matrix fetch returned status ${matRes.status}. Attempting self-healing schema sync...`);
+        try {
+          const compatRes = await fetch('/api/system/schema-compat');
+          if (compatRes.ok) {
+            const retryRes = await fetch(`/api/matrix?module=${activeMod}`);
+            if (retryRes.ok) {
+              const retryData = await retryRes.json();
+              setMatrixData(retryData);
+              const draftMap = {};
+              const remarkMap = {};
+              if (retryData.categories) {
+                retryData.categories.forEach(cat => {
+                  (cat.items || []).forEach(it => {
+                    draftMap[it.cost_head_id] = { ...(it.amounts || {}) };
+                    remarkMap[it.cost_head_id] = { ...(it.remarks || {}) };
+                  });
+                });
+              }
+              setMatrixDraft(draftMap);
+              setRemarksDraft(remarkMap);
+              if (retryData.census) setCensusDraft(retryData.census);
+              if (retryData.hostel_census) setHostelCensusDraft(retryData.hostel_census);
+              if (retryData.transport_census) setTransportCensusDraft(retryData.transport_census);
+              setIsDirty(false);
+              if (retryData.periods && retryData.periods.length > 0) {
+                setEditingPeriodId(retryData.periods[retryData.periods.length - 1].id);
+              }
+            }
+          }
+        } catch (retryErr) {
+          console.error('[fetchData] Self-healing retry error:', retryErr);
         }
       }
       if (varRes.ok) setVarianceData(await varRes.json());
@@ -433,13 +466,13 @@ export default function App() {
       periods.forEach(p => { catSubtotalByPeriod[p.id] = 0.0; });
       let catOverallTotal = 0.0;
 
-      const items = cat.items.map(it => {
+      const items = (cat.items || []).map(it => {
         const rowAmounts = {};
         let rowTotal = 0.0;
 
         periods.forEach(p => {
           const draftVal = matrixDraft[it.cost_head_id]?.[p.id];
-          const actualVal = it.amounts[p.id];
+          const actualVal = it.amounts?.[p.id] ?? it.amounts?.[String(p.id)];
 
           let val = 0.0;
           if (draftVal !== undefined && draftVal !== null && draftVal !== '') {
@@ -469,8 +502,12 @@ export default function App() {
       overallGrandTotal += catOverallTotal;
 
       return {
+        ...cat,
         category_id: cat.category_id,
         category_name: cat.category_name,
+        category_type: cat.category_type || 'DIRECT',
+        formula_expression: cat.formula_expression,
+        formula_definition: cat.formula_definition,
         items,
         subtotal: {
           amounts: catSubtotalByPeriod,
@@ -1266,7 +1303,14 @@ export default function App() {
   // --------------------------------------------------------------------------
   // DASHBOARD MEMOS (PIE & COMPARISON DATA)
   // --------------------------------------------------------------------------
-  const activePeriodObj = computedMatrix?.periods?.find(p => p.id === editingPeriodId);
+  const activePeriodObj = computedMatrix?.periods?.find(p => p.id === editingPeriodId) || 
+                          (computedMatrix?.periods && computedMatrix.periods.length > 0 ? computedMatrix.periods[computedMatrix.periods.length - 1] : null);
+
+  useEffect(() => {
+    if (activePeriodObj && editingPeriodId !== activePeriodObj.id) {
+      setEditingPeriodId(activePeriodObj.id);
+    }
+  }, [activePeriodObj, editingPeriodId]);
 
   const pieData = useMemo(() => {
     if (!computedMatrix || !computedMatrix.categories) return [];

@@ -612,15 +612,15 @@ export default function DashboardPage({
               3
             </span>
             <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Total Counts & Operational Volume Summary
+              Executive Financial Totals Summary
             </h2>
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857', backgroundColor: '#ecfdf5', padding: '2px 8px', borderRadius: '4px' }}>
-              Grand Totals & Volume Census
+              Financial Spend Summary
             </span>
           </div>
 
           <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Financial aggregate totals, student/staff population counts & operational production metrics
+            Cumulative spend, active cycle total, monthly normalized average & largest expense head
           </div>
         </div>
 
@@ -716,121 +716,6 @@ export default function DashboardPage({
             <div style={{ fontSize: '11px', color: '#64748b' }} className="currency-font">
               {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length}-month)` : '₹0.00'}
             </div>
-          </div>
-        </div>
-
-        {/* 2. OPERATIONAL HEADCOUNT & VOLUME COUNTS RIBBON */}
-        <div style={{
-          backgroundColor: currentModule === 'food' ? '#f8fafc' : currentModule === 'hostel' ? '#f0fdf4' : '#fff7ed',
-          borderRadius: '12px',
-          border: `1.5px solid ${currentModule === 'food' ? '#cbd5e1' : currentModule === 'hostel' ? '#bbf7d0' : '#fed7aa'}`,
-          padding: '16px 22px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '24px' }}>
-              {currentModule === 'food' ? '🍲' : currentModule === 'hostel' ? '🏢' : '🚌'}
-            </span>
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
-                {currentModule === 'food' && 'Dining Headcount & Meal Production Total Counts'}
-                {currentModule === 'hostel' && 'Hostel Resident Occupancy & Utilities Total Counts'}
-                {currentModule === 'transport' && 'Fleet Commuters, Mileage & Diesel Total Counts'}
-              </div>
-              <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                {currentModule === 'food' && 'Operating across campus mess facilities, daily fresh supply & manpower allocation'}
-                {currentModule === 'hostel' && 'Campus residential census, power/water consumption & facilities maintenance'}
-                {currentModule === 'transport' && 'Daily commuter bus operations, routes, fuel mileage & trip statistics'}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '22px', flexWrap: 'wrap' }}>
-            {currentModule === 'food' && (() => {
-              const pidKey = activePeriod === 'all' ? String(latestPeriod?.id) : String(activePeriod);
-              const diners = computedMatrix?.census?.total_persons?.[pidKey] || 2690;
-              const meals = computedMatrix?.census?.production?.[pidKey] || 85000;
-              const matTotal = computedMatrix?.categories?.[0]?.subtotal?.total || 0;
-              const tot = computedMatrix?.grand_total?.total || 1;
-              const matPct = tot > 0 && matTotal > 0 ? ((matTotal / tot) * 100).toFixed(1) : '59.1';
-              return (
-                <>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Active Diners Total</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(diners).toLocaleString()} Diners</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Monthly Production Total</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(meals).toLocaleString()} Meals</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Material Cost Share</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#4f46e5' }}>{matPct}% of Total</div>
-                  </div>
-                </>
-              );
-            })()}
-
-            {currentModule === 'hostel' && (() => {
-              const pidKey = activePeriod === 'all' ? String(latestPeriod?.id) : String(activePeriod);
-              const hCensus = computedMatrix?.hostel_census?.[pidKey] || {};
-              const bedCap = hCensus.bed_capacity_total || 3119;
-              const occupied = hCensus.total_occupied || 3039;
-              const occPct = hCensus.occupied_pct || 97.4;
-              const pUnits = hCensus.power_units || 125422;
-              const pCost = hCensus.power_cost || 1659230;
-              return (
-                <>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Total Bed Capacity</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(bedCap).toLocaleString()} Beds</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Occupied Resident Count</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#059669' }}>{Number(occupied).toLocaleString()} ({occPct}%)</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Total Power Units</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(pUnits).toLocaleString()} kWh ({formatINR(pCost)})</div>
-                  </div>
-                </>
-              );
-            })()}
-
-            {currentModule === 'transport' && (() => {
-              const pidKey = activePeriod === 'all' ? String(latestPeriod?.id) : String(activePeriod);
-              const tCensus = computedMatrix?.transport_census?.[pidKey] || {};
-              const veh = tCensus.vehicles_count || '18+1';
-              const pax = tCensus.passengers_count || 447;
-              const kms = tCensus.actual_kms || 25777;
-              const diesel = tCensus.diesel_litres || 5184.8;
-              return (
-                <>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Active Fleet Count</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{veh} Vehicles</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Total Commuters Count</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#ea580c' }}>{Number(pax).toLocaleString()} Persons</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', backgroundColor: '#cbd5e1' }} />
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Actual Trip KMs & Fuel</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{Number(kms).toLocaleString()} KM • {Number(diesel).toLocaleString()}L</div>
-                  </div>
-                </>
-              );
-            })()}
           </div>
         </div>
       </section>

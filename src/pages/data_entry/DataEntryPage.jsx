@@ -39,7 +39,59 @@ export default function DataEntryPage({
   handleAddNewMonth,
   fetchData
 }) {
-  if (!computedMatrix) return null;
+  if (!computedMatrix) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '80px 20px',
+        backgroundColor: '#ffffff',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+        minHeight: '380px'
+      }}>
+        <div style={{
+          width: '42px',
+          height: '42px',
+          borderRadius: '50%',
+          border: '3.5px solid #e0e7ff',
+          borderTopColor: '#4f46e5',
+          animation: 'spin 0.9s linear infinite'
+        }} />
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        <h3 style={{ fontSize: '16.5px', fontWeight: '700', color: '#1e293b', marginTop: '18px', marginBottom: '6px' }}>
+          Loading Operational Data Entry...
+        </h3>
+        <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px 0', textAlign: 'center' }}>
+          Fetching monthly billing sheets and category balances for {selectedModule === 'food' ? 'Food & Dining' : selectedModule === 'hostel' ? 'Hostel' : 'Transport'}
+        </p>
+        {fetchData && (
+          <button
+            type="button"
+            onClick={() => fetchData(selectedModule)}
+            style={{
+              padding: '7px 16px',
+              borderRadius: '8px',
+              backgroundColor: '#4f46e5',
+              color: '#ffffff',
+              fontSize: '12.5px',
+              fontWeight: '600',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>Reload Sheet</span>
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const moduleLabel = selectedModule === 'food' ? 'Food & Dining Operations' : selectedModule === 'hostel' ? 'Hostel Resident Operations' : 'Transport & Fleet Operations';
   const matrixTitle = selectedModule === 'food' ? 'Food & Dining Expense Matrix' : selectedModule === 'hostel' ? 'Hostel Operations & Expense Matrix' : 'Transport Fleet Operations & Expense Matrix';
