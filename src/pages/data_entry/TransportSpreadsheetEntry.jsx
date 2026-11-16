@@ -1,19 +1,21 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { formatINR } from '../../utils/formatters';
 import { 
-  Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Bus, 
-  AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, Users, Fuel, Wrench, ShieldCheck, DollarSign, Building2, School
+  Save, RefreshCw, CheckCircle2, Zap, Bus, 
+  AlertCircle, Check, Copy, Settings,
+  Users, Fuel, Wrench, ShieldCheck, DollarSign, School, ChevronRight, Calculator,
+  TrendingUp, Award, Layers, Hash
 } from 'lucide-react';
 
-const BRANCHES = [
+export const TRANSPORT_BRANCHES = [
   { 
-    id: 'all', 
-    code: 'all', 
-    label: 'All Branches (Consolidated)', 
-    icon: '🏢', 
-    badgeColor: '#0284c7', 
-    badgeBg: '#e0f2fe',
-    description: 'Consolidated view • Combined metrics for all 4 institutions'
+    id: 'Common', 
+    code: 'Common', 
+    label: 'Common Pool', 
+    icon: '🚌', 
+    badgeColor: '#d97706', 
+    badgeBg: '#fef3c7',
+    description: 'Central Campus Fleet • Shared shuttles, staff transit, central pool'
   },
   { 
     id: 'RPS', 
@@ -22,7 +24,7 @@ const BRANCHES = [
     icon: '🏫', 
     badgeColor: '#7c3aed', 
     badgeBg: '#f3e8ff',
-    description: 'Rathinam Public School Fleet (School buses, van routes, student passes)'
+    description: 'Rathinam Public School Fleet • School buses, student commuter routes'
   },
   { 
     id: 'KPM', 
@@ -31,16 +33,7 @@ const BRANCHES = [
     icon: '🏫', 
     badgeColor: '#059669', 
     badgeBg: '#d1fae5',
-    description: 'KPM Matriculation School Fleet (Dedicated school routes)'
-  },
-  { 
-    id: 'Common', 
-    code: 'Common', 
-    label: 'Common Pool', 
-    icon: '🚌', 
-    badgeColor: '#d97706', 
-    badgeBg: '#fef3c7',
-    description: 'Campus Common Fleet (Shared shuttles, staff transit, central pool)'
+    description: 'KPM Matriculation School Fleet • Dedicated student transit routes'
   },
   { 
     id: 'University', 
@@ -49,528 +42,623 @@ const BRANCHES = [
     icon: '🎓', 
     badgeColor: '#dc2626', 
     badgeBg: '#fee2e2',
-    description: 'Rathinam University Main Fleet (College buses, student & staff commuter routes)'
+    description: 'Rathinam University Main Fleet • College buses & commuter transit'
+  },
+  { 
+    id: 'all', 
+    code: 'all', 
+    label: 'All Branches (Consolidated)', 
+    icon: '🏢', 
+    badgeColor: '#0284c7', 
+    badgeBg: '#e0f2fe',
+    description: 'Consolidated view • Combined metrics for all 4 institutions'
   }
 ];
+
+// Fallback section styling palette matching the uploaded image exactly
+const SECTION_STYLES = {
+  'Fleet Operations & Distance': {
+    headerBg: '#f8fafc',
+    headerText: '#1e293b',
+    rowBg: '#ffffff',
+    border: '#cbd5e1',
+    accent: '#3b82f6'
+  },
+  'Fleet Expenses & Operations': {
+    headerBg: '#ffedd5',
+    headerText: '#9a3412',
+    rowBg: '#fff7ed',
+    border: '#fdba74',
+    accent: '#ea580c',
+    totalBg: '#86efac' // Bright lime green total row
+  },
+  'Revenue, Deductions & Income': {
+    headerBg: '#fef3c7',
+    headerText: '#92400e',
+    rowBg: '#fffbeb',
+    border: '#fde68a',
+    accent: '#d97706',
+    totalBg: '#fde047'
+  },
+  'Operating Budget & Balance': {
+    headerBg: '#dcfce7',
+    headerText: '#166534',
+    rowBg: '#f0fdf4',
+    border: '#86efac',
+    accent: '#16a34a',
+    totalBg: '#86efac'
+  },
+  'Service Tickets & Compliance': {
+    headerBg: '#f3e8ff',
+    headerText: '#6b21a8',
+    rowBg: '#faf5ff',
+    border: '#d8b4fe',
+    accent: '#9333ea'
+  },
+  'Fuel & Energy Consumption': {
+    headerBg: '#f1f5f9',
+    headerText: '#334155',
+    rowBg: '#ffffff',
+    border: '#cbd5e1',
+    accent: '#64748b'
+  },
+  'Student Transport Fee Analytics': {
+    headerBg: '#fef08a',
+    headerText: '#854d0e',
+    rowBg: '#fefce8',
+    border: '#facc15',
+    accent: '#ca8a04',
+    totalBg: '#86efac'
+  }
+};
 
 export default function TransportSpreadsheetEntry({
   activePeriodObj,
   computedMatrix,
   editingPeriodId,
   setEditingPeriodId,
-  matrixDraft = {},
-  remarksDraft = {},
   transportCensusDraft = {},
-  handleCellChange,
-  handleRemarkChange,
   handleTransportCensusChange,
-  handleSaveActiveMonth,
-  savingBatch,
-  isDirty,
-  fetchData,
-  openAddCostHeadModal,
-  handleDeleteCostHead,
-  openAddCategoryModal
+  fetchData
 }) {
   const [activeBranch, setActiveBranch] = useState('Common');
-  const [activeSubTab, setActiveSubTab] = useState('excel_grid'); // 'excel_grid', 'single_month', 'census'
+  const [activeView, setActiveView] = useState('sheet'); // 'sheet' (Exact single-month spreadsheet) or 'multi_month'
+  const [parameters, setParameters] = useState([]);
+  const [loadingParams, setLoadingParams] = useState(true);
   const [localMessage, setLocalMessage] = useState(null);
-  const [isSavingLocal, setIsSavingLocal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Per-branch drafts so switching branches preserves unsaved entries
-  const [branchMatrixDraft, setBranchMatrixDraft] = useState({}); // { [branch]: { [costHeadId]: { [periodId]: val } } }
-  const [branchRemarksDraft, setBranchRemarksDraft] = useState({}); // { [branch]: { [costHeadId]: { [periodId]: text } } }
-  const [branchCensusDraft, setBranchCensusDraft] = useState({}); // { [branch]: { [periodId]: { field: val } } }
-
-  // Inline editing state for Cost Head descriptions and Category names
-  const [editedCostHeadNames, setEditedCostHeadNames] = useState({}); // { [cost_head_id]: new_name }
-  const [editedCategoryNames, setEditedCategoryNames] = useState({}); // { [category_id]: new_name }
-  const [newRowDrafts, setNewRowDrafts] = useState([]); // [ { temp_id, category_id, name, amounts: {} } ]
+  // Per-branch local edit buffers: { [branch]: { [periodId]: { [param_key]: val } } }
+  const [branchDrafts, setBranchDrafts] = useState({});
 
   const isClosed = !!activePeriodObj?.is_closed;
   const periods = computedMatrix?.periods || [];
-  const categories = computedMatrix?.categories || [];
-  const currStr = String(editingPeriodId);
+  const currPeriodIdStr = String(editingPeriodId);
+  const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[0];
 
-  const activeBranchObj = BRANCHES.find(b => b.id === activeBranch) || BRANCHES[0];
+  // Fetch parameters from Master Data API
+  const fetchParameters = async () => {
+    try {
+      setLoadingParams(true);
+      const res = await fetch('/api/transport/parameters');
+      if (res.ok) {
+        const data = await res.json();
+        setParameters(data);
+      }
+    } catch (err) {
+      console.error('Error fetching transport parameters:', err);
+    } finally {
+      setLoadingParams(false);
+    }
+  };
 
-  // --- Helper: Parse numeric safely ---
+  useEffect(() => {
+    fetchParameters();
+  }, []);
+
+  // Safe numeric parser
   const num = (v, defaultVal = 0) => {
     if (v === undefined || v === null || v === '') return defaultVal;
     if (typeof v === 'number') return isNaN(v) ? defaultVal : v;
-    const cleaned = String(v).replace(/,/g, '').replace(/%/g, '').trim();
+    const cleaned = String(v).replace(/,/g, '').replace(/₹/g, '').replace(/%/g, '').trim();
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? defaultVal : parsed;
   };
 
-  // --- Helper: Get value of a cell for a specific branch or consolidated ---
-  const getBranchCellAmount = (branch, costHeadId, periodId) => {
-    if (branch === 'all') {
-      let sum = 0;
-      ['RPS', 'KPM', 'Common', 'University'].forEach(b => {
-        sum += getBranchCellAmount(b, costHeadId, periodId);
-      });
-      return sum;
+  // Helper to get raw stored value for a given branch, period, and parameter key
+  const getParamRawValue = (branchId, periodIdStr, paramKey) => {
+    // 1. Check local unsaved draft for this branch and period
+    const localVal = branchDrafts[branchId]?.[periodIdStr]?.[paramKey];
+    if (localVal !== undefined && localVal !== null) return localVal;
+
+    // 2. If active branch matches the parent draft, check transportCensusDraft
+    if (branchId === activeBranch) {
+      const parentVal = transportCensusDraft[periodIdStr]?.[paramKey];
+      if (parentVal !== undefined && parentVal !== null) return parentVal;
     }
 
-    const draftVal = branchMatrixDraft[branch]?.[costHeadId]?.[periodId];
-    if (draftVal !== undefined && draftVal !== null && draftVal !== '') {
-      const parsedNum = parseFloat(String(draftVal).replace(/,/g, ''));
-      return isNaN(parsedNum) ? 0 : parsedNum;
+    // 3. Check computedMatrix.transport_census_by_branch from backend
+    const dbBranchData = computedMatrix?.transport_census_by_branch?.[branchId]?.[periodIdStr];
+    if (dbBranchData && dbBranchData[paramKey] !== undefined && dbBranchData[paramKey] !== null) {
+      return dbBranchData[paramKey];
     }
 
-    const bAmounts = computedMatrix?.matrix_by_branch?.[branch]?.amounts;
-    if (bAmounts) {
-      const key = `${costHeadId}_${periodId}`;
-      if (bAmounts[key] !== undefined && bAmounts[key] !== null) {
-        return Number(bAmounts[key]) || 0;
-      }
+    // 4. Default fallbacks based on branch
+    if (paramKey === 'vehicles_count') {
+      return branchId === 'RPS' ? '18+1' : branchId === 'KPM' ? '12+1' : branchId === 'University' ? '24+2' : '10+1';
     }
-
-    // Fallback: check item in categories if Common
-    if (branch === 'Common') {
-      for (const cat of categories) {
-        const item = cat.items?.find(it => it.cost_head_id === costHeadId);
-        if (item) {
-          const amt = item.amounts?.[periodId] ?? item.amounts?.[String(periodId)] ?? 0;
-          return Number(amt) || 0;
-        }
-      }
-    }
-    return 0;
+    return '';
   };
 
-  const getCellAmount = (costHeadId, periodId) => {
-    return getBranchCellAmount(activeBranch, costHeadId, periodId);
-  };
-
-  // --- Handle Cell Editing per Branch ---
-  const handleBranchCellChange = (costHeadId, periodId, val) => {
-    if (activeBranch === 'all') return;
-    setBranchMatrixDraft(prev => ({
-      ...prev,
-      [activeBranch]: {
-        ...(prev[activeBranch] || {}),
-        [costHeadId]: {
-          ...((prev[activeBranch] || {})[costHeadId] || {}),
-          [periodId]: val
-        }
-      }
-    }));
-  };
-
-  // --- Category Color Palette matching user's Excel style ---
-  const getCategoryColor = (catName, idx) => {
-    const nameLower = (catName || '').toLowerCase();
-    if (nameLower.includes('fuel') || nameLower.includes('toll')) {
-      return { headerBg: '#ffc90e', text: '#000000', rowBg: '#fff2df' }; // Golden yellow
-    }
-    if (nameLower.includes('maintenance') || nameLower.includes('spare') || nameLower.includes('fleet')) {
-      return { headerBg: '#dcdde1', text: '#000000', rowBg: '#fff2df' }; // Silver / Grey
-    }
-    if (nameLower.includes('manpower') || nameLower.includes('crew') || nameLower.includes('employee')) {
-      return { headerBg: '#a8d8ea', text: '#000000', rowBg: '#fff2df' }; // Soft sky blue
-    }
-    if (nameLower.includes('statutory') || nameLower.includes('insurance') || nameLower.includes('compliance')) {
-      return { headerBg: '#d4edda', text: '#000000', rowBg: '#fff2df' }; // Soft mint green
-    }
-    const fallbacks = [
-      { headerBg: '#fef08a', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#e2e8f0', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#bfdbfe', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#bbf7d0', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#fed7aa', text: '#000000', rowBg: '#fff2df' }
-    ];
-    return fallbacks[idx % fallbacks.length];
-  };
-
-  // --- Calculate live category subtotals across all periods for active branch ---
-  const categorySubtotals = useMemo(() => {
-    const subs = {};
-    categories.forEach(cat => {
-      subs[cat.category_id] = {};
-      periods.forEach(p => {
-        let pSum = 0;
-        cat.items?.forEach(it => {
-          pSum += getBranchCellAmount(activeBranch, it.cost_head_id, p.id);
-        });
-        // Include any new draft rows for this category
-        newRowDrafts.filter(nr => nr.category_id === cat.category_id).forEach(nr => {
-          const amt = parseFloat(nr.amounts?.[p.id] || 0);
-          if (!isNaN(amt)) pSum += amt;
-        });
-        subs[cat.category_id][p.id] = pSum;
-      });
-    });
-    return subs;
-  }, [categories, periods, activeBranch, branchMatrixDraft, newRowDrafts, computedMatrix]);
-
-  // --- Calculate live Grand Total for each period for active branch ---
-  const grandTotalsByPeriod = useMemo(() => {
-    const totals = {};
-    let overallGrand = 0;
-    periods.forEach(p => {
-      let pSum = 0;
-      categories.forEach(cat => {
-        pSum += categorySubtotals[cat.category_id]?.[p.id] || 0;
-      });
-      totals[p.id] = pSum;
-      overallGrand += pSum;
-    });
-    return { totals, overallGrand };
-  }, [periods, categories, categorySubtotals]);
-
-  // --- Calculate total spend for EACH branch to display contribution strip ---
-  const branchTotals = useMemo(() => {
-    const res = {};
-    let allSum = 0;
-    ['RPS', 'KPM', 'Common', 'University'].forEach(b => {
-      let bSum = 0;
-      categories.forEach(cat => {
-        cat.items?.forEach(it => {
-          periods.forEach(p => {
-            bSum += getBranchCellAmount(b, it.cost_head_id, p.id);
-          });
-        });
-      });
-      res[b] = bSum;
-      allSum += bSum;
-    });
-    res['all'] = allSum;
-    return res;
-  }, [categories, periods, branchMatrixDraft, computedMatrix]);
-
-  // --- Handle inline description change ---
-  const handleCostHeadNameChange = (costHeadId, newName) => {
-    setEditedCostHeadNames(prev => ({
-      ...prev,
-      [costHeadId]: newName
-    }));
-  };
-
-  // --- Handle inline category name change ---
-  const handleCategoryNameChange = (categoryId, newName) => {
-    setEditedCategoryNames(prev => ({
-      ...prev,
-      [categoryId]: newName
-    }));
-  };
-
-  // --- Add a new row to a category ---
-  const handleAddNewRow = (categoryId) => {
-    const tempId = `temp_${Date.now()}`;
-    setNewRowDrafts(prev => [
-      ...prev,
-      {
-        temp_id: tempId,
-        category_id: categoryId,
-        name: 'New Transport Line Item',
-        amounts: {}
-      }
-    ]);
-  };
-
-  // --- Discard draft row ---
-  const handleRemoveDraftRow = (tempId) => {
-    setNewRowDrafts(prev => prev.filter(r => r.temp_id !== tempId));
-  };
-
-  // --- Update amount in draft row ---
-  const handleDraftRowAmountChange = (tempId, periodId, val) => {
-    setNewRowDrafts(prev => prev.map(r => {
-      if (r.temp_id === tempId) {
-        return {
-          ...r,
-          amounts: {
-            ...r.amounts,
-            [periodId]: val
-          }
-        };
-      }
-      return r;
-    }));
-  };
-
-  // --- Branch Operational Census Metrics Helper ---
-  const getBranchCensusMetrics = (branch, periodId) => {
-    const pStr = String(periodId);
-    if (branch === 'all') {
-      let tot_passengers = 0;
-      let tot_students = 0;
-      let tot_staff = 0;
-      let tot_approved_kms = 0;
-      let tot_actual_kms = 0;
-      let tot_additional_kms = 0;
-      let tot_diesel_litres = 0;
-      let tot_fuel_expenses = 0;
-      let tot_fee_demand = 0;
-      let tot_fee_collected = 0;
-      let tot_approved_budget = 0;
-      let tot_cumulative_budget_spent = 0;
-      let tot_tickets_raised = 0;
-      let tot_tickets_closed = 0;
-      let tot_incidents = 0;
+  // Helper to compute a branch's full metrics dictionary (with formulas calculated) for a period
+  const computeBranchMetrics = (branchId, periodIdStr) => {
+    // If Consolidated 'all', aggregate across the 4 real branches
+    if (branchId === 'all') {
+      const realBranches = ['Common', 'RPS', 'KPM', 'University'];
+      const branchMetricsList = realBranches.map(b => computeBranchMetrics(b, periodIdStr));
       const vehList = [];
+      let totPassengers = 0;
+      let totApprovedKms = 0;
+      let totActualKms = 0;
+      let totAdditionalKms = 0;
+      let totDieselLitres = 0;
+      let totFuelExp = 0;
+      let totFc = 0;
+      let totStatutory = 0;
+      let totRepair = 0;
+      let totOther = 0;
+      let totEmp = 0;
+      let totFeeDemand = 0;
+      let totFeeDiscount = 0;
+      let totFeePaid = 0;
+      let totRpsBilling = 0;
+      let totStaffDeduction = 0;
+      let totAddKmsRps = 0;
+      let totAddKmsOthers = 0;
+      let totCabBilling = 0;
+      let totApprovedBudget = 0;
+      let totCumulativeBudgetSpent = 0;
+      let totTicketsRaised = 0;
+      let totTicketsClosed = 0;
+      let totQualityRec = 0;
+      let totQualityCls = 0;
+      let totIncidents = 0;
 
-      ['RPS', 'KPM', 'Common', 'University'].forEach(b => {
-        const m = getBranchCensusMetrics(b, periodId);
-        if (m.vehicles_count) vehList.push(`${b}: ${m.vehicles_count}`);
-        tot_passengers += num(m.passengers_count);
-        tot_students += num(m.students_count);
-        tot_staff += num(m.staff_count);
-        tot_approved_kms += num(m.approved_kms);
-        tot_actual_kms += num(m.actual_kms);
-        tot_additional_kms += num(m.additional_kms);
-        tot_diesel_litres += num(m.diesel_litres);
-        tot_fuel_expenses += num(m.fuel_expenses);
-        tot_fee_demand += num(m.fee_demand);
-        tot_fee_collected += num(m.fee_collected);
-        tot_approved_budget += num(m.approved_budget);
-        tot_cumulative_budget_spent += num(m.cumulative_budget_spent);
-        tot_tickets_raised += num(m.service_tickets_raised);
-        tot_tickets_closed += num(m.service_tickets_closed);
-        tot_incidents += num(m.incidents_count);
+      branchMetricsList.forEach((m, idx) => {
+        const bCode = realBranches[idx];
+        if (m.vehicles_count) vehList.push(`${bCode}: ${m.vehicles_count}`);
+        totPassengers += num(m.passengers_count);
+        totApprovedKms += num(m.approved_kms);
+        totActualKms += num(m.actual_kms);
+        totAdditionalKms += num(m.additional_kms);
+        totDieselLitres += num(m.diesel_litres);
+        totFuelExp += num(m.fuel_expenses);
+        totFc += num(m.fc_cost);
+        totStatutory += num(m.statutory_cost);
+        totRepair += num(m.repair_maintenance_cost);
+        totOther += num(m.other_cost);
+        totEmp += num(m.employee_cost);
+        totFeeDemand += num(m.fee_demand);
+        totFeeDiscount += num(m.fee_discount);
+        totFeePaid += num(m.fee_collected);
+        totRpsBilling += num(m.rps_monthly_billing);
+        totStaffDeduction += num(m.staff_travel_deduction);
+        totAddKmsRps += num(m.additional_kms_billed_rps);
+        totAddKmsOthers += num(m.additional_kms_others_billing);
+        totCabBilling += num(m.cab_billing);
+        totApprovedBudget += num(m.approved_budget);
+        totCumulativeBudgetSpent += num(m.cumulative_budget_spent);
+        totTicketsRaised += num(m.service_tickets_raised);
+        totTicketsClosed += num(m.service_tickets_closed);
+        totQualityRec += num(m.quality_issues_received);
+        totQualityCls += num(m.quality_issues_closed);
+        totIncidents += num(m.incidents_count);
       });
+
+      const totExpenses = totFuelExp + totFc + totStatutory + totRepair + totOther + totEmp;
+      const totCumIncome = totFeePaid + totRpsBilling + totStaffDeduction + totAddKmsRps + totAddKmsOthers + totCabBilling;
+      const totBal = totApprovedBudget - totCumulativeBudgetSpent;
+      const totFeeUnpaid = Math.max(0, totFeeDemand - totFeeDiscount - totFeePaid);
+      const totTicketsOpen = Math.max(0, totTicketsRaised - totTicketsClosed);
+      const totQualityOpen = Math.max(0, totQualityRec - totQualityCls);
 
       return {
         vehicles_count: vehList.join(' / ') || '64 fleet',
-        passengers_count: tot_passengers,
-        students_count: tot_students,
-        staff_count: tot_staff,
-        approved_kms: tot_approved_kms,
-        actual_kms: tot_actual_kms,
-        additional_kms: tot_additional_kms,
-        excess_kms_rps: 0,
-        diesel_litres: tot_diesel_litres,
-        fuel_expenses: tot_fuel_expenses,
-        fee_demand: tot_fee_demand,
-        fee_collected: tot_fee_collected,
-        fee_unpaid: Math.max(0, tot_fee_demand - tot_fee_collected),
-        approved_budget: tot_approved_budget,
-        cumulative_budget_spent: tot_cumulative_budget_spent,
-        balance: tot_approved_budget - tot_cumulative_budget_spent,
-        service_tickets_raised: tot_tickets_raised,
-        service_tickets_closed: tot_tickets_closed,
-        service_tickets_open: Math.max(0, tot_tickets_raised - tot_tickets_closed),
-        incidents_count: tot_incidents,
-        statutory_compliance: 1
+        passengers_count: totPassengers,
+        approved_kms: totApprovedKms,
+        actual_kms: totActualKms,
+        excess_minus_kms_rps: Math.round(totActualKms - totApprovedKms),
+        excess_kms_billed_rps: 0,
+        additional_kms: totAdditionalKms,
+        fuel_expenses: totFuelExp,
+        fc_cost: totFc,
+        statutory_cost: totStatutory,
+        repair_maintenance_cost: totRepair,
+        other_cost: totOther,
+        employee_cost: totEmp,
+        total_expenses: totExpenses,
+        students_count_income: totPassengers,
+        staff_count_income: 0,
+        fee_demand: totFeeDemand,
+        fee_collected: totFeePaid,
+        fee_unpaid: totFeeUnpaid,
+        rps_monthly_billing: totRpsBilling,
+        staff_travel_deduction: totStaffDeduction,
+        additional_kms_billed_rps: totAddKmsRps,
+        additional_kms_others_billing: totAddKmsOthers,
+        cumulative_income: totCumIncome,
+        approved_budget: totApprovedBudget,
+        cumulative_budget_spent: totCumulativeBudgetSpent,
+        balance: totBal,
+        service_tickets_raised: totTicketsRaised,
+        service_tickets_closed: totTicketsClosed,
+        service_tickets_open: totTicketsOpen,
+        quality_issues_received: totQualityRec,
+        quality_issues_closed: totQualityCls,
+        quality_issues_open: totQualityOpen,
+        statutory_compliance: 1,
+        incidents_count: totIncidents,
+        diesel_litres: totDieselLitres,
+        students_count_fee: totPassengers,
+        demand_fee: totFeeDemand,
+        fee_discount: totFeeDiscount,
+        paid_fee: totFeePaid,
+        unpaid_fee: totFeeUnpaid,
+        per_student_cost_expenses: totPassengers > 0 ? Math.round(totExpenses / totPassengers) : 0,
+        per_student_fee_year: totPassengers > 0 ? Math.round(totFeeDemand / totPassengers) : 0,
+        demand_per_km_day: totActualKms > 0 ? (totFeeDemand / (totActualKms * 30)).toFixed(2) : '0.00',
+        km_per_veh_day: (totActualKms / (64 * 30)).toFixed(2),
+        cumulative_demand_per_km: totActualKms > 0 ? (totFeeDemand / totActualKms).toFixed(2) : '0.00',
+        cab_billing: totCabBilling
       };
     }
 
-    const draft = branchCensusDraft[branch]?.[pStr];
-    const base = computedMatrix?.transport_census_by_branch?.[branch]?.[pStr] || {};
-    const d = { ...base, ...(draft || {}) };
+    // Single real branch calculations:
+    const g = (k, fb = 0) => num(getParamRawValue(branchId, periodIdStr, k), fb);
 
-    const vehicles_count = d.vehicles_count !== undefined && d.vehicles_count !== '' 
-      ? String(d.vehicles_count) 
-      : (branch === 'RPS' ? '18+1' : branch === 'KPM' ? '12+1' : branch === 'University' ? '24+2' : '10+1');
-    const passengers_count = num(d.passengers_count, branch === 'RPS' ? 447 : branch === 'KPM' ? 320 : branch === 'University' ? 890 : 150);
-    const students_count = num(d.students_count, branch === 'RPS' ? 412 : branch === 'KPM' ? 295 : branch === 'University' ? 820 : 110);
-    const staff_count = num(d.staff_count, branch === 'RPS' ? 35 : branch === 'KPM' ? 25 : branch === 'University' ? 70 : 40);
+    const vehicles_count = String(getParamRawValue(branchId, periodIdStr, 'vehicles_count') || (
+      branchId === 'RPS' ? '18+1' : branchId === 'KPM' ? '12+1' : branchId === 'University' ? '24+2' : '10+1'
+    ));
+    const passengers_count = g('passengers_count', branchId === 'RPS' ? 447 : branchId === 'KPM' ? 320 : branchId === 'University' ? 890 : 150);
+    const approved_kms = g('approved_kms', branchId === 'RPS' ? 26691 : branchId === 'KPM' ? 18500 : branchId === 'University' ? 42000 : 15000);
+    const actual_kms = g('actual_kms', branchId === 'RPS' ? 25777 : branchId === 'KPM' ? 17950 : branchId === 'University' ? 40800 : 14200);
+    const excess_minus_kms_rps = actual_kms - approved_kms; // Formula: Actual - Approved
+    const excess_kms_billed_rps = g('excess_kms_billed_rps', 0);
+    const additional_kms = g('additional_kms', branchId === 'RPS' ? 2481 : branchId === 'KPM' ? 1200 : branchId === 'University' ? 3500 : 950);
 
-    const approved_kms = num(d.approved_kms, branch === 'RPS' ? 26691 : branch === 'KPM' ? 18500 : branch === 'University' ? 42000 : 15000);
-    const actual_kms = num(d.actual_kms, branch === 'RPS' ? 25777 : branch === 'KPM' ? 17950 : branch === 'University' ? 40800 : 14200);
-    const additional_kms = num(d.additional_kms, branch === 'RPS' ? 2481 : branch === 'KPM' ? 1200 : branch === 'University' ? 3500 : 950);
-    const excess_kms_rps = num(d.excess_kms_rps, 0);
+    // Section 2: Fleet Expenses & Operations
+    const fuel_expenses = g('fuel_expenses', branchId === 'RPS' ? 478461 : branchId === 'KPM' ? 338400 : branchId === 'University' ? 789600 : 272600);
+    const fc_cost = g('fc_cost', 0);
+    const statutory_cost = g('statutory_cost', branchId === 'RPS' ? 61896 : branchId === 'KPM' ? 42000 : branchId === 'University' ? 95000 : 35000);
+    const repair_maintenance_cost = g('repair_maintenance_cost', branchId === 'RPS' ? 82865 : branchId === 'KPM' ? 58000 : branchId === 'University' ? 134000 : 45000);
+    const other_cost = g('other_cost', branchId === 'RPS' ? 116532 : branchId === 'KPM' ? 78000 : branchId === 'University' ? 185000 : 62000);
+    const employee_cost = g('employee_cost', branchId === 'RPS' ? 474600 : branchId === 'KPM' ? 325000 : branchId === 'University' ? 740000 : 260000);
+    
+    // Formula: Total Expenses = Fuel + FC + Statutory + Repair + Others + Employees Cost
+    const total_expenses = fuel_expenses + fc_cost + statutory_cost + repair_maintenance_cost + other_cost + employee_cost;
 
-    const diesel_litres = num(d.diesel_litres, branch === 'RPS' ? 5184.84 : branch === 'KPM' ? 3600.00 : branch === 'University' ? 8400.00 : 2900.00);
-    const fuel_expenses = num(d.fuel_expenses, branch === 'RPS' ? 487375 : branch === 'KPM' ? 338400 : branch === 'University' ? 789600 : 272600);
-
-    const fee_demand = num(d.fee_demand, branch === 'RPS' ? 12500000 : branch === 'KPM' ? 8500000 : branch === 'University' ? 24000000 : 0);
-    const fee_collected = num(d.fee_collected, branch === 'RPS' ? 8900000 : branch === 'KPM' ? 6200000 : branch === 'University' ? 17500000 : 0);
+    // Section 3: Revenue, Deductions & Income
+    const students_count_income = g('students_count_income', branchId === 'RPS' ? 412 : branchId === 'KPM' ? 295 : branchId === 'University' ? 820 : 110);
+    const staff_count_income = g('staff_count_income', branchId === 'RPS' ? 35 : branchId === 'KPM' ? 25 : branchId === 'University' ? 70 : 40);
+    const fee_demand = g('fee_demand', branchId === 'RPS' ? 12500000 : branchId === 'KPM' ? 8500000 : branchId === 'University' ? 24000000 : 0);
+    const fee_collected = g('fee_collected', branchId === 'RPS' ? 8900000 : branchId === 'KPM' ? 6200000 : branchId === 'University' ? 17500000 : 0);
     const fee_unpaid = Math.max(0, fee_demand - fee_collected);
+    const rps_monthly_billing = g('rps_monthly_billing', 0);
+    const staff_travel_deduction = g('staff_travel_deduction', 0);
+    const additional_kms_billed_rps = g('additional_kms_billed_rps', 0);
+    const additional_kms_others_billing = g('additional_kms_others_billing', 0);
+    const cab_billing = g('cab_billing', branchId === 'RPS' ? 214440 : 0);
 
-    const approved_budget = num(d.approved_budget, branch === 'RPS' ? 13730137.73 : branch === 'KPM' ? 9500000.00 : branch === 'University' ? 28500000.00 : 7500000.00);
-    const cumulative_budget_spent = num(d.cumulative_budget_spent, branch === 'RPS' ? 6600000 : branch === 'KPM' ? 4300000 : branch === 'University' ? 13200000 : 3100000);
+    // Formula: Cumulative Income = Paid + RPS monthly billing + Staff Travel Deduction + Additional KMs Billed + Others Billing + Cab billing
+    const cumulative_income = fee_collected + rps_monthly_billing + staff_travel_deduction + additional_kms_billed_rps + additional_kms_others_billing + cab_billing;
+
+    // Section 4: Operating Budget & Balance
+    const approved_budget = g('approved_budget', branchId === 'RPS' ? 13730138 : branchId === 'KPM' ? 9500000 : branchId === 'University' ? 28500000 : 7500000);
+    const cumulative_budget_spent = g('cumulative_budget_spent', branchId === 'RPS' ? 6471523 : branchId === 'KPM' ? 4300000 : branchId === 'University' ? 13200000 : 3100000);
+    // Formula: Balance = Approved Budget - Cumulative Budget spent
     const balance = approved_budget - cumulative_budget_spent;
 
-    const service_tickets_raised = num(d.service_tickets_raised, branch === 'RPS' ? 38 : branch === 'KPM' ? 24 : branch === 'University' ? 56 : 18);
-    const service_tickets_closed = num(d.service_tickets_closed, branch === 'RPS' ? 38 : branch === 'KPM' ? 23 : branch === 'University' ? 54 : 17);
+    // Section 5: Service Tickets & Compliance
+    const service_tickets_raised = g('service_tickets_raised', branchId === 'RPS' ? 38 : branchId === 'KPM' ? 24 : branchId === 'University' ? 56 : 18);
+    const service_tickets_closed = g('service_tickets_closed', branchId === 'RPS' ? 38 : branchId === 'KPM' ? 23 : branchId === 'University' ? 54 : 17);
     const service_tickets_open = Math.max(0, service_tickets_raised - service_tickets_closed);
 
-    const incidents_count = num(d.incidents_count, 1);
-    const statutory_compliance = num(d.statutory_compliance, 1);
+    const quality_issues_received = g('quality_issues_received', 0);
+    const quality_issues_closed = g('quality_issues_closed', 0);
+    const quality_issues_open = Math.max(0, quality_issues_received - quality_issues_closed);
+
+    const statutory_compliance = g('statutory_compliance', 1);
+    const incidents_count = g('incidents_count', 1);
+
+    // Section 6: Fuel Purchase
+    const diesel_litres = g('diesel_litres', branchId === 'RPS' ? 5185 : branchId === 'KPM' ? 3600 : branchId === 'University' ? 8400 : 2900);
+
+    // Section 7: Student Transport Fee Analytics
+    const students_count_fee = g('students_count_fee', students_count_income);
+    const demand_fee = g('demand_fee', fee_demand);
+    const fee_discount = g('fee_discount', 0);
+    const paid_fee = g('paid_fee', fee_collected);
+    const unpaid_fee = Math.max(0, demand_fee - fee_discount - paid_fee);
+
+    // Formula: Per student cost expenses = Total Expenses / Students Count
+    const per_student_cost_expenses = students_count_income > 0 ? Math.round(total_expenses / students_count_income) : 0;
+    const per_student_fee_year = students_count_income > 0 ? Math.round(demand_fee / students_count_income) : 0;
+    const demand_per_km_day = actual_kms > 0 ? (demand_fee / (actual_kms * 30)).toFixed(2) : '0.00';
+    const numVehicles = parseFloat(vehicles_count) || 19;
+    const km_per_veh_day = numVehicles > 0 ? (actual_kms / (numVehicles * 30)).toFixed(2) : '0.00';
+    const cumulative_demand_per_km = actual_kms > 0 ? (demand_fee / actual_kms).toFixed(2) : '0.00';
 
     return {
       vehicles_count,
       passengers_count,
-      students_count,
-      staff_count,
       approved_kms,
       actual_kms,
+      excess_minus_kms_rps,
+      excess_kms_billed_rps,
       additional_kms,
-      excess_kms_rps,
-      diesel_litres,
       fuel_expenses,
+      fc_cost,
+      statutory_cost,
+      repair_maintenance_cost,
+      other_cost,
+      employee_cost,
+      total_expenses,
+      students_count_income,
+      staff_count_income,
       fee_demand,
       fee_collected,
       fee_unpaid,
+      rps_monthly_billing,
+      staff_travel_deduction,
+      additional_kms_billed_rps,
+      additional_kms_others_billing,
+      cumulative_income,
       approved_budget,
       cumulative_budget_spent,
       balance,
       service_tickets_raised,
       service_tickets_closed,
       service_tickets_open,
+      quality_issues_received,
+      quality_issues_closed,
+      quality_issues_open,
+      statutory_compliance,
       incidents_count,
-      statutory_compliance
+      diesel_litres,
+      students_count_fee,
+      demand_fee,
+      fee_discount,
+      paid_fee,
+      unpaid_fee,
+      per_student_cost_expenses,
+      per_student_fee_year,
+      demand_per_km_day,
+      km_per_veh_day,
+      cumulative_demand_per_km,
+      cab_billing
     };
   };
 
-  const handleBranchCensusChange = (field, val, periodId) => {
-    if (activeBranch === 'all') return;
-    const pStr = String(periodId);
-    setBranchCensusDraft(prev => ({
+  // Active metrics for the currently selected branch and focus month
+  const activeMetrics = useMemo(() => {
+    return computeBranchMetrics(activeBranch, currPeriodIdStr);
+  }, [activeBranch, currPeriodIdStr, branchDrafts, transportCensusDraft, computedMatrix]);
+
+  // Handle cell edit in local state
+  const handleCellEdit = (paramKey, value, periodIdStr = currPeriodIdStr) => {
+    if (activeBranch === 'all') return; // Consolidated is calculated & read-only
+    setBranchDrafts(prev => ({
       ...prev,
       [activeBranch]: {
         ...(prev[activeBranch] || {}),
-        [pStr]: {
-          ...((prev[activeBranch] || {})[pStr] || {}),
-          [field]: val
+        [periodIdStr]: {
+          ...((prev[activeBranch] || {})[periodIdStr] || {}),
+          [paramKey]: value
         }
       }
     }));
+    // Also notify parent if current editing period
+    if (handleTransportCensusChange && periodIdStr === currPeriodIdStr) {
+      handleTransportCensusChange(paramKey, value, editingPeriodId);
+    }
   };
 
-  const activeTransportMetrics = getBranchCensusMetrics(activeBranch, editingPeriodId);
+  // Group parameters dynamically by section
+  const groupedParameters = useMemo(() => {
+    const map = new Map();
+    // Default sections order
+    const defaultSections = [
+      'Fleet Operations & Distance',
+      'Fleet Expenses & Operations',
+      'Revenue, Deductions & Income',
+      'Operating Budget & Balance',
+      'Service Tickets & Compliance',
+      'Fuel & Energy Consumption',
+      'Student Transport Fee Analytics'
+    ];
+    defaultSections.forEach(s => map.set(s, []));
 
-  // --- Master Save: Persists all branch line items, census, descriptions to DB ---
-  const handleSaveAllSpreadsheetData = async (branchToSave = activeBranch) => {
-    setIsSavingLocal(true);
-    setLocalMessage(null);
+    // Place active parameters into their section
+    parameters.forEach(p => {
+      const sec = p.section || 'General Operations';
+      if (!map.has(sec)) {
+        map.set(sec, []);
+      }
+      map.get(sec).push(p);
+    });
+
+    // Remove empty sections
+    const result = [];
+    map.forEach((items, sectionName) => {
+      if (items.length > 0) {
+        // Sort items by display_order
+        items.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+        result.push({
+          sectionName,
+          items,
+          style: SECTION_STYLES[sectionName] || {
+            headerBg: '#f8fafc',
+            headerText: '#334155',
+            rowBg: '#ffffff',
+            border: '#e2e8f0',
+            accent: '#0284c7'
+          }
+        });
+      }
+    });
+    return result;
+  }, [parameters]);
+
+  // Save current branch's transport census to PostgreSQL
+  const handleSaveActiveBranch = async () => {
+    if (activeBranch === 'all') {
+      setLocalMessage({
+        type: 'error',
+        text: 'Consolidated view is auto-calculated. Please select an individual branch (RPS, KPM, Common, or University) to save entries.'
+      });
+      setTimeout(() => setLocalMessage(null), 5000);
+      return;
+    }
+
     try {
-      // 1. Prepare updated cost heads
-      const updatedCostHeads = Object.keys(editedCostHeadNames).map(id => ({
-        id: parseInt(id, 10),
-        name: editedCostHeadNames[id]
-      }));
+      setIsSaving(true);
+      setLocalMessage(null);
 
-      // 2. Prepare updated categories
-      const updatedCategories = Object.keys(editedCategoryNames).map(id => ({
-        id: parseInt(id, 10),
-        name: editedCategoryNames[id]
-      }));
-
-      // 3. Prepare new cost heads
-      const newCostHeads = newRowDrafts.map(nr => ({
-        temp_id: nr.temp_id,
-        category_id: nr.category_id,
-        name: nr.name
-      }));
-
-      const branchesToProcess = branchToSave === 'all' 
-        ? ['RPS', 'KPM', 'Common', 'University'] 
-        : [branchToSave];
-
-      for (const targetBranch of branchesToProcess) {
-        // 4. Prepare entries by period for this branch
-        const entriesByPeriod = {};
-        periods.forEach(p => {
-          const pEntries = [];
-          categories.forEach(cat => {
-            cat.items?.forEach(it => {
-              const amt = getBranchCellAmount(targetBranch, it.cost_head_id, p.id);
-              const rmk = branchRemarksDraft[targetBranch]?.[it.cost_head_id]?.[p.id] ?? 
-                          remarksDraft[it.cost_head_id]?.[p.id] ?? 
-                          it.remarks?.[p.id] ?? '';
-              pEntries.push({
-                cost_head_id: it.cost_head_id,
-                amount: amt,
-                remarks: rmk,
-                branch: targetBranch
-              });
-            });
-          });
-          // Include new row draft entries
-          newRowDrafts.forEach(nr => {
-            const amt = parseFloat(nr.amounts?.[p.id] || 0) || 0;
-            pEntries.push({
-              cost_head_id: nr.temp_id,
-              amount: amt,
-              remarks: '',
-              branch: targetBranch
-            });
-          });
-          entriesByPeriod[p.id] = pEntries;
-        });
-
-        // 5. Prepare transport census by period for this branch
-        const transportCensusByPeriod = {};
-        periods.forEach(p => {
-          const cMetrics = getBranchCensusMetrics(targetBranch, p.id);
-          transportCensusByPeriod[p.id] = {
-            ...cMetrics,
-            branch: targetBranch
-          };
-        });
-
-        const payload = {
-          module: 'transport',
-          branch: targetBranch,
-          updated_cost_heads: updatedCostHeads,
-          updated_categories: updatedCategories,
-          new_cost_heads: newCostHeads,
-          entries_by_period: entriesByPeriod,
-          transport_census_by_period: transportCensusByPeriod
-        };
-
-        const res = await fetch('/api/workstation/spreadsheet-save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || `Failed to save transport branch ${targetBranch}`);
+      // Merge computed metrics and any custom drafts for this period
+      const payload = {
+        branch: activeBranch,
+        ...activeMetrics,
+        ...(branchDrafts[activeBranch]?.[currPeriodIdStr] || {}),
+        custom_metrics: {
+          ...(branchDrafts[activeBranch]?.[currPeriodIdStr] || {})
         }
+      };
+
+      const res = await fetch(`/api/transport-census/${editingPeriodId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to save transport parameters');
       }
 
       setLocalMessage({
         type: 'success',
-        text: `Saved transport spreadsheet & fleet operational parameters for ${branchesToProcess.length === 1 ? branchesToProcess[0] : 'all branches'} to database successfully!`
+        text: `Transport spreadsheet for ${activeBranchObj.label} (${activePeriodObj?.period_label || 'Current Period'}) saved to PostgreSQL successfully!`
       });
-
-      // Clear local edit buffers
-      setEditedCostHeadNames({});
-      setEditedCategoryNames({});
-      setNewRowDrafts([]);
-      setBranchMatrixDraft({});
-      setBranchCensusDraft({});
 
       if (fetchData) fetchData('transport');
     } catch (err) {
-      setLocalMessage({ type: 'error', text: err.message || 'Save failed' });
+      setLocalMessage({
+        type: 'error',
+        text: err.message || 'Error saving transport spreadsheet'
+      });
     } finally {
-      setIsSavingLocal(false);
-      setTimeout(() => setLocalMessage(null), 6000);
+      setIsSaving(false);
+      setTimeout(() => setLocalMessage(null), 5000);
     }
+  };
+
+  // Copy values from previous month
+  const handleCopyFromPreviousMonth = () => {
+    if (activeBranch === 'all') {
+      setLocalMessage({
+        type: 'error',
+        text: 'Please select an individual branch to copy previous month values.'
+      });
+      setTimeout(() => setLocalMessage(null), 4000);
+      return;
+    }
+
+    const curIdx = periods.findIndex(p => String(p.id) === currPeriodIdStr);
+    if (curIdx <= 0) {
+      setLocalMessage({
+        type: 'error',
+        text: 'No previous month found in the academic calendar to copy from.'
+      });
+      setTimeout(() => setLocalMessage(null), 4000);
+      return;
+    }
+
+    const prevP = periods[curIdx - 1];
+    const prevMetrics = computeBranchMetrics(activeBranch, String(prevP.id));
+    if (!prevMetrics || Object.keys(prevMetrics).length === 0) {
+      setLocalMessage({
+        type: 'error',
+        text: `Previous month (${prevP.period_label}) has no recorded parameters to copy.`
+      });
+      setTimeout(() => setLocalMessage(null), 4000);
+      return;
+    }
+
+    // Apply previous month metrics to active period draft
+    setBranchDrafts(prev => ({
+      ...prev,
+      [activeBranch]: {
+        ...(prev[activeBranch] || {}),
+        [currPeriodIdStr]: {
+          ...((prev[activeBranch] || {})[currPeriodIdStr] || {}),
+          ...prevMetrics
+        }
+      }
+    }));
+
+    if (handleTransportCensusChange) {
+      handleTransportCensusChange(prevMetrics, null, editingPeriodId);
+    }
+
+    setLocalMessage({
+      type: 'success',
+      text: `Values cleanly copied from ${prevP.period_label} for ${activeBranchObj.label}. Review and click Save.`
+    });
+    setTimeout(() => setLocalMessage(null), 5000);
+  };
+
+  // Helper to format table cell values
+  const formatCellValue = (param, val) => {
+    if (val === undefined || val === null || val === '') return '-';
+    if (param.input_type === 'text') return String(val);
+    if (typeof val === 'string' && isNaN(Number(val.replace(/,/g, '')))) return val;
+    const n = Number(val);
+    if (isNaN(n)) return String(val);
+    if (param.input_type === 'cost' || param.unit?.includes('INR') || param.unit?.includes('₹')) {
+      return formatINR(n);
+    }
+    if (param.input_type === 'single_count') {
+      return n.toLocaleString('en-IN');
+    }
+    return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
   };
 
   return (
     <div style={{
       backgroundColor: '#ffffff',
       borderRadius: '12px',
-      border: '1.5px solid #00a2e8',
-      boxShadow: '0 4px 16px rgba(0, 162, 232, 0.1)',
+      border: '2px solid #00a2e8',
+      boxShadow: '0 4px 16px rgba(0, 162, 232, 0.08)',
       overflow: 'hidden',
-      marginBottom: '22px',
+      marginBottom: '24px',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      {/* 1. SPREADSHEET TOOLBAR & HEADER */}
+      
+      {/* 1. TOP TOOLBAR & HEADER */}
       <div style={{
         backgroundColor: '#00a2e8',
-        padding: '14px 20px',
+        padding: '14px 22px',
         display: 'flex',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '12px',
         color: '#ffffff'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '38px',
-            height: '38px',
+            width: '40px',
+            height: '40px',
             borderRadius: '10px',
             backgroundColor: '#ffffff',
             color: '#00a2e8',
@@ -583,8 +671,8 @@ export default function TransportSpreadsheetEntry({
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 style={{ fontSize: '17.5px', fontWeight: '800', margin: 0, letterSpacing: '-0.01em', color: '#ffffff' }}>
-                Transport Operations Master Spreadsheet
+              <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#ffffff', letterSpacing: '-0.01em' }}>
+                Transport Operations & Fleet Master Spreadsheet
               </h2>
               <span style={{
                 fontSize: '11px',
@@ -594,72 +682,56 @@ export default function TransportSpreadsheetEntry({
                 borderRadius: '12px',
                 color: '#ffffff'
               }}>
-                Multi-Branch Division
+                Excel Sheet Model
               </span>
             </div>
-            <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#e0f2fe' }}>
-              RPS • KPM • Common Pool • University Fleet • Live Multi-Unit Data Entry & Consolidated Reports
+            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#e0f2fe' }}>
+              Exact multi-parameter spreadsheet layout • Multi-Branch (RPS, KPM, Common, University, Consolidated) • Live Real-time Formulas • Synced with Master Data
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {openAddCategoryModal && (
-            <button
-              type="button"
-              onClick={openAddCategoryModal}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                backgroundColor: 'rgba(255, 255, 255, 0.18)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              <Plus size={14} /> Add Category
-            </button>
-          )}
-
-          {openAddCostHeadModal && (
-            <button
-              type="button"
-              onClick={() => openAddCostHeadModal()}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                backgroundColor: 'rgba(255, 255, 255, 0.18)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              <Plus size={14} /> Add Cost Head
-            </button>
-          )}
-
+          {/* Copy Previous Month */}
           <button
             type="button"
-            onClick={() => fetchData && fetchData('transport')}
+            onClick={handleCopyFromPreviousMonth}
+            disabled={activeBranch === 'all' || isClosed}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 12px',
+              padding: '6px 13px',
               borderRadius: '6px',
               backgroundColor: 'rgba(255, 255, 255, 0.18)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.35)',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: (activeBranch === 'all' || isClosed) ? 'not-allowed' : 'pointer',
+              opacity: (activeBranch === 'all' || isClosed) ? 0.6 : 1
+            }}
+            title="Copy all parameter values from previous month into active month"
+          >
+            <Copy size={13} /> Copy Previous Month
+          </button>
+
+          {/* Refresh */}
+          <button
+            type="button"
+            onClick={() => {
+              fetchParameters();
+              if (fetchData) fetchData('transport');
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 13px',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.18)',
+              border: '1px solid rgba(255, 255, 255, 0.35)',
               color: '#ffffff',
               fontSize: '12px',
               fontWeight: '700',
@@ -672,25 +744,26 @@ export default function TransportSpreadsheetEntry({
           {/* Master Save Button */}
           <button
             type="button"
-            onClick={() => handleSaveAllSpreadsheetData(activeBranch)}
-            disabled={isSavingLocal || savingBatch}
+            onClick={handleSaveActiveBranch}
+            disabled={isSaving || isClosed || activeBranch === 'all'}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '7px 16px',
+              padding: '7px 18px',
               borderRadius: '6px',
               backgroundColor: '#ffffff',
               border: 'none',
               color: '#00a2e8',
-              fontSize: '12.5px',
+              fontSize: '13px',
               fontWeight: '800',
-              cursor: (isSavingLocal || savingBatch) ? 'not-allowed' : 'pointer',
+              cursor: (isSaving || isClosed || activeBranch === 'all') ? 'not-allowed' : 'pointer',
+              opacity: (isSaving || isClosed || activeBranch === 'all') ? 0.6 : 1,
               boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
               transition: 'all 0.15s ease'
             }}
           >
-            {isSavingLocal ? (
+            {isSaving ? (
               <>
                 <RefreshCw size={14} className="spin-animate" />
                 <span>Saving {activeBranchObj.label}...</span>
@@ -699,7 +772,7 @@ export default function TransportSpreadsheetEntry({
               <>
                 <Save size={14} />
                 <span>
-                  {activeBranch === 'all' ? 'Save All Branches to DB' : `Save ${activeBranchObj.label} to DB`}
+                  {activeBranch === 'all' ? 'Consolidated (Auto-Calculated)' : `Save ${activeBranchObj.label}`}
                 </span>
               </>
             )}
@@ -710,7 +783,7 @@ export default function TransportSpreadsheetEntry({
       {/* 2. FLEET BRANCH / DIVISION SELECTOR BAR */}
       <div style={{
         backgroundColor: '#f8fafc',
-        padding: '12px 20px',
+        padding: '12px 22px',
         borderBottom: '1.5px solid #e2e8f0',
         display: 'flex',
         alignItems: 'center',
@@ -722,7 +795,7 @@ export default function TransportSpreadsheetEntry({
           <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             🏫 Fleet Branch:
           </span>
-          {BRANCHES.map(br => {
+          {TRANSPORT_BRANCHES.map(br => {
             const isSel = activeBranch === br.id;
             return (
               <button
@@ -731,7 +804,7 @@ export default function TransportSpreadsheetEntry({
                 onClick={() => setActiveBranch(br.id)}
                 title={br.description}
                 style={{
-                  padding: '7px 15px',
+                  padding: '7px 16px',
                   borderRadius: '20px',
                   fontSize: '12.5px',
                   fontWeight: '800',
@@ -761,7 +834,7 @@ export default function TransportSpreadsheetEntry({
           gap: '6px',
           backgroundColor: activeBranchObj.badgeBg,
           color: activeBranchObj.badgeColor,
-          padding: '5px 14px',
+          padding: '6px 14px',
           borderRadius: '16px',
           fontSize: '11.5px',
           fontWeight: '700',
@@ -772,134 +845,10 @@ export default function TransportSpreadsheetEntry({
         </div>
       </div>
 
-      {/* 3. MULTI-BRANCH CONTRIBUTION BREAKDOWN STRIP */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        padding: '10px 20px',
-        borderBottom: '1px solid #f1f5f9',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '10px',
-        fontSize: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontWeight: '700' }}>
-          <span>Fleet Contribution:</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {BRANCHES.filter(b => b.id !== 'all').map(b => {
-            const bSpend = branchTotals[b.id] || 0;
-            const pct = branchTotals.all > 0 ? ((bSpend / branchTotals.all) * 100).toFixed(1) : 0;
-            const isCurrent = activeBranch === b.id;
-            return (
-              <div
-                key={b.id}
-                onClick={() => setActiveBranch(b.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                  backgroundColor: isCurrent ? b.badgeBg : '#f8fafc',
-                  border: `1px solid ${isCurrent ? b.badgeColor : '#e2e8f0'}`,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                title={`Click to switch to ${b.label}`}
-              >
-                <span style={{ fontSize: '12px' }}>{b.icon}</span>
-                <span style={{ fontWeight: '700', color: isCurrent ? b.badgeColor : '#334155' }}>{b.id}:</span>
-                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatINR(bSpend)}</span>
-                <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700' }}>({pct}%)</span>
-              </div>
-            );
-          })}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '4px 10px',
-            borderRadius: '8px',
-            backgroundColor: '#f0f9ff',
-            border: '1px solid #0284c7',
-            cursor: 'pointer'
-          }} onClick={() => setActiveBranch('all')}>
-            <span style={{ fontWeight: '800', color: '#0369a1' }}>Total:</span>
-            <span style={{ fontWeight: '900', color: '#0369a1' }}>{formatINR(branchTotals.all || 0)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* CONSOLIDATED NOTICE BANNER */}
-      {activeBranch === 'all' && (
-        <div style={{
-          backgroundColor: '#f0f9ff',
-          borderBottom: '1px solid #bae6fd',
-          padding: '8px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '10px',
-          fontSize: '12px',
-          color: '#0369a1',
-          fontWeight: '600'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Layers size={16} color="#0284c7" />
-            <span>
-              <strong>Consolidated Fleet View:</strong> Showing combined sum across <strong>RPS</strong>, <strong>KPM</strong>, <strong>Common Pool</strong>, and <strong>University Fleet</strong>.
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '11px', color: '#64748b' }}>Select a branch to edit:</span>
-            {['RPS', 'KPM', 'Common', 'University'].map(b => (
-              <button
-                key={b}
-                type="button"
-                onClick={() => setActiveBranch(b)}
-                style={{
-                  padding: '3px 9px',
-                  borderRadius: '12px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #0284c7',
-                  color: '#0284c7',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                Edit {b} →
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Local Notification Toast */}
-      {localMessage && (
-        <div style={{
-          padding: '10px 20px',
-          backgroundColor: localMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
-          borderBottom: `1px solid ${localMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-          color: localMessage.type === 'success' ? '#065f46' : '#991b1b',
-          fontSize: '12.5px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          {localMessage.type === 'success' ? <CheckCircle2 size={16} color="#059669" /> : <AlertCircle size={16} color="#dc2626" />}
-          <span>{localMessage.text}</span>
-        </div>
-      )}
-
-      {/* 4. CYCLE SELECTION & VIEW TOGGLE */}
+      {/* 3. CYCLE SELECTION & VIEW MODE TOGGLE */}
       <div style={{
         backgroundColor: '#f0f9ff',
-        padding: '10px 20px',
+        padding: '10px 22px',
         borderBottom: '1px solid #bae6fd',
         display: 'flex',
         alignItems: 'center',
@@ -907,12 +856,13 @@ export default function TransportSpreadsheetEntry({
         flexWrap: 'wrap',
         gap: '12px'
       }}>
+        {/* Focus Month Selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             📅 Focus Month:
           </span>
           {periods.map(p => {
-            const isSel = String(p.id) === currStr;
+            const isSel = String(p.id) === currPeriodIdStr;
             return (
               <button
                 key={p.id}
@@ -930,7 +880,8 @@ export default function TransportSpreadsheetEntry({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: isSel ? '0 2px 4px rgba(0, 162, 232, 0.25)' : 'none'
+                  boxShadow: isSel ? '0 2px 4px rgba(0, 162, 232, 0.25)' : 'none',
+                  transition: 'all 0.15s ease'
                 }}
               >
                 <span>{p.period_label}</span>
@@ -940,771 +891,457 @@ export default function TransportSpreadsheetEntry({
           })}
         </div>
 
-        {/* View mode toggle */}
+        {/* View Mode Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
           <button
             type="button"
-            onClick={() => setActiveSubTab('excel_grid')}
+            onClick={() => setActiveView('sheet')}
             style={{
-              padding: '4px 12px',
+              padding: '5px 14px',
               borderRadius: '6px',
-              fontSize: '11.5px',
+              fontSize: '12px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'excel_grid' ? '#00a2e8' : 'transparent',
-              color: activeSubTab === 'excel_grid' ? '#ffffff' : '#64748b'
+              backgroundColor: activeView === 'sheet' ? '#00a2e8' : 'transparent',
+              color: activeView === 'sheet' ? '#ffffff' : '#64748b',
+              transition: 'all 0.15s ease'
             }}
           >
-            📊 Multi-Month Excel Grid
+            📄 Excel Spreadsheet ({activePeriodObj?.period_label})
           </button>
           <button
             type="button"
-            onClick={() => setActiveSubTab('single_month')}
+            onClick={() => setActiveView('multi_month')}
             style={{
-              padding: '4px 12px',
+              padding: '5px 14px',
               borderRadius: '6px',
-              fontSize: '11.5px',
+              fontSize: '12px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'single_month' ? '#00a2e8' : 'transparent',
-              color: activeSubTab === 'single_month' ? '#ffffff' : '#64748b'
+              backgroundColor: activeView === 'multi_month' ? '#00a2e8' : 'transparent',
+              color: activeView === 'multi_month' ? '#ffffff' : '#64748b',
+              transition: 'all 0.15s ease'
             }}
           >
-            Focused Month ({activePeriodObj?.period_label})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('census')}
-            style={{
-              padding: '4px 12px',
-              borderRadius: '6px',
-              fontSize: '11.5px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeSubTab === 'census' ? '#00a2e8' : 'transparent',
-              color: activeSubTab === 'census' ? '#ffffff' : '#64748b'
-            }}
-          >
-            🚌 Fleet Metrics & Census
+            📊 Multi-Month Comparison Grid
           </button>
         </div>
       </div>
 
-      {/* 5. MASTER EXCEL SPREADSHEET TABLE */}
-      {(activeSubTab === 'excel_grid' || activeSubTab === 'single_month') && (
-        <div style={{ overflowX: 'auto', width: '100%', maxHeight: '720px' }}>
+      {/* Local Notification Toast */}
+      {localMessage && (
+        <div style={{
+          padding: '11px 22px',
+          backgroundColor: localMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+          borderBottom: `1.5px solid ${localMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+          color: localMessage.type === 'success' ? '#065f46' : '#991b1b',
+          fontSize: '13px',
+          fontWeight: '700',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          {localMessage.type === 'success' ? <CheckCircle2 size={16} color="#059669" /> : <AlertCircle size={16} color="#dc2626" />}
+          <span>{localMessage.text}</span>
+        </div>
+      )}
+
+      {/* Consolidated Notice */}
+      {activeBranch === 'all' && (
+        <div style={{
+          backgroundColor: '#eff6ff',
+          borderBottom: '1px solid #bfdbfe',
+          padding: '9px 22px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          fontSize: '12.5px',
+          color: '#1e40af',
+          fontWeight: '600'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Layers size={16} color="#2563eb" />
+            <span>
+              <strong>Consolidated Fleet Total:</strong> Showing the combined automatic sum of <strong>Common Pool</strong>, <strong>RPS</strong>, <strong>KPM</strong>, and <strong>University Fleet</strong>.
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '11.5px', color: '#64748b' }}>Select a branch to edit values:</span>
+            {['Common', 'RPS', 'KPM', 'University'].map(b => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => setActiveBranch(b)}
+                style={{
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #3b82f6',
+                  color: '#2563eb',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Edit {b} →
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 4. EXACT MULTI-SECTION EXCEL SPREADSHEET TABLE */}
+      {activeView === 'sheet' ? (
+        <div style={{ overflowX: 'auto', width: '100%' }}>
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
-            fontSize: '12.5px',
+            fontSize: '13px',
             border: '2px solid #000000',
             fontFamily: 'inherit'
           }}>
-            {/* Table Header: Dark Cyan background with crisp black grid lines */}
+            {/* Header: S.No | Parameters | [Focus Month Period] | Cost / Details */}
             <thead>
               <tr style={{
-                backgroundColor: '#00a2e8',
-                color: '#000000',
+                backgroundColor: '#ffffff',
                 borderBottom: '2px solid #000000',
+                color: '#000000',
                 fontWeight: '800',
                 fontSize: '13px'
               }}>
-                <th style={{ padding: '10px 14px', width: '180px', textAlign: 'center', borderRight: '1px solid #000000' }}>
-                  Category
+                <th style={{ width: '60px', padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#f1f5f9' }}>
+                  S.No
                 </th>
-                <th style={{ padding: '10px 16px', minWidth: '220px', textAlign: 'center', borderRight: '1px solid #000000' }}>
-                  Description ({activeBranchObj.label})
+                <th style={{ padding: '10px 16px', textAlign: 'left', minWidth: '340px', borderRight: '1px solid #000000' }}>
+                  Parameters ({activeBranchObj.label})
                 </th>
-
-                {/* Display columns */}
-                {activeSubTab === 'excel_grid' ? (
-                  periods.map(p => {
-                    const isSel = String(p.id) === currStr;
-                    return (
-                      <th
-                        key={p.id}
-                        style={{
-                          padding: '10px 14px',
-                          minWidth: '125px',
-                          textAlign: 'center',
-                          borderRight: '1px solid #000000',
-                          backgroundColor: isSel ? '#0ea5e9' : '#00a2e8',
-                          color: '#000000',
-                          fontWeight: '800'
-                        }}
-                      >
-                        {p.period_label} {isSel && '★'}
-                      </th>
-                    );
-                  })
-                ) : (
-                  <th style={{ padding: '10px 16px', minWidth: '150px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#0ea5e9' }}>
-                    {activePeriodObj?.period_label} • Amount (₹)
-                  </th>
-                )}
-
-                <th style={{ padding: '10px 16px', width: '130px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#0284c7', color: '#ffffff' }}>
-                  Total Spend
+                <th style={{ width: '220px', padding: '10px 16px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                  {activePeriodObj?.period_label || 'Focus Month'}
                 </th>
-                <th style={{ padding: '10px 10px', width: '70px', textAlign: 'center' }}>
-                  Action
+                <th style={{ width: '220px', padding: '10px 16px', textAlign: 'center', backgroundColor: '#f8fafc', color: '#334155' }}>
+                  Unit / Type / Formula
                 </th>
               </tr>
             </thead>
 
             <tbody>
-              {categories.map((cat, catIdx) => {
-                const colorTheme = getCategoryColor(cat.category_name, catIdx);
-                const categoryItems = cat.items || [];
-                const draftItemsInCat = newRowDrafts.filter(nr => nr.category_id === cat.category_id);
-                const allItemsCount = categoryItems.length + draftItemsInCat.length;
-
-                const catDisplayName = editedCategoryNames[cat.category_id] !== undefined
-                  ? editedCategoryNames[cat.category_id]
-                  : cat.category_name;
-
+              {groupedParameters.map(({ sectionName, items, style }) => {
                 return (
-                  <React.Fragment key={cat.category_id}>
-                    {/* Render Category Items */}
-                    {categoryItems.map((item, itemIdx) => {
-                      const itemDisplayName = editedCostHeadNames[item.cost_head_id] !== undefined
-                        ? editedCostHeadNames[item.cost_head_id]
-                        : item.description;
+                  <React.Fragment key={sectionName}>
+                    {/* Section Header Row */}
+                    <tr style={{
+                      backgroundColor: style.headerBg,
+                      color: style.headerText,
+                      borderTop: '2px solid #000000',
+                      borderBottom: '1px solid #000000',
+                      fontWeight: '800',
+                      fontSize: '12.5px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em'
+                    }}>
+                      <td colSpan={4} style={{ padding: '8px 16px', borderRight: '1px solid #000000' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>{sectionName}</span>
+                          <span style={{ fontSize: '11px', textTransform: 'none', opacity: 0.8 }}>
+                            {items.length} parameter{items.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
 
-                      // Calculate item total across periods for active branch
-                      let itemTotal = 0;
-                      periods.forEach(p => {
-                        itemTotal += getBranchCellAmount(activeBranch, item.cost_head_id, p.id);
-                      });
+                    {/* Section Items */}
+                    {items.map((param, idx) => {
+                      const isFormula = !!param.formula;
+                      const isTotalRow = param.param_key === 'total_expenses' || param.param_key === 'cumulative_income' || param.param_key === 'balance';
+                      const cellVal = activeMetrics[param.param_key] !== undefined ? activeMetrics[param.param_key] : getParamRawValue(activeBranch, currPeriodIdStr, param.param_key);
+                      
+                      // Row background based on formula or total
+                      let rowBg = style.rowBg;
+                      if (isTotalRow && style.totalBg) {
+                        rowBg = style.totalBg;
+                      } else if (idx % 2 === 1) {
+                        rowBg = '#ffffff';
+                      }
 
                       return (
-                        <tr key={item.cost_head_id} style={{ borderBottom: '1px solid #000000' }}>
-                          {/* Merged Category Column on the first row of category */}
-                          {itemIdx === 0 && (
-                            <td
-                              rowSpan={allItemsCount > 0 ? allItemsCount : 1}
-                              style={{
-                                padding: '12px 14px',
-                                textAlign: 'center',
-                                verticalAlign: 'middle',
-                                backgroundColor: colorTheme.headerBg,
-                                color: colorTheme.text,
-                                fontWeight: '800',
-                                borderRight: '1px solid #000000',
-                                width: '180px'
-                              }}
-                            >
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                                <input
-                                  type="text"
-                                  value={catDisplayName}
-                                  onChange={(e) => handleCategoryNameChange(cat.category_id, e.target.value)}
-                                  style={{
-                                    width: '100%',
-                                    textAlign: 'center',
-                                    fontWeight: '800',
-                                    fontSize: '13px',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: colorTheme.text,
-                                    outline: 'none'
-                                  }}
-                                  title="Click to edit category title"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleAddNewRow(cat.category_id)}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '2px',
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    backgroundColor: 'rgba(0,0,0,0.08)',
-                                    border: '1px solid rgba(0,0,0,0.15)',
-                                    fontSize: '10.5px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  <Plus size={10} /> Add Row
-                                </button>
-                              </div>
-                            </td>
-                          )}
-
-                          {/* Editable Description Column */}
+                        <tr
+                          key={param.id || param.param_key}
+                          style={{
+                            backgroundColor: rowBg,
+                            borderBottom: isTotalRow ? '2px solid #000000' : '1px solid #000000',
+                            fontWeight: isTotalRow ? '800' : '500',
+                            transition: 'background-color 0.15s ease'
+                          }}
+                        >
+                          {/* S.No */}
                           <td style={{
-                            padding: '6px 12px',
-                            backgroundColor: colorTheme.headerBg,
-                            fontWeight: '700',
-                            color: '#000000',
-                            borderRight: '1px solid #000000'
+                            padding: '8px',
+                            textAlign: 'center',
+                            borderRight: '1px solid #000000',
+                            color: '#475569',
+                            fontWeight: isTotalRow ? '800' : '600'
                           }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <input
-                                type="text"
-                                value={itemDisplayName}
-                                onChange={(e) => handleCostHeadNameChange(item.cost_head_id, e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '4px 6px',
+                            {param.display_order || (idx + 1)}
+                          </td>
+
+                          {/* Parameter Name */}
+                          <td style={{
+                            padding: '8px 16px',
+                            borderRight: '1px solid #000000',
+                            color: '#0f172a',
+                            fontWeight: isTotalRow ? '900' : '600'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span>{param.param_name}</span>
+                              {isFormula && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  padding: '1px 6px',
                                   borderRadius: '4px',
-                                  border: '1px dashed rgba(0,0,0,0.25)',
-                                  backgroundColor: 'rgba(255,255,255,0.7)',
+                                  backgroundColor: '#dcfce7',
+                                  color: '#15803d',
                                   fontWeight: '700',
-                                  fontSize: '12.5px',
-                                  color: '#000000'
-                                }}
-                                title="Click to edit line item description"
-                              />
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }} title={`Formula: ${param.formula}`}>
+                                  <Calculator size={10} /> Formula
+                                </span>
+                              )}
                             </div>
                           </td>
 
-                          {/* Data Cells: Peach/Cream Background with Crisp Borders */}
-                          {activeSubTab === 'excel_grid' ? (
-                            periods.map(p => {
-                              const amt = getBranchCellAmount(activeBranch, item.cost_head_id, p.id);
-                              const isSel = String(p.id) === currStr;
-                              const isReadOnly = activeBranch === 'all' || isClosed;
-                              return (
-                                <td
-                                  key={p.id}
-                                  style={{
-                                    padding: '4px 8px',
-                                    textAlign: 'right',
-                                    backgroundColor: isSel ? '#ffedd5' : '#fff2df',
-                                    borderRight: '1px solid #000000'
-                                  }}
-                                >
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={amt || ''}
-                                    onChange={(e) => handleBranchCellChange(item.cost_head_id, p.id, e.target.value)}
-                                    disabled={isReadOnly}
-                                    title={activeBranch === 'all' ? 'Consolidated sum. Select RPS, KPM, Common, or University above to edit' : 'Enter amount in ₹'}
-                                    style={{
-                                      width: '100%',
-                                      textAlign: 'right',
-                                      padding: '4px 6px',
-                                      borderRadius: '4px',
-                                      border: isSel ? '1.5px solid #00a2e8' : '1px solid #cbd5e1',
-                                      backgroundColor: isReadOnly ? 'rgba(0,0,0,0.02)' : '#ffffff',
-                                      fontWeight: '700',
-                                      color: '#000000',
-                                      fontSize: '12.5px',
-                                      cursor: isReadOnly ? (activeBranch === 'all' ? 'not-allowed' : 'default') : 'text'
-                                    }}
-                                    className="currency-font"
-                                  />
-                                </td>
-                              );
-                            })
-                          ) : (
-                            <td style={{
-                              padding: '4px 10px',
-                              textAlign: 'right',
-                              backgroundColor: '#ffedd5',
-                              borderRight: '1px solid #000000'
-                            }}>
+                          {/* Value / Input Cell */}
+                          <td style={{
+                            padding: '5px 12px',
+                            textAlign: 'right',
+                            borderRight: '1px solid #000000',
+                            backgroundColor: isFormula ? '#f0fdf4' : (activeBranch === 'all' ? '#f8fafc' : '#ffffff')
+                          }}>
+                            {isFormula || activeBranch === 'all' || isClosed ? (
+                              <div style={{
+                                fontWeight: '800',
+                                fontSize: isTotalRow ? '14px' : '13px',
+                                color: isTotalRow ? '#15803d' : '#0f172a',
+                                padding: '4px 6px'
+                              }}>
+                                {formatCellValue(param, cellVal)}
+                              </div>
+                            ) : (
                               <input
-                                type="number"
-                                step="0.01"
-                                value={getBranchCellAmount(activeBranch, item.cost_head_id, editingPeriodId) || ''}
-                                onChange={(e) => handleBranchCellChange(item.cost_head_id, editingPeriodId, e.target.value)}
-                                disabled={activeBranch === 'all' || isClosed}
-                                title={activeBranch === 'all' ? 'Consolidated sum. Select a branch above to edit' : 'Enter amount in ₹'}
+                                type={param.input_type === 'text' ? 'text' : 'number'}
+                                step={param.input_type === 'cost' ? '1' : '0.01'}
+                                value={cellVal !== undefined && cellVal !== null ? cellVal : ''}
+                                onChange={(e) => handleCellEdit(param.param_key, e.target.value)}
                                 style={{
                                   width: '100%',
-                                  textAlign: 'right',
-                                  padding: '4px 8px',
-                                  borderRadius: '4px',
-                                  border: '1.5px solid #00a2e8',
-                                  backgroundColor: activeBranch === 'all' ? 'rgba(0,0,0,0.02)' : '#ffffff',
-                                  fontWeight: '800',
-                                  color: '#000000',
+                                  padding: '6px 10px',
+                                  border: '1.5px solid #cbd5e1',
+                                  borderRadius: '5px',
                                   fontSize: '13px',
-                                  cursor: activeBranch === 'all' ? 'not-allowed' : 'text'
+                                  fontWeight: '700',
+                                  textAlign: 'right',
+                                  outline: 'none',
+                                  backgroundColor: '#ffffff',
+                                  color: '#0f172a'
                                 }}
-                                className="currency-font"
+                                placeholder="0"
                               />
-                            </td>
-                          )}
-
-                          {/* Total Spend */}
-                          <td style={{
-                            padding: '6px 14px',
-                            textAlign: 'right',
-                            fontWeight: '800',
-                            backgroundColor: '#fafafa',
-                            color: '#000000',
-                            borderRight: '1px solid #000000'
-                          }} className="currency-font">
-                            {formatINR(itemTotal)}
+                            )}
                           </td>
 
-                          {/* Delete Action */}
-                          <td style={{ padding: '4px 8px', textAlign: 'center' }}>
-                            {handleDeleteCostHead && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteCostHead({ id: item.cost_head_id, name: item.description })}
-                                title={`Delete "${item.description}"`}
-                                style={{
-                                  border: 'none',
-                                  background: 'none',
-                                  cursor: 'pointer',
-                                  color: '#94a3b8',
-                                  padding: '2px'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.color = '#dc2626'}
-                                onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                          {/* Unit / Formula description */}
+                          <td style={{
+                            padding: '6px 12px',
+                            textAlign: 'left',
+                            color: '#64748b',
+                            fontSize: '11.5px',
+                            fontWeight: '600',
+                            backgroundColor: rowBg
+                          }}>
+                            {param.formula ? (
+                              <span style={{ color: '#047857', fontWeight: '700' }}>
+                                = {param.formula}
+                              </span>
+                            ) : (
+                              <span>
+                                {param.unit ? `${param.unit} (${param.input_type})` : param.input_type}
+                              </span>
                             )}
                           </td>
                         </tr>
                       );
                     })}
-
-                    {/* Render New Added Rows in this Category */}
-                    {draftItemsInCat.map((nr) => {
-                      let nrTotal = 0;
-                      periods.forEach(p => {
-                        nrTotal += parseFloat(nr.amounts?.[p.id] || 0) || 0;
-                      });
-
-                      return (
-                        <tr key={nr.temp_id} style={{ borderBottom: '1px solid #000000', backgroundColor: '#fef9c3' }}>
-                          <td style={{ padding: '6px 12px', borderRight: '1px solid #000000', backgroundColor: colorTheme.headerBg }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <input
-                                type="text"
-                                value={nr.name}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setNewRowDrafts(prev => prev.map(r => r.temp_id === nr.temp_id ? { ...r, name: val } : r));
-                                }}
-                                placeholder="Enter transport item name..."
-                                style={{
-                                  width: '100%',
-                                  padding: '4px 6px',
-                                  borderRadius: '4px',
-                                  border: '1.5px solid #eab308',
-                                  backgroundColor: '#ffffff',
-                                  fontWeight: '700',
-                                  fontSize: '12.5px'
-                                }}
-                              />
-                            </div>
-                          </td>
-
-                          {/* Draft Cells */}
-                          {activeSubTab === 'excel_grid' ? (
-                            periods.map(p => (
-                              <td key={p.id} style={{ padding: '4px 8px', borderRight: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  value={nr.amounts?.[p.id] || ''}
-                                  onChange={(e) => handleDraftRowAmountChange(nr.temp_id, p.id, e.target.value)}
-                                  disabled={activeBranch === 'all'}
-                                  style={{
-                                    width: '100%',
-                                    textAlign: 'right',
-                                    padding: '4px 6px',
-                                    borderRadius: '4px',
-                                    border: '1px solid #cbd5e1',
-                                    backgroundColor: '#ffffff',
-                                    fontWeight: '700'
-                                  }}
-                                />
-                              </td>
-                            ))
-                          ) : (
-                            <td style={{ padding: '4px 8px', borderRight: '1px solid #000000', backgroundColor: '#fff2df' }}>
-                              <input
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                value={nr.amounts?.[editingPeriodId] || ''}
-                                onChange={(e) => handleDraftRowAmountChange(nr.temp_id, editingPeriodId, e.target.value)}
-                                disabled={activeBranch === 'all'}
-                                style={{
-                                  width: '100%',
-                                  textAlign: 'right',
-                                  padding: '4px 6px',
-                                  borderRadius: '4px',
-                                  border: '1px solid #cbd5e1',
-                                  backgroundColor: '#ffffff',
-                                  fontWeight: '700'
-                                }}
-                              />
-                            </td>
-                          )}
-
-                          <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }} className="currency-font">
-                            {formatINR(nrTotal)}
-                          </td>
-
-                          <td style={{ padding: '4px 8px', textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveDraftRow(nr.temp_id)}
-                              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626' }}
-                              title="Discard draft row"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-
-                    {/* CATEGORY SUBTOTAL ROW: Bright Lime Green matching Excel Style */}
-                    <tr style={{
-                      backgroundColor: '#00ff00',
-                      color: '#000000',
-                      borderTop: '2px solid #000000',
-                      borderBottom: '2px solid #000000',
-                      fontWeight: '800',
-                      fontSize: '13px'
-                    }}>
-                      <td colSpan={2} style={{
-                        padding: '9px 18px',
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* 5. MULTI-MONTH COMPARISON GRID */
+        <div style={{ overflowX: 'auto', width: '100%', maxHeight: '720px' }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: '12px',
+            border: '2px solid #000000',
+            fontFamily: 'inherit'
+          }}>
+            <thead>
+              <tr style={{
+                backgroundColor: '#00a2e8',
+                color: '#ffffff',
+                borderBottom: '2px solid #000000',
+                fontWeight: '800'
+              }}>
+                <th style={{ width: '50px', padding: '9px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>#</th>
+                <th style={{ padding: '9px 12px', minWidth: '240px', textAlign: 'left', borderRight: '1px solid #000000' }}>
+                  Parameters ({activeBranchObj.label})
+                </th>
+                {periods.map(p => {
+                  const isCurrent = String(p.id) === currPeriodIdStr;
+                  return (
+                    <th
+                      key={p.id}
+                      style={{
+                        padding: '9px 10px',
+                        minWidth: '120px',
                         textAlign: 'center',
                         borderRight: '1px solid #000000',
-                        letterSpacing: '0.02em'
-                      }}>
-                        Total {cat.category_name} ({activeBranchObj.label})
-                      </td>
+                        backgroundColor: isCurrent ? '#0284c7' : '#00a2e8',
+                        color: '#ffffff'
+                      }}
+                    >
+                      {p.period_label} {isCurrent && '★'}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
 
-                      {/* Subtotal columns per period */}
-                      {activeSubTab === 'excel_grid' ? (
-                        periods.map(p => {
-                          const subVal = categorySubtotals[cat.category_id]?.[p.id] || 0;
+            <tbody>
+              {groupedParameters.map(({ sectionName, items, style }) => (
+                <React.Fragment key={sectionName}>
+                  {/* Section Title */}
+                  <tr style={{
+                    backgroundColor: style.headerBg,
+                    color: style.headerText,
+                    borderTop: '2px solid #000000',
+                    borderBottom: '1px solid #000000',
+                    fontWeight: '800',
+                    fontSize: '11.5px',
+                    textTransform: 'uppercase'
+                  }}>
+                    <td colSpan={periods.length + 2} style={{ padding: '7px 12px' }}>
+                      {sectionName}
+                    </td>
+                  </tr>
+
+                  {/* Section Rows */}
+                  {items.map((param, idx) => {
+                    const isTotalRow = param.param_key === 'total_expenses' || param.param_key === 'cumulative_income' || param.param_key === 'balance';
+                    const isFormula = !!param.formula;
+
+                    return (
+                      <tr
+                        key={param.id || param.param_key}
+                        style={{
+                          backgroundColor: isTotalRow ? (style.totalBg || '#86efac') : (idx % 2 === 1 ? '#ffffff' : style.rowBg),
+                          borderBottom: isTotalRow ? '2px solid #000000' : '1px solid #000000',
+                          fontWeight: isTotalRow ? '800' : '500'
+                        }}
+                      >
+                        <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #000000', color: '#64748b' }}>
+                          {param.display_order || (idx + 1)}
+                        </td>
+                        <td style={{ padding: '6px 12px', borderRight: '1px solid #000000', color: '#0f172a', fontWeight: isTotalRow ? '800' : '600' }}>
+                          {param.param_name}
+                        </td>
+
+                        {/* Each Month Column */}
+                        {periods.map(p => {
+                          const pStr = String(p.id);
+                          const pMetrics = computeBranchMetrics(activeBranch, pStr);
+                          const mVal = pMetrics[param.param_key] !== undefined ? pMetrics[param.param_key] : getParamRawValue(activeBranch, pStr, param.param_key);
+                          const isCurrent = pStr === currPeriodIdStr;
+
                           return (
                             <td
                               key={p.id}
                               style={{
-                                padding: '9px 12px',
+                                padding: '4px 8px',
                                 textAlign: 'right',
                                 borderRight: '1px solid #000000',
-                                fontWeight: '800'
+                                backgroundColor: isCurrent ? (isFormula ? '#dcfce7' : '#eff6ff') : (isFormula ? '#f0fdf4' : 'transparent'),
+                                fontWeight: isTotalRow ? '800' : '600'
                               }}
-                              className="currency-font"
                             >
-                              {formatINR(subVal)}
+                              {isFormula || activeBranch === 'all' || isClosed ? (
+                                <span style={{ color: isTotalRow ? '#15803d' : '#0f172a' }}>
+                                  {formatCellValue(param, mVal)}
+                                </span>
+                              ) : (
+                                <input
+                                  type={param.input_type === 'text' ? 'text' : 'number'}
+                                  value={mVal !== undefined && mVal !== null ? mVal : ''}
+                                  onChange={(e) => handleCellEdit(param.param_key, e.target.value, pStr)}
+                                  style={{
+                                    width: '100%',
+                                    padding: '4px 6px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    textAlign: 'right',
+                                    outline: 'none',
+                                    backgroundColor: '#ffffff'
+                                  }}
+                                  placeholder="0"
+                                />
+                              )}
                             </td>
                           );
-                        })
-                      ) : (
-                        <td style={{
-                          padding: '9px 14px',
-                          textAlign: 'right',
-                          borderRight: '1px solid #000000',
-                          fontWeight: '800'
-                        }} className="currency-font">
-                          {formatINR(categorySubtotals[cat.category_id]?.[editingPeriodId] || 0)}
-                        </td>
-                      )}
-
-                      {/* Overall Category Total */}
-                      <td style={{
-                        padding: '9px 14px',
-                        textAlign: 'right',
-                        borderRight: '1px solid #000000',
-                        fontWeight: '800'
-                      }} className="currency-font">
-                        {formatINR(
-                          periods.reduce((acc, p) => acc + (categorySubtotals[cat.category_id]?.[p.id] || 0), 0)
-                        )}
-                      </td>
-                      <td style={{ padding: '9px 8px' }}></td>
-                    </tr>
-                  </React.Fragment>
-                );
-              })}
-
-              {/* BOTTOM GRAND TOTAL ROW: Deep Emerald / Teal */}
-              <tr style={{
-                backgroundColor: '#00b894',
-                color: '#000000',
-                borderTop: '3px solid #000000',
-                fontWeight: '900',
-                fontSize: '13.5px'
-              }}>
-                <td colSpan={2} style={{
-                  padding: '12px 18px',
-                  textAlign: 'center',
-                  borderRight: '1px solid #000000',
-                  letterSpacing: '0.04em'
-                }}>
-                  Total Transport Expenses ({activeBranchObj.label})
-                </td>
-
-                {/* Grand Total per period */}
-                {activeSubTab === 'excel_grid' ? (
-                  periods.map(p => {
-                    const gVal = grandTotalsByPeriod.totals[p.id] || 0;
-                    return (
-                      <td
-                        key={p.id}
-                        style={{
-                          padding: '12px 12px',
-                          textAlign: 'right',
-                          borderRight: '1px solid #000000',
-                          fontWeight: '900'
-                        }}
-                        className="currency-font"
-                      >
-                        {formatINR(gVal)}
-                      </td>
+                        })}
+                      </tr>
                     );
-                  })
-                ) : (
-                  <td style={{
-                    padding: '12px 14px',
-                    textAlign: 'right',
-                    borderRight: '1px solid #000000',
-                    fontWeight: '900'
-                  }} className="currency-font">
-                    {formatINR(grandTotalsByPeriod.totals[editingPeriodId] || 0)}
-                  </td>
-                )}
-
-                <td style={{
-                  padding: '12px 14px',
-                  textAlign: 'right',
-                  borderRight: '1px solid #000000',
-                  fontWeight: '900'
-                }} className="currency-font">
-                  {formatINR(grandTotalsByPeriod.overallGrand)}
-                </td>
-                <td style={{ padding: '12px 8px' }}></td>
-              </tr>
+                  })}
+                </React.Fragment>
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* 6. TRANSPORT FLEET ASSETS & MILEAGE CENSUS SUB-TAB */}
-      {activeSubTab === 'census' && (
-        <div style={{ padding: '16px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Bus size={18} color="#00a2e8" />
-              <span>Transport Fleet Assets & Mileage Census ({activePeriodObj?.period_label} • {activeBranchObj.label})</span>
-            </h3>
-            <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-              {activeBranch === 'all' 
-                ? 'Consolidated across all 4 institutions • Select a branch above to edit' 
-                : `Editing operational parameters for ${activeBranchObj.label}`}
-            </span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-            {/* Card 1: Fleet Size & Commuter Census */}
-            <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
-              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Users size={15} /> Fleet Size & Commuter Census
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Vehicles Count</label>
-                  <input
-                    type="text"
-                    value={activeTransportMetrics.vehicles_count}
-                    onChange={(e) => handleBranchCensusChange('vehicles_count', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Total Passengers</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.passengers_count}
-                    onChange={(e) => handleBranchCensusChange('passengers_count', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Students Count</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.students_count}
-                    onChange={(e) => handleBranchCensusChange('students_count', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Staff Count</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.staff_count}
-                    onChange={(e) => handleBranchCensusChange('staff_count', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Trip Mileage & Fuel Consumption */}
-            <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
-              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Fuel size={15} /> Trip Mileage & Diesel Fuel
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Approved KMs</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.approved_kms}
-                    onChange={(e) => handleBranchCensusChange('approved_kms', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Actual Run KMs</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.actual_kms}
-                    onChange={(e) => handleBranchCensusChange('actual_kms', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Additional KMs</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.additional_kms}
-                    onChange={(e) => handleBranchCensusChange('additional_kms', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Diesel Litres</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={activeTransportMetrics.diesel_litres}
-                    onChange={(e) => handleBranchCensusChange('diesel_litres', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Revenue, Passes & Operating Budget */}
-            <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
-              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#047857', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <DollarSign size={15} /> Student Passes & Fleet Budget
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Pass Fee Demand (₹)</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.fee_demand}
-                    onChange={(e) => handleBranchCensusChange('fee_demand', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Pass Fee Collected (₹)</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.fee_collected}
-                    onChange={(e) => handleBranchCensusChange('fee_collected', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Approved Budget (₹)</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.approved_budget}
-                    onChange={(e) => handleBranchCensusChange('approved_budget', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Budget Spent (₹)</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.cumulative_budget_spent}
-                    onChange={(e) => handleBranchCensusChange('cumulative_budget_spent', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Service Tickets & Safety Compliance */}
-            <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '14px', backgroundColor: '#f8fafc' }}>
-              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ShieldCheck size={15} /> Service Tickets & Safety Compliance
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Service Tickets Raised</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.service_tickets_raised}
-                    onChange={(e) => handleBranchCensusChange('service_tickets_raised', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Service Tickets Closed</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.service_tickets_closed}
-                    onChange={(e) => handleBranchCensusChange('service_tickets_closed', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Safety Incidents</label>
-                  <input
-                    type="number"
-                    value={activeTransportMetrics.incidents_count}
-                    onChange={(e) => handleBranchCensusChange('incidents_count', e.target.value, editingPeriodId)}
-                    disabled={activeBranch === 'all' || isClosed}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: '#64748b', fontWeight: '600', marginBottom: '3px' }}>Statutory Compliance</label>
-                  <div style={{ padding: '6px 8px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', fontWeight: '800', color: '#166534' }}>
-                    100% Compliant
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* 6. BOTTOM FOOTER INFO & QUICK LINK TO MASTER DATA */}
+      <div style={{
+        padding: '12px 22px',
+        backgroundColor: '#f8fafc',
+        borderTop: '1.5px solid #e2e8f0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        fontSize: '12px',
+        color: '#64748b'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Zap size={15} color="#00a2e8" />
+          <span>
+            Connected to <strong>Transport Master Data</strong> ({parameters.length} active parameters). Any parameter or formula added in Master Data is automatically calculated here.
+          </span>
         </div>
-      )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontWeight: '700', color: '#334155' }}>
+            Branch: {activeBranchObj.label} ({activePeriodObj?.period_label})
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SlidersHorizontal, Calendar, CheckCircle2, AlertTriangle, Calculator, FileSpreadsheet } from 'lucide-react';
 import CostHeadsManager from './CostHeadsManager';
 import HostelMasterManager from './HostelMasterManager';
+import TransportMasterManager from './TransportMasterManager';
 import PeriodsManager from './PeriodsManager';
 import CategoryFormulaManager from './CategoryFormulaManager';
 import EditPeriodModal from './EditPeriodModal';
@@ -95,7 +96,7 @@ export default function MasterDataPage({
           }}
         >
           <SlidersHorizontal size={14} />
-          <span>{moduleName === 'Hostel' ? 'Hostel Parameters & Template' : `Categories & Cost Heads (${costHeadsList.length} Items)`}</span>
+          <span>{moduleName === 'Hostel' ? 'Hostel Parameters & Template' : moduleName === 'Transport' ? 'Transport Fleet Parameters & Template' : `Categories & Cost Heads (${costHeadsList.length} Items)`}</span>
         </button>
 
         <button
@@ -174,6 +175,8 @@ export default function MasterDataPage({
           {masterFoodView === 'cost_heads' && (
             moduleName === 'Hostel' ? (
               <HostelMasterManager />
+            ) : moduleName === 'Transport' ? (
+              <TransportMasterManager />
             ) : (
               <CostHeadsManager
                 costHeadsList={costHeadsList}
