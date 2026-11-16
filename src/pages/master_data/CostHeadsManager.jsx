@@ -27,6 +27,7 @@ export default function CostHeadsManager({
   handleUpdateCategory,
   handleDeleteCategory,
   onToggleMathTool,
+  onNavigateFormulas,
   moduleName = 'Food & Dining'
 }) {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
@@ -176,6 +177,31 @@ export default function CostHeadsManager({
             >
               <Calculator size={15} />
               <span>🧮 Math Tools</span>
+            </button>
+          )}
+
+          {onNavigateFormulas && (
+            <button
+              type="button"
+              onClick={onNavigateFormulas}
+              title="Open Category Formulas & Mathematical Functions sheet"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                backgroundColor: '#eef2ff',
+                color: '#4f46e5',
+                fontSize: '13px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                border: '1.5px solid #c7d2fe',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Calculator size={15} />
+              <span>📐 Category Formulas</span>
             </button>
           )}
         </div>

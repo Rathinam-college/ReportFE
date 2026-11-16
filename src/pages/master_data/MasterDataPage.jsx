@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SlidersHorizontal, Calendar, CheckCircle2, AlertTriangle, Calculator } from 'lucide-react';
 import CostHeadsManager from './CostHeadsManager';
 import PeriodsManager from './PeriodsManager';
+import CategoryFormulaManager from './CategoryFormulaManager';
 import EditPeriodModal from './EditPeriodModal';
 import AddMonthModal from '../data_entry/AddMonthModal';
 import AddCategoryModal from './AddCategoryModal';
@@ -121,6 +122,28 @@ export default function MasterDataPage({
           <span>Monthly Billing Cycles ({computedMatrix?.periods?.length || 0} Months)</span>
         </button>
 
+        <button
+          type="button"
+          onClick={() => setMasterFoodView('formulas')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '7px 18px',
+            borderRadius: '9999px',
+            fontSize: '12.5px',
+            fontWeight: masterFoodView === 'formulas' ? '700' : '600',
+            backgroundColor: masterFoodView === 'formulas' ? '#4f46e5' : '#ffffff',
+            color: masterFoodView === 'formulas' ? '#ffffff' : '#475569',
+            border: masterFoodView === 'formulas' ? '1px solid #4f46e5' : '1px solid #cbd5e1',
+            cursor: 'pointer',
+            boxShadow: masterFoodView === 'formulas' ? '0 2px 6px rgba(79,70,229,0.28)' : 'none'
+          }}
+        >
+          <Calculator size={14} />
+          <span>📐 Category Formulas & Functions</span>
+        </button>
+
         {/* Math Tools Toggle Button in Master Data */}
         <button
           type="button"
@@ -202,6 +225,7 @@ export default function MasterDataPage({
               handleUpdateCategory={handleUpdateCategory}
               handleDeleteCategory={handleDeleteCategory}
               onToggleMathTool={() => setShowMathTool(prev => !prev)}
+              onNavigateFormulas={() => setMasterFoodView('formulas')}
               moduleName={moduleName}
             />
           )}
@@ -212,6 +236,15 @@ export default function MasterDataPage({
               setShowAddMonthModal={setShowAddMonthModal}
               openEditPeriodModal={openEditPeriodModal}
               handleDeletePeriod={handleDeletePeriod}
+            />
+          )}
+
+          {masterFoodView === 'formulas' && (
+            <CategoryFormulaManager
+              moduleName={moduleName}
+              categoriesList={categoriesList}
+              computedMatrix={computedMatrix}
+              openAddCategoryModal={openAddCategoryModal}
             />
           )}
         </div>
