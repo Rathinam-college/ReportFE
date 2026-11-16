@@ -65,18 +65,18 @@ export default function HostelSpreadsheetEntry({
     const d = currData;
 
     // 1. Bed Capacity
-    const bed_capacity_boys = num(d.bed_capacity_boys, 2223);
-    const bed_capacity_girls = num(d.bed_capacity_girls, 896);
+    const bed_capacity_boys = num(d.bed_capacity_boys, 0);
+    const bed_capacity_girls = num(d.bed_capacity_girls, 0);
     const bed_capacity_total = bed_capacity_boys + bed_capacity_girls;
 
     // 2. Students Count
-    const students_boys = num(d.students_boys, 2075);
-    const students_girls = num(d.students_girls, 768);
+    const students_boys = num(d.students_boys, 0);
+    const students_girls = num(d.students_girls, 0);
     const students_total = students_boys + students_girls;
 
     // 3. Staffs Count
-    const staff_boys = num(d.staff_boys, 72);
-    const staff_girls = num(d.staff_girls, 59);
+    const staff_boys = num(d.staff_boys, 0);
+    const staff_girls = num(d.staff_girls, 0);
     const staff_total = staff_boys + staff_girls;
 
     // 4. Total Occupied
@@ -85,13 +85,13 @@ export default function HostelSpreadsheetEntry({
     const total_occupied = total_occupied_boys + total_occupied_girls;
 
     // 5. Vacant
-    const vacant_boys = bed_capacity_boys - total_occupied_boys;
-    const vacant_girls = bed_capacity_girls - total_occupied_girls;
-    const vacant_total = vacant_boys + vacant_girls;
+    const vacant_boys = bed_capacity_boys > 0 ? (bed_capacity_boys - total_occupied_boys) : 0;
+    const vacant_girls = bed_capacity_girls > 0 ? (bed_capacity_girls - total_occupied_girls) : 0;
+    const vacant_total = (bed_capacity_total > 0 || total_occupied > 0) ? (bed_capacity_total - total_occupied) : 0;
 
     // 6. Specific Vacancy breakdowns
-    const vacant_college_boys = num(d.vacant_college_boys, -41);
-    const vacant_college_girls = num(d.vacant_college_girls, 69);
+    const vacant_college_boys = num(d.vacant_college_boys, 0);
+    const vacant_college_girls = num(d.vacant_college_girls, 0);
     const vacant_college = vacant_college_boys + vacant_college_girls;
 
     const vacant_sports_boys = num(d.vacant_sports_boys, 0);
@@ -111,56 +111,56 @@ export default function HostelSpreadsheetEntry({
     const vacant_pct_girls = bed_capacity_girls > 0 ? ((vacant_girls / bed_capacity_girls) * 100).toFixed(1) : '0.0';
     const vacant_pct = bed_capacity_total > 0 ? ((vacant_total / bed_capacity_total) * 100).toFixed(1) : '0.0';
 
-    const students_vacated = num(d.students_vacated, 86);
+    const students_vacated = num(d.students_vacated, 0);
 
     // 8. Maintenance Tickets
-    const tickets_received = num(d.tickets_received, 176);
-    const tickets_closed = num(d.tickets_closed, 176);
+    const tickets_received = num(d.tickets_received, 0);
+    const tickets_closed = num(d.tickets_closed, 0);
     const tickets_open = Math.max(0, tickets_received - tickets_closed);
     const total_hours_close = num(d.total_hours_close, 0);
-    const tat_hours = num(d.tat_hours, 62.29);
+    const tat_hours = num(d.tat_hours, 0);
 
     // 9. Quality Issues & Incidents
-    const quality_issues_received = num(d.quality_issues_received, 5);
-    const quality_issues_closed = num(d.quality_issues_closed, 3);
+    const quality_issues_received = num(d.quality_issues_received, 0);
+    const quality_issues_closed = num(d.quality_issues_closed, 0);
     const quality_issues_open = Math.max(0, quality_issues_received - quality_issues_closed);
     const incidents_count = num(d.incidents_count, 0);
 
     // 10. Expenses & Utilities
-    const power_units = num(d.power_units, 108201);
-    const power_cost = num(d.power_cost, 1325151);
-    const water_purchase_cost = num(d.water_purchase_cost, 248765);
-    const maintenance_expenses = num(d.maintenance_expenses, 119394);
-    const expenses_occurred = num(d.expenses_occurred, 9349172);
+    const power_units = num(d.power_units, 0);
+    const power_cost = num(d.power_cost, 0);
+    const water_purchase_cost = num(d.water_purchase_cost, 0);
+    const maintenance_expenses = num(d.maintenance_expenses, 0);
+    const expenses_occurred = num(d.expenses_occurred, 0);
 
     // 11. Budget
-    const approved_budget = num(d.approved_budget, 131788118);
-    const cumulative_budget_spent = num(d.cumulative_budget_spent, 34527814);
-    const balance = approved_budget - cumulative_budget_spent;
+    const approved_budget = num(d.approved_budget, 0);
+    const cumulative_budget_spent = num(d.cumulative_budget_spent, 0);
+    const balance = (approved_budget > 0 || cumulative_budget_spent > 0) ? (approved_budget - cumulative_budget_spent) : 0;
 
     // 12. Area & Per Student Metrics
-    const sq_feet = num(d.sq_feet, 231701);
-    const per_student_cost_month = students_total > 0 ? Math.round(expenses_occurred / students_total) : 3288;
-    const per_student_cost_day = Math.round(per_student_cost_month / 30);
-    const sq_feet_per_occupant = total_occupied > 0 ? Math.round(sq_feet / total_occupied) : 81;
+    const sq_feet = num(d.sq_feet, 0);
+    const per_student_cost_month = students_total > 0 ? Math.round(expenses_occurred / students_total) : 0;
+    const per_student_cost_day = per_student_cost_month > 0 ? Math.round(per_student_cost_month / 30) : 0;
+    const sq_feet_per_occupant = total_occupied > 0 ? Math.round(sq_feet / total_occupied) : 0;
 
     // 13. Water Metrics (Image 2)
-    const normal_water_litres = num(d.normal_water_litres, 8202000);
-    const normal_water_cost = num(d.normal_water_cost, 820200);
+    const normal_water_litres = num(d.normal_water_litres, 0);
+    const normal_water_cost = num(d.normal_water_cost, 0);
     const normal_water_student_ltrs = num(d.normal_water_student_ltrs, 0);
-    const normal_water_student_cost = num(d.normal_water_student_cost, 88);
+    const normal_water_student_cost = num(d.normal_water_student_cost, 0);
 
-    const power_cost_sqft = sq_feet > 0 ? (power_cost / sq_feet).toFixed(1) : '6.3';
-    const units_per_occupant = total_occupied > 0 ? (power_units / total_occupied).toFixed(1) : '35.3';
-    const power_cost_occupant = total_occupied > 0 ? Math.round(power_cost / total_occupied) : 494;
+    const power_cost_sqft = sq_feet > 0 ? (power_cost / sq_feet).toFixed(1) : '0.0';
+    const units_per_occupant = total_occupied > 0 ? (power_units / total_occupied).toFixed(1) : '0.0';
+    const power_cost_occupant = total_occupied > 0 ? Math.round(power_cost / total_occupied) : 0;
 
-    const normal_water_ltr_day = total_occupied > 0 ? (normal_water_litres / total_occupied / 30).toFixed(2) : '91.93';
-    const normal_water_cost_day = total_occupied > 0 ? (normal_water_cost / total_occupied / 30).toFixed(2) : '9.19';
+    const normal_water_ltr_day = total_occupied > 0 ? (normal_water_litres / total_occupied / 30).toFixed(2) : '0.00';
+    const normal_water_cost_day = total_occupied > 0 ? (normal_water_cost / total_occupied / 30).toFixed(2) : '0.00';
 
-    const drinking_water_litres = num(d.drinking_water_litres, 92800);
-    const drinking_water_cost = num(d.drinking_water_cost, 23200);
-    const drinking_water_ltr_day = total_occupied > 0 ? (drinking_water_litres / total_occupied / 30).toFixed(2) : '1.04';
-    const drinking_water_cost_day = total_occupied > 0 ? (drinking_water_cost / total_occupied / 30).toFixed(2) : '0.26';
+    const drinking_water_litres = num(d.drinking_water_litres, 0);
+    const drinking_water_cost = num(d.drinking_water_cost, 0);
+    const drinking_water_ltr_day = total_occupied > 0 ? (drinking_water_litres / total_occupied / 30).toFixed(2) : '0.00';
+    const drinking_water_cost_day = total_occupied > 0 ? (drinking_water_cost / total_occupied / 30).toFixed(2) : '0.00';
 
     return {
       bed_capacity_boys, bed_capacity_girls, bed_capacity_total,
@@ -231,6 +231,38 @@ export default function HostelSpreadsheetEntry({
     }
   };
 
+  // Copy values from immediately preceding month
+  const handleCloneFromPreviousMonth = () => {
+    const curIdx = periods.findIndex(p => String(p.id) === currPeriodIdStr);
+    if (curIdx <= 0) {
+      setLocalMessage({
+        type: 'error',
+        text: 'No previous month found to copy from.'
+      });
+      setTimeout(() => setLocalMessage(null), 4000);
+      return;
+    }
+
+    const prevP = periods[curIdx - 1];
+    const prevData = hostelCensusDraft[String(prevP.id)];
+    if (!prevData || Object.keys(prevData).length === 0) {
+      setLocalMessage({
+        type: 'error',
+        text: `Previous month (${prevP.period_label}) has no saved data to copy.`
+      });
+      setTimeout(() => setLocalMessage(null), 4000);
+      return;
+    }
+
+    // Cleanly copy data to active month
+    handleHostelCensusChange?.(prevData, null, editingPeriodId);
+    setLocalMessage({
+      type: 'success',
+      text: `Values copied from ${prevP.period_label}. Review and click Save.`
+    });
+    setTimeout(() => setLocalMessage(null), 5000);
+  };
+
   // Group custom parameters added in Master Data
   const customParameters = useMemo(() => {
     return parameters.filter(p => !p.is_system);
@@ -295,6 +327,29 @@ export default function HostelSpreadsheetEntry({
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleCloneFromPreviousMonth}
+            disabled={isClosed}
+            title="Copy values from previous month into this month"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 15px',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: '#ffffff',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              border: '1px solid rgba(255, 255, 255, 0.45)',
+              cursor: isClosed ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            📋 Copy Previous Month
+          </button>
+
           <button
             type="button"
             onClick={handleSaveMonth}
@@ -502,18 +557,20 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.bed_capacity_boys ?? 2223}
+                    value={currData.bed_capacity_boys ?? ''}
                     onChange={(e) => handleValChange('bed_capacity_boys', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.bed_capacity_girls ?? 896}
+                    value={currData.bed_capacity_girls ?? ''}
                     onChange={(e) => handleValChange('bed_capacity_girls', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -530,18 +587,20 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.students_boys ?? 2075}
+                    value={currData.students_boys ?? ''}
                     onChange={(e) => handleValChange('students_boys', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.students_girls ?? 768}
+                    value={currData.students_girls ?? ''}
                     onChange={(e) => handleValChange('students_girls', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -558,18 +617,20 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.staff_boys ?? 72}
+                    value={currData.staff_boys ?? ''}
                     onChange={(e) => handleValChange('staff_boys', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.staff_girls ?? 59}
+                    value={currData.staff_girls ?? ''}
                     onChange={(e) => handleValChange('staff_girls', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -618,18 +679,20 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.vacant_college_boys ?? -41}
+                    value={currData.vacant_college_boys ?? ''}
                     onChange={(e) => handleValChange('vacant_college_boys', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.vacant_college_girls ?? 69}
+                    value={currData.vacant_college_girls ?? ''}
                     onChange={(e) => handleValChange('vacant_college_girls', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -649,6 +712,7 @@ export default function HostelSpreadsheetEntry({
                     value={currData.vacant_sports_boys ?? ''}
                     onChange={(e) => handleValChange('vacant_sports_boys', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                   />
                 </td>
@@ -658,6 +722,7 @@ export default function HostelSpreadsheetEntry({
                     value={currData.vacant_sports_girls ?? ''}
                     onChange={(e) => handleValChange('vacant_sports_girls', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                   />
                 </td>
@@ -677,6 +742,7 @@ export default function HostelSpreadsheetEntry({
                     value={currData.vacant_school_boys ?? ''}
                     onChange={(e) => handleValChange('vacant_school_boys', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                   />
                 </td>
@@ -686,6 +752,7 @@ export default function HostelSpreadsheetEntry({
                     value={currData.vacant_school_girls ?? ''}
                     onChange={(e) => handleValChange('vacant_school_girls', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                   />
                 </td>
@@ -727,9 +794,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.students_vacated ?? 86}
+                    value={currData.students_vacated ?? ''}
                     onChange={(e) => handleValChange('students_vacated', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -747,9 +815,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.tickets_received ?? 176}
+                    value={currData.tickets_received ?? ''}
                     onChange={(e) => handleValChange('tickets_received', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
                   />
                 </td>
@@ -766,9 +835,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.tickets_closed ?? 176}
+                    value={currData.tickets_closed ?? ''}
                     onChange={(e) => handleValChange('tickets_closed', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
                   />
                 </td>
@@ -814,9 +884,10 @@ export default function HostelSpreadsheetEntry({
                   <input
                     type="number"
                     step="0.01"
-                    value={currData.tat_hours ?? 62.29}
+                    value={currData.tat_hours ?? ''}
                     onChange={(e) => handleValChange('tat_hours', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
                   />
                 </td>
@@ -831,9 +902,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.quality_issues_received ?? 5}
+                    value={currData.quality_issues_received ?? ''}
                     onChange={(e) => handleValChange('quality_issues_received', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -848,9 +920,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.quality_issues_closed ?? 3}
+                    value={currData.quality_issues_closed ?? ''}
                     onChange={(e) => handleValChange('quality_issues_closed', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -876,9 +949,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
                   <input
                     type="number"
-                    value={currData.incidents_count ?? 0}
+                    value={currData.incidents_count ?? ''}
                     onChange={(e) => handleValChange('incidents_count', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -899,9 +973,10 @@ export default function HostelSpreadsheetEntry({
                     <span style={{ fontSize: '11px', color: '#64748b' }}>Units:</span>
                     <input
                       type="number"
-                      value={currData.power_units ?? 108201}
+                      value={currData.power_units ?? ''}
                       onChange={(e) => handleValChange('power_units', e.target.value)}
                       disabled={isClosed}
+                      placeholder="0"
                       style={{ width: '130px', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
                     />
                   </div>
@@ -909,9 +984,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.power_cost ?? 1325151}
+                    value={currData.power_cost ?? ''}
                     onChange={(e) => handleValChange('power_cost', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
                     className="currency-font"
                   />
@@ -926,9 +1002,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.water_purchase_cost ?? 248765}
+                    value={currData.water_purchase_cost ?? ''}
                     onChange={(e) => handleValChange('water_purchase_cost', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
                     className="currency-font"
                   />
@@ -943,9 +1020,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.maintenance_expenses ?? 119394}
+                    value={currData.maintenance_expenses ?? ''}
                     onChange={(e) => handleValChange('maintenance_expenses', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
                     className="currency-font"
                   />
@@ -960,9 +1038,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.expenses_occurred ?? 9349172}
+                    value={currData.expenses_occurred ?? ''}
                     onChange={(e) => handleValChange('expenses_occurred', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '900', backgroundColor: '#fff', color: '#000' }}
                     className="currency-font"
                   />
@@ -981,9 +1060,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.approved_budget ?? 131788118}
+                    value={currData.approved_budget ?? ''}
                     onChange={(e) => handleValChange('approved_budget', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
                     className="currency-font"
                   />
@@ -998,9 +1078,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.cumulative_budget_spent ?? 34527814}
+                    value={currData.cumulative_budget_spent ?? ''}
                     onChange={(e) => handleValChange('cumulative_budget_spent', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
                     className="currency-font"
                   />
@@ -1059,9 +1140,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.sq_feet ?? 231701}
+                    value={currData.sq_feet ?? ''}
                     onChange={(e) => handleValChange('sq_feet', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -1086,9 +1168,10 @@ export default function HostelSpreadsheetEntry({
                     <span style={{ fontSize: '11px', color: '#64748b' }}>Ltrs:</span>
                     <input
                       type="number"
-                      value={currData.normal_water_student_ltrs ?? 0}
+                      value={currData.normal_water_student_ltrs ?? ''}
                       onChange={(e) => handleValChange('normal_water_student_ltrs', e.target.value)}
                       disabled={isClosed}
+                      placeholder="0"
                       style={{ width: '100px', textAlign: 'right', padding: '4px 6px', border: '1px solid #000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
                     />
                   </div>
@@ -1096,9 +1179,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.normal_water_student_cost ?? 88}
+                    value={currData.normal_water_student_cost ?? ''}
                     onChange={(e) => handleValChange('normal_water_student_cost', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
                   />
                 </td>
@@ -1145,9 +1229,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.normal_water_litres ?? 8202000}
+                    value={currData.normal_water_litres ?? ''}
                     onChange={(e) => handleValChange('normal_water_litres', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -1161,9 +1246,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.normal_water_cost ?? 820200}
+                    value={currData.normal_water_cost ?? ''}
                     onChange={(e) => handleValChange('normal_water_cost', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                     className="currency-font"
                   />
@@ -1194,9 +1280,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.drinking_water_litres ?? 92800}
+                    value={currData.drinking_water_litres ?? ''}
                     onChange={(e) => handleValChange('drinking_water_litres', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                   />
                 </td>
@@ -1210,9 +1297,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                   <input
                     type="number"
-                    value={currData.drinking_water_cost ?? 23200}
+                    value={currData.drinking_water_cost ?? ''}
                     onChange={(e) => handleValChange('drinking_water_cost', e.target.value)}
                     disabled={isClosed}
+                    placeholder="0"
                     style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                     className="currency-font"
                   />

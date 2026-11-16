@@ -1091,8 +1091,17 @@ export default function App() {
 
   const openAddCostHeadModal = (defaultCategoryId = null) => {
     setEditingCostHead(null);
+    let resolvedCatId = null;
+    if (typeof defaultCategoryId === 'number' || (typeof defaultCategoryId === 'string' && defaultCategoryId !== '' && !isNaN(Number(defaultCategoryId)))) {
+      resolvedCatId = Number(defaultCategoryId);
+    } else if (categoriesList && categoriesList.length > 0) {
+      resolvedCatId = categoriesList[0]?.id;
+    } else {
+      resolvedCatId = 1;
+    }
+
     setCostHeadForm({
-      category_id: defaultCategoryId || categoriesList[0]?.id || 1,
+      category_id: resolvedCatId,
       name: '',
       is_new_category: false,
       new_category_name: ''
@@ -1113,10 +1122,10 @@ export default function App() {
 
   const handleSaveCostHead = async (e) => {
     if (e) e.preventDefault();
-    const activeMod = masterDataSubTab;
+    const activeMod = masterDataSubTab || 'food';
 
     try {
-      let targetCategoryId = Number(costHeadForm.category_id);
+      let targetCategoryId = null;
 
       // Simultaneous category creation if user chose to add new category at the same time
       if (costHeadForm.is_new_category && costHeadForm.new_category_name?.trim()) {
@@ -1130,18 +1139,29 @@ export default function App() {
         });
 
         if (!catRes.ok) {
-          const catErr = await catRes.json();
+          const catErr = await catRes.json().catch(() => ({}));
           throw new Error(catErr.detail || 'Failed to create new category');
         }
 
         const catData = await catRes.json();
-        targetCategoryId = catData.category.id;
+        targetCategoryId = catData.category?.id;
+      } else if (costHeadForm.category_id && !isNaN(Number(costHeadForm.category_id))) {
+        targetCategoryId = Number(costHeadForm.category_id);
+      }
+
+      if (!targetCategoryId) {
+        targetCategoryId = categoriesList[0]?.id || 1;
+      }
+
+      const headName = (costHeadForm.name || '').trim();
+      if (!headName) {
+        throw new Error('Please enter a cost head name');
       }
 
       const payload = {
-        name: costHeadForm.name,
+        name: headName,
         category_id: targetCategoryId,
-        code: costHeadForm.name.toUpperCase().replace(/\s+/g, '_').slice(0, 30),
+        code: headName.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 30),
         default_vendor: 'Institutional Campus Supplier',
         cost_behavior: 'variable',
         module: activeMod
@@ -1163,18 +1183,21 @@ export default function App() {
       }
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Failed to save cost head');
+        const err = await res.json().catch(() => ({}));
+        const msg = Array.isArray(err.detail)
+          ? err.detail.map(d => `${d.loc?.slice(-1)[0] || 'field'}: ${d.msg}`).join(', ')
+          : (err.detail || 'Failed to save cost head');
+        throw new Error(msg);
       }
 
       setShowCostHeadModal(false);
       setMasterMessage({
         type: 'success',
         text: costHeadForm.is_new_category
-          ? `Created new Category "${costHeadForm.new_category_name}" and Line Item "${costHeadForm.name}" simultaneously!`
+          ? `Created new Category "${costHeadForm.new_category_name}" and Line Item "${headName}" simultaneously!`
           : (editingCostHead
-            ? `Updated "${costHeadForm.name}" successfully.`
-            : `Created new line item "${costHeadForm.name}".`)
+            ? `Updated "${headName}" successfully.`
+            : `Created new line item "${headName}".`)
       });
       await fetchMasterDetails(activeMod);
       await fetchData(activeMod);

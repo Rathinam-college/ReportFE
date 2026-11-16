@@ -135,7 +135,7 @@ export default function CostHeadsManager({
 
           <button
             type="button"
-            onClick={openAddCostHeadModal}
+            onClick={() => openAddCostHeadModal()}
             style={{
               padding: '8px 18px',
               borderRadius: '6px',
