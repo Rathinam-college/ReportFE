@@ -328,7 +328,7 @@ export default function TransportDashboardCensusView({
               </span>
             </div>
             <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#ffedd5' }}>
-              RPS • KPM • Common Pool • University Fleet • Consolidated • {activePeriodObj?.period_label || 'Current Period'}
+              RPS • KPM • Common • University Fleet • Consolidated • {activePeriodObj?.period_label || 'Current Period'}
             </p>
           </div>
         </div>

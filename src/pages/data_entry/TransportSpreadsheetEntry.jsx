@@ -11,7 +11,7 @@ export const TRANSPORT_BRANCHES = [
   { 
     id: 'Common', 
     code: 'Common', 
-    label: 'Common Pool', 
+    label: 'Common', 
     icon: '🚌', 
     badgeColor: '#d97706', 
     badgeBg: '#fef3c7',
@@ -1172,7 +1172,7 @@ export default function TransportSpreadsheetEntry({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Layers size={16} color="#2563eb" />
             <span>
-              <strong>Consolidated Fleet Total:</strong> Showing the combined automatic sum of <strong>Common Pool</strong>, <strong>RPS</strong>, <strong>KPM</strong>, and <strong>University Fleet</strong>.
+              <strong>Consolidated Fleet Total:</strong> Showing the combined automatic sum of <strong>Common</strong>, <strong>RPS</strong>, <strong>KPM</strong>, and <strong>University Fleet</strong>.
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
