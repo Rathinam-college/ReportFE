@@ -158,13 +158,21 @@ export default function FoodSpreadsheetEntry({
     return subs;
   }, [categories, periods, matrixDraft, newRowDrafts]);
 
-  // Calculate live Grand Total for each period
+  // Calculate live Grand Total for each period (excluding Total Person & Cost Per Person)
   const grandTotalsByPeriod = useMemo(() => {
     const totals = {};
     let overallGrand = 0;
     periods.forEach(p => {
       let pSum = 0;
       categories.forEach(cat => {
+        const catName = String(cat.category_name || cat.name || '').toLowerCase();
+        if (
+          catName.includes('total person') ||
+          catName.includes('cost per person') ||
+          catName.includes('per person') ||
+          catName.includes('diners') ||
+          catName.includes('unit economics')
+        ) return;
         pSum += categorySubtotals[cat.category_id]?.[p.id] || 0;
       });
       totals[p.id] = pSum;

@@ -85,14 +85,25 @@ export default function ClusteredDataTableChart({
       }
     }
 
-    // Default: Expense Categories from Master Data
-    return categories.map(cat => ({
-      key: `cat_${cat.category_id || cat.id}`,
-      id: cat.category_id || cat.id,
-      label: cat.category_name || cat.name,
-      short: cat.category_name || cat.name,
-      type: 'currency'
-    }));
+    // Default: Expense Categories from Master Data (excluding non-expense categories)
+    return categories
+      .filter(cat => {
+        const n = String(cat.category_name || cat.name || '').toLowerCase();
+        return !(
+          n.includes('total person') ||
+          n.includes('cost per person') ||
+          n.includes('per person') ||
+          n.includes('diners') ||
+          n.includes('unit economics')
+        );
+      })
+      .map(cat => ({
+        key: `cat_${cat.category_id || cat.id}`,
+        id: cat.category_id || cat.id,
+        label: cat.category_name || cat.name,
+        short: cat.category_name || cat.name,
+        type: 'currency'
+      }));
   }, [dataViewMode, selectedModule, categories]);
 
   // 2. Compute matrix values for each period and column
@@ -173,9 +184,17 @@ export default function ClusteredDataTableChart({
           row.rowTotal = pax;
         }
       } else {
-        // Categories expenditure
+        // Categories expenditure (excluding Total Person & Cost Per Person)
         let sum = 0;
         categories.forEach(cat => {
+          const catName = String(cat.category_name || cat.name || '').toLowerCase();
+          if (
+            catName.includes('total person') ||
+            catName.includes('cost per person') ||
+            catName.includes('per person') ||
+            catName.includes('diners') ||
+            catName.includes('unit economics')
+          ) return;
           const catId = cat.category_id || cat.id;
           const val = Number(cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[pStr] ?? 0);
           row.values[`cat_${catId}`] = val;

@@ -167,6 +167,14 @@ export default function DashboardPage({
     let largest = { name: '—', total: 0 };
     if (effectiveMatrix?.categories && Array.isArray(effectiveMatrix.categories)) {
       effectiveMatrix.categories.forEach(cat => {
+        const catName = String(cat.category_name || cat.name || '').toLowerCase();
+        if (
+          catName.includes('total person') ||
+          catName.includes('cost per person') ||
+          catName.includes('per person') ||
+          catName.includes('diners') ||
+          catName.includes('unit economics')
+        ) return;
         cat.items?.forEach(it => {
           const itTot = activePeriod === 'all'
             ? Number(it.total || 0)
@@ -180,10 +188,22 @@ export default function DashboardPage({
     return largest;
   }, [effectiveMatrix, activePeriod]);
 
-  // 1. Prepare Category items for Bar, Pie, Doughnut with remarks
+  // 1. Prepare Category items for Bar, Pie, Doughnut with remarks (excluding Total Person & Cost Per Person)
   const categoryItems = useMemo(() => {
     if (!computedMatrix || !computedMatrix.categories) return [];
-    return computedMatrix.categories.map((cat, idx) => {
+    return computedMatrix.categories
+      .filter(cat => {
+        const n = String(cat.category_name || cat.name || '').toLowerCase().trim();
+        return !(
+          n.includes('total person') ||
+          n.includes('cost per person') ||
+          n.includes('per person') ||
+          n.includes('total persons') ||
+          n.includes('diners') ||
+          n.includes('unit economics')
+        );
+      })
+      .map((cat, idx) => {
       let val = 0;
       if (activePeriod === 'all') {
         val = cat.subtotal.total;

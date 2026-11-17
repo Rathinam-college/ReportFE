@@ -265,7 +265,24 @@ export default function HostelSpreadsheetEntry({
 
   // Group custom parameters added in Master Data
   const customParameters = useMemo(() => {
-    return parameters.filter(p => !p.is_system);
+    return parameters.filter(p => !p.is_system && p.is_active !== false);
+  }, [parameters]);
+
+  // Known canonical sections
+  const knownSections = [
+    'occupancy & census',
+    'maintenance & quality tickets',
+    'utilities & operational expenses',
+    'budget & financial balance',
+    'per student & area metrics',
+    'water & utilities deep dive'
+  ];
+
+  // Custom parameters outside known sections
+  const uncategorizedCustomParams = useMemo(() => {
+    return (parameters || []).filter(
+      p => !p.is_system && p.is_active !== false && !knownSections.includes((p.section || '').toLowerCase().trim())
+    );
   }, [parameters]);
 
   // Live parameter helpers synced with Master Data
@@ -274,14 +291,87 @@ export default function HostelSpreadsheetEntry({
     return parameters.some(p => p.param_key === key && p.is_active !== false);
   };
 
-  const getParamSNo = (key, defaultSNo) => {
+  const getParamSNo = (key, defaultSNo = '') => {
     const found = parameters.find(p => p.param_key === key);
-    return (found && found.s_no) ? found.s_no : defaultSNo;
+    return (found && found.s_no !== undefined && found.s_no !== null) ? found.s_no : defaultSNo;
   };
 
-  const getParamName = (key, defaultName) => {
+  const getParamName = (key, defaultName = '') => {
     const found = parameters.find(p => p.param_key === key);
     return (found && found.param_name) ? found.param_name : defaultName;
+  };
+
+  // Helper to render custom parameters that belong to a specific section
+  const renderCustomParamsForSection = (sectionName) => {
+    const list = (parameters || []).filter(
+      p => !p.is_system && p.is_active !== false && (p.section || '').toLowerCase().trim() === sectionName.toLowerCase().trim()
+    );
+    if (!list.length) return null;
+    return list.map((cp, cIdx) => {
+      const cKey = cp.param_key;
+      const cVal = currData[cKey] ?? '';
+
+      return (
+        <tr key={cp.id || cKey} style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#faf5ff' }}>
+          <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000', color: '#7e22ce', fontWeight: '700' }}>
+            {cp.s_no || `+`}
+          </td>
+          <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>{cp.param_name}</span>
+              <span style={{ fontSize: '10px', color: '#7e22ce', backgroundColor: '#f3e8ff', padding: '1px 5px', borderRadius: '4px' }}>Custom</span>
+            </div>
+          </td>
+
+          {cp.input_type === 'boys_girls_total' ? (
+            <>
+              <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                <input
+                  type="number"
+                  value={currData[`${cKey}_boys`] ?? ''}
+                  onChange={(e) => handleValChange(`${cKey}_boys`, e.target.value)}
+                  disabled={isClosed}
+                  style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                />
+              </td>
+              <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                <input
+                  type="number"
+                  value={currData[`${cKey}_girls`] ?? ''}
+                  onChange={(e) => handleValChange(`${cKey}_girls`, e.target.value)}
+                  disabled={isClosed}
+                  style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                />
+              </td>
+              <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                {(num(currData[`${cKey}_boys`]) + num(currData[`${cKey}_girls`])) || '—'}
+              </td>
+              <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+            </>
+          ) : (
+            <>
+              <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#fdf4ff' }}>
+                {cp.formula && (
+                  <span style={{ fontSize: '11px', color: '#7e22ce', fontStyle: 'italic', paddingLeft: '8px' }}>
+                    Formula: = {cp.formula}
+                  </span>
+                )}
+              </td>
+              <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                <input
+                  type={cp.input_type === 'cost' || cp.input_type === 'single_number' ? 'number' : 'text'}
+                  value={cVal}
+                  onChange={(e) => handleValChange(cKey, e.target.value)}
+                  disabled={isClosed}
+                  placeholder={cp.unit ? `0 ${cp.unit}` : 'Enter value'}
+                  style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #d8b4fe', borderRadius: '3px', fontWeight: '700' }}
+                />
+              </td>
+            </>
+          )}
+        </tr>
+      );
+    });
   };
 
   return (
@@ -567,642 +657,855 @@ export default function HostelSpreadsheetEntry({
               {/* ================================================================ */}
               
               {/* Row 1: Bed Capacity */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>1</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Bed Capacity</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.bed_capacity_boys ?? ''}
-                    onChange={(e) => handleValChange('bed_capacity_boys', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.bed_capacity_girls ?? ''}
-                    onChange={(e) => handleValChange('bed_capacity_girls', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
-                  {metrics.bed_capacity_total}
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('bed_capacity') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('bed_capacity', '1')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('bed_capacity', 'Bed Capacity')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.bed_capacity_boys ?? ''}
+                      onChange={(e) => handleValChange('bed_capacity_boys', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.bed_capacity_girls ?? ''}
+                      onChange={(e) => handleValChange('bed_capacity_girls', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                    {metrics.bed_capacity_total}
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Row 2: No. of students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>2</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of students</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.students_boys ?? ''}
-                    onChange={(e) => handleValChange('students_boys', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.students_girls ?? ''}
-                    onChange={(e) => handleValChange('students_girls', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
-                  {metrics.students_total}
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('students_count') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('students_count', '2')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('students_count', 'No. of students')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.students_boys ?? ''}
+                      onChange={(e) => handleValChange('students_boys', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.students_girls ?? ''}
+                      onChange={(e) => handleValChange('students_girls', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                    {metrics.students_total}
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Row 3: No. of staffs */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>3</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of staffs</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.staff_boys ?? ''}
-                    onChange={(e) => handleValChange('staff_boys', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.staff_girls ?? ''}
-                    onChange={(e) => handleValChange('staff_girls', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
-                  {metrics.staff_total}
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('staff_count') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('staff_count', '3')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('staff_count', 'No. of staffs')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.staff_boys ?? ''}
+                      onChange={(e) => handleValChange('staff_boys', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.staff_girls ?? ''}
+                      onChange={(e) => handleValChange('staff_girls', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                    {metrics.staff_total}
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Row 4: Total Occupied */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>4</td>
-                <td style={{ padding: '6px 14px', fontWeight: '800', color: '#0369a1', borderRight: '1px solid #000000' }}>Total Occupied</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }}>
-                  {metrics.total_occupied_boys}
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }}>
-                  {metrics.total_occupied_girls}
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#e0f2fe', color: '#0369a1', borderRight: '1px solid #000000' }}>
-                  {metrics.total_occupied}
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('total_occupied') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('total_occupied', '4')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '800', color: '#0369a1', borderRight: '1px solid #000000' }}>
+                    {getParamName('total_occupied', 'Total Occupied')}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {metrics.total_occupied_boys}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {metrics.total_occupied_girls}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#e0f2fe', color: '#0369a1', borderRight: '1px solid #000000' }}>
+                    {metrics.total_occupied}
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Row 5: Vacant */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>5</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Vacant</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
-                  {metrics.vacant_boys}
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
-                  {metrics.vacant_girls}
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
-                  {metrics.vacant_total}
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('vacant') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant', '5')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant', 'Vacant')}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {metrics.vacant_boys}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {metrics.vacant_girls}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                    {metrics.vacant_total}
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Row 6: Vacant for college students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>6</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Vacant for college students</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.vacant_college_boys ?? ''}
-                    onChange={(e) => handleValChange('vacant_college_boys', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.vacant_college_girls ?? ''}
-                    onChange={(e) => handleValChange('vacant_college_girls', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
-                  {metrics.vacant_college}
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('vacant_college') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant_college', '6')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant_college', 'Vacant for college students')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.vacant_college_boys ?? ''}
+                      onChange={(e) => handleValChange('vacant_college_boys', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.vacant_college_girls ?? ''}
+                      onChange={(e) => handleValChange('vacant_college_girls', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                    {metrics.vacant_college}
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Vacant for sports students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>Vacant for college sports students (KPM hostel)</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.vacant_sports_boys ?? ''}
-                    onChange={(e) => handleValChange('vacant_sports_boys', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                  />
-                </td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.vacant_sports_girls ?? ''}
-                    onChange={(e) => handleValChange('vacant_sports_girls', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                  />
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', backgroundColor: '#f1f5f9' }}>
-                  {metrics.vacant_sports_total || '—'}
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('vacant_sports') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant_sports', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant_sports', 'Vacant for college sports students (KPM hostel)')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.vacant_sports_boys ?? ''}
+                      onChange={(e) => handleValChange('vacant_sports_boys', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                    />
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.vacant_sports_girls ?? ''}
+                      onChange={(e) => handleValChange('vacant_sports_girls', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                    />
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', backgroundColor: '#f1f5f9' }}>
+                    {metrics.vacant_sports_total || '—'}
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Vacant for school students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>Vacant for school students</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.vacant_school_boys ?? ''}
-                    onChange={(e) => handleValChange('vacant_school_boys', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                  />
-                </td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.vacant_school_girls ?? ''}
-                    onChange={(e) => handleValChange('vacant_school_girls', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                  />
-                </td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', backgroundColor: '#f1f5f9' }}>
-                  {metrics.vacant_school_total || '—'}
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('vacant_school') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant_school', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant_school', 'Vacant for school students')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.vacant_school_boys ?? ''}
+                      onChange={(e) => handleValChange('vacant_school_boys', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                    />
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.vacant_school_girls ?? ''}
+                      onChange={(e) => handleValChange('vacant_school_girls', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                    />
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', backgroundColor: '#f1f5f9' }}>
+                    {metrics.vacant_school_total || '—'}
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Occupied % */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                <td style={{ padding: '6px 14px', fontWeight: '800', color: '#166534', borderRight: '1px solid #000000' }}>Occupied %</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>{metrics.occupied_pct_boys}%</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>{metrics.occupied_pct_girls}%</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', color: '#166534', backgroundColor: '#dcfce7', borderRight: '1px solid #000000' }}>
-                  {metrics.occupied_pct}%
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('occupied_pct') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('occupied_pct', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '800', color: '#166534', borderRight: '1px solid #000000' }}>
+                    {getParamName('occupied_pct', 'Occupied %')}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>{metrics.occupied_pct_boys}%</td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>{metrics.occupied_pct_girls}%</td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', color: '#166534', backgroundColor: '#dcfce7', borderRight: '1px solid #000000' }}>
+                    {metrics.occupied_pct}%
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Vacant % */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', color: '#64748b', borderRight: '1px solid #000000' }}>Vacant %</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{metrics.vacant_pct_boys}%</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{metrics.vacant_pct_girls}%</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
-                  {metrics.vacant_pct}%
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('vacant_pct') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant_pct', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', color: '#64748b', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant_pct', 'Vacant %')}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{metrics.vacant_pct_boys}%</td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{metrics.vacant_pct_girls}%</td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                    {metrics.vacant_pct}%
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Students Vacated */}
-              <tr style={{ borderBottom: '2px solid #000000' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Students Vacated</td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.students_vacated ?? ''}
-                    onChange={(e) => handleValChange('students_vacated', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('students_vacated') && (
+                <tr style={{ borderBottom: '2px solid #000000' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('students_vacated', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('students_vacated', 'Students Vacated')}
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.students_vacated ?? ''}
+                      onChange={(e) => handleValChange('students_vacated', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
+
+              {/* Custom Parameters dynamically added to Section 1 in Master Data */}
+              {renderCustomParamsForSection('Occupancy & Census')}
 
               {/* ================================================================ */}
               {/* SECTION 2: MAINTENANCE & QUALITY TICKETS (Yellow / Orange in Image 1) */}
               {/* ================================================================ */}
               
               {/* Row 8: Maintenance Tickets Received */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>8</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Maintenance Tickets Received</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.tickets_received ?? ''}
-                    onChange={(e) => handleValChange('tickets_received', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
-                  />
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#fed7aa', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#1d4ed8' }}>
-                  Space basic tickets
-                </td>
-              </tr>
+              {isParamActive('tickets_received') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('tickets_received', '8')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('tickets_received', 'No. of Maintenance Tickets Received')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.tickets_received ?? ''}
+                      onChange={(e) => handleValChange('tickets_received', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
+                    />
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#fed7aa', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#1d4ed8' }}>
+                    Space basic tickets
+                  </td>
+                </tr>
+              )}
 
               {/* Row 9: Tickets Closed */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>9</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Maintenance Tickets closed</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.tickets_closed ?? ''}
-                    onChange={(e) => handleValChange('tickets_closed', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
-                  />
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#fed7aa' }}></td>
-              </tr>
+              {isParamActive('tickets_closed') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('tickets_closed', '9')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('tickets_closed', 'No. of Maintenance Tickets closed')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.tickets_closed ?? ''}
+                      onChange={(e) => handleValChange('tickets_closed', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
+                    />
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#fed7aa' }}></td>
+                </tr>
+              )}
 
               {/* Row 10: Tickets Open */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>10</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Maintenance Tickets in Open</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }}>
-                  {metrics.tickets_open}
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#fed7aa' }}></td>
-              </tr>
+              {isParamActive('tickets_open') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('tickets_open', '10')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('tickets_open', 'No. of Maintenance Tickets in Open')}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {metrics.tickets_open}
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#fed7aa' }}></td>
+                </tr>
+              )}
 
               {/* Row 11: Total Hours taken */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>11</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Total Hours taken to close the tickets</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={currData.total_hours_close ?? ''}
-                    onChange={(e) => handleValChange('total_hours_close', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
-                  />
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#fed7aa' }}></td>
-              </tr>
+              {isParamActive('total_hours_close') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('total_hours_close', '11')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('total_hours_close', 'Total Hours taken to close the tickets')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currData.total_hours_close ?? ''}
+                      onChange={(e) => handleValChange('total_hours_close', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
+                    />
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#fed7aa' }}></td>
+                </tr>
+              )}
 
               {/* Row 12: TAT Hours */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>12</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>TAT (Turnaround Time)Hours</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={currData.tat_hours ?? ''}
-                    onChange={(e) => handleValChange('tat_hours', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
-                  />
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#fed7aa' }}></td>
-              </tr>
+              {isParamActive('tat_hours') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('tat_hours', '12')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('tat_hours', 'TAT (Turnaround Time)Hours')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={currData.tat_hours ?? ''}
+                      onChange={(e) => handleValChange('tat_hours', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
+                    />
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#fed7aa' }}></td>
+                </tr>
+              )}
 
               {/* Row 13: Quality issues Received */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>13</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Quality issues Received</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.quality_issues_received ?? ''}
-                    onChange={(e) => handleValChange('quality_issues_received', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('quality_issues_received') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('quality_issues_received', '13')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('quality_issues_received', 'No. of Quality issues Received')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.quality_issues_received ?? ''}
+                      onChange={(e) => handleValChange('quality_issues_received', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Row 14: Quality issues Closed */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>14</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Quality issues Closed</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.quality_issues_closed ?? ''}
-                    onChange={(e) => handleValChange('quality_issues_closed', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('quality_issues_closed') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('quality_issues_closed', '14')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('quality_issues_closed', 'No. of Quality issues Closed')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.quality_issues_closed ?? ''}
+                      onChange={(e) => handleValChange('quality_issues_closed', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Row 15: Quality issues Open */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>15</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Quality issues in Open</td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }}>
-                  {metrics.quality_issues_open}
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('quality_issues_open') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('quality_issues_open', '15')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('quality_issues_open', 'No. of Quality issues in Open')}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {metrics.quality_issues_open}
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
 
               {/* Row 16: No. of Incidents */}
-              <tr style={{ borderBottom: '2px solid #000000' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>16</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Incidents</td>
-                <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
-                  <input
-                    type="number"
-                    value={currData.incidents_count ?? ''}
-                    onChange={(e) => handleValChange('incidents_count', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-                <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
-              </tr>
+              {isParamActive('incidents_count') && (
+                <tr style={{ borderBottom: '2px solid #000000' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('incidents_count', '16')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('incidents_count', 'No. of Incidents')}
+                  </td>
+                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000000' }}>
+                    <input
+                      type="number"
+                      value={currData.incidents_count ?? ''}
+                      onChange={(e) => handleValChange('incidents_count', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                  <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ borderRight: 'none', backgroundColor: '#f8fafc' }}></td>
+                </tr>
+              )}
+
+              {/* Custom Parameters dynamically added to Section 2 in Master Data */}
+              {renderCustomParamsForSection('Maintenance & Quality Tickets')}
 
               {/* ================================================================ */}
               {/* SECTION 3: UTILITIES & OPERATING EXPENSES (Salmon / Orange in Image 1) */}
               {/* ================================================================ */}
               
               {/* Row 17: Power Consumption */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>17</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Power Consumption</td>
-                <td colSpan={3} style={{ padding: '4px 8px', borderRight: '1px solid #000000', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>Units:</span>
+              {isParamActive('power_consumption') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('power_consumption', '17')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('power_consumption', 'Power Consumption')}
+                  </td>
+                  <td colSpan={3} style={{ padding: '4px 8px', borderRight: '1px solid #000000', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>Units:</span>
+                      <input
+                        type="number"
+                        value={currData.power_units ?? ''}
+                        onChange={(e) => handleValChange('power_units', e.target.value)}
+                        disabled={isClosed}
+                        placeholder="0"
+                        style={{ width: '130px', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
+                      />
+                    </div>
+                  </td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                     <input
                       type="number"
-                      value={currData.power_units ?? ''}
-                      onChange={(e) => handleValChange('power_units', e.target.value)}
+                      value={currData.power_cost ?? ''}
+                      onChange={(e) => handleValChange('power_cost', e.target.value)}
                       disabled={isClosed}
                       placeholder="0"
-                      style={{ width: '130px', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
+                      className="currency-font"
                     />
-                  </div>
-                </td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.power_cost ?? ''}
-                    onChange={(e) => handleValChange('power_cost', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
-                    className="currency-font"
-                  />
-                </td>
-              </tr>
+                  </td>
+                </tr>
+              )}
 
               {/* Row 18: Water Purchase Expenses */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>18</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Water Purchase Expenses</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffedd5' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.water_purchase_cost ?? ''}
-                    onChange={(e) => handleValChange('water_purchase_cost', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
-                    className="currency-font"
-                  />
-                </td>
-              </tr>
+              {isParamActive('water_purchase_cost') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('water_purchase_cost', '18')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('water_purchase_cost', 'Water Purchase Expenses')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffedd5' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.water_purchase_cost ?? ''}
+                      onChange={(e) => handleValChange('water_purchase_cost', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
+                      className="currency-font"
+                    />
+                  </td>
+                </tr>
+              )}
 
               {/* Row: Maintenance Expenses */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Maintenance Expenses</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffedd5' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.maintenance_expenses ?? ''}
-                    onChange={(e) => handleValChange('maintenance_expenses', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
-                    className="currency-font"
-                  />
-                </td>
-              </tr>
+              {isParamActive('maintenance_expenses') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('maintenance_expenses', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('maintenance_expenses', 'Maintenance Expenses')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffedd5' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.maintenance_expenses ?? ''}
+                      onChange={(e) => handleValChange('maintenance_expenses', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
+                      className="currency-font"
+                    />
+                  </td>
+                </tr>
+              )}
 
               {/* Row 20: Expenses occurred */}
-              <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#fed7aa' }}>
-                <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>20</td>
-                <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>Expenses occurred</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.expenses_occurred ?? ''}
-                    onChange={(e) => handleValChange('expenses_occurred', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '900', backgroundColor: '#fff', color: '#000' }}
-                    className="currency-font"
-                  />
-                </td>
-              </tr>
+              {isParamActive('expenses_occurred') && (
+                <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#fed7aa' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('expenses_occurred', '20')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {getParamName('expenses_occurred', 'Expenses occurred (Total Spend)')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.expenses_occurred ?? ''}
+                      onChange={(e) => handleValChange('expenses_occurred', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '900', backgroundColor: '#fff', color: '#000' }}
+                      className="currency-font"
+                    />
+                  </td>
+                </tr>
+              )}
+
+              {/* Custom Parameters dynamically added to Section 3 in Master Data */}
+              {renderCustomParamsForSection('Utilities & Operational Expenses')}
 
               {/* ================================================================ */}
               {/* SECTION 4: BUDGET & FINANCIAL BALANCE (Green in Image 1) */}
               {/* ================================================================ */}
               
               {/* Row 22: Approved Budget */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#bbf7d0' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>22</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Approved Budget</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.approved_budget ?? ''}
-                    onChange={(e) => handleValChange('approved_budget', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
-                    className="currency-font"
-                  />
-                </td>
-              </tr>
+              {isParamActive('approved_budget') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#bbf7d0' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('approved_budget', '22')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('approved_budget', 'Approved Budget')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.approved_budget ?? ''}
+                      onChange={(e) => handleValChange('approved_budget', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
+                      className="currency-font"
+                    />
+                  </td>
+                </tr>
+              )}
 
               {/* Row 23: Cumulative Budget spent */}
-              <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#bbf7d0' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>23</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Cumulative Budget spent (Actual expenses) till now</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.cumulative_budget_spent ?? ''}
-                    onChange={(e) => handleValChange('cumulative_budget_spent', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
-                    className="currency-font"
-                  />
-                </td>
-              </tr>
+              {isParamActive('cumulative_budget_spent') && (
+                <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#bbf7d0' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('cumulative_budget_spent', '23')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('cumulative_budget_spent', 'Cumulative Budget spent (Actual expenses) till now')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.cumulative_budget_spent ?? ''}
+                      onChange={(e) => handleValChange('cumulative_budget_spent', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
+                      className="currency-font"
+                    />
+                  </td>
+                </tr>
+              )}
 
               {/* Row 24: Balance */}
-              <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#86efac' }}>
-                <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>24</td>
-                <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>Balance</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#86efac' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '900', color: '#14532d', fontSize: '13.5px' }} className="currency-font">
-                  {formatINR(metrics.balance)}
-                </td>
-              </tr>
+              {isParamActive('balance') && (
+                <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#86efac' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('balance', '24')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {getParamName('balance', 'Balance')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#86efac' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '900', color: '#14532d', fontSize: '13.5px' }} className="currency-font">
+                    {formatINR(metrics.balance)}
+                  </td>
+                </tr>
+              )}
+
+              {/* Custom Parameters dynamically added to Section 4 in Master Data */}
+              {renderCustomParamsForSection('Budget & Financial Balance')}
 
               {/* ================================================================ */}
               {/* SECTION 5: PER STUDENT & AREA METRICS (White in Image 1) */}
               {/* ================================================================ */}
               
               {/* Row 25: Number of students */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>25</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Number of students</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>
-                  {metrics.students_total.toLocaleString()}
-                </td>
-              </tr>
+              {isParamActive('students_kpi') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('students_kpi', '25')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('students_kpi', 'Number of students')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>
+                    {metrics.students_total.toLocaleString()}
+                  </td>
+                </tr>
+              )}
 
               {/* Row 26: Per student cost per month */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>26</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Per student cost per month</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }} className="currency-font">
-                  ₹ {metrics.per_student_cost_month.toLocaleString()}
-                </td>
-              </tr>
+              {isParamActive('per_student_cost_month') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('per_student_cost_month', '26')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('per_student_cost_month', 'Per student cost per month')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }} className="currency-font">
+                    ₹ {metrics.per_student_cost_month.toLocaleString()}
+                  </td>
+                </tr>
+              )}
 
               {/* Row 27: Per student cost per day */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>27</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Per student cost per day</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }} className="currency-font">
-                  ₹ {metrics.per_student_cost_day.toLocaleString()}
-                </td>
-              </tr>
+              {isParamActive('per_student_cost_day') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('per_student_cost_day', '27')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('per_student_cost_day', 'Per student cost per day')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }} className="currency-font">
+                    ₹ {metrics.per_student_cost_day.toLocaleString()}
+                  </td>
+                </tr>
+              )}
 
               {/* Sq feet */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Sq feet</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.sq_feet ?? ''}
-                    onChange={(e) => handleValChange('sq_feet', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-              </tr>
-
-              {/* Sq feet per occupant */}
-              <tr style={{ borderBottom: '1px solid #000000' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Sq feet per occupant in hostel</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>
-                  {metrics.sq_feet_per_occupant}
-                </td>
-              </tr>
-
-              {/* Row 28: Normal water per student per month */}
-              <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#fef08a' }}>
-                <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>28</td>
-                <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>Normal water per student per month(Ltrs& cost)</td>
-                <td colSpan={3} style={{ padding: '4px 8px', borderRight: '1px solid #000000', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>Ltrs:</span>
+              {isParamActive('sq_feet') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('sq_feet', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('sq_feet', 'Sq feet (Hostel Area)')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                     <input
                       type="number"
-                      value={currData.normal_water_student_ltrs ?? ''}
-                      onChange={(e) => handleValChange('normal_water_student_ltrs', e.target.value)}
+                      value={currData.sq_feet ?? ''}
+                      onChange={(e) => handleValChange('sq_feet', e.target.value)}
                       disabled={isClosed}
                       placeholder="0"
-                      style={{ width: '100px', textAlign: 'right', padding: '4px 6px', border: '1px solid #000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
                     />
-                  </div>
-                </td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.normal_water_student_cost ?? ''}
-                    onChange={(e) => handleValChange('normal_water_student_cost', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
-                  />
-                </td>
-              </tr>
+                  </td>
+                </tr>
+              )}
+
+              {/* Sq feet per occupant */}
+              {isParamActive('sq_feet_per_occupant') && (
+                <tr style={{ borderBottom: '1px solid #000000' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('sq_feet_per_occupant', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('sq_feet_per_occupant', 'Sq feet per occupant in hostel')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>
+                    {metrics.sq_feet_per_occupant}
+                  </td>
+                </tr>
+              )}
+
+              {/* Row 28: Normal water per student per month */}
+              {isParamActive('normal_water_student_month') && (
+                <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#fef08a' }}>
+                  <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_student_month', '28')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_student_month', 'Normal water per student per month (Ltrs & cost)')}
+                  </td>
+                  <td colSpan={3} style={{ padding: '4px 8px', borderRight: '1px solid #000000', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>Ltrs:</span>
+                      <input
+                        type="number"
+                        value={currData.normal_water_student_ltrs ?? ''}
+                        onChange={(e) => handleValChange('normal_water_student_ltrs', e.target.value)}
+                        disabled={isClosed}
+                        placeholder="0"
+                        style={{ width: '100px', textAlign: 'right', padding: '4px 6px', border: '1px solid #000', borderRadius: '3px', fontWeight: '700', backgroundColor: '#fff' }}
+                      />
+                    </div>
+                  </td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.normal_water_student_cost ?? ''}
+                      onChange={(e) => handleValChange('normal_water_student_cost', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
+                    />
+                  </td>
+                </tr>
+              )}
+
+              {/* Custom Parameters dynamically added to Section 5 in Master Data */}
+              {renderCustomParamsForSection('Per Student & Area Metrics')}
 
               {/* ================================================================ */}
               {/* SECTION 6: WATER & UTILITIES DEEP DIVE (Image 2 Metrics) */}
@@ -1214,147 +1517,216 @@ export default function HostelSpreadsheetEntry({
               </tr>
 
               {/* Power cost per sqft */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Power cost per sq feet</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>₹ {metrics.power_cost_sqft}</td>
-              </tr>
+              {isParamActive('power_cost_sqft') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('power_cost_sqft', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('power_cost_sqft', 'Power cost per sq feet')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>₹ {metrics.power_cost_sqft}</td>
+                </tr>
+              )}
 
               {/* Units per occupant */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Units per occupant per month - Hostel</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.units_per_occupant} kWh</td>
-              </tr>
+              {isParamActive('units_per_occupant') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('units_per_occupant', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('units_per_occupant', 'Units per occupant per month - Hostel')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.units_per_occupant} kWh</td>
+                </tr>
+              )}
 
               {/* Power cost per occupant */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Power cost Per occupant per month - Hostel</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>₹ {metrics.power_cost_occupant}</td>
-              </tr>
+              {isParamActive('power_cost_occupant') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('power_cost_occupant', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('power_cost_occupant', 'Power cost Per occupant per month - Hostel')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>₹ {metrics.power_cost_occupant}</td>
+                </tr>
+              )}
 
               {/* Normal Water Consumption Ltr */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0f9ff' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Normal Water Consumption Ltr Hostels</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0f9ff' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.normal_water_litres ?? ''}
-                    onChange={(e) => handleValChange('normal_water_litres', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-              </tr>
+              {isParamActive('normal_water_litres') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0f9ff' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_litres', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_litres', 'Normal Water Consumption Ltr Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0f9ff' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.normal_water_litres ?? ''}
+                      onChange={(e) => handleValChange('normal_water_litres', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                </tr>
+              )}
 
               {/* Normal Water Consumption Cost */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0f9ff' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Normal Water Consumption Cost Hostels</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0f9ff' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.normal_water_cost ?? ''}
-                    onChange={(e) => handleValChange('normal_water_cost', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                    className="currency-font"
-                  />
-                </td>
-              </tr>
+              {isParamActive('normal_water_cost') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0f9ff' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_cost', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_cost', 'Normal Water Consumption Cost Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0f9ff' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.normal_water_cost ?? ''}
+                      onChange={(e) => handleValChange('normal_water_cost', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                      className="currency-font"
+                    />
+                  </td>
+                </tr>
+              )}
 
               {/* Normal water Ltr per student per day */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Normal water Ltr per student per day - Hostels</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.normal_water_ltr_day} L</td>
-              </tr>
+              {isParamActive('normal_water_ltr_day') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_ltr_day', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_ltr_day', 'Normal water Ltr per student per day - Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.normal_water_ltr_day} L</td>
+                </tr>
+              )}
 
               {/* Normal Water cost Per student per day */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Normal Water cost Per student per day Hostels</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>₹ {metrics.normal_water_cost_day}</td>
-              </tr>
+              {isParamActive('normal_water_cost_day') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_cost_day', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_cost_day', 'Normal Water cost Per student per day Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>₹ {metrics.normal_water_cost_day}</td>
+                </tr>
+              )}
 
               {/* Drinking Water Consumption Litres */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Drinking Water Consumption Litres Hostels</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.drinking_water_litres ?? ''}
-                    onChange={(e) => handleValChange('drinking_water_litres', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                  />
-                </td>
-              </tr>
+              {isParamActive('drinking_water_litres') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('drinking_water_litres', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('drinking_water_litres', 'Drinking Water Consumption Litres Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.drinking_water_litres ?? ''}
+                      onChange={(e) => handleValChange('drinking_water_litres', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    />
+                  </td>
+                </tr>
+              )}
 
               {/* Drinking Water Consumption Cost */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Drinking Water Consumption Cost Hostels</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
-                  <input
-                    type="number"
-                    value={currData.drinking_water_cost ?? ''}
-                    onChange={(e) => handleValChange('drinking_water_cost', e.target.value)}
-                    disabled={isClosed}
-                    placeholder="0"
-                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
-                    className="currency-font"
-                  />
-                </td>
-              </tr>
+              {isParamActive('drinking_water_cost') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('drinking_water_cost', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('drinking_water_cost', 'Drinking Water Consumption Cost Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
+                  <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      value={currData.drinking_water_cost ?? ''}
+                      onChange={(e) => handleValChange('drinking_water_cost', e.target.value)}
+                      disabled={isClosed}
+                      placeholder="0"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                      className="currency-font"
+                    />
+                  </td>
+                </tr>
+              )}
 
               {/* Drinking water Litres per student per day */}
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Drinking water Litres per student per day- Hostels</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.drinking_water_ltr_day} L</td>
-              </tr>
+              {isParamActive('drinking_water_ltr_day') && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('drinking_water_ltr_day', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('drinking_water_ltr_day', 'Drinking water Litres per student per day- Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.drinking_water_ltr_day} L</td>
+                </tr>
+              )}
 
               {/* Drinking Water cost Per student per day */}
-              <tr style={{ borderBottom: '2px solid #000000' }}>
-                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>•</td>
-                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Drinking Water cost Per student per day Hostels</td>
-                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>₹ {metrics.drinking_water_cost_day}</td>
-              </tr>
+              {isParamActive('drinking_water_cost_day') && (
+                <tr style={{ borderBottom: '2px solid #000000' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('drinking_water_cost_day', '•')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('drinking_water_cost_day', 'Drinking Water cost Per student per day Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>₹ {metrics.drinking_water_cost_day}</td>
+                </tr>
+              )}
+
+              {/* Custom Parameters dynamically added to Section 6 in Master Data */}
+              {renderCustomParamsForSection('Water & Utilities Deep Dive')}
 
               {/* ================================================================ */}
-              {/* SECTION 7: DYNAMIC CUSTOM PARAMETERS ADDED IN MASTER DATA */}
+              {/* SECTION 7: OTHER DYNAMIC CUSTOM PARAMETERS ADDED IN MASTER DATA */}
               {/* ================================================================ */}
-              {customParameters.length > 0 && (
+              {uncategorizedCustomParams.length > 0 && (
                 <>
                   <tr style={{ backgroundColor: '#faf5ff', color: '#7e22ce', fontWeight: '800', borderBottom: '2px solid #000000' }}>
                     <td colSpan={6} style={{ padding: '8px 16px', fontSize: '12.5px', letterSpacing: '0.03em' }}>
                       ✨ CUSTOM PARAMETERS (CONFIGURED FROM MASTER DATA)
                     </td>
                   </tr>
-                  {customParameters.map((cp, cIdx) => {
+                  {uncategorizedCustomParams.map((cp, cIdx) => {
                     const cKey = cp.param_key;
                     const cVal = currData[cKey] ?? '';
 
                     return (
-                      <tr key={cp.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
+                      <tr key={cp.id || cKey} style={{ borderBottom: '1px solid #cbd5e1' }}>
                         <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000', color: '#7e22ce', fontWeight: '700' }}>
                           {cp.s_no || `C${cIdx + 1}`}
                         </td>

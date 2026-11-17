@@ -103,6 +103,37 @@ export default function HostelDashboardDataTable({
     fetchMasterParams();
   }, []);
 
+  // Synced Master Data helpers
+  const isParamActive = (key) => {
+    if (!masterParams || masterParams.length === 0) return true;
+    return masterParams.some(p => p.param_key === key && p.is_active !== false);
+  };
+
+  const getParamSNo = (key, defaultSNo = '') => {
+    const found = masterParams.find(p => p.param_key === key);
+    return (found && found.s_no !== undefined && found.s_no !== null) ? found.s_no : defaultSNo;
+  };
+
+  const getParamName = (key, defaultName = '') => {
+    const found = masterParams.find(p => p.param_key === key);
+    return (found && found.param_name) ? found.param_name : defaultName;
+  };
+
+  const knownSections = [
+    'occupancy & census',
+    'maintenance & quality tickets',
+    'utilities & operational expenses',
+    'budget & financial balance',
+    'per student & area metrics',
+    'water & utilities deep dive'
+  ];
+
+  const uncategorizedMasterParams = useMemo(() => {
+    return (masterParams || []).filter(
+      p => !p.is_system && p.is_active !== false && !knownSections.includes((p.section || '').toLowerCase().trim())
+    );
+  }, [masterParams]);
+
   const num = (v, fb = 0) => {
     if (v === undefined || v === null || v === '') return fb;
     const n = Number(v);
@@ -274,8 +305,22 @@ export default function HostelDashboardDataTable({
     const per_student_cost_day = getVal('per_student_cost_day', per_student_cost_month > 0 ? Math.round(per_student_cost_month / 30) : canonicalSepFallback.per_student_cost_day);
     const sq_feet_per_occupant = getVal('sq_feet_per_occupant', total_occupied > 0 ? Math.round(sq_feet / total_occupied) : canonicalSepFallback.sq_feet_per_occupant);
 
+    const normal_water_litres = getVal('normal_water_litres', 0);
+    const normal_water_cost = getVal('normal_water_cost', 0);
     const normal_water_student_ltrs = getVal('normal_water_student_ltrs', 0);
-    const normal_water_student_cost = getVal('normal_water_student_cost', canonicalSepFallback.normal_water_cost);
+    const normal_water_student_cost = getVal('normal_water_student_cost', canonicalSepFallback.normal_water_student_cost || 88);
+
+    const power_cost_sqft = sq_feet > 0 ? (power_cost / sq_feet).toFixed(1) : '0.0';
+    const units_per_occupant = total_occupied > 0 ? (power_units / total_occupied).toFixed(1) : '0.0';
+    const power_cost_occupant = total_occupied > 0 ? Math.round(power_cost / total_occupied) : 0;
+
+    const normal_water_ltr_day = total_occupied > 0 ? (normal_water_litres / total_occupied / 30).toFixed(2) : '0.00';
+    const normal_water_cost_day = total_occupied > 0 ? (normal_water_cost / total_occupied / 30).toFixed(2) : '0.00';
+
+    const drinking_water_litres = getVal('drinking_water_litres', 0);
+    const drinking_water_cost = getVal('drinking_water_cost', 0);
+    const drinking_water_ltr_day = total_occupied > 0 ? (drinking_water_litres / total_occupied / 30).toFixed(2) : '0.00';
+    const drinking_water_cost_day = total_occupied > 0 ? (drinking_water_cost / total_occupied / 30).toFixed(2) : '0.00';
 
     return {
       raw,
@@ -295,7 +340,10 @@ export default function HostelDashboardDataTable({
       power_units, power_cost, water_purchase_cost, maintenance_expenses, expenses_occurred,
       approved_budget, cumulative_budget_spent, balance,
       sq_feet, per_student_cost_month, per_student_cost_day, sq_feet_per_occupant,
-      normal_water_student_ltrs, normal_water_student_cost
+      normal_water_litres, normal_water_cost, normal_water_student_ltrs, normal_water_student_cost,
+      power_cost_sqft, units_per_occupant, power_cost_occupant,
+      normal_water_ltr_day, normal_water_cost_day,
+      drinking_water_litres, drinking_water_cost, drinking_water_ltr_day, drinking_water_cost_day
     };
   }, [hostelCensusMap, selectedPeriodId, activePeriodObj]);
 
@@ -343,6 +391,58 @@ export default function HostelDashboardDataTable({
   };
 
   const c = currentPeriodCensus;
+
+  // Helper to render custom parameters that belong to a specific section in Dashboard
+  const renderCustomParamsForSection = (sectionName) => {
+    const list = (masterParams || []).filter(
+      p => !p.is_system && p.is_active !== false && (p.section || '').toLowerCase().trim() === sectionName.toLowerCase().trim()
+    );
+    if (!list.length) return null;
+    return list.map((cp, cIdx) => {
+      const cKey = cp.param_key;
+      const raw = c.raw || {};
+      const cVal = raw[cKey] !== undefined ? raw[cKey] : (raw?.custom_metrics?.[cKey] ?? '—');
+      const bVal = raw[`${cKey}_boys`];
+      const gVal = raw[`${cKey}_girls`];
+      const hasBoysGirls = cp.input_type === 'boys_girls_total';
+      const totVal = hasBoysGirls ? ((Number(bVal) || 0) + (Number(gVal) || 0)) : null;
+
+      if (!matchesSearch(cp.param_name)) return null;
+
+      return (
+        <tr key={cp.id || cKey} style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#faf5ff' }}>
+          <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000', color: '#7e22ce', fontWeight: '700' }}>
+            {cp.s_no || `+`}
+          </td>
+          <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>{cp.param_name}</span>
+              <span style={{ fontSize: '10px', color: '#7e22ce', backgroundColor: '#f3e8ff', padding: '1px 5px', borderRadius: '4px' }}>Custom</span>
+            </div>
+          </td>
+          {hasBoysGirls ? (
+            <>
+              <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{bVal !== undefined ? fmtVal(bVal) : '—'}</td>
+              <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{gVal !== undefined ? fmtVal(gVal) : '—'}</td>
+              <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                {totVal !== null ? fmtVal(totVal) : '—'}
+              </td>
+              <td style={{ borderRight: 'none', backgroundColor: '#ffffff' }}></td>
+            </>
+          ) : (
+            <>
+              <td colSpan={3} style={{ padding: '6px 14px', textAlign: 'center', borderRight: '1px solid #000000', color: '#64748b' }}>
+                {cp.formula ? `Formula: = ${cp.formula}` : (cp.unit ? `${cVal} ${cp.unit}` : '—')}
+              </td>
+              <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', borderRight: 'none' }}>
+                {cp.input_type === 'cost' || cp.format === 'currency' ? fmtCost(cVal) : (cVal !== '—' ? fmtVal(cVal) : '—')}
+              </td>
+            </>
+          )}
+        </tr>
+      );
+    });
+  };
 
   return (
     <div 
@@ -644,10 +744,14 @@ export default function HostelDashboardDataTable({
               {/* ================================================================ */}
               
               {/* Row 1: Bed Capacity */}
-              {matchesSearch('Bed Capacity') && (
+              {isParamActive('bed_capacity') && matchesSearch(getParamName('bed_capacity', 'Bed Capacity')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>1</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Bed Capacity</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('bed_capacity', '1')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('bed_capacity', 'Bed Capacity')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{fmtVal(c.bed_capacity_boys)}</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{fmtVal(c.bed_capacity_girls)}</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f8fafc', borderRight: '1px solid #000000' }}>
@@ -658,10 +762,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 2: No. of students */}
-              {matchesSearch('No. of students') && (
+              {isParamActive('students_count') && matchesSearch(getParamName('students_count', 'No. of students')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>2</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of students</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('students_count', '2')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('students_count', 'No. of students')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{fmtVal(c.students_boys)}</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{fmtVal(c.students_girls)}</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f8fafc', borderRight: '1px solid #000000' }}>
@@ -672,10 +780,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 3: No. of staffs */}
-              {matchesSearch('No. of staffs') && (
+              {isParamActive('staff_count') && matchesSearch(getParamName('staff_count', 'No. of staffs')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>3</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of staffs</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('staff_count', '3')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('staff_count', 'No. of staffs')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{fmtVal(c.staff_boys)}</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{fmtVal(c.staff_girls)}</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f8fafc', borderRight: '1px solid #000000' }}>
@@ -686,10 +798,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 4: Total Occupied */}
-              {matchesSearch('Total Occupied') && (
+              {isParamActive('total_occupied') && matchesSearch(getParamName('total_occupied', 'Total Occupied')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>4</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>Total Occupied</td>
+                  <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('total_occupied', '4')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {getParamName('total_occupied', 'Total Occupied')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>{fmtVal(c.total_occupied_boys)}</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>{fmtVal(c.total_occupied_girls)}</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '900', borderRight: '1px solid #000000', backgroundColor: '#f1f5f9' }}>
@@ -700,10 +816,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 5: Vacant */}
-              {matchesSearch('Vacant') && (
+              {isParamActive('vacant') && matchesSearch(getParamName('vacant', 'Vacant')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>5</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Vacant</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant', '5')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant', 'Vacant')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#64748b' }}>
                     {c.vacant_boys ? fmtVal(c.vacant_boys) : ''}
                   </td>
@@ -718,10 +838,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 6: Vacant for college students */}
-              {matchesSearch('Vacant for college students') && (
+              {isParamActive('vacant_college') && matchesSearch(getParamName('vacant_college', 'Vacant for college students')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>6</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Vacant for college students</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant_college', '6')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant_college', 'Vacant for college students')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: c.vacant_college_boys < 0 ? '#dc2626' : 'inherit' }}>
                     {fmtVal(c.vacant_college_boys)}
                   </td>
@@ -734,34 +858,58 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Vacant for sports students */}
-              {matchesSearch('college sports') && (
+              {isParamActive('vacant_sports') && matchesSearch(getParamName('vacant_sports', 'Vacant for college sports students (KPM hostel)')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                  <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>Vacant for college sports students (KPM hostel)</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#94a3b8' }}>—</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#94a3b8' }}>—</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', backgroundColor: '#f8fafc', color: '#94a3b8' }}>—</td>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000', fontWeight: '700' }}>
+                    {getParamSNo('vacant_sports', '7')}
+                  </td>
+                  <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant_sports', 'Vacant for college sports students (KPM hostel)')}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#94a3b8' }}>
+                    {c.vacant_sports_boys ? fmtVal(c.vacant_sports_boys) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#94a3b8' }}>
+                    {c.vacant_sports_girls ? fmtVal(c.vacant_sports_girls) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', backgroundColor: '#f8fafc', color: '#94a3b8' }}>
+                    {c.vacant_sports_total ? fmtVal(c.vacant_sports_total) : '—'}
+                  </td>
                   <td style={{ borderRight: 'none', backgroundColor: '#ffffff' }}></td>
                 </tr>
               )}
 
               {/* Vacant for school students */}
-              {matchesSearch('school students') && (
+              {isParamActive('vacant_school') && matchesSearch(getParamName('vacant_school', 'Vacant for school students')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                  <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>Vacant for school students</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#94a3b8' }}>—</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#94a3b8' }}>—</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', backgroundColor: '#f8fafc', color: '#94a3b8' }}>—</td>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant_school', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant_school', 'Vacant for school students')}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#94a3b8' }}>
+                    {c.vacant_school_boys ? fmtVal(c.vacant_school_boys) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', color: '#94a3b8' }}>
+                    {c.vacant_school_girls ? fmtVal(c.vacant_school_girls) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000', backgroundColor: '#f8fafc', color: '#94a3b8' }}>
+                    {c.vacant_school_total ? fmtVal(c.vacant_school_total) : '—'}
+                  </td>
                   <td style={{ borderRight: 'none', backgroundColor: '#ffffff' }}></td>
                 </tr>
               )}
 
               {/* Occupied % */}
-              {matchesSearch('Occupied %') && (
+              {isParamActive('occupied_pct') && matchesSearch(getParamName('occupied_pct', 'Occupied %')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                  <td style={{ padding: '6px 14px', fontWeight: '800', color: '#0f172a', borderRight: '1px solid #000000' }}>Occupied %</td>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('occupied_pct', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '800', color: '#0f172a', borderRight: '1px solid #000000' }}>
+                    {getParamName('occupied_pct', 'Occupied %')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {c.occupied_pct_boys}%
                   </td>
@@ -776,10 +924,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Vacant % */}
-              {matchesSearch('Vacant %') && (
+              {isParamActive('vacant_pct') && matchesSearch(getParamName('vacant_pct', 'Vacant %')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', color: '#64748b', borderRight: '1px solid #000000' }}>Vacant %</td>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('vacant_pct', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', color: '#64748b', borderRight: '1px solid #000000' }}>
+                    {getParamName('vacant_pct', 'Vacant %')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{c.vacant_pct_boys}%</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{c.vacant_pct_girls}%</td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', backgroundColor: '#f8fafc', borderRight: '1px solid #000000' }}>
@@ -790,10 +942,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Students Vacated */}
-              {matchesSearch('Students Vacated') && (
+              {isParamActive('students_vacated') && matchesSearch(getParamName('students_vacated', 'Students Vacated')) && (
                 <tr style={{ borderBottom: '2px solid #000000' }}>
-                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Students Vacated</td>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('students_vacated', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('students_vacated', 'Students Vacated')}
+                  </td>
                   <td colSpan={2} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f8fafc', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.students_vacated)}
@@ -802,15 +958,22 @@ export default function HostelDashboardDataTable({
                 </tr>
               )}
 
+              {/* Custom Parameters dynamically added to Section 1 in Master Data */}
+              {renderCustomParamsForSection('Occupancy & Census')}
+
               {/* ================================================================ */}
               {/* SECTION 2: MAINTENANCE & TICKETS (Amber/Orange Background)       */}
               {/* ================================================================ */}
               
               {/* Row 8: Maintenance Tickets */}
-              {matchesSearch('Maintenance Tickets') && (
+              {isParamActive('tickets_received') && matchesSearch(getParamName('tickets_received', 'No. of Maintenance Tickets')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>8</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Maintenance Tickets</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('tickets_received', '8')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('tickets_received', 'No. of Maintenance Tickets')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.tickets_received)}
                   </td>
@@ -834,10 +997,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 9: Maintenance Tickets Closed */}
-              {matchesSearch('Tickets closed') && (
+              {isParamActive('tickets_closed') && matchesSearch(getParamName('tickets_closed', 'No. of Maintenance Tickets closed')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>9</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Maintenance Tickets closed</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('tickets_closed', '9')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('tickets_closed', 'No. of Maintenance Tickets closed')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.tickets_closed)}
                   </td>
@@ -847,10 +1014,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 10: Maintenance Tickets Open */}
-              {matchesSearch('Tickets in Open') && (
+              {isParamActive('tickets_open') && matchesSearch(getParamName('tickets_open', 'No. of Maintenance Tickets in Open')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>10</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Maintenance Tickets in Open</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('tickets_open', '10')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('tickets_open', 'No. of Maintenance Tickets in Open')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.tickets_open)}
                   </td>
@@ -860,10 +1031,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 11: Total Hours taken to close */}
-              {matchesSearch('Total Hours') && (
+              {isParamActive('total_hours_close') && matchesSearch(getParamName('total_hours_close', 'Total Hours taken to close the')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>11</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Total Hours taken to close the</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('total_hours_close', '11')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('total_hours_close', 'Total Hours taken to close the')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>
                     {c.total_hours_close ? Number(c.total_hours_close).toFixed(2) : '—'}
                   </td>
@@ -873,10 +1048,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 12: TAT Hours */}
-              {matchesSearch('TAT') && (
+              {isParamActive('tat_hours') && matchesSearch(getParamName('tat_hours', 'TAT (Turnaround Time)Hours')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#fed7aa' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>12</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>TAT (Turnaround Time)Hours</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('tat_hours', '12')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('tat_hours', 'TAT (Turnaround Time)Hours')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>
                     {c.tat_hours ? Number(c.tat_hours).toFixed(2) : '—'}
                   </td>
@@ -886,10 +1065,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 13: Quality issues Received */}
-              {matchesSearch('Quality issues Received') && (
+              {isParamActive('quality_issues_received') && matchesSearch(getParamName('quality_issues_received', 'No. of Quality issues Received')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>13</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Quality issues Received</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('quality_issues_received', '13')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('quality_issues_received', 'No. of Quality issues Received')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.quality_issues_received)}
                   </td>
@@ -899,10 +1082,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 14: Quality issues Closed */}
-              {matchesSearch('Quality issues Closed') && (
+              {isParamActive('quality_issues_closed') && matchesSearch(getParamName('quality_issues_closed', 'No. of Quality issues Closed')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>14</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Quality issues Closed</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('quality_issues_closed', '14')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('quality_issues_closed', 'No. of Quality issues Closed')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.quality_issues_closed)}
                   </td>
@@ -912,10 +1099,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 15: Quality issues Open */}
-              {matchesSearch('Quality issues in Open') && (
+              {isParamActive('quality_issues_open') && matchesSearch(getParamName('quality_issues_open', 'No. of Quality issues in Open')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>15</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Quality issues in Open</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('quality_issues_open', '15')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('quality_issues_open', 'No. of Quality issues in Open')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.quality_issues_open)}
                   </td>
@@ -925,10 +1116,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 16: Incidents */}
-              {matchesSearch('Incidents') && (
+              {isParamActive('incidents_count') && matchesSearch(getParamName('incidents_count', 'No. of Incidents')) && (
                 <tr style={{ borderBottom: '2px solid #000000' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>16</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>No. of Incidents</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('incidents_count', '16')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('incidents_count', 'No. of Incidents')}
+                  </td>
                   <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.incidents_count)}
                   </td>
@@ -937,15 +1132,22 @@ export default function HostelDashboardDataTable({
                 </tr>
               )}
 
+              {/* Custom Parameters dynamically added to Section 2 in Master Data */}
+              {renderCustomParamsForSection('Maintenance & Quality Tickets')}
+
               {/* ================================================================ */}
               {/* SECTION 3: UTILITIES & EXPENSES (Salmon / Peach Background)      */}
               {/* ================================================================ */}
               
               {/* Row 17: Power Consumption */}
-              {matchesSearch('Power Consumption') && (
+              {isParamActive('power_consumption') && matchesSearch(getParamName('power_consumption', 'Power Consumption')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>17</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Power Consumption</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('power_consumption', '17')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('power_consumption', 'Power Consumption')}
+                  </td>
                   <td colSpan={3} style={{ padding: '6px 14px', textAlign: 'center', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.power_units)} kwh
                   </td>
@@ -956,10 +1158,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 18: Water Purchase Expenses */}
-              {matchesSearch('Water Purchase Expenses') && (
+              {isParamActive('water_purchase_cost') && matchesSearch(getParamName('water_purchase_cost', 'Water Purchase Expenses')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>18</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Water Purchase Expenses</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('water_purchase_cost', '18')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('water_purchase_cost', 'Water Purchase Expenses')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffedd5' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtCost(c.water_purchase_cost)}
@@ -968,10 +1174,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Maintenance Expenses */}
-              {matchesSearch('Maintenance Expenses') && (
+              {isParamActive('maintenance_expenses') && matchesSearch(getParamName('maintenance_expenses', 'Maintenance Expenses')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffedd5' }}>
-                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Maintenance Expenses</td>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('maintenance_expenses', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('maintenance_expenses', 'Maintenance Expenses')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffedd5' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtCost(c.maintenance_expenses)}
@@ -980,10 +1190,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 20: Expenses occurred */}
-              {matchesSearch('Expenses occurred') && (
+              {isParamActive('expenses_occurred') && matchesSearch(getParamName('expenses_occurred', 'Expenses occurred')) && (
                 <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#fed7aa' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>20</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>Expenses occurred</td>
+                  <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('expenses_occurred', '20')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000' }}>
+                    {getParamName('expenses_occurred', 'Expenses occurred')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#fed7aa' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '900', fontSize: '13.5px', borderRight: 'none', color: '#0f172a' }}>
                     {fmtCost(c.expenses_occurred)}
@@ -991,15 +1205,22 @@ export default function HostelDashboardDataTable({
                 </tr>
               )}
 
+              {/* Custom Parameters dynamically added to Section 3 in Master Data */}
+              {renderCustomParamsForSection('Utilities & Operational Expenses')}
+
               {/* ================================================================ */}
               {/* SECTION 4: BUDGET & FINANCIAL BALANCE (Bright Green Background)  */}
               {/* ================================================================ */}
               
               {/* Row 22: Approved Budget */}
-              {matchesSearch('Approved Budget') && (
+              {isParamActive('approved_budget') && matchesSearch(getParamName('approved_budget', 'Approved Budget')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#bbf7d0' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>22</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Approved Budget</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('approved_budget', '22')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('approved_budget', 'Approved Budget')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtCost(c.approved_budget)}
@@ -1008,10 +1229,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 23: Cumulative Budget spent */}
-              {matchesSearch('Cumulative Budget spent') && (
+              {isParamActive('cumulative_budget_spent') && matchesSearch(getParamName('cumulative_budget_spent', 'Cumulative Budget spent (Actual expenses) till now')) && (
                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#bbf7d0' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>23</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Cumulative Budget spent (Actual expenses) till now</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('cumulative_budget_spent', '23')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('cumulative_budget_spent', 'Cumulative Budget spent (Actual expenses) till now')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtCost(c.cumulative_budget_spent)}
@@ -1020,10 +1245,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 24: Balance */}
-              {matchesSearch('Balance') && (
+              {isParamActive('balance') && matchesSearch(getParamName('balance', 'Balance')) && (
                 <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#86efac' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '900', padding: '7px 4px', borderRight: '1px solid #000000' }}>24</td>
-                  <td style={{ padding: '7px 14px', fontWeight: '900', fontSize: '13.5px', borderRight: '1px solid #000000' }}>Balance</td>
+                  <td style={{ textAlign: 'center', fontWeight: '900', padding: '7px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('balance', '24')}
+                  </td>
+                  <td style={{ padding: '7px 14px', fontWeight: '900', fontSize: '13.5px', borderRight: '1px solid #000000' }}>
+                    {getParamName('balance', 'Balance')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#86efac' }}></td>
                   <td style={{ padding: '7px 14px', textAlign: 'right', fontWeight: '900', fontSize: '14px', borderRight: 'none', color: '#000000' }}>
                     {fmtCost(c.balance)}
@@ -1031,15 +1260,22 @@ export default function HostelDashboardDataTable({
                 </tr>
               )}
 
+              {/* Custom Parameters dynamically added to Section 4 in Master Data */}
+              {renderCustomParamsForSection('Budget & Financial Balance')}
+
               {/* ================================================================ */}
               {/* SECTION 5: METRICS & PER STUDENT METRICS (White Background)       */}
               {/* ================================================================ */}
               
               {/* Row 25: Number of students */}
-              {matchesSearch('Number of students') && (
+              {isParamActive('students_kpi') && matchesSearch(getParamName('students_kpi', 'Number of students')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>25</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Number of students</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('students_kpi', '25')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('students_kpi', 'Number of students')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtVal(c.students_total)}
@@ -1048,10 +1284,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 26: Per student cost per month */}
-              {matchesSearch('Per student cost per month') && (
+              {isParamActive('per_student_cost_month') && matchesSearch(getParamName('per_student_cost_month', 'Per student cost per month')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>26</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Per student cost per month</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('per_student_cost_month', '26')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('per_student_cost_month', 'Per student cost per month')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtCost(c.per_student_cost_month)}
@@ -1060,10 +1300,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Row 27: Per student cost per day */}
-              {matchesSearch('Per student cost per day') && (
+              {isParamActive('per_student_cost_day') && matchesSearch(getParamName('per_student_cost_day', 'Per student cost per day')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>27</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Per student cost per day</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('per_student_cost_day', '27')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('per_student_cost_day', 'Per student cost per day')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtCost(c.per_student_cost_day)}
@@ -1072,10 +1316,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Sq feet */}
-              {matchesSearch('Sq feet') && (
+              {isParamActive('sq_feet') && matchesSearch(getParamName('sq_feet', 'Sq feet')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Sq feet</td>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('sq_feet', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('sq_feet', 'Sq feet')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtVal(c.sq_feet)}
@@ -1084,10 +1332,14 @@ export default function HostelDashboardDataTable({
               )}
 
               {/* Sq feet per occupant */}
-              {matchesSearch('Sq feet per occupant') && (
+              {isParamActive('sq_feet_per_occupant') && matchesSearch(getParamName('sq_feet_per_occupant', 'Sq feet per occupant in hostel')) && (
                 <tr style={{ borderBottom: '2px solid #000000' }}>
-                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}></td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Sq feet per occupant in hostel</td>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('sq_feet_per_occupant', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('sq_feet_per_occupant', 'Sq feet per occupant in hostel')}
+                  </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
                   <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
                     {fmtVal(c.sq_feet_per_occupant)}
@@ -1095,15 +1347,15 @@ export default function HostelDashboardDataTable({
                 </tr>
               )}
 
-              {/* ================================================================ */}
-              {/* SECTION 6: WATER CONSUMPTION (Yellow Background)                 */}
-              {/* ================================================================ */}
-              
               {/* Row 28: Normal water per student per month */}
-              {matchesSearch('Normal water per student') && (
+              {isParamActive('normal_water_student_month') && matchesSearch(getParamName('normal_water_student_month', 'Normal water per student per month(Ltrs & cost)')) && (
                 <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#fffc00' }}>
-                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>28</td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Normal water per student per month(Ltrs & cost)</td>
+                  <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_student_month', '28')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_student_month', 'Normal water per student per month(Ltrs & cost)')}
+                  </td>
                   <td colSpan={3} style={{ padding: '6px 14px', textAlign: 'center', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {fmtVal(c.normal_water_student_ltrs)}
                   </td>
@@ -1113,30 +1365,231 @@ export default function HostelDashboardDataTable({
                 </tr>
               )}
 
+              {/* Custom Parameters dynamically added to Section 5 in Master Data */}
+              {renderCustomParamsForSection('Per Student & Area Metrics')}
+
               {/* ================================================================ */}
-              {/* SECTION 7: CUSTOM MASTER PARAMETERS (Dynamic from DB)            */}
+              {/* SECTION 6: WATER & UTILITIES DEEP DIVE                           */}
               {/* ================================================================ */}
-              {masterParams && masterParams.filter(p => p.is_custom).map((param, idx) => {
-                if (!matchesSearch(param.param_name)) return null;
-                const custVal = c.raw?.[param.param_key] || c.raw?.custom_metrics?.[param.param_key] || '—';
-                return (
-                  <tr key={param.id || idx} style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
-                    <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
-                      {param.s_no || `C${idx + 1}`}
-                    </td>
-                    <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
-                      {param.param_name}
-                      <span style={{ fontSize: '10.5px', color: '#6366f1', marginLeft: '6px' }}>({param.section || 'Custom'})</span>
-                    </td>
-                    <td colSpan={3} style={{ padding: '6px 14px', textAlign: 'center', borderRight: '1px solid #000000' }}>
-                      {param.unit ? `${custVal} ${param.unit}` : custVal}
-                    </td>
-                    <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '700', borderRight: 'none' }}>
-                      {param.format === 'currency' ? fmtCost(custVal) : custVal}
+              <tr style={{ backgroundColor: '#bae6fd', color: '#0369a1', fontWeight: '800', borderBottom: '2px solid #000000' }}>
+                <td colSpan={6} style={{ padding: '8px 16px', fontSize: '12.5px', letterSpacing: '0.03em' }}>
+                  ⚡ WATER, POWER CONSUMPTION & DAILY EFFICIENCY METRICS
+                </td>
+              </tr>
+
+              {/* Power cost per sqft */}
+              {isParamActive('power_cost_sqft') && matchesSearch(getParamName('power_cost_sqft', 'Power cost per sq feet')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('power_cost_sqft', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('power_cost_sqft', 'Power cost per sq feet')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>₹ {c.power_cost_sqft}</td>
+                </tr>
+              )}
+
+              {/* Units per occupant */}
+              {isParamActive('units_per_occupant') && matchesSearch(getParamName('units_per_occupant', 'Units per occupant per month - Hostel')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('units_per_occupant', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('units_per_occupant', 'Units per occupant per month - Hostel')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{c.units_per_occupant} kWh</td>
+                </tr>
+              )}
+
+              {/* Power cost per occupant */}
+              {isParamActive('power_cost_occupant') && matchesSearch(getParamName('power_cost_occupant', 'Power cost Per occupant per month - Hostel')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('power_cost_occupant', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('power_cost_occupant', 'Power cost Per occupant per month - Hostel')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>₹ {fmtVal(c.power_cost_occupant)}</td>
+                </tr>
+              )}
+
+              {/* Normal Water Consumption Ltr */}
+              {isParamActive('normal_water_litres') && matchesSearch(getParamName('normal_water_litres', 'Normal Water Consumption Ltr Hostels')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_litres', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_litres', 'Normal Water Consumption Ltr Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{fmtVal(c.normal_water_litres)} L</td>
+                </tr>
+              )}
+
+              {/* Normal Water Consumption Cost */}
+              {isParamActive('normal_water_cost') && matchesSearch(getParamName('normal_water_cost', 'Normal Water Consumption Cost Hostels')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_cost', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_cost', 'Normal Water Consumption Cost Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{fmtCost(c.normal_water_cost)}</td>
+                </tr>
+              )}
+
+              {/* Normal water Ltr per student per day */}
+              {isParamActive('normal_water_ltr_day') && matchesSearch(getParamName('normal_water_ltr_day', 'Normal water Ltr per student per day - Hostels')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_ltr_day', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_ltr_day', 'Normal water Ltr per student per day - Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{c.normal_water_ltr_day} L</td>
+                </tr>
+              )}
+
+              {/* Normal Water cost Per student per day */}
+              {isParamActive('normal_water_cost_day') && matchesSearch(getParamName('normal_water_cost_day', 'Normal Water cost Per student per day Hostels')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('normal_water_cost_day', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('normal_water_cost_day', 'Normal Water cost Per student per day Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>₹ {c.normal_water_cost_day}</td>
+                </tr>
+              )}
+
+              {/* Drinking Water Consumption Litres */}
+              {isParamActive('drinking_water_litres') && matchesSearch(getParamName('drinking_water_litres', 'Drinking Water Consumption Litres Hostels')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('drinking_water_litres', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('drinking_water_litres', 'Drinking Water Consumption Litres Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{fmtVal(c.drinking_water_litres)} L</td>
+                </tr>
+              )}
+
+              {/* Drinking Water Consumption Cost */}
+              {isParamActive('drinking_water_cost') && matchesSearch(getParamName('drinking_water_cost', 'Drinking Water Consumption Cost Hostels')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('drinking_water_cost', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('drinking_water_cost', 'Drinking Water Consumption Cost Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{fmtCost(c.drinking_water_cost)}</td>
+                </tr>
+              )}
+
+              {/* Drinking water Litres per student per day */}
+              {isParamActive('drinking_water_ltr_day') && matchesSearch(getParamName('drinking_water_ltr_day', 'Drinking water Litres per student per day- Hostels')) && (
+                <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('drinking_water_ltr_day', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('drinking_water_ltr_day', 'Drinking water Litres per student per day- Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{c.drinking_water_ltr_day} L</td>
+                </tr>
+              )}
+
+              {/* Drinking Water cost Per student per day */}
+              {isParamActive('drinking_water_cost_day') && matchesSearch(getParamName('drinking_water_cost_day', 'Drinking Water cost Per student per day Hostels')) && (
+                <tr style={{ borderBottom: '2px solid #000000' }}>
+                  <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                    {getParamSNo('drinking_water_cost_day', '')}
+                  </td>
+                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                    {getParamName('drinking_water_cost_day', 'Drinking Water cost Per student per day Hostels')}
+                  </td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>₹ {c.drinking_water_cost_day}</td>
+                </tr>
+              )}
+
+              {/* Custom Parameters dynamically added to Section 6 in Master Data */}
+              {renderCustomParamsForSection('Water & Utilities Deep Dive')}
+
+              {/* ================================================================ */}
+              {/* SECTION 7: OTHER DYNAMIC CUSTOM PARAMETERS ADDED IN MASTER DATA  */}
+              {/* ================================================================ */}
+              {uncategorizedMasterParams.length > 0 && (
+                <>
+                  <tr style={{ backgroundColor: '#faf5ff', color: '#7e22ce', fontWeight: '800', borderBottom: '2px solid #000000' }}>
+                    <td colSpan={6} style={{ padding: '8px 16px', fontSize: '12.5px', letterSpacing: '0.03em' }}>
+                      ✨ CUSTOM PARAMETERS (CONFIGURED FROM MASTER DATA)
                     </td>
                   </tr>
-                );
-              })}
+                  {uncategorizedMasterParams.map((cp, cIdx) => {
+                    const cKey = cp.param_key;
+                    const raw = c.raw || {};
+                    const cVal = raw[cKey] !== undefined ? raw[cKey] : (raw?.custom_metrics?.[cKey] ?? '—');
+                    const bVal = raw[`${cKey}_boys`];
+                    const gVal = raw[`${cKey}_girls`];
+                    const hasBoysGirls = cp.input_type === 'boys_girls_total';
+                    const totVal = hasBoysGirls ? ((Number(bVal) || 0) + (Number(gVal) || 0)) : null;
+
+                    if (!matchesSearch(cp.param_name)) return null;
+
+                    return (
+                      <tr key={cp.id || cKey} style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#faf5ff' }}>
+                        <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000', color: '#7e22ce', fontWeight: '700' }}>
+                          {cp.s_no || `C${cIdx + 1}`}
+                        </td>
+                        <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{cp.param_name}</span>
+                            <span style={{ fontSize: '10px', color: '#7e22ce', backgroundColor: '#f3e8ff', padding: '1px 5px', borderRadius: '4px' }}>Custom</span>
+                          </div>
+                        </td>
+                        {hasBoysGirls ? (
+                          <>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{bVal !== undefined ? fmtVal(bVal) : '—'}</td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>{gVal !== undefined ? fmtVal(gVal) : '—'}</td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#f1f5f9', borderRight: '1px solid #000000' }}>
+                              {totVal !== null ? fmtVal(totVal) : '—'}
+                            </td>
+                            <td style={{ borderRight: 'none', backgroundColor: '#ffffff' }}></td>
+                          </>
+                        ) : (
+                          <>
+                            <td colSpan={3} style={{ padding: '6px 14px', textAlign: 'center', borderRight: '1px solid #000000', color: '#64748b' }}>
+                              {cp.formula ? `Formula: = ${cp.formula}` : (cp.unit ? `${cVal} ${cp.unit}` : '—')}
+                            </td>
+                            <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800', borderRight: 'none' }}>
+                              {cp.input_type === 'cost' || cp.format === 'currency' ? fmtCost(cVal) : (cVal !== '—' ? fmtVal(cVal) : '—')}
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </>
+              )}
 
             </tbody>
           </table>
@@ -1281,33 +1734,40 @@ export default function HostelDashboardDataTable({
             <tbody>
               {/* Rows */}
               {[
-                { sNo: '1', name: 'Bed Capacity', key: 'bed_capacity_total', format: 'number' },
-                { sNo: '2', name: 'No. of students', key: 'students_total', format: 'number' },
-                { sNo: '3', name: 'No. of staffs', key: 'staff_total', format: 'number' },
-                { sNo: '4', name: 'Total Occupied', key: 'total_occupied', format: 'number', bg: '#f8fafc', bold: true },
-                { sNo: '5', name: 'Vacant', key: 'vacant_total', format: 'number' },
-                { sNo: '6', name: 'Vacant for college students', key: 'vacant_college', format: 'number' },
-                { sNo: '—', name: 'Occupied %', key: 'occupied_pct', format: 'percent', bold: true, color: '#166534' },
-                { sNo: '—', name: 'Vacant %', key: 'vacant_pct', format: 'percent' },
-                { sNo: '—', name: 'Students Vacated', key: 'students_vacated', format: 'number' },
-                { sNo: '8', name: 'No. of Maintenance Tickets', key: 'tickets_received', format: 'number', bg: '#fed7aa' },
-                { sNo: '9', name: 'No. of Maintenance Tickets closed', key: 'tickets_closed', format: 'number', bg: '#fed7aa' },
-                { sNo: '10', name: 'No. of Maintenance Tickets in Open', key: 'tickets_open', format: 'number', bg: '#fed7aa' },
-                { sNo: '17', name: 'Power Consumption (Units)', key: 'power_units', format: 'number', bg: '#ffedd5' },
-                { sNo: '17', name: 'Power Consumption Cost', key: 'power_cost', format: 'currency', bg: '#ffedd5' },
-                { sNo: '18', name: 'Water Purchase Expenses', key: 'water_purchase_cost', format: 'currency', bg: '#ffedd5' },
-                { sNo: '—', name: 'Maintenance Expenses', key: 'maintenance_expenses', format: 'currency', bg: '#ffedd5' },
-                { sNo: '20', name: 'Expenses occurred', key: 'expenses_occurred', format: 'currency', bg: '#fed7aa', bold: true },
-                { sNo: '22', name: 'Approved Budget', key: 'approved_budget', format: 'currency', bg: '#bbf7d0' },
-                { sNo: '23', name: 'Cumulative Budget spent', key: 'cumulative_budget_spent', format: 'currency', bg: '#bbf7d0' },
-                { sNo: '24', name: 'Balance', key: 'balance', format: 'currency', bg: '#86efac', bold: true },
-                { sNo: '25', name: 'Number of students', key: 'students_total', format: 'number' },
-                { sNo: '26', name: 'Per student cost per month', key: 'per_student_cost_month', format: 'currency' },
-                { sNo: '27', name: 'Per student cost per day', key: 'per_student_cost_day', format: 'currency' },
-                { sNo: '—', name: 'Sq feet', key: 'sq_feet', format: 'number' },
-                { sNo: '—', name: 'Sq feet per occupant', key: 'sq_feet_per_occupant', format: 'number' },
-                { sNo: '28', name: 'Normal water per student cost', key: 'normal_water_student_cost', format: 'currency', bg: '#fffc00' }
-              ].map((row, rIdx) => {
+                { paramKey: 'bed_capacity', sNo: getParamSNo('bed_capacity', '1'), name: getParamName('bed_capacity', 'Bed Capacity'), key: 'bed_capacity_total', format: 'number' },
+                { paramKey: 'students_count', sNo: getParamSNo('students_count', '2'), name: getParamName('students_count', 'No. of students'), key: 'students_total', format: 'number' },
+                { paramKey: 'staff_count', sNo: getParamSNo('staff_count', '3'), name: getParamName('staff_count', 'No. of staffs'), key: 'staff_total', format: 'number' },
+                { paramKey: 'total_occupied', sNo: getParamSNo('total_occupied', '4'), name: getParamName('total_occupied', 'Total Occupied'), key: 'total_occupied', format: 'number', bg: '#f8fafc', bold: true },
+                { paramKey: 'vacant', sNo: getParamSNo('vacant', '5'), name: getParamName('vacant', 'Vacant'), key: 'vacant_total', format: 'number' },
+                { paramKey: 'vacant_college', sNo: getParamSNo('vacant_college', '6'), name: getParamName('vacant_college', 'Vacant for college students'), key: 'vacant_college', format: 'number' },
+                { paramKey: 'vacant_sports', sNo: getParamSNo('vacant_sports', '7'), name: getParamName('vacant_sports', 'Vacant for college sports students'), key: 'vacant_sports_total', format: 'number' },
+                { paramKey: 'occupied_pct', sNo: getParamSNo('occupied_pct', ''), name: getParamName('occupied_pct', 'Occupied %'), key: 'occupied_pct', format: 'percent', bold: true, color: '#166534' },
+                { paramKey: 'vacant_pct', sNo: getParamSNo('vacant_pct', ''), name: getParamName('vacant_pct', 'Vacant %'), key: 'vacant_pct', format: 'percent' },
+                { paramKey: 'students_vacated', sNo: getParamSNo('students_vacated', ''), name: getParamName('students_vacated', 'Students Vacated'), key: 'students_vacated', format: 'number' },
+                { paramKey: 'tickets_received', sNo: getParamSNo('tickets_received', '8'), name: getParamName('tickets_received', 'No. of Maintenance Tickets'), key: 'tickets_received', format: 'number', bg: '#fed7aa' },
+                { paramKey: 'tickets_closed', sNo: getParamSNo('tickets_closed', '9'), name: getParamName('tickets_closed', 'No. of Maintenance Tickets closed'), key: 'tickets_closed', format: 'number', bg: '#fed7aa' },
+                { paramKey: 'tickets_open', sNo: getParamSNo('tickets_open', '10'), name: getParamName('tickets_open', 'No. of Maintenance Tickets in Open'), key: 'tickets_open', format: 'number', bg: '#fed7aa' },
+                { paramKey: 'total_hours_close', sNo: getParamSNo('total_hours_close', '11'), name: getParamName('total_hours_close', 'Total Hours taken to close'), key: 'total_hours_close', format: 'number', bg: '#fed7aa' },
+                { paramKey: 'tat_hours', sNo: getParamSNo('tat_hours', '12'), name: getParamName('tat_hours', 'TAT (Turnaround Time)Hours'), key: 'tat_hours', format: 'number', bg: '#fed7aa' },
+                { paramKey: 'quality_issues_received', sNo: getParamSNo('quality_issues_received', '13'), name: getParamName('quality_issues_received', 'No. of Quality issues Received'), key: 'quality_issues_received', format: 'number' },
+                { paramKey: 'quality_issues_closed', sNo: getParamSNo('quality_issues_closed', '14'), name: getParamName('quality_issues_closed', 'No. of Quality issues Closed'), key: 'quality_issues_closed', format: 'number' },
+                { paramKey: 'quality_issues_open', sNo: getParamSNo('quality_issues_open', '15'), name: getParamName('quality_issues_open', 'No. of Quality issues in Open'), key: 'quality_issues_open', format: 'number' },
+                { paramKey: 'incidents_count', sNo: getParamSNo('incidents_count', '16'), name: getParamName('incidents_count', 'No. of Incidents'), key: 'incidents_count', format: 'number' },
+                { paramKey: 'power_consumption', sNo: getParamSNo('power_consumption', '17'), name: getParamName('power_consumption', 'Power Consumption (Units)'), key: 'power_units', format: 'number', bg: '#ffedd5' },
+                { paramKey: 'power_consumption', sNo: getParamSNo('power_consumption', '17'), name: `${getParamName('power_consumption', 'Power Consumption')} Cost`, key: 'power_cost', format: 'currency', bg: '#ffedd5' },
+                { paramKey: 'water_purchase_cost', sNo: getParamSNo('water_purchase_cost', '18'), name: getParamName('water_purchase_cost', 'Water Purchase Expenses'), key: 'water_purchase_cost', format: 'currency', bg: '#ffedd5' },
+                { paramKey: 'maintenance_expenses', sNo: getParamSNo('maintenance_expenses', ''), name: getParamName('maintenance_expenses', 'Maintenance Expenses'), key: 'maintenance_expenses', format: 'currency', bg: '#ffedd5' },
+                { paramKey: 'expenses_occurred', sNo: getParamSNo('expenses_occurred', '20'), name: getParamName('expenses_occurred', 'Expenses occurred'), key: 'expenses_occurred', format: 'currency', bg: '#fed7aa', bold: true },
+                { paramKey: 'approved_budget', sNo: getParamSNo('approved_budget', '22'), name: getParamName('approved_budget', 'Approved Budget'), key: 'approved_budget', format: 'currency', bg: '#bbf7d0' },
+                { paramKey: 'cumulative_budget_spent', sNo: getParamSNo('cumulative_budget_spent', '23'), name: getParamName('cumulative_budget_spent', 'Cumulative Budget spent'), key: 'cumulative_budget_spent', format: 'currency', bg: '#bbf7d0' },
+                { paramKey: 'balance', sNo: getParamSNo('balance', '24'), name: getParamName('balance', 'Balance'), key: 'balance', format: 'currency', bg: '#86efac', bold: true },
+                { paramKey: 'students_kpi', sNo: getParamSNo('students_kpi', '25'), name: getParamName('students_kpi', 'Number of students'), key: 'students_total', format: 'number' },
+                { paramKey: 'per_student_cost_month', sNo: getParamSNo('per_student_cost_month', '26'), name: getParamName('per_student_cost_month', 'Per student cost per month'), key: 'per_student_cost_month', format: 'currency' },
+                { paramKey: 'per_student_cost_day', sNo: getParamSNo('per_student_cost_day', '27'), name: getParamName('per_student_cost_day', 'Per student cost per day'), key: 'per_student_cost_day', format: 'currency' },
+                { paramKey: 'sq_feet', sNo: getParamSNo('sq_feet', ''), name: getParamName('sq_feet', 'Sq feet'), key: 'sq_feet', format: 'number' },
+                { paramKey: 'sq_feet_per_occupant', sNo: getParamSNo('sq_feet_per_occupant', ''), name: getParamName('sq_feet_per_occupant', 'Sq feet per occupant'), key: 'sq_feet_per_occupant', format: 'number' },
+                { paramKey: 'normal_water_student_month', sNo: getParamSNo('normal_water_student_month', '28'), name: getParamName('normal_water_student_month', 'Normal water per student cost'), key: 'normal_water_student_cost', format: 'currency', bg: '#fffc00' }
+              ].filter(row => isParamActive(row.paramKey)).map((row, rIdx) => {
                 if (!matchesSearch(row.name)) return null;
                 return (
                   <tr key={rIdx} style={{ backgroundColor: row.bg || '#ffffff', borderBottom: '1px solid #cbd5e1' }}>
@@ -1360,6 +1820,77 @@ export default function HostelDashboardDataTable({
                             borderBottom: '1px solid #cbd5e1',
                             fontWeight: row.bold ? '800' : '600',
                             color: row.color || '#334155'
+                          }}
+                        >
+                          {display}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+
+              {/* Dynamic Custom Parameters configured from Master Data */}
+              {(masterParams || []).filter(p => !p.is_system && p.is_active !== false).map((cp, cIdx) => {
+                if (!matchesSearch(cp.param_name)) return null;
+                const isCurr = cp.input_type === 'cost' || cp.format === 'currency';
+
+                return (
+                  <tr key={cp.id || cp.param_key} style={{ backgroundColor: '#faf5ff', borderBottom: '1px solid #cbd5e1' }}>
+                    <td style={{
+                      padding: '6px 4px',
+                      textAlign: 'center',
+                      fontWeight: '700',
+                      borderRight: '1px solid #cbd5e1',
+                      borderBottom: '1px solid #cbd5e1',
+                      backgroundColor: '#faf5ff',
+                      color: '#7e22ce',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 10
+                    }}>
+                      {cp.s_no || `C${cIdx + 1}`}
+                    </td>
+                    <td style={{
+                      padding: '6px 14px',
+                      fontWeight: '700',
+                      color: '#7e22ce',
+                      borderRight: '2px solid #000000',
+                      borderBottom: '1px solid #cbd5e1',
+                      backgroundColor: '#faf5ff',
+                      position: 'sticky',
+                      left: '50px',
+                      zIndex: 10
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{cp.param_name}</span>
+                        <span style={{ fontSize: '10px', backgroundColor: '#f3e8ff', padding: '1px 5px', borderRadius: '4px' }}>Custom</span>
+                      </div>
+                    </td>
+
+                    {periods.map(p => {
+                      const pStr = String(p.id);
+                      const d = hostelCensusMap[pStr] || {};
+                      const rawV = d[cp.param_key] !== undefined ? d[cp.param_key] : d?.custom_metrics?.[cp.param_key];
+                      const bVal = d[`${cp.param_key}_boys`];
+                      const gVal = d[`${cp.param_key}_girls`];
+                      const hasBoysGirls = cp.input_type === 'boys_girls_total';
+                      const val = hasBoysGirls ? ((Number(bVal) || 0) + (Number(gVal) || 0)) : (rawV !== undefined && rawV !== null ? rawV : 0);
+
+                      let display = '—';
+                      if (isCurr) display = fmtCost(val);
+                      else display = fmtVal(val);
+
+                      return (
+                        <td
+                          key={p.id}
+                          style={{
+                            padding: '6px 12px',
+                            textAlign: 'right',
+                            borderRight: '1px solid #cbd5e1',
+                            borderBottom: '1px solid #cbd5e1',
+                            fontWeight: '700',
+                            color: '#581c87'
                           }}
                         >
                           {display}

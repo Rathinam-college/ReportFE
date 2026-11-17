@@ -290,13 +290,31 @@ export default function ChartDataTable({
     return categories.map(c => c.category_name);
   }, [categories]);
 
-  // Compute month-by-month grand totals across all categories
+  // Helper to check if a category is excluded from Grand Total (Total Person, Total Cost Per Person, Unit Economics)
+  const isExcludedFromGrandTotal = (catName = '') => {
+    const n = String(catName || '').toLowerCase().trim();
+    return (
+      n.includes('total person') ||
+      n.includes('cost per person') ||
+      n.includes('per person') ||
+      n.includes('total persons') ||
+      n.includes('persons count') ||
+      n.includes('diners') ||
+      n.includes('per meal') ||
+      n.includes('unit economics')
+    );
+  };
+
+  // Compute month-by-month grand totals across all categories (EXCLUDING Total Person, Total Cost Per Person)
   const monthlyGrandTotals = useMemo(() => {
     const totals = {};
     let grandOverall = 0;
     periods.forEach(p => {
       let pSum = 0;
       categories.forEach(cat => {
+        if (isExcludedFromGrandTotal(cat.category_name || cat.name)) {
+          return; // DO NOT add Total Person or Total Cost Per Person to Grand Total!
+        }
         const val = cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0;
         pSum += Number(val) || 0;
       });
@@ -1494,7 +1512,12 @@ export default function ChartDataTable({
                 letterSpacing: '0.03em',
                 color: '#ffffff'
               }}>
-                TOTAL EXPENSES • ALL CATEGORIES
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span>TOTAL EXPENSES • ALL CATEGORIES</span>
+                  <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#94a3b8', letterSpacing: 'normal' }}>
+                    (Operating expenses only · excludes Total Person & Cost Per Person)
+                  </span>
+                </div>
               </td>
 
               {periods.map(p => {
