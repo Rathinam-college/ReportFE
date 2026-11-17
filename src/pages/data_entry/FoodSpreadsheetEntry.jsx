@@ -158,7 +158,28 @@ export default function FoodSpreadsheetEntry({
     return subs;
   }, [categories, periods, matrixDraft, newRowDrafts]);
 
-  // Calculate live Grand Total for each period (excluding Total Person & Cost Per Person)
+  // Helper to detect non-expense metrics (Total Person, Total Cost Per Person, etc.)
+  const isNonExpenseItem = (catName = '', itemDesc = '') => {
+    const s = `${catName} ${itemDesc}`.toLowerCase().trim();
+    return (
+      s.includes('total person') ||
+      s.includes('cost per person') ||
+      s.includes('per person') ||
+      s.includes('total persons') ||
+      s.includes('persons count') ||
+      s.includes('diners') ||
+      s.includes('per meal') ||
+      s.includes('cost per meal') ||
+      s.includes('unit economics') ||
+      s.includes('census') ||
+      s.includes('cost / person') ||
+      s.includes('cost/person') ||
+      s.includes('headcount') ||
+      s.includes('student count')
+    );
+  };
+
+  // Calculate live Grand Total for each period (strictly excluding Total Person & Cost Per Person)
   const grandTotalsByPeriod = useMemo(() => {
     const totals = {};
     let overallGrand = 0;
@@ -166,29 +187,26 @@ export default function FoodSpreadsheetEntry({
       let pSum = 0;
       categories.forEach(cat => {
         const catName = String(cat.category_name || cat.name || '').toLowerCase();
-        if (
-          catName.includes('total person') ||
-          catName.includes('cost per person') ||
-          catName.includes('per person') ||
-          catName.includes('total persons') ||
-          catName.includes('persons count') ||
-          catName.includes('diners') ||
-          catName.includes('per meal') ||
-          catName.includes('cost per meal') ||
-          catName.includes('unit economics') ||
-          catName.includes('census') ||
-          catName.includes('cost / person') ||
-          catName.includes('cost/person') ||
-          catName.includes('headcount') ||
-          catName.includes('student count')
-        ) return;
-        pSum += categorySubtotals[cat.category_id]?.[p.id] || 0;
+        if (isNonExpenseItem(catName)) return;
+
+        cat.items?.forEach(it => {
+          if (!isNonExpenseItem(catName, it.description || it.name)) {
+            pSum += getCellAmount(it.cost_head_id, p.id);
+          }
+        });
+
+        newRowDrafts.filter(nr => nr.category_id === cat.category_id).forEach(nr => {
+          if (!isNonExpenseItem(catName, nr.name)) {
+            const amt = parseFloat(nr.amounts?.[p.id] || 0);
+            if (!isNaN(amt)) pSum += amt;
+          }
+        });
       });
       totals[p.id] = pSum;
       overallGrand += pSum;
     });
     return { totals, overallGrand };
-  }, [periods, categories, categorySubtotals]);
+  }, [periods, categories, matrixDraft, newRowDrafts]);
 
   // Handle inline description change
   const handleCostHeadNameChange = (costHeadId, newName) => {

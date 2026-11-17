@@ -1529,9 +1529,6 @@ export default function ChartDataTable({
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span>TOTAL EXPENSES • ALL CATEGORIES</span>
-                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#93c5fd', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                    (Excludes Total Person & Total Cost Per Person)
-                  </span>
                 </div>
               </td>
 
