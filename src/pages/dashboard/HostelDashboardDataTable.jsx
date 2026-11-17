@@ -360,7 +360,7 @@ export default function HostelDashboardDataTable({
     csv += `4,Total Occupied,${c.total_occupied_boys},${c.total_occupied_girls},${c.total_occupied},\n`;
     csv += `5,Vacant,${c.vacant_boys},${c.vacant_girls},${c.vacant_total},\n`;
     csv += `6,Vacant for college students,${c.vacant_college_boys},${c.vacant_college_girls},${c.vacant_college},\n`;
-    csv += `7,Vacant for college sports students,${c.vacant_sports_boys},${c.vacant_sports_girls},${c.vacant_sports_total},\n`;
+    csv += `,Vacant for college sports students,${c.vacant_sports_boys},${c.vacant_sports_girls},${c.vacant_sports_total},\n`;
     csv += `8,No. of Maintenance Tickets,${c.tickets_received},,${c.tickets_received},Space basic tickets Sept'25.csv\n`;
     csv += `9,No. of Maintenance Tickets closed,${c.tickets_closed},,${c.tickets_closed},\n`;
     csv += `10,No. of Maintenance Tickets in Open,${c.tickets_open},,${c.tickets_open},\n`;
@@ -861,7 +861,7 @@ export default function HostelDashboardDataTable({
               {isParamActive('vacant_sports') && matchesSearch(getParamName('vacant_sports', 'Vacant for college sports students (KPM hostel)')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
                   <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000', fontWeight: '700' }}>
-                    {getParamSNo('vacant_sports', '7')}
+                    {getParamSNo('vacant_sports', '')}
                   </td>
                   <td style={{ padding: '6px 14px', color: '#475569', borderRight: '1px solid #000000' }}>
                     {getParamName('vacant_sports', 'Vacant for college sports students (KPM hostel)')}
@@ -1740,7 +1740,7 @@ export default function HostelDashboardDataTable({
                 { paramKey: 'total_occupied', sNo: getParamSNo('total_occupied', '4'), name: getParamName('total_occupied', 'Total Occupied'), key: 'total_occupied', format: 'number', bg: '#f8fafc', bold: true },
                 { paramKey: 'vacant', sNo: getParamSNo('vacant', '5'), name: getParamName('vacant', 'Vacant'), key: 'vacant_total', format: 'number' },
                 { paramKey: 'vacant_college', sNo: getParamSNo('vacant_college', '6'), name: getParamName('vacant_college', 'Vacant for college students'), key: 'vacant_college', format: 'number' },
-                { paramKey: 'vacant_sports', sNo: getParamSNo('vacant_sports', '7'), name: getParamName('vacant_sports', 'Vacant for college sports students'), key: 'vacant_sports_total', format: 'number' },
+                { paramKey: 'vacant_sports', sNo: getParamSNo('vacant_sports', ''), name: getParamName('vacant_sports', 'Vacant for college sports students'), key: 'vacant_sports_total', format: 'number' },
                 { paramKey: 'occupied_pct', sNo: getParamSNo('occupied_pct', ''), name: getParamName('occupied_pct', 'Occupied %'), key: 'occupied_pct', format: 'percent', bold: true, color: '#166534' },
                 { paramKey: 'vacant_pct', sNo: getParamSNo('vacant_pct', ''), name: getParamName('vacant_pct', 'Vacant %'), key: 'vacant_pct', format: 'percent' },
                 { paramKey: 'students_vacated', sNo: getParamSNo('students_vacated', ''), name: getParamName('students_vacated', 'Students Vacated'), key: 'students_vacated', format: 'number' },

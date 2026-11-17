@@ -411,17 +411,28 @@ export default function TransportMasterManager() {
                               outline: 'none'
                             }}
                           />
-                        ) : (
+                        ) : (param.s_no !== undefined && param.s_no !== null && String(param.s_no).trim() !== '') ? (
                           <span style={{
                             display: 'inline-block',
                             padding: '2px 8px',
                             borderRadius: '6px',
                             backgroundColor: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
                             fontSize: '12px',
                             fontWeight: '800',
                             color: '#334155'
                           }}>
-                            {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || pIdx + 1)}
+                            {param.s_no}
+                          </span>
+                        ) : (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#94a3b8'
+                          }}>
+                            —
                           </span>
                         )}
                       </td>

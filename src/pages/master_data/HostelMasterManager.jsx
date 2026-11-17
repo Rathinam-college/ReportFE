@@ -84,7 +84,7 @@ export default function HostelMasterManager() {
   const handleStartEdit = (param) => {
     setEditingParamId(param.id);
     setEditForm({
-      s_no: param.s_no !== undefined && param.s_no !== null ? param.s_no : (param.display_order || ''),
+      s_no: (param.s_no !== undefined && param.s_no !== null) ? param.s_no : '',
       param_name: param.param_name,
       section: param.section,
       input_type: param.input_type,
@@ -438,7 +438,7 @@ export default function HostelMasterManager() {
                               outline: 'none'
                             }}
                           />
-                        ) : (
+                        ) : (param.s_no !== undefined && param.s_no !== null && String(param.s_no).trim() !== '') ? (
                           <span style={{
                             display: 'inline-block',
                             padding: '2px 8px',
@@ -449,7 +449,17 @@ export default function HostelMasterManager() {
                             fontWeight: '800',
                             color: '#0369a1'
                           }}>
-                            {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || idx + 1)}
+                            {param.s_no}
+                          </span>
+                        ) : (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#94a3b8'
+                          }}>
+                            —
                           </span>
                         )}
                       </td>
