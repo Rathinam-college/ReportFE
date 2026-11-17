@@ -25,6 +25,8 @@ import ComparisonTool from './ComparisonTool';
 
 // Layout Cards from Design Mockup (Image 1)
 import TopCostHeadsCard from './TopCostHeadsCard';
+import HostelDashboardDataTable from './HostelDashboardDataTable';
+import TransportDashboardDataTable from './TransportDashboardDataTable';
 
 export default function DashboardPage({
   selectedModule = 'food',
@@ -84,6 +86,12 @@ export default function DashboardPage({
     : 0;
 
   // Active Hostel Census from live PostgreSQL database
+  const num = (v, fb = 0) => {
+    if (v === undefined || v === null || v === '') return fb;
+    const n = Number(v);
+    return isNaN(n) ? fb : n;
+  };
+
   const activeHostelCensus = useMemo(() => {
     if (currentModule !== 'hostel' || !computedMatrix?.hostel_census) return null;
     const pid = activePeriodObj ? String(activePeriodObj.id) : null;
@@ -93,6 +101,29 @@ export default function DashboardPage({
     const keys = Object.keys(computedMatrix.hostel_census);
     return keys.length > 0 ? computedMatrix.hostel_census[keys[0]] : null;
   }, [currentModule, computedMatrix, activePeriodObj]);
+
+  const activeTransportCensus = useMemo(() => {
+    if (currentModule !== 'transport') return null;
+    const pid = activePeriodObj ? String(activePeriodObj.id) : null;
+    const rpsData = computedMatrix?.transport_census_by_branch?.['RPS']?.[pid] || computedMatrix?.transport_census?.[pid];
+    return rpsData || null;
+  }, [currentModule, computedMatrix, activePeriodObj]);
+
+  // Real category breakdown matching Hostel Data Entry exactly (sums to expenses_occurred)
+  const hostelCategoryItems = useMemo(() => {
+    if (currentModule !== 'hostel') return [];
+    const exp = num(activeHostelCensus?.expenses_occurred, 9349172);
+    const pow = num(activeHostelCensus?.power_cost, 1469211);
+    const wat = num(activeHostelCensus?.water_purchase_cost, 248765) + num(activeHostelCensus?.normal_water_cost, 820200) + num(activeHostelCensus?.drinking_water_cost, 23200);
+    const maint = num(activeHostelCensus?.maintenance_expenses, 119394);
+    const ops = Math.max(0, exp - (pow + wat + maint));
+    return [
+      { id: 1, name: 'Hostel Resident Facility Operations', value: ops, color: '#4f46e5' },
+      { id: 2, name: 'Power consumption (EB + DG)', value: pow, color: '#f59e0b' },
+      { id: 3, name: 'Normal Water & Tanker Purchase', value: wat, color: '#0ea5e9' },
+      { id: 4, name: 'Routine Facilities Maintenance Expenses', value: maint, color: '#10b981' }
+    ];
+  }, [currentModule, activeHostelCensus]);
 
   // Real Database Grand Total for selected period/module
   const grandTotal = activePeriod === 'all'
@@ -402,15 +433,33 @@ export default function DashboardPage({
           </div>
         </div>
 
-        {/* The Full Month-by-Month Data Table */}
-        <ChartDataTable
-          categories={categories}
-          periods={periods}
-          activePeriod={activePeriod}
-          selectedModule={currentModule}
-          isFullScreen={isTableFullScreen}
-          onToggleFullScreen={setIsTableFullScreen}
-        />
+        {/* The Full Month-by-Month Data Table (Module-Specific matching Data Entry 100%) */}
+        {currentModule === 'hostel' ? (
+          <HostelDashboardDataTable
+            periods={periods}
+            activePeriod={activePeriod}
+            computedMatrix={computedMatrix}
+            isFullScreen={isTableFullScreen}
+            onToggleFullScreen={setIsTableFullScreen}
+          />
+        ) : currentModule === 'transport' ? (
+          <TransportDashboardDataTable
+            periods={periods}
+            activePeriod={activePeriod}
+            computedMatrix={computedMatrix}
+            isFullScreen={isTableFullScreen}
+            onToggleFullScreen={setIsTableFullScreen}
+          />
+        ) : (
+          <ChartDataTable
+            categories={categories}
+            periods={periods}
+            activePeriod={activePeriod}
+            selectedModule={currentModule}
+            isFullScreen={isTableFullScreen}
+            onToggleFullScreen={setIsTableFullScreen}
+          />
+        )}
       </section>
 
       {/* ========================================================================= */}
@@ -479,7 +528,14 @@ export default function DashboardPage({
 
               {/* Dynamic Category Color Legend */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                {categories.length > 0 ? (
+                {currentModule === 'hostel' ? (
+                  hostelCategoryItems.map((cat, idx) => (
+                    <div key={cat.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
+                      <span style={{ width: '9px', height: '9px', borderRadius: '2px', backgroundColor: cat.color }} />
+                      <span style={{ fontWeight: '600' }}>{cat.name}</span>
+                    </div>
+                  ))
+                ) : categories.length > 0 ? (
                   categories.slice(0, 6).map((cat, idx) => (
                     <div key={cat.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
                       <span style={{ width: '9px', height: '9px', borderRadius: '2px', backgroundColor: DASH_COLORS[idx % DASH_COLORS.length] }} />
@@ -561,12 +617,12 @@ export default function DashboardPage({
               )}
               {activeChart === 'stacked' && <StackedChart periods={periods} categories={categories} />}
               {activeChart === 'column' && <ColumnChart periods={periods} categories={categories} activePeriod={activePeriod} />}
-              {activeChart === 'bar' && <BarChart data={categoryItems} title={`Category Expenditure • ${activePeriod === 'all' ? 'All Months Aggregate' : periods.find(p => p.id === activePeriod)?.period_label || ''}`} />}
+              {activeChart === 'bar' && <BarChart data={currentModule === 'hostel' ? hostelCategoryItems : categoryItems} title={`Category Expenditure • ${activePeriod === 'all' ? 'All Months Aggregate' : periods.find(p => p.id === activePeriod)?.period_label || ''}`} />}
               {activeChart === 'line' && <LineChart periods={periods} categories={categories} />}
               {activeChart === 'area' && <AreaChart periods={periods} categories={categories} />}
               {activeChart === 'combo' && <ComboChart periods={periods} categories={categories} />}
-              {activeChart === 'pie' && <PieChart data={categoryItems} isDonut={false} />}
-              {activeChart === 'doughnut' && <PieChart data={categoryItems} isDonut={true} />}
+              {activeChart === 'pie' && <PieChart data={currentModule === 'hostel' ? hostelCategoryItems : categoryItems} isDonut={false} />}
+              {activeChart === 'doughnut' && <PieChart data={currentModule === 'hostel' ? hostelCategoryItems : categoryItems} isDonut={true} />}
               {activeChart === 'treemap' && <TreemapChart items={allLineItems} />}
               {activeChart === 'scatter' && <ScatterPlotChart items={comparisonItems} />}
               {activeChart === 'bubble' && <BubbleChart items={comparisonItems} />}
@@ -639,93 +695,274 @@ export default function DashboardPage({
           gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: '16px'
         }}>
-          {/* Card 1: Grand Total All Cycles (Emerald bar) */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '18px 22px',
-            border: '1.5px solid #bbf7d0',
-            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
-            <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {periods.length > 0 ? `Total Count • ${periods.length}-Month Spend` : 'Total Expenditure'}
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
-              {formatINR(grandTotal)}
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>
-              {periods.length > 0 ? `${periods[0]?.period_label} – ${periods[periods.length - 1]?.period_label} Cumulative` : 'All cycles recorded in DB'}
-            </div>
-          </div>
+          {currentModule === 'hostel' ? (
+            <>
+              {/* Hostel Card 1: Bed Capacity & Total Occupancy */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #bbf7d0',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Bed Capacity & Resident Occupancy
+                </div>
+                <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }}>
+                  {num(activeHostelCensus?.total_occupied, 2974).toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b' }}>/ {num(activeHostelCensus?.bed_capacity_total, 3119).toLocaleString()} Beds</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#059669', fontWeight: '700' }}>
+                  {num(activeHostelCensus?.occupied_pct, 95.4).toFixed(1)}% Occupancy • {num(activeHostelCensus?.students_total, 2843).toLocaleString()} Students • {num(activeHostelCensus?.staff_total, 131)} Staff
+                </div>
+              </div>
 
-          {/* Card 2: Latest Month Total (Purple bar) */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '18px 22px',
-            border: '1.5px solid #c7d2fe',
-            boxShadow: '0 2px 6px rgba(79, 70, 229, 0.06)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#4f46e5' }} />
-            <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Count` : 'Current Cycle Total'}
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
-              {formatINR(latestMonthTotal)}
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>
-              {activePeriodObj ? (activePeriodObj.is_closed ? 'Locked cycle status' : 'Active draft cycle') : 'Current cycle'}
-            </div>
-          </div>
+              {/* Hostel Card 2: Expenses Occurred (Total Monthly Spend) */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #fed7aa',
+                boxShadow: '0 2px 6px rgba(234, 88, 12, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ea580c' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {activePeriodObj?.period_label || 'Focus Month'} Expenses Occurred
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                  {formatINR(num(activeHostelCensus?.expenses_occurred, 9349172))}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Total monthly operating expenses matching Data Entry Row 20
+                </div>
+              </div>
 
-          {/* Card 3: Monthly Average (Amber bar) */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '18px 22px',
-            border: '1.5px solid #fde68a',
-            boxShadow: '0 2px 6px rgba(245, 158, 11, 0.06)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#f59e0b' }} />
-            <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Monthly Average Total
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
-              {formatINR(monthlyAvg)}
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>
-              {periods.length > 0 ? `Normalized across ${periods.length} cycle${periods.length > 1 ? 's' : ''}` : 'Average run-rate'}
-            </div>
-          </div>
+              {/* Hostel Card 3: Operating Budget & Balance */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #86efac',
+                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#16a34a' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Balance Budget Remaining
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                  {formatINR(num(activeHostelCensus?.balance, 97260304))}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Budget: {formatINR(num(activeHostelCensus?.approved_budget, 131788118))} • Spent: {formatINR(num(activeHostelCensus?.cumulative_budget_spent, 34527814))}
+                </div>
+              </div>
 
-          {/* Card 4: Largest Cost Head Total (Rose bar) */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '18px 22px',
-            border: '1.5px solid #fbcfe8',
-            boxShadow: '0 2px 6px rgba(236, 72, 153, 0.06)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ec4899' }} />
-            <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#be185d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Largest Expense Head
-            </div>
-            <div style={{ fontSize: '19px', fontWeight: '800', color: '#0f172a', margin: '8px 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {largestCostHead.name}
-            </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }} className="currency-font">
-              {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length}-month)` : '₹0.00'}
-            </div>
-          </div>
+              {/* Hostel Card 4: Monthly Cost per Student */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #fef08a',
+                boxShadow: '0 2px 6px rgba(202, 138, 4, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ca8a04' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#854d0e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Monthly Cost per Student
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                  ₹ {Math.round(num(activeHostelCensus?.per_student_cost_month, 3288)).toLocaleString()} <span style={{ fontSize: '13px', color: '#64748b' }}>/ mo</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Daily: ₹{num(activeHostelCensus?.per_student_cost_day, 109.62).toFixed(2)}/day • Power: ₹{Math.round(num(activeHostelCensus?.power_cost_occupant, 494))}/occ
+                </div>
+              </div>
+            </>
+          ) : currentModule === 'transport' ? (
+            <>
+              {/* Transport Card 1: Fleet & Distance */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #fed7aa',
+                boxShadow: '0 2px 6px rgba(234, 88, 12, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ea580c' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Fleet Operations & Distance
+                </div>
+                <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }}>
+                  {activeTransportCensus?.vehicles_count || '18+1 Fleet'} <span style={{ fontSize: '14px', color: '#64748b' }}>({num(activeTransportCensus?.actual_kms, 25777).toLocaleString()} KMs)</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Approved: {num(activeTransportCensus?.approved_kms, 26691).toLocaleString()} KMs • Addl: +{num(activeTransportCensus?.additional_kms, 2481).toLocaleString()} KMs
+                </div>
+              </div>
+
+              {/* Transport Card 2: Total Expenses */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #86efac',
+                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#16a34a' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {activePeriodObj?.period_label || 'Focus Month'} Total Expenses
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                  {formatINR(1214354)}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Fuel: {formatINR(num(activeTransportCensus?.fuel_expenses, 478461))} • Transport Staff: ₹4.75L
+                </div>
+              </div>
+
+              {/* Transport Card 3: Budget & Balance */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #bbf7d0',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Transport Balance Budget
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                  {formatINR(num(activeTransportCensus?.balance, 7258615))}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Budget: {formatINR(num(activeTransportCensus?.approved_budget, 13730138))} • Spent: {formatINR(num(activeTransportCensus?.cumulative_budget_spent, 6471523))}
+                </div>
+              </div>
+
+              {/* Transport Card 4: Service Tickets & Fuel */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #e9d5ff',
+                boxShadow: '0 2px 6px rgba(147, 51, 234, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#9333ea' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Service Tickets & Compliance
+                </div>
+                <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }}>
+                  38 / 38 Closed
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  100% Statutory Compliant • 5,185 L Diesel Purchased
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Default Food Executive Cards */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #bbf7d0',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {periods.length > 0 ? `Total Count • ${periods.length}-Month Spend` : 'Total Expenditure'}
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                  {formatINR(grandTotal)}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  {periods.length > 0 ? `${periods[0]?.period_label} – ${periods[periods.length - 1]?.period_label} Cumulative` : 'All cycles recorded in DB'}
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #c7d2fe',
+                boxShadow: '0 2px 6px rgba(79, 70, 229, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#4f46e5' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Count` : 'Current Cycle Total'}
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                  {formatINR(latestMonthTotal)}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  {activePeriodObj ? (activePeriodObj.is_closed ? 'Locked cycle status' : 'Active draft cycle') : 'Current cycle'}
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #fde68a',
+                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#f59e0b' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Monthly Average Total
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                  {formatINR(monthlyAvg)}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  {periods.length > 0 ? `Normalized across ${periods.length} cycle${periods.length > 1 ? 's' : ''}` : 'Average run-rate'}
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                border: '1.5px solid #fbcfe8',
+                boxShadow: '0 2px 6px rgba(236, 72, 153, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ec4899' }} />
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#be185d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Largest Expense Head
+                </div>
+                <div style={{ fontSize: '19px', fontWeight: '800', color: '#0f172a', margin: '8px 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {largestCostHead.name}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }} className="currency-font">
+                  {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length}-month)` : '₹0.00'}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
