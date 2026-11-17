@@ -32,7 +32,7 @@ export default function SubNav({
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
       borderBottom: '1px solid #eef2f6',
-      padding: '0 28px',
+      padding: '0 24px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -42,7 +42,9 @@ export default function SubNav({
       top: '66px',
       zIndex: 990,
       boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      width: '100%',
+      maxWidth: '100vw'
     }}>
       {/* Module Pill Switcher */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>

@@ -1521,7 +1521,7 @@ export default function App() {
   // MAIN APP RENDER
   // --------------------------------------------------------------------------
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f4f6fa', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f4f6fa', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
       
       {/* 1. TOP GLOBAL NAVIGATION BAR */}
       <Navbar
@@ -1547,11 +1547,12 @@ export default function App() {
       {/* 3. MAIN WORKSPACE CONTENT */}
       <main style={{
         flex: 1,
-        padding: activeTab === 'data_entry' ? '18px 24px' : '24px 32px',
-        maxWidth: activeTab === 'data_entry' ? '100%' : '1600px',
+        padding: activeTab === 'data_entry' ? '18px 20px' : '20px 24px',
+        maxWidth: '100%',
         width: '100%',
         margin: '0 auto',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        overflowX: 'hidden'
       }}>
         
         {/* DASHBOARD PAGE */}

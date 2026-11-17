@@ -47,8 +47,35 @@ export default function DashboardPage({
 
   const currentModule = selectedModule || 'food';
 
-  const periods = computedMatrix?.periods || [];
-  const categories = computedMatrix?.categories || [];
+  // Self-healing fallback: If parent computedMatrix has no periods, fetch directly!
+  const [internalMatrix, setInternalMatrix] = useState(null);
+  const [matrixLoading, setMatrixLoading] = useState(false);
+
+  useEffect(() => {
+    const hasValidPeriods = computedMatrix?.periods && computedMatrix.periods.length > 0;
+    if (!hasValidPeriods) {
+      setMatrixLoading(true);
+      fetch(`/api/matrix?module=${currentModule}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.periods && data.periods.length > 0) {
+            setInternalMatrix(data);
+          }
+          setMatrixLoading(false);
+        })
+        .catch(err => {
+          console.error('[DashboardPage] Matrix fallback fetch error:', err);
+          setMatrixLoading(false);
+        });
+    }
+  }, [currentModule, computedMatrix]);
+
+  const effectiveMatrix = (computedMatrix?.periods && computedMatrix.periods.length > 0)
+    ? computedMatrix
+    : (internalMatrix || {});
+
+  const periods = effectiveMatrix?.periods || [];
+  const categories = effectiveMatrix?.categories || [];
 
   const moduleMeta = {
     food: {
@@ -60,7 +87,7 @@ export default function DashboardPage({
     },
     hostel: {
       title: 'Hostel Resident Operations Dashboard',
-      subtitle: `Hostel Resident Facilities overview • ${periods[0]?.period_label || "Sep 1st to 30th"} – ${periods[periods.length - 1]?.period_label || "Sep 1st to 30th"} • FY 2025-2026 • Currency INR (₹)`,
+      subtitle: `Hostel Resident Facilities overview • ${periods[0]?.period_label || "Sep'25"} – ${periods[periods.length - 1]?.period_label || "Sep'26"} (${periods.length || 13} Cycles) • FY 2025-2026 • Currency INR (₹)`,
       badge: 'Hostel Operations',
       badgeColor: '#059669',
       badgeBg: '#ecfdf5'
@@ -82,7 +109,7 @@ export default function DashboardPage({
 
   // Active month total directly from database matrix
   const latestMonthTotal = activePeriodObj 
-    ? (computedMatrix?.grand_total?.amounts?.[activePeriodObj.id] ?? computedMatrix?.grand_total?.amounts?.[String(activePeriodObj.id)] ?? 0)
+    ? (effectiveMatrix?.grand_total?.amounts?.[activePeriodObj.id] ?? effectiveMatrix?.grand_total?.amounts?.[String(activePeriodObj.id)] ?? 0)
     : 0;
 
   // Active Hostel Census from live PostgreSQL database
@@ -93,21 +120,21 @@ export default function DashboardPage({
   };
 
   const activeHostelCensus = useMemo(() => {
-    if (currentModule !== 'hostel' || !computedMatrix?.hostel_census) return null;
+    if (currentModule !== 'hostel' || !effectiveMatrix?.hostel_census) return null;
     const pid = activePeriodObj ? String(activePeriodObj.id) : null;
-    if (pid && computedMatrix.hostel_census[pid]) {
-      return computedMatrix.hostel_census[pid];
+    if (pid && effectiveMatrix.hostel_census[pid]) {
+      return effectiveMatrix.hostel_census[pid];
     }
-    const keys = Object.keys(computedMatrix.hostel_census);
-    return keys.length > 0 ? computedMatrix.hostel_census[keys[0]] : null;
-  }, [currentModule, computedMatrix, activePeriodObj]);
+    const keys = Object.keys(effectiveMatrix.hostel_census);
+    return keys.length > 0 ? effectiveMatrix.hostel_census[keys[0]] : null;
+  }, [currentModule, effectiveMatrix, activePeriodObj]);
 
   const activeTransportCensus = useMemo(() => {
     if (currentModule !== 'transport') return null;
     const pid = activePeriodObj ? String(activePeriodObj.id) : null;
-    const rpsData = computedMatrix?.transport_census_by_branch?.['RPS']?.[pid] || computedMatrix?.transport_census?.[pid];
+    const rpsData = effectiveMatrix?.transport_census_by_branch?.['RPS']?.[pid] || effectiveMatrix?.transport_census?.[pid];
     return rpsData || null;
-  }, [currentModule, computedMatrix, activePeriodObj]);
+  }, [currentModule, effectiveMatrix, activePeriodObj]);
 
   // Real category breakdown matching Hostel Data Entry exactly (sums to expenses_occurred)
   const hostelCategoryItems = useMemo(() => {
@@ -127,18 +154,18 @@ export default function DashboardPage({
 
   // Real Database Grand Total for selected period/module
   const grandTotal = activePeriod === 'all'
-    ? (computedMatrix?.grand_total?.total ?? 0)
-    : (computedMatrix?.grand_total?.amounts?.[activePeriod] ?? computedMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0);
+    ? (effectiveMatrix?.grand_total?.total ?? 0)
+    : (effectiveMatrix?.grand_total?.amounts?.[activePeriod] ?? effectiveMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0);
 
   const monthlyAvg = periods.length > 0
-    ? (computedMatrix?.grand_total?.total ?? 0) / periods.length
+    ? (effectiveMatrix?.grand_total?.total ?? 0) / periods.length
     : 0;
 
   // Find largest cost head dynamically from active module's actual line items
   const largestCostHead = useMemo(() => {
     let largest = { name: '—', total: 0 };
-    if (computedMatrix?.categories && Array.isArray(computedMatrix.categories)) {
-      computedMatrix.categories.forEach(cat => {
+    if (effectiveMatrix?.categories && Array.isArray(effectiveMatrix.categories)) {
+      effectiveMatrix.categories.forEach(cat => {
         cat.items?.forEach(it => {
           const itTot = activePeriod === 'all'
             ? Number(it.total || 0)
@@ -150,7 +177,7 @@ export default function DashboardPage({
       });
     }
     return largest;
-  }, [computedMatrix, activePeriod]);
+  }, [effectiveMatrix, activePeriod]);
 
   // 1. Prepare Category items for Bar, Pie, Doughnut with remarks
   const categoryItems = useMemo(() => {
@@ -284,7 +311,7 @@ export default function DashboardPage({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
       
       {/* OPERATIONS DASHBOARD HEADER */}
       <div style={{
@@ -438,7 +465,7 @@ export default function DashboardPage({
           <HostelDashboardDataTable
             periods={periods}
             activePeriod={activePeriod}
-            computedMatrix={computedMatrix}
+            computedMatrix={effectiveMatrix}
             isFullScreen={isTableFullScreen}
             onToggleFullScreen={setIsTableFullScreen}
           />
@@ -446,7 +473,7 @@ export default function DashboardPage({
           <TransportDashboardDataTable
             periods={periods}
             activePeriod={activePeriod}
-            computedMatrix={computedMatrix}
+            computedMatrix={effectiveMatrix}
             isFullScreen={isTableFullScreen}
             onToggleFullScreen={setIsTableFullScreen}
           />

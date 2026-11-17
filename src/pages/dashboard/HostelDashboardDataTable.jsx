@@ -6,20 +6,50 @@ import {
 } from 'lucide-react';
 
 export default function HostelDashboardDataTable({
-  periods = [],
+  periods: propPeriods = [],
   activePeriod = 'all',
-  computedMatrix,
+  computedMatrix: propComputedMatrix,
   isFullScreen: propIsFullScreen,
   onToggleFullScreen: propOnToggleFullScreen
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSection, setSelectedSection] = useState('all');
   const [internalFullScreen, setInternalFullScreen] = useState(false);
+  const [localMatrix, setLocalMatrix] = useState(null);
+  const [loadingLocal, setLoadingLocal] = useState(false);
+
   const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
   const containerRef = useRef(null);
 
+  // Self-healing fallback: If parent periods or computedMatrix is empty, fetch directly from live database!
+  useEffect(() => {
+    const hasParentPeriods = propPeriods && propPeriods.length > 0;
+    const hasParentCensus = propComputedMatrix?.hostel_census && Object.keys(propComputedMatrix.hostel_census).length > 0;
+    
+    if (!hasParentPeriods || !hasParentCensus) {
+      setLoadingLocal(true);
+      fetch('/api/matrix?module=hostel')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.periods && data.periods.length > 0) {
+            setLocalMatrix(data);
+          }
+          setLoadingLocal(false);
+        })
+        .catch(err => {
+          console.error('[HostelDashboardDataTable] Fallback fetch error:', err);
+          setLoadingLocal(false);
+        });
+    }
+  }, [propPeriods, propComputedMatrix]);
+
+  const periods = (propPeriods && propPeriods.length > 0) ? propPeriods : (localMatrix?.periods || []);
+  const computedMatrix = (propComputedMatrix?.hostel_census && Object.keys(propComputedMatrix.hostel_census).length > 0)
+    ? propComputedMatrix
+    : (localMatrix || {});
   const hostelCensusMap = computedMatrix?.hostel_census || {};
-  const currentPeriodIdStr = activePeriod !== 'all' ? String(activePeriod) : String(periods[0]?.id || '29');
+
+  const currentPeriodIdStr = activePeriod !== 'all' ? String(activePeriod) : String(periods[0]?.id || '220');
 
   const toggleFullScreen = () => {
     const nextState = !isFullScreen;
@@ -46,18 +76,18 @@ export default function HostelDashboardDataTable({
     { id: 'analytics', name: 'Per Student Cost & Area Metrics', icon: Calculator, color: '#ca8a04', bg: '#fef9c3' }
   ];
 
-  // Full 35 Operational Parameters matching Data Entry 100%
+  // Full 44 Operational Parameters matching Data Entry 100%
   const PARAMETERS = useMemo(() => [
     // 1. Bed Capacity & Occupancy
     { sNo: '1', name: 'Bed Capacity - Boys', section: 'occupancy', calc: c => num(c.bed_capacity_boys, 2223).toLocaleString(), unit: 'Beds' },
     { sNo: '1', name: 'Bed Capacity - Girls', section: 'occupancy', calc: c => num(c.bed_capacity_girls, 896).toLocaleString(), unit: 'Beds' },
-    { sNo: '1', name: 'Total Bed Capacity', section: 'occupancy', isHeaderVal: true, calc: c => (num(c.bed_capacity_boys, 2223) + num(c.bed_capacity_girls, 896)).toLocaleString(), unit: 'Beds', highlight: true },
+    { sNo: '1', name: 'Total Bed Capacity', section: 'occupancy', isHeaderVal: true, calc: c => (num(c.bed_capacity_total, 0) || (num(c.bed_capacity_boys, 2223) + num(c.bed_capacity_girls, 896))).toLocaleString(), unit: 'Beds', highlight: true },
     { sNo: '2', name: 'No. of Students - Boys', section: 'occupancy', calc: c => num(c.students_boys, 2075).toLocaleString(), unit: 'Persons' },
     { sNo: '2', name: 'No. of Students - Girls', section: 'occupancy', calc: c => num(c.students_girls, 768).toLocaleString(), unit: 'Persons' },
-    { sNo: '2', name: 'Total Students Count', section: 'occupancy', calc: c => (num(c.students_boys, 2075) + num(c.students_girls, 768)).toLocaleString(), unit: 'Students' },
+    { sNo: '2', name: 'Total Students Count', section: 'occupancy', calc: c => (num(c.students_total, 0) || (num(c.students_boys, 2075) + num(c.students_girls, 768))).toLocaleString(), unit: 'Students' },
     { sNo: '3', name: 'No. of Staffs - Boys', section: 'occupancy', calc: c => num(c.staff_boys, 72).toLocaleString(), unit: 'Staff' },
     { sNo: '3', name: 'No. of Staffs - Girls', section: 'occupancy', calc: c => num(c.staff_girls, 59).toLocaleString(), unit: 'Staff' },
-    { sNo: '3', name: 'Total Staffs Count', section: 'occupancy', calc: c => (num(c.staff_boys, 72) + num(c.staff_girls, 59)).toLocaleString(), unit: 'Staff' },
+    { sNo: '3', name: 'Total Staffs Count', section: 'occupancy', calc: c => (num(c.staff_total, 0) || (num(c.staff_boys, 72) + num(c.staff_girls, 59))).toLocaleString(), unit: 'Staff' },
     { sNo: '4', name: 'Total Occupied (Students + Staff)', section: 'occupancy', calc: c => num(c.total_occupied, 2974).toLocaleString(), unit: 'Occupants', highlight: true, highlightBg: '#f0fdf4', highlightColor: '#166534' },
     { sNo: '5', name: 'Vacant Beds Total', section: 'occupancy', calc: c => num(c.vacant_total, 145).toLocaleString(), unit: 'Beds' },
     { sNo: '6', name: 'Vacant for College Students', section: 'occupancy', calc: c => num(c.vacant_college, 104).toLocaleString(), unit: 'Beds' },
@@ -149,8 +179,10 @@ export default function HostelDashboardDataTable({
         right: isFullScreen ? 0 : 'auto',
         bottom: isFullScreen ? 0 : 'auto',
         width: isFullScreen ? '100vw' : '100%',
+        maxWidth: '100%',
         height: isFullScreen ? '100vh' : 'auto',
-        zIndex: isFullScreen ? 99999 : 1
+        zIndex: isFullScreen ? 99999 : 1,
+        boxSizing: 'border-box'
       }}
     >
       {/* 1. TOP UTILITY HEADER */}
@@ -188,7 +220,7 @@ export default function HostelDashboardDataTable({
               </span>
             </div>
             <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#64748b' }}>
-              All 38 operational parameters side-by-side across all recorded monthly billing cycles
+              All 44 operational parameters side-by-side across all {periods.length || 13} recorded monthly billing cycles
             </p>
           </div>
         </div>
@@ -299,54 +331,91 @@ export default function HostelDashboardDataTable({
         </div>
       </div>
 
-      {/* 2. THE MULTI-MONTH DATA TABLE */}
+      {/* 2. THE MULTI-MONTH DATA TABLE WITH STICKY LEFT COLUMNS */}
       <div style={{
         overflowX: 'auto',
         overflowY: 'auto',
-        maxHeight: isFullScreen ? 'calc(100vh - 65px)' : '680px',
-        backgroundColor: '#ffffff'
+        maxHeight: isFullScreen ? 'calc(100vh - 65px)' : '650px',
+        backgroundColor: '#ffffff',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
         <table style={{
-          width: '100%',
-          borderCollapse: 'collapse',
+          width: 'max-content',
+          minWidth: '100%',
+          borderCollapse: 'separate',
+          borderSpacing: 0,
           fontSize: '12.5px',
-          border: '1px solid #cbd5e1',
           fontFamily: 'Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
         }}>
           <thead>
-            <tr style={{
-              backgroundColor: '#059669',
-              color: '#ffffff',
-              borderBottom: '2px solid #000000',
-              fontWeight: '800',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10
-            }}>
-              <th style={{ width: '45px', padding: '9px 6px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.2)' }}>
+            <tr>
+              {/* Sticky S.No Column */}
+              <th style={{
+                width: '50px',
+                minWidth: '50px',
+                maxWidth: '50px',
+                padding: '10px 6px',
+                textAlign: 'center',
+                backgroundColor: '#059669',
+                color: '#ffffff',
+                fontWeight: '800',
+                borderBottom: '2px solid #000000',
+                borderRight: '1px solid rgba(255,255,255,0.2)',
+                position: 'sticky',
+                top: 0,
+                left: 0,
+                zIndex: 30
+              }}>
                 S.No
               </th>
-              <th style={{ minWidth: '320px', padding: '9px 14px', textAlign: 'left', borderRight: '1px solid rgba(255,255,255,0.2)' }}>
+
+              {/* Sticky Parameter Name Column */}
+              <th style={{
+                width: '320px',
+                minWidth: '320px',
+                maxWidth: '320px',
+                padding: '10px 14px',
+                textAlign: 'left',
+                backgroundColor: '#059669',
+                color: '#ffffff',
+                fontWeight: '800',
+                borderBottom: '2px solid #000000',
+                borderRight: '2px solid rgba(0,0,0,0.2)',
+                position: 'sticky',
+                top: 0,
+                left: '50px',
+                zIndex: 30,
+                boxShadow: '3px 0 6px rgba(0,0,0,0.1)'
+              }}>
                 Hostel Operations & Census Parameters
               </th>
+
+              {/* Each Monthly Cycle Column */}
               {periods.map(p => {
                 const isSelected = String(p.id) === currentPeriodIdStr;
                 return (
                   <th
                     key={p.id}
                     style={{
-                      minWidth: '130px',
-                      padding: '9px 10px',
+                      minWidth: '135px',
+                      padding: '10px 12px',
                       textAlign: 'center',
+                      borderBottom: '2px solid #000000',
                       borderRight: '1px solid rgba(255,255,255,0.2)',
                       backgroundColor: isSelected ? '#047857' : '#059669',
                       color: '#ffffff',
+                      fontWeight: '800',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 20,
                       boxShadow: isSelected ? 'inset 0 -3px 0 #86efac' : 'none'
                     }}
                   >
                     <div>{p.period_label}</div>
                     {isSelected && (
-                      <span style={{ fontSize: '9.5px', fontWeight: '700', backgroundColor: '#86efac', color: '#064e3b', padding: '1px 6px', borderRadius: '4px', marginTop: '2px', display: 'inline-block' }}>
+                      <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: '#86efac', color: '#064e3b', padding: '1px 6px', borderRadius: '4px', marginTop: '2px', display: 'inline-block' }}>
                         ACTIVE
                       </span>
                     )}
@@ -357,7 +426,16 @@ export default function HostelDashboardDataTable({
           </thead>
 
           <tbody>
-            {filteredParameters.length === 0 ? (
+            {periods.length === 0 ? (
+              <tr>
+                <td colSpan={2} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '16px', height: '16px', border: '2px solid #059669', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <span>Loading Hostel Operational Ledger & monthly cycles from database...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : filteredParameters.length === 0 ? (
               <tr>
                 <td colSpan={periods.length + 2} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                   No parameters match your search query "{searchTerm}"
@@ -372,35 +450,47 @@ export default function HostelDashboardDataTable({
                   <tr
                     key={`${param.sNo}-${param.name}`}
                     style={{
-                      backgroundColor: rowBg,
-                      borderBottom: isTotalRow ? '1.5px solid #000000' : '1px solid #e2e8f0',
-                      fontWeight: isTotalRow ? '800' : '500',
                       height: '28px'
                     }}
                   >
-                    {/* S.No */}
+                    {/* S.No - Sticky Left */}
                     <td style={{
+                      position: 'sticky',
+                      left: 0,
+                      backgroundColor: rowBg,
+                      zIndex: 10,
                       padding: '5px 6px',
                       textAlign: 'center',
+                      borderBottom: isTotalRow ? '1.5px solid #000000' : '1px solid #e2e8f0',
                       borderRight: '1px solid #cbd5e1',
                       color: '#64748b',
                       fontWeight: '700',
-                      fontSize: '11.5px'
+                      fontSize: '11.5px',
+                      width: '50px',
+                      minWidth: '50px'
                     }}>
                       {param.sNo}
                     </td>
 
-                    {/* Parameter Name */}
+                    {/* Parameter Name - Sticky Left */}
                     <td style={{
+                      position: 'sticky',
+                      left: '50px',
+                      backgroundColor: rowBg,
+                      zIndex: 10,
                       padding: '5px 12px',
-                      borderRight: '1px solid #cbd5e1',
+                      borderBottom: isTotalRow ? '1.5px solid #000000' : '1px solid #e2e8f0',
+                      borderRight: '2px solid #94a3b8',
                       color: param.highlightColor || '#0f172a',
-                      fontWeight: isTotalRow ? '800' : '600'
+                      fontWeight: isTotalRow ? '800' : '600',
+                      width: '320px',
+                      minWidth: '320px',
+                      boxShadow: '3px 0 6px rgba(0,0,0,0.05)'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span>{param.name}</span>
                         {param.unit && (
-                          <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '500', marginLeft: '6px' }}>
+                          <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600', marginLeft: '6px' }}>
                             {param.unit}
                           </span>
                         )}
@@ -418,13 +508,15 @@ export default function HostelDashboardDataTable({
                         <td
                           key={p.id}
                           style={{
-                            padding: '4px 10px',
+                            padding: '4px 12px',
                             textAlign: 'right',
+                            borderBottom: isTotalRow ? '1.5px solid #000000' : '1px solid #e2e8f0',
                             borderRight: '1px solid #cbd5e1',
                             fontWeight: isTotalRow ? '800' : '600',
                             color: param.highlightColor || (isSelected ? '#0f172a' : '#334155'),
-                            backgroundColor: isSelected ? 'rgba(5, 150, 105, 0.05)' : 'transparent',
-                            fontSize: isTotalRow ? '13px' : '12.5px'
+                            backgroundColor: isSelected ? 'rgba(5, 150, 105, 0.05)' : (isTotalRow ? rowBg : 'transparent'),
+                            fontSize: isTotalRow ? '13px' : '12.5px',
+                            whiteSpace: 'nowrap'
                           }}
                         >
                           {valStr}
@@ -451,7 +543,7 @@ export default function HostelDashboardDataTable({
         color: '#64748b'
       }}>
         <span>Showing {filteredParameters.length} of {PARAMETERS.length} operational parameters across {periods.length} monthly cycles</span>
-        <span>Values match Hostel Data Entry & PostgreSQL hostel_census_entries</span>
+        <span>Values match Hostel Data Entry & PostgreSQL live database</span>
       </div>
     </div>
   );

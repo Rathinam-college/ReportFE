@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { formatINR } from '../../utils/formatters';
 import { 
   Search, X, Maximize2, Minimize2, Download, Bus, 
@@ -7,17 +7,47 @@ import {
 import { TRANSPORT_BRANCHES, CANONICAL_TRANSPORT_PARAMETERS } from '../data_entry/TransportSpreadsheetEntry';
 
 export default function TransportDashboardDataTable({
-  periods = [],
+  periods: propPeriods = [],
   activePeriod = 'all',
-  computedMatrix,
+  computedMatrix: propComputedMatrix,
   isFullScreen: propIsFullScreen,
   onToggleFullScreen: propOnToggleFullScreen
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeBranch, setActiveBranch] = useState('RPS');
   const [internalFullScreen, setInternalFullScreen] = useState(false);
+  const [localMatrix, setLocalMatrix] = useState(null);
+  const [loadingLocal, setLoadingLocal] = useState(false);
+
   const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
   const containerRef = useRef(null);
+
+  // Self-healing fallback: If parent periods or transport data is empty, fetch directly from live database!
+  useEffect(() => {
+    const hasParentPeriods = propPeriods && propPeriods.length > 0;
+    const hasParentBranch = propComputedMatrix?.transport_census_by_branch && Object.keys(propComputedMatrix.transport_census_by_branch).length > 0;
+    
+    if (!hasParentPeriods || !hasParentBranch) {
+      setLoadingLocal(true);
+      fetch('/api/matrix?module=transport')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.periods && data.periods.length > 0) {
+            setLocalMatrix(data);
+          }
+          setLoadingLocal(false);
+        })
+        .catch(err => {
+          console.error('[TransportDashboardDataTable] Fallback fetch error:', err);
+          setLoadingLocal(false);
+        });
+    }
+  }, [propPeriods, propComputedMatrix]);
+
+  const periods = (propPeriods && propPeriods.length > 0) ? propPeriods : (localMatrix?.periods || []);
+  const computedMatrix = (propComputedMatrix?.transport_census_by_branch && Object.keys(propComputedMatrix.transport_census_by_branch).length > 0)
+    ? propComputedMatrix
+    : (localMatrix || {});
 
   const currentPeriodIdStr = activePeriod !== 'all' ? String(activePeriod) : String(periods[periods.length - 1]?.id || '29');
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[1] || TRANSPORT_BRANCHES[0];
@@ -105,8 +135,10 @@ export default function TransportDashboardDataTable({
         right: isFullScreen ? 0 : 'auto',
         bottom: isFullScreen ? 0 : 'auto',
         width: isFullScreen ? '100vw' : '100%',
+        maxWidth: '100%',
         height: isFullScreen ? '100vh' : 'auto',
-        zIndex: isFullScreen ? 99999 : 1
+        zIndex: isFullScreen ? 99999 : 1,
+        boxSizing: 'border-box'
       }}
     >
       {/* 1. TOP UTILITY HEADER */}
@@ -161,7 +193,7 @@ export default function TransportDashboardDataTable({
                   type="button"
                   onClick={() => setActiveBranch(b.id)}
                   style={{
-                    padding: '3px 8px',
+                    padding: '4px 9px',
                     borderRadius: '4px',
                     fontSize: '11.5px',
                     fontWeight: isSel ? '800' : '600',
@@ -220,33 +252,61 @@ export default function TransportDashboardDataTable({
         </div>
       </div>
 
-      {/* 2. THE MULTI-MONTH TABLE */}
+      {/* 2. THE MULTI-MONTH TABLE WITH STICKY HEADERS */}
       <div style={{
         overflowX: 'auto',
         overflowY: 'auto',
-        maxHeight: isFullScreen ? 'calc(100vh - 65px)' : '680px',
-        backgroundColor: '#ffffff'
+        maxHeight: isFullScreen ? 'calc(100vh - 65px)' : '650px',
+        backgroundColor: '#ffffff',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
         <table style={{
-          width: '100%',
-          borderCollapse: 'collapse',
+          width: 'max-content',
+          minWidth: '100%',
+          borderCollapse: 'separate',
+          borderSpacing: 0,
           fontSize: '12.5px',
-          border: '2px solid #000000',
           fontFamily: 'Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
         }}>
           <thead>
-            <tr style={{
-              backgroundColor: '#ffffff',
-              borderBottom: '2px solid #000000',
-              fontWeight: '800',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10
-            }}>
-              <th style={{ width: '50px', padding: '7px 4px', textAlign: 'center', borderRight: '1px solid #000000', borderBottom: '2px solid #000000' }}>
+            <tr>
+              <th style={{
+                width: '50px',
+                minWidth: '50px',
+                maxWidth: '50px',
+                padding: '9px 6px',
+                textAlign: 'center',
+                backgroundColor: '#ffffff',
+                color: '#000000',
+                fontWeight: '800',
+                borderBottom: '2px solid #000000',
+                borderRight: '1px solid #000000',
+                position: 'sticky',
+                top: 0,
+                left: 0,
+                zIndex: 30
+              }}>
                 S.No
               </th>
-              <th style={{ minWidth: '300px', padding: '7px 12px', textAlign: 'left', borderRight: '1px solid #000000', borderBottom: '2px solid #000000' }}>
+              <th style={{
+                width: '300px',
+                minWidth: '300px',
+                maxWidth: '300px',
+                padding: '9px 12px',
+                textAlign: 'left',
+                backgroundColor: '#ffffff',
+                color: '#000000',
+                fontWeight: '800',
+                borderBottom: '2px solid #000000',
+                borderRight: '2px solid #000000',
+                position: 'sticky',
+                top: 0,
+                left: '50px',
+                zIndex: 30,
+                boxShadow: '3px 0 6px rgba(0,0,0,0.06)'
+              }}>
                 Parameters ({activeBranchObj.label})
               </th>
               {periods.map(p => {
@@ -255,13 +315,17 @@ export default function TransportDashboardDataTable({
                   <th
                     key={p.id}
                     style={{
-                      minWidth: '125px',
-                      padding: '7px 10px',
+                      minWidth: '130px',
+                      padding: '9px 10px',
                       textAlign: 'center',
-                      borderRight: '1px solid #000000',
                       borderBottom: '2px solid #000000',
+                      borderRight: '1px solid #000000',
                       backgroundColor: isSelected ? '#fff7ed' : '#ffffff',
-                      color: isSelected ? '#ea580c' : '#000000'
+                      color: isSelected ? '#ea580c' : '#000000',
+                      fontWeight: '800',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 20
                     }}
                   >
                     <div>{p.period_label}</div>
@@ -272,63 +336,96 @@ export default function TransportDashboardDataTable({
           </thead>
 
           <tbody>
-            {filteredParams.map((param, idx) => {
-              const rowStyle = getRowStyle(param);
-              const isTotal = param.param_key === 'total_expenses' || param.param_key === 'balance';
+            {periods.length === 0 ? (
+              <tr>
+                <td colSpan={2} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '16px', height: '16px', border: '2px solid #ea580c', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <span>Loading Transport Fleet Ledger & cycles from database...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredParams.map((param, idx) => {
+                const rowStyle = getRowStyle(param);
+                const isTotal = param.param_key === 'total_expenses' || param.param_key === 'balance';
 
-              return (
-                <React.Fragment key={param.id || param.param_key}>
-                  {/* Row 46 blank yellow spacer */}
-                  {param.param_key === 'cumulative_demand_per_km' && (
-                    <tr style={{ backgroundColor: '#fef08a', height: '22px', borderBottom: '1px solid #000000' }}>
-                      <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
-                      <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
-                      {periods.map(p => (
-                        <td key={p.id} style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
-                      ))}
+                return (
+                  <React.Fragment key={param.id || param.param_key}>
+                    {/* Row 46 blank yellow spacer */}
+                    {param.param_key === 'cumulative_demand_per_km' && (
+                      <tr style={{ backgroundColor: '#fef08a', height: '22px' }}>
+                        <td style={{ position: 'sticky', left: 0, borderRight: '1px solid #000000', borderBottom: '1px solid #000000', backgroundColor: '#fef08a', zIndex: 10 }}>&nbsp;</td>
+                        <td style={{ position: 'sticky', left: '50px', borderRight: '2px solid #000000', borderBottom: '1px solid #000000', backgroundColor: '#fef08a', zIndex: 10 }}>&nbsp;</td>
+                        {periods.map(p => (
+                          <td key={p.id} style={{ borderRight: '1px solid #000000', borderBottom: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
+                        ))}
+                      </tr>
+                    )}
+
+                    <tr
+                      style={{
+                        height: '26px'
+                      }}
+                    >
+                      <td style={{
+                        position: 'sticky',
+                        left: 0,
+                        backgroundColor: rowStyle.bg,
+                        zIndex: 10,
+                        padding: '4px 6px',
+                        textAlign: 'center',
+                        borderRight: '1px solid #000000',
+                        borderBottom: isTotal ? '2px solid #000000' : '1px solid #000000',
+                        color: '#000000',
+                        fontWeight: '700'
+                      }}>
+                        {param.s_no}
+                      </td>
+
+                      <td style={{
+                        position: 'sticky',
+                        left: '50px',
+                        backgroundColor: rowStyle.bg,
+                        zIndex: 10,
+                        padding: '4px 10px',
+                        borderRight: '2px solid #000000',
+                        borderBottom: isTotal ? '2px solid #000000' : '1px solid #000000',
+                        color: '#000000',
+                        fontWeight: rowStyle.isBold ? '800' : '500',
+                        boxShadow: '3px 0 6px rgba(0,0,0,0.05)'
+                      }}>
+                        {param.param_name}
+                      </td>
+
+                      {periods.map(p => {
+                        const pStr = String(p.id);
+                        const rawVal = getParamValue(activeBranch, pStr, param.param_key);
+                        const isRef = param.param_key === 'per_student_cost_expenses' && (rawVal === '#REF!' || !rawVal || rawVal === 0);
+
+                        return (
+                          <td
+                            key={p.id}
+                            style={{
+                              padding: '3px 10px',
+                              textAlign: 'right',
+                              backgroundColor: rowStyle.bg,
+                              borderRight: '1px solid #000000',
+                              borderBottom: isTotal ? '2px solid #000000' : '1px solid #000000',
+                              color: '#000000',
+                              fontWeight: rowStyle.isBold ? '800' : '600',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {isRef ? '#REF!' : formatVal(param, rawVal)}
+                          </td>
+                        );
+                      })}
                     </tr>
-                  )}
-
-                  <tr
-                    style={{
-                      backgroundColor: rowStyle.bg,
-                      borderBottom: isTotal ? '2px solid #000000' : '1px solid #000000',
-                      fontWeight: rowStyle.isBold ? '800' : '500',
-                      height: '26px'
-                    }}
-                  >
-                    <td style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000', color: '#000000', fontWeight: '700' }}>
-                      {param.s_no}
-                    </td>
-
-                    <td style={{ padding: '4px 10px', borderRight: '1px solid #000000', color: '#000000', fontWeight: rowStyle.isBold ? '800' : '500' }}>
-                      {param.param_name}
-                    </td>
-
-                    {periods.map(p => {
-                      const pStr = String(p.id);
-                      const rawVal = getParamValue(activeBranch, pStr, param.param_key);
-                      const isRef = param.param_key === 'per_student_cost_expenses' && (rawVal === '#REF!' || !rawVal || rawVal === 0);
-
-                      return (
-                        <td
-                          key={p.id}
-                          style={{
-                            padding: '3px 8px',
-                            textAlign: 'right',
-                            borderRight: '1px solid #000000',
-                            color: '#000000',
-                            fontWeight: rowStyle.isBold ? '800' : '600'
-                          }}
-                        >
-                          {isRef ? '#REF!' : formatVal(param, rawVal)}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                </React.Fragment>
-              );
-            })}
+                  </React.Fragment>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
