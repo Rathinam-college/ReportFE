@@ -38,10 +38,8 @@ export default function SubNav({
       justifyContent: 'space-between',
       height: '50px',
       minHeight: '50px',
-      position: 'sticky',
-      top: '66px',
-      zIndex: 990,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+      position: 'relative',
+      boxShadow: 'none',
       boxSizing: 'border-box',
       width: '100%',
       maxWidth: '100vw'

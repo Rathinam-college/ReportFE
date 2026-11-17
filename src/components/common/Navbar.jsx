@@ -57,11 +57,10 @@ export default function Navbar({
       flexWrap: 'nowrap',
       height: '66px',
       minHeight: '66px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 1000,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-      boxSizing: 'border-box'
+      position: 'relative',
+      boxShadow: 'none',
+      boxSizing: 'border-box',
+      width: '100%'
     }}>
       {/* Brand Identity */}
       <div

@@ -1521,28 +1521,40 @@ export default function App() {
   // MAIN APP RENDER
   // --------------------------------------------------------------------------
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f4f6fa', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f4f6fa', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100vw', overflowX: 'clip' }}>
       
-      {/* 1. TOP GLOBAL NAVIGATION BAR */}
-      <Navbar
-        currentUser={currentUser}
-        handleLogout={handleLogout}
-        dbStatus={dbStatus}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        permissions={pagePermissions}
-      />
+      {/* 1 & 2. STICKY TOP GLOBAL NAVIGATION HEADER */}
+      <div
+        id="app-sticky-header"
+        style={{
+          position: '-webkit-sticky',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000,
+          width: '100%',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+        }}
+      >
+        <Navbar
+          currentUser={currentUser}
+          handleLogout={handleLogout}
+          dbStatus={dbStatus}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          permissions={pagePermissions}
+        />
 
-      {/* 2. SUB-NAVIGATION BAR (DASHBOARD, DATA ENTRY & MASTER DATA) */}
-      <SubNav
-        activeTab={activeTab}
-        dashboardSubTab={dashboardSubTab}
-        setDashboardSubTab={setDashboardSubTab}
-        dataEntrySubTab={dataEntrySubTab}
-        setDataEntrySubTab={setDataEntrySubTab}
-        masterDataSubTab={masterDataSubTab}
-        setMasterDataSubTab={setMasterDataSubTab}
-      />
+        <SubNav
+          activeTab={activeTab}
+          dashboardSubTab={dashboardSubTab}
+          setDashboardSubTab={setDashboardSubTab}
+          dataEntrySubTab={dataEntrySubTab}
+          setDataEntrySubTab={setDataEntrySubTab}
+          masterDataSubTab={masterDataSubTab}
+          setMasterDataSubTab={setMasterDataSubTab}
+        />
+      </div>
 
       {/* 3. MAIN WORKSPACE CONTENT */}
       <main style={{
@@ -1552,7 +1564,7 @@ export default function App() {
         width: '100%',
         margin: '0 auto',
         boxSizing: 'border-box',
-        overflowX: 'hidden'
+        overflowX: 'clip'
       }}>
         
         {/* DASHBOARD PAGE */}

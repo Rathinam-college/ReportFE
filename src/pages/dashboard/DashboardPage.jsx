@@ -312,7 +312,7 @@ export default function DashboardPage({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
       
       {/* OPERATIONS DASHBOARD HEADER */}
       <div style={{
