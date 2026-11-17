@@ -246,17 +246,15 @@ export default function TransportSpreadsheetEntry({
 
   // Helper to get raw stored value for a given branch, period, and parameter key
   const getParamRawValue = (branchId, periodIdStr, paramKey) => {
-    // 1. Check local unsaved draft for this branch and period
+    // 1. Check local unsaved draft for this SPECIFIC branch and period
     const localVal = branchDrafts[branchId]?.[periodIdStr]?.[paramKey];
     if (localVal !== undefined && localVal !== null) return localVal;
 
-    // 2. If active branch matches the parent draft, check transportCensusDraft
-    if (branchId === activeBranch) {
-      const parentVal = transportCensusDraft[periodIdStr]?.[paramKey];
-      if (parentVal !== undefined && parentVal !== null) return parentVal;
-    }
+    // 2. Check parent transportCensusDraft for this SPECIFIC branch and period
+    const parentVal = transportCensusDraft?.[branchId]?.[periodIdStr]?.[paramKey];
+    if (parentVal !== undefined && parentVal !== null) return parentVal;
 
-    // 3. Check computedMatrix.transport_census_by_branch from backend
+    // 3. Check computedMatrix.transport_census_by_branch from backend for this SPECIFIC branch and period
     const dbBranchData = computedMatrix?.transport_census_by_branch?.[branchId]?.[periodIdStr];
     if (dbBranchData && dbBranchData[paramKey] !== undefined && dbBranchData[paramKey] !== null) {
       return dbBranchData[paramKey];
@@ -532,9 +530,9 @@ export default function TransportSpreadsheetEntry({
         }
       }
     }));
-    // Also notify parent if current editing period
+    // Also notify parent if current editing period with activeBranch
     if (handleTransportCensusChange && periodIdStr === currPeriodIdStr) {
-      handleTransportCensusChange(paramKey, value, editingPeriodId);
+      handleTransportCensusChange(activeBranch, paramKey, value, editingPeriodId);
     }
   };
 

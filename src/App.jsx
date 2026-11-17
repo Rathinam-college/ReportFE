@@ -532,7 +532,25 @@ export default function App() {
       },
       transport_census: {
         ...(matrixData.transport_census || {}),
-        ...(transportCensusDraft || {})
+        ...(transportCensusDraft?.RPS || transportCensusDraft || {})
+      },
+      transport_census_by_branch: {
+        Common: {
+          ...(matrixData.transport_census_by_branch?.Common || {}),
+          ...(transportCensusDraft?.Common || {})
+        },
+        RPS: {
+          ...(matrixData.transport_census_by_branch?.RPS || {}),
+          ...(transportCensusDraft?.RPS || {})
+        },
+        KPM: {
+          ...(matrixData.transport_census_by_branch?.KPM || {}),
+          ...(transportCensusDraft?.KPM || {})
+        },
+        University: {
+          ...(matrixData.transport_census_by_branch?.University || {}),
+          ...(transportCensusDraft?.University || {})
+        }
       }
     };
   }, [matrixData, matrixDraft, hostelCensusDraft, transportCensusDraft]);
@@ -607,10 +625,27 @@ export default function App() {
     setIsDirty(true);
   };
 
-  const handleTransportCensusChange = (fieldOrObj, value, targetPeriodId = null) => {
-    const pIdStr = String(targetPeriodId || editingPeriodId);
+  const handleTransportCensusChange = (branchOrField, fieldOrVal, valOrPeriod = null, targetPeriodId = null) => {
+    let branch = 'RPS';
+    let fieldOrObj;
+    let value;
+    let pId = editingPeriodId;
+
+    if (['Common', 'RPS', 'KPM', 'University'].includes(branchOrField)) {
+      branch = branchOrField;
+      fieldOrObj = fieldOrVal;
+      value = valOrPeriod;
+      pId = targetPeriodId || editingPeriodId;
+    } else {
+      fieldOrObj = branchOrField;
+      value = fieldOrVal;
+      pId = valOrPeriod || editingPeriodId;
+    }
+    const pIdStr = String(pId);
+
     setTransportCensusDraft(prev => {
-      const current = prev[pIdStr] || {};
+      const branchMap = prev[branch] || {};
+      const current = branchMap[pIdStr] || {};
       let updated;
       if (typeof fieldOrObj === 'object' && fieldOrObj !== null) {
         updated = { ...current, ...fieldOrObj };
@@ -619,7 +654,10 @@ export default function App() {
       }
       return {
         ...prev,
-        [pIdStr]: updated
+        [branch]: {
+          ...branchMap,
+          [pIdStr]: updated
+        }
       };
     });
     setIsDirty(true);
@@ -669,7 +707,12 @@ export default function App() {
         operating_days: activePeriod.operating_days || 30,
         module: dataEntrySubTab,
         hostel_census: dataEntrySubTab === 'hostel' ? (hostelCensusDraft[pIdStr] || {}) : null,
-        transport_census: dataEntrySubTab === 'transport' ? (transportCensusDraft[pIdStr] || {}) : null
+        transport_census: dataEntrySubTab === 'transport' ? {
+          Common: transportCensusDraft?.Common?.[pIdStr] || {},
+          RPS: transportCensusDraft?.RPS?.[pIdStr] || {},
+          KPM: transportCensusDraft?.KPM?.[pIdStr] || {},
+          University: transportCensusDraft?.University?.[pIdStr] || {}
+        } : null
       };
 
       const res = await fetch('/api/batch-entry', {
@@ -684,6 +727,17 @@ export default function App() {
       }
 
       setEntryMessage({ type: 'success', text: `Saved all line items and operational parameters for ${activePeriod.period_label} successfully!` });
+      setTransportCensusDraft(prev => {
+        const next = { ...prev };
+        ['Common', 'RPS', 'KPM', 'University'].forEach(b => {
+          if (next[b]) {
+            const nextB = { ...next[b] };
+            delete nextB[pIdStr];
+            next[b] = nextB;
+          }
+        });
+        return next;
+      });
       setIsDirty(false);
       fetchData();
     } catch (err) {
