@@ -268,6 +268,22 @@ export default function HostelSpreadsheetEntry({
     return parameters.filter(p => !p.is_system);
   }, [parameters]);
 
+  // Live parameter helpers synced with Master Data
+  const isParamActive = (key) => {
+    if (!parameters || parameters.length === 0) return true;
+    return parameters.some(p => p.param_key === key && p.is_active !== false);
+  };
+
+  const getParamSNo = (key, defaultSNo) => {
+    const found = parameters.find(p => p.param_key === key);
+    return (found && found.s_no) ? found.s_no : defaultSNo;
+  };
+
+  const getParamName = (key, defaultName) => {
+    const found = parameters.find(p => p.param_key === key);
+    return (found && found.param_name) ? found.param_name : defaultName;
+  };
+
   return (
     <div style={{
       backgroundColor: '#ffffff',
@@ -1340,7 +1356,7 @@ export default function HostelSpreadsheetEntry({
                     return (
                       <tr key={cp.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
                         <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000', color: '#7e22ce', fontWeight: '700' }}>
-                          C{cIdx + 1}
+                          {cp.s_no || `C${cIdx + 1}`}
                         </td>
                         <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

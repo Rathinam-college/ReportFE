@@ -60,6 +60,31 @@ export default function HostelDashboardDataTable({
     }
   };
 
+  const [masterParams, setMasterParams] = useState([]);
+  const [loadingParams, setLoadingParams] = useState(true);
+
+  // Fetch parameters from Hostel Master Data API
+  const fetchMasterParams = async () => {
+    try {
+      setLoadingParams(true);
+      const res = await fetch('/api/hostel/parameters');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setMasterParams(data);
+        }
+      }
+    } catch (err) {
+      console.error('[HostelDashboardDataTable] Error fetching parameters:', err);
+    } finally {
+      setLoadingParams(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMasterParams();
+  }, []);
+
   const num = (v, fb = 0) => {
     if (v === undefined || v === null || v === '') return fb;
     const n = Number(v);
@@ -87,83 +112,190 @@ export default function HostelDashboardDataTable({
     return `${n.toFixed(1)}%`;
   };
 
-  // Section definitions matching Hostel Data Entry exactly
-  const HOSTEL_SECTIONS = [
-    { id: 'occupancy', name: 'Bed Capacity & Occupancy', icon: BedDouble, color: '#059669', bg: '#ecfdf5' },
-    { id: 'tickets', name: 'Maintenance & Service Tickets', icon: Wrench, color: '#7c3aed', bg: '#f5f3ff' },
-    { id: 'power', name: 'Power Consumption (EB + DG)', icon: Zap, color: '#ea580c', bg: '#fff7ed' },
-    { id: 'water', name: 'Water Supply, RO & Tankers', icon: Droplets, color: '#0284c7', bg: '#f0f9ff' },
-    { id: 'budget', name: 'Operating Budget & Balance', icon: DollarSign, color: '#16a34a', bg: '#dcfce7' },
-    { id: 'analytics', name: 'Per Student Cost & Area Metrics', icon: Calculator, color: '#ca8a04', bg: '#fef9c3' }
-  ];
+  // Evaluate any parameter (standard or dynamic custom parameter) for a given month's census entry
+  const getHostelParamValue = (param, c) => {
+    if (!c || Object.keys(c).length === 0) return '—';
+    const k = param.param_key;
 
-  // Full 44 Operational Parameters matching Data Entry 100% (Strictly shows entered database values)
-  const PARAMETERS = useMemo(() => [
-    // 1. Bed Capacity & Occupancy
-    { sNo: '1', name: 'Bed Capacity - Boys', section: 'occupancy', calc: c => fmtVal(c.bed_capacity_boys), unit: 'Beds' },
-    { sNo: '1', name: 'Bed Capacity - Girls', section: 'occupancy', calc: c => fmtVal(c.bed_capacity_girls), unit: 'Beds' },
-    { sNo: '1', name: 'Total Bed Capacity', section: 'occupancy', isHeaderVal: true, calc: c => {
+    // 1. Bed Capacity
+    if (k === 'bed_capacity') {
       const tot = c.bed_capacity_total ?? (c.bed_capacity_boys !== undefined && c.bed_capacity_girls !== undefined ? (num(c.bed_capacity_boys) + num(c.bed_capacity_girls)) : undefined);
       return fmtVal(tot);
-    }, unit: 'Beds', highlight: true },
-    { sNo: '2', name: 'No. of Students - Boys', section: 'occupancy', calc: c => fmtVal(c.students_boys), unit: 'Persons' },
-    { sNo: '2', name: 'No. of Students - Girls', section: 'occupancy', calc: c => fmtVal(c.students_girls), unit: 'Persons' },
-    { sNo: '2', name: 'Total Students Count', section: 'occupancy', calc: c => {
+    }
+    if (k === 'bed_capacity_boys') return fmtVal(c.bed_capacity_boys);
+    if (k === 'bed_capacity_girls') return fmtVal(c.bed_capacity_girls);
+
+    // 2. Students Count
+    if (k === 'students_count' || k === 'students_kpi') {
       const tot = c.students_total ?? (c.students_boys !== undefined && c.students_girls !== undefined ? (num(c.students_boys) + num(c.students_girls)) : undefined);
       return fmtVal(tot);
-    }, unit: 'Students' },
-    { sNo: '3', name: 'No. of Staffs - Boys', section: 'occupancy', calc: c => fmtVal(c.staff_boys), unit: 'Staff' },
-    { sNo: '3', name: 'No. of Staffs - Girls', section: 'occupancy', calc: c => fmtVal(c.staff_girls), unit: 'Staff' },
-    { sNo: '3', name: 'Total Staffs Count', section: 'occupancy', calc: c => {
+    }
+    if (k === 'students_boys') return fmtVal(c.students_boys);
+    if (k === 'students_girls') return fmtVal(c.students_girls);
+
+    // 3. Staff Count
+    if (k === 'staff_count') {
       const tot = c.staff_total ?? (c.staff_boys !== undefined && c.staff_girls !== undefined ? (num(c.staff_boys) + num(c.staff_girls)) : undefined);
       return fmtVal(tot);
-    }, unit: 'Staff' },
-    { sNo: '4', name: 'Total Occupied (Students + Staff)', section: 'occupancy', calc: c => fmtVal(c.total_occupied), unit: 'Occupants', highlight: true, highlightBg: '#f0fdf4', highlightColor: '#166534' },
-    { sNo: '5', name: 'Vacant Beds Total', section: 'occupancy', calc: c => fmtVal(c.vacant_total), unit: 'Beds' },
-    { sNo: '6', name: 'Vacant for College Students', section: 'occupancy', calc: c => fmtVal(c.vacant_college), unit: 'Beds' },
-    { sNo: '7', name: 'Occupied %', section: 'occupancy', isBadge: true, calc: c => fmtPercent(c.occupied_pct), highlight: true, highlightColor: '#059669' },
-    { sNo: '8', name: 'Vacant %', section: 'occupancy', calc: c => fmtPercent(c.vacant_pct) },
-    { sNo: '9', name: 'Students Vacated', section: 'occupancy', calc: c => fmtVal(c.students_vacated) },
+    }
+    if (k === 'staff_boys') return fmtVal(c.staff_boys);
+    if (k === 'staff_girls') return fmtVal(c.staff_girls);
 
-    // 2. Maintenance & Service Tickets
-    { sNo: '10', name: 'No. of Maintenance Tickets Received', section: 'tickets', calc: c => fmtVal(c.tickets_received), unit: 'Tickets' },
-    { sNo: '11', name: 'No. of Maintenance Tickets Closed', section: 'tickets', calc: c => fmtVal(c.tickets_closed), unit: 'Tickets' },
-    { sNo: '12', name: 'No. of Maintenance Tickets Open', section: 'tickets', calc: c => fmtVal(c.tickets_open), unit: 'Tickets', highlight: true },
-    { sNo: '13', name: 'TAT (Turnaround Time) Hours', section: 'tickets', calc: c => (c.tat_hours !== undefined && c.tat_hours !== null && c.tat_hours !== '') ? `${num(c.tat_hours).toFixed(1)} hrs` : '—' },
-    { sNo: '14', name: 'No. of Quality Issues Received', section: 'tickets', calc: c => fmtVal(c.quality_issues_received) },
-    { sNo: '15', name: 'No. of Quality Issues Closed', section: 'tickets', calc: c => fmtVal(c.quality_issues_closed) },
-    { sNo: '16', name: 'No. of Quality Issues Open', section: 'tickets', calc: c => fmtVal(c.quality_issues_open) },
-    { sNo: '17', name: 'No. of Incidents', section: 'tickets', calc: c => fmtVal(c.incidents_count) },
+    // 4. Total Occupied
+    if (k === 'total_occupied') return fmtVal(c.total_occupied);
 
-    // 3. Power Consumption (EB + DG)
-    { sNo: '18', name: 'Power Consumption Units (EB + DG)', section: 'power', calc: c => fmtVal(c.power_units, 'kWh'), unit: 'kWh' },
-    { sNo: '19', name: 'Power Consumption Cost (EB + DG)', section: 'power', isCurrency: true, calc: c => fmtCost(c.power_cost), highlight: true, highlightBg: '#fff7ed', highlightColor: '#9a3412' },
-    { sNo: '20', name: 'Power Cost per Sq.Ft', section: 'power', calc: c => (c.power_cost_sqft !== undefined && c.power_cost_sqft !== null && c.power_cost_sqft !== '') ? `₹${num(c.power_cost_sqft).toFixed(2)} / sq.ft` : '—' },
-    { sNo: '21', name: 'Units per Occupant per Month', section: 'power', calc: c => (c.units_per_occupant !== undefined && c.units_per_occupant !== null && c.units_per_occupant !== '') ? `${num(c.units_per_occupant).toFixed(1)} kWh/occ` : '—' },
-    { sNo: '22', name: 'Power Cost per Occupant per Month', section: 'power', calc: c => (c.power_cost_occupant !== undefined && c.power_cost_occupant !== null && c.power_cost_occupant !== '') ? `₹${Math.round(num(c.power_cost_occupant)).toLocaleString()} / occ` : '—' },
+    // 5. Vacancy Breakdown
+    if (k === 'vacant') return fmtVal(c.vacant_total);
+    if (k === 'vacant_college') return fmtVal(c.vacant_college);
+    if (k === 'vacant_sports') return fmtVal(c.vacant_sports_total);
+    if (k === 'vacant_school') return fmtVal(c.vacant_school_total);
 
-    // 4. Water Supply, RO & Tankers
-    { sNo: '23', name: 'Water Purchase Expenses (Tanker Refill)', section: 'water', isCurrency: true, calc: c => fmtCost(c.water_purchase_cost) },
-    { sNo: '24', name: 'Normal Water Consumption Litres', section: 'water', calc: c => (c.normal_water_litres !== undefined && c.normal_water_litres !== null && c.normal_water_litres !== '') ? `${(num(c.normal_water_litres) / 100000).toFixed(2)} Lakh L` : '—' },
-    { sNo: '25', name: 'Normal Water Cost', section: 'water', isCurrency: true, calc: c => fmtCost(c.normal_water_cost) },
-    { sNo: '26', name: 'Drinking RO Purified Water Litres', section: 'water', calc: c => fmtVal(c.drinking_water_litres, 'L') },
-    { sNo: '27', name: 'Drinking RO Purified Water Cost', section: 'water', isCurrency: true, calc: c => fmtCost(c.drinking_water_cost) },
-    { sNo: '28', name: 'Normal Water Ltr / Student / Day', section: 'water', calc: c => (c.normal_water_ltr_day !== undefined && c.normal_water_ltr_day !== null && c.normal_water_ltr_day !== '') ? `${num(c.normal_water_ltr_day).toFixed(1)} L/day` : '—' },
-    { sNo: '29', name: 'Normal Water Cost / Student / Day', section: 'water', calc: c => (c.normal_water_cost_day !== undefined && c.normal_water_cost_day !== null && c.normal_water_cost_day !== '') ? `₹${num(c.normal_water_cost_day).toFixed(2)}/day` : '—' },
+    // 6. Percentages & Turnout
+    if (k === 'occupied_pct') return fmtPercent(c.occupied_pct);
+    if (k === 'vacant_pct') return fmtPercent(c.vacant_pct);
+    if (k === 'students_vacated') return fmtVal(c.students_vacated);
 
-    // 5. Operating Budget & Expenses Occurred
-    { sNo: '30', name: 'Routine Facilities Maintenance Expenses', section: 'budget', isCurrency: true, calc: c => fmtCost(c.maintenance_expenses) },
-    { sNo: '31', name: 'Expenses Occurred (Total Monthly Spend)', section: 'budget', isCurrency: true, calc: c => fmtCost(c.expenses_occurred), highlight: true, highlightBg: '#fed7aa', highlightColor: '#7c2d12' },
-    { sNo: '32', name: 'Approved Operating Budget', section: 'budget', isCurrency: true, calc: c => fmtCost(c.approved_budget) },
-    { sNo: '33', name: 'Cumulative Budget Spent (till now)', section: 'budget', isCurrency: true, calc: c => fmtCost(c.cumulative_budget_spent) },
-    { sNo: '34', name: 'Balance Budget Remaining', section: 'budget', isCurrency: true, calc: c => fmtCost(c.balance), highlight: true, highlightBg: '#86efac', highlightColor: '#14532d' },
+    // 7. Service Tickets & Quality
+    if (k === 'tickets_received') return fmtVal(c.tickets_received);
+    if (k === 'tickets_closed') return fmtVal(c.tickets_closed);
+    if (k === 'tickets_open') return fmtVal(c.tickets_open);
+    if (k === 'total_hours_close') return fmtVal(c.total_hours_close);
+    if (k === 'tat_hours') return (c.tat_hours !== undefined && c.tat_hours !== null && c.tat_hours !== '') ? `${num(c.tat_hours).toFixed(1)} hrs` : '—';
+    if (k === 'quality_issues_received') return fmtVal(c.quality_issues_received);
+    if (k === 'quality_issues_closed') return fmtVal(c.quality_issues_closed);
+    if (k === 'quality_issues_open') return fmtVal(c.quality_issues_open);
+    if (k === 'incidents_count') return fmtVal(c.incidents_count);
 
-    // 6. Per Student Run-Rate & Area
-    { sNo: '35', name: 'Total Hostel Area (Sq Feet)', section: 'analytics', calc: c => fmtVal(c.sq_feet, 'sq.ft') },
-    { sNo: '36', name: 'Sq Feet per Occupant', section: 'analytics', calc: c => (c.sq_feet_per_occupant !== undefined && c.sq_feet_per_occupant !== null && c.sq_feet_per_occupant !== '') ? `${num(c.sq_feet_per_occupant).toFixed(1)} sq.ft/occ` : '—' },
-    { sNo: '37', name: 'Per Student Cost per Month', section: 'analytics', isCurrency: true, calc: c => (c.per_student_cost_month !== undefined && c.per_student_cost_month !== null && c.per_student_cost_month !== '') ? `₹ ${Math.round(num(c.per_student_cost_month)).toLocaleString()} / mo` : '—', highlight: true, highlightBg: '#fef08a', highlightColor: '#713f12' },
-    { sNo: '38', name: 'Per Student Cost per Day', section: 'analytics', calc: c => (c.per_student_cost_day !== undefined && c.per_student_cost_day !== null && c.per_student_cost_day !== '') ? `₹ ${num(c.per_student_cost_day).toFixed(2)} / day` : '—' }
-  ], []);
+    // 8. Power Consumption
+    if (k === 'power_consumption') return fmtVal(c.power_units, 'kWh');
+    if (k === 'power_units') return fmtVal(c.power_units, 'kWh');
+    if (k === 'power_cost') return fmtCost(c.power_cost);
+    if (k === 'power_cost_sqft') return (c.power_cost_sqft !== undefined && c.power_cost_sqft !== null && c.power_cost_sqft !== '') ? `₹${num(c.power_cost_sqft).toFixed(2)} / sq.ft` : '—';
+    if (k === 'units_per_occupant') return (c.units_per_occupant !== undefined && c.units_per_occupant !== null && c.units_per_occupant !== '') ? `${num(c.units_per_occupant).toFixed(1)} kWh/occ` : '—';
+    if (k === 'power_cost_occupant') return (c.power_cost_occupant !== undefined && c.power_cost_occupant !== null && c.power_cost_occupant !== '') ? `₹${Math.round(num(c.power_cost_occupant)).toLocaleString()} / occ` : '—';
+
+    // 9. Water Supply & Drinking RO
+    if (k === 'water_purchase_cost') return fmtCost(c.water_purchase_cost);
+    if (k === 'normal_water_litres') return (c.normal_water_litres !== undefined && c.normal_water_litres !== null && c.normal_water_litres !== '') ? `${(num(c.normal_water_litres) / 100000).toFixed(2)} Lakh L` : '—';
+    if (k === 'normal_water_cost') return fmtCost(c.normal_water_cost);
+    if (k === 'normal_water_ltr_day') return (c.normal_water_ltr_day !== undefined && c.normal_water_ltr_day !== null && c.normal_water_ltr_day !== '') ? `${num(c.normal_water_ltr_day).toFixed(1)} L/day` : '—';
+    if (k === 'normal_water_cost_day') return (c.normal_water_cost_day !== undefined && c.normal_water_cost_day !== null && c.normal_water_cost_day !== '') ? `₹${num(c.normal_water_cost_day).toFixed(2)}/day` : '—';
+    if (k === 'drinking_water_litres') return fmtVal(c.drinking_water_litres, 'L');
+    if (k === 'drinking_water_cost') return fmtCost(c.drinking_water_cost);
+    if (k === 'drinking_water_ltr_day') return (c.drinking_water_ltr_day !== undefined && c.drinking_water_ltr_day !== null && c.drinking_water_ltr_day !== '') ? `${num(c.drinking_water_ltr_day).toFixed(1)} L/day` : '—';
+    if (k === 'drinking_water_cost_day') return (c.drinking_water_cost_day !== undefined && c.drinking_water_cost_day !== null && c.drinking_water_cost_day !== '') ? `₹${num(c.drinking_water_cost_day).toFixed(2)}/day` : '—';
+    if (k === 'normal_water_student_month') return fmtCost(c.normal_water_cost);
+
+    // 10. Financial Budget & Operational Expenses
+    if (k === 'maintenance_expenses') return fmtCost(c.maintenance_expenses);
+    if (k === 'expenses_occurred') return fmtCost(c.expenses_occurred);
+    if (k === 'approved_budget') return fmtCost(c.approved_budget);
+    if (k === 'cumulative_budget_spent') return fmtCost(c.cumulative_budget_spent);
+    if (k === 'balance') return fmtCost(c.balance);
+
+    // 11. Per Student Cost & Area
+    if (k === 'sq_feet') return fmtVal(c.sq_feet, 'sq.ft');
+    if (k === 'sq_feet_per_occupant') return (c.sq_feet_per_occupant !== undefined && c.sq_feet_per_occupant !== null && c.sq_feet_per_occupant !== '') ? `${num(c.sq_feet_per_occupant).toFixed(1)} sq.ft/occ` : '—';
+    if (k === 'per_student_cost_month') return (c.per_student_cost_month !== undefined && c.per_student_cost_month !== null && c.per_student_cost_month !== '') ? `₹ ${Math.round(num(c.per_student_cost_month)).toLocaleString()} / mo` : '—';
+    if (k === 'per_student_cost_day') return (c.per_student_cost_day !== undefined && c.per_student_cost_day !== null && c.per_student_cost_day !== '') ? `₹ ${num(c.per_student_cost_day).toFixed(2)} / day` : '—';
+
+    // 12. Dynamic custom parameters added in Master Data
+    const rawVal = c[k] !== undefined ? c[k] : (c.custom_metrics && c.custom_metrics[k]);
+    if (rawVal === undefined || rawVal === null || rawVal === '') return '—';
+    if (param.input_type === 'cost') return fmtCost(rawVal);
+    if (param.input_type === 'percentage') return fmtPercent(rawVal);
+    return fmtVal(rawVal, param.unit);
+  };
+
+  // Canonical fallback parameters if Master Data API is still connecting
+  const CANONICAL_HOSTEL_FALLBACK = [
+    { s_no: '1', param_key: 'bed_capacity', param_name: 'Bed Capacity', section: 'Occupancy & Census', input_type: 'boys_girls_total', formula: 'Boys + Girls' },
+    { s_no: '2', param_key: 'students_count', param_name: 'No. of students', section: 'Occupancy & Census', input_type: 'boys_girls_total', formula: 'Boys + Girls' },
+    { s_no: '3', param_key: 'staff_count', param_name: 'No. of staffs', section: 'Occupancy & Census', input_type: 'boys_girls_total', formula: 'Boys + Girls' },
+    { s_no: '4', param_key: 'total_occupied', param_name: 'Total Occupied', section: 'Occupancy & Census', input_type: 'boys_girls_total', formula: 'Students + Staffs' },
+    { s_no: '5', param_key: 'vacant', param_name: 'Vacant', section: 'Occupancy & Census', input_type: 'boys_girls_total', formula: 'Bed Capacity - Total Occupied' },
+    { s_no: '6', param_key: 'vacant_college', param_name: 'Vacant for college students', section: 'Occupancy & Census', input_type: 'boys_girls_total' },
+    { s_no: '7', param_key: 'vacant_sports', param_name: 'Vacant for college sports students (KPM hostel)', section: 'Occupancy & Census', input_type: 'boys_girls_total' },
+    { s_no: '8', param_key: 'vacant_school', param_name: 'Vacant for school students', section: 'Occupancy & Census', input_type: 'boys_girls_total' },
+    { s_no: '9', param_key: 'occupied_pct', param_name: 'Occupied %', section: 'Occupancy & Census', input_type: 'percentage', formula: '(Total Occupied / Bed Capacity) * 100' },
+    { s_no: '10', param_key: 'vacant_pct', param_name: 'Vacant %', section: 'Occupancy & Census', input_type: 'percentage', formula: '(Vacant / Bed Capacity) * 100' },
+    { s_no: '11', param_key: 'students_vacated', param_name: 'Students Vacated', section: 'Occupancy & Census', input_type: 'single_count' },
+    { s_no: '12', param_key: 'tickets_received', param_name: 'No. of Maintenance Tickets Received', section: 'Maintenance & Quality Tickets', input_type: 'single_count' },
+    { s_no: '13', param_key: 'tickets_closed', param_name: 'No. of Maintenance Tickets closed', section: 'Maintenance & Quality Tickets', input_type: 'single_count' },
+    { s_no: '14', param_key: 'tickets_open', param_name: 'No. of Maintenance Tickets in Open', section: 'Maintenance & Quality Tickets', input_type: 'single_count', formula: 'Tickets Received - Tickets Closed' },
+    { s_no: '15', param_key: 'total_hours_close', param_name: 'Total Hours taken to close the tickets', section: 'Maintenance & Quality Tickets', input_type: 'single_number' },
+    { s_no: '16', param_key: 'tat_hours', param_name: 'TAT (Turnaround Time)Hours', section: 'Maintenance & Quality Tickets', input_type: 'single_number', formula: 'Total Hours / Tickets Closed' },
+    { s_no: '17', param_key: 'quality_issues_received', param_name: 'No. of Quality issues Received', section: 'Maintenance & Quality Tickets', input_type: 'single_count' },
+    { s_no: '18', param_key: 'quality_issues_closed', param_name: 'No. of Quality issues Closed', section: 'Maintenance & Quality Tickets', input_type: 'single_count' },
+    { s_no: '19', param_key: 'quality_issues_open', param_name: 'No. of Quality issues in Open', section: 'Maintenance & Quality Tickets', input_type: 'single_count', formula: 'Received - Closed' },
+    { s_no: '20', param_key: 'incidents_count', param_name: 'No. of Incidents', section: 'Maintenance & Quality Tickets', input_type: 'single_count' },
+    { s_no: '21', param_key: 'power_consumption', param_name: 'Power Consumption', section: 'Utilities & Operational Expenses', input_type: 'units_and_cost' },
+    { s_no: '22', param_key: 'water_purchase_cost', param_name: 'Water Purchase Expenses', section: 'Utilities & Operational Expenses', input_type: 'cost' },
+    { s_no: '23', param_key: 'maintenance_expenses', param_name: 'Maintenance Expenses', section: 'Utilities & Operational Expenses', input_type: 'cost' },
+    { s_no: '24', param_key: 'expenses_occurred', param_name: 'Expenses occurred (Total Spend)', section: 'Utilities & Operational Expenses', input_type: 'cost', formula: 'Sum of Monthly Operational Expenses' },
+    { s_no: '25', param_key: 'approved_budget', param_name: 'Approved Budget', section: 'Budget & Financial Balance', input_type: 'cost' },
+    { s_no: '26', param_key: 'cumulative_budget_spent', param_name: 'Cumulative Budget spent (Actual expenses) till now', section: 'Budget & Financial Balance', input_type: 'cost' },
+    { s_no: '27', param_key: 'balance', param_name: 'Balance', section: 'Budget & Financial Balance', input_type: 'cost', formula: 'Approved Budget - Cumulative Budget Spent' },
+    { s_no: '28', param_key: 'students_kpi', param_name: 'Number of students', section: 'Per Student & Area Metrics', input_type: 'single_count' },
+    { s_no: '29', param_key: 'per_student_cost_month', param_name: 'Per student cost per month', section: 'Per Student & Area Metrics', input_type: 'cost', formula: 'Expenses occurred / Number of students' },
+    { s_no: '30', param_key: 'per_student_cost_day', param_name: 'Per student cost per day', section: 'Per Student & Area Metrics', input_type: 'cost', formula: 'Per student cost per month / 30' },
+    { s_no: '31', param_key: 'sq_feet', param_name: 'Sq feet (Hostel Area)', section: 'Per Student & Area Metrics', input_type: 'single_number' },
+    { s_no: '32', param_key: 'sq_feet_per_occupant', param_name: 'Sq feet per occupant in hostel', section: 'Per Student & Area Metrics', input_type: 'single_number', formula: 'Sq feet / Total Occupied' },
+    { s_no: '33', param_key: 'normal_water_student_month', param_name: 'Normal water per student per month (Ltrs & cost)', section: 'Per Student & Area Metrics', input_type: 'units_and_cost' },
+    { s_no: '34', param_key: 'power_cost_sqft', param_name: 'Power cost per sq feet', section: 'Water & Utilities Deep Dive', input_type: 'cost', formula: 'Power cost / Sq feet' },
+    { s_no: '35', param_key: 'units_per_occupant', param_name: 'Units per occupant per month - Hostel', section: 'Water & Utilities Deep Dive', input_type: 'single_number', formula: 'Power units / Total Occupied' },
+    { s_no: '36', param_key: 'power_cost_occupant', param_name: 'Power cost Per occupant per month - Hostel', section: 'Water & Utilities Deep Dive', input_type: 'cost', formula: 'Power cost / Total Occupied' },
+    { s_no: '37', param_key: 'normal_water_litres', param_name: 'Normal Water Consumption Ltr Hostels', section: 'Water & Utilities Deep Dive', input_type: 'single_number' },
+    { s_no: '38', param_key: 'normal_water_cost', param_name: 'Normal Water Consumption Cost Hostels', section: 'Water & Utilities Deep Dive', input_type: 'cost' },
+    { s_no: '39', param_key: 'normal_water_ltr_day', param_name: 'Normal water Ltr per student per day - Hostels', section: 'Water & Utilities Deep Dive', input_type: 'single_number', formula: 'Normal Water Ltr / Total Students / 30' },
+    { s_no: '40', param_key: 'normal_water_cost_day', param_name: 'Normal Water cost Per student per day Hostels', section: 'Water & Utilities Deep Dive', input_type: 'cost', formula: 'Normal Water Cost / Total Students / 30' },
+    { s_no: '41', param_key: 'drinking_water_litres', param_name: 'Drinking Water Consumption Litres Hostels', section: 'Water & Utilities Deep Dive', input_type: 'single_number' },
+    { s_no: '42', param_key: 'drinking_water_cost', param_name: 'Drinking Water Consumption Cost Hostels', section: 'Water & Utilities Deep Dive', input_type: 'cost' },
+    { s_no: '43', param_key: 'drinking_water_ltr_day', param_name: 'Drinking water Litres per student per day- Hostels', section: 'Water & Utilities Deep Dive', input_type: 'single_number', formula: 'Drinking Water Ltr / Total Students / 30' },
+    { s_no: '44', param_key: 'drinking_water_cost_day', param_name: 'Drinking Water cost Per student per day Hostels', section: 'Water & Utilities Deep Dive', input_type: 'cost', formula: 'Drinking Water Cost / Total Students / 30' }
+  ];
+
+  // Dynamic parameters built directly from live Master Data (updates automatically when added or removed)
+  const PARAMETERS = useMemo(() => {
+    const sourceList = (masterParams && masterParams.length > 0) ? masterParams : CANONICAL_HOSTEL_FALLBACK;
+    
+    return sourceList.map((p, idx) => {
+      const sNo = p.s_no !== undefined && p.s_no !== null && p.s_no !== '' ? String(p.s_no) : String(idx + 1);
+      const name = p.param_name;
+      const sec = p.section || 'General Operations';
+      const isHeaderVal = p.param_key === 'bed_capacity' || p.param_key === 'total_occupied' || p.param_key === 'balance' || p.param_key === 'expenses_occurred';
+      const highlight = isHeaderVal || p.param_key === 'occupied_pct';
+      const highlightBg = (p.param_key === 'total_occupied' || p.param_key === 'balance') ? '#f0fdf4' : (p.param_key === 'expenses_occurred') ? '#fed7aa' : undefined;
+      const highlightColor = (p.param_key === 'total_occupied' || p.param_key === 'balance') ? '#166534' : (p.param_key === 'expenses_occurred') ? '#7c2d12' : undefined;
+
+      return {
+        id: p.id || idx,
+        sNo,
+        name,
+        section: sec,
+        unit: p.unit || '',
+        formula: p.formula,
+        highlight,
+        highlightBg,
+        highlightColor,
+        isHeaderVal,
+        calc: (c) => getHostelParamValue(p, c)
+      };
+    });
+  }, [masterParams]);
+
+  // Extract unique sections dynamically from the active parameters
+  const dynamicSections = useMemo(() => {
+    const list = [];
+    const seen = new Set();
+    PARAMETERS.forEach(p => {
+      if (p.section && !seen.has(p.section)) {
+        seen.add(p.section);
+        list.push(p.section);
+      }
+    });
+    return list;
+  }, [PARAMETERS]);
 
   // Filtered parameters by search term and section
   const filteredParameters = useMemo(() => {
@@ -309,8 +441,8 @@ export default function HostelDashboardDataTable({
             }}
           >
             <option value="all">All Sections ({PARAMETERS.length} Rows)</option>
-            {HOSTEL_SECTIONS.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+            {dynamicSections.map(secName => (
+              <option key={secName} value={secName}>{secName}</option>
             ))}
           </select>
 

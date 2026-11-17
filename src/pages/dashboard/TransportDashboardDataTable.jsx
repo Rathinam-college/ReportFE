@@ -18,6 +18,21 @@ export default function TransportDashboardDataTable({
   const [internalFullScreen, setInternalFullScreen] = useState(false);
   const [localMatrix, setLocalMatrix] = useState(null);
   const [loadingLocal, setLoadingLocal] = useState(false);
+  const [masterParams, setMasterParams] = useState([]);
+
+  // Fetch live transport parameters from Master Data API
+  useEffect(() => {
+    fetch('/api/transport/parameters')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setMasterParams(data);
+        }
+      })
+      .catch(err => {
+        console.error('[TransportDashboardDataTable] Error fetching parameters:', err);
+      });
+  }, []);
 
   const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
   const containerRef = useRef(null);
@@ -114,11 +129,17 @@ export default function TransportDashboardDataTable({
     return { bg: '#ffffff', isBold: false };
   };
 
+  const activeParamsList = useMemo(() => {
+    return (masterParams && masterParams.length > 0) ? masterParams : CANONICAL_TRANSPORT_PARAMETERS;
+  }, [masterParams]);
+
   const filteredParams = useMemo(() => {
-    return CANONICAL_TRANSPORT_PARAMETERS.filter(p => {
-      return !searchTerm || p.param_name.toLowerCase().includes(searchTerm.toLowerCase()) || String(p.s_no).includes(searchTerm);
+    return activeParamsList.filter(p => {
+      const name = p.param_name || '';
+      const sno = String(p.s_no || '');
+      return !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase()) || sno.includes(searchTerm);
     });
-  }, [searchTerm]);
+  }, [activeParamsList, searchTerm]);
 
   return (
     <div 
