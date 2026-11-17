@@ -63,7 +63,7 @@ export default function ModulesGrid({
               {selectedModule === 'food' ? activePeriodTotal : '4 Active Cycles'}
             </div>
             <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
-              Mess & dining halls • 2,690 Enrolled diners • 72,400 meals/mo
+              Mess & dining halls • Food materials, labour & operations
             </div>
 
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: '5px', height: '24px', marginTop: '12px' }}>

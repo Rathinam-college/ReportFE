@@ -283,25 +283,12 @@ export default function FoodSpreadsheetEntry({
         entriesByPeriod[p.id] = pEntries;
       });
 
-      // 5. Prepare census by period
-      const censusByPeriod = {};
-      periods.forEach(p => {
-        const pStr = String(p.id);
-        censusByPeriod[p.id] = {
-          students: parseInt(censusDraft?.students?.[pStr], 10) || 0,
-          staff: parseInt(censusDraft?.staff?.[pStr], 10) || 0,
-          others: parseInt(censusDraft?.others?.[pStr], 10) || 0,
-          production: parseInt(censusDraft?.production?.[pStr], 10) || 0
-        };
-      });
-
       const payload = {
         module: 'food',
         updated_cost_heads: updatedCostHeads,
         updated_categories: updatedCategories,
         new_cost_heads: newCostHeads,
-        entries_by_period: entriesByPeriod,
-        census_by_period: censusByPeriod
+        entries_by_period: entriesByPeriod
       };
 
       const res = await fetch('/api/workstation/spreadsheet-save', {
@@ -537,22 +524,6 @@ export default function FoodSpreadsheetEntry({
             }}
           >
             Focused Month ({activePeriodObj?.period_label})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('census')}
-            style={{
-              padding: '4px 12px',
-              borderRadius: '6px',
-              fontSize: '11.5px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeSubTab === 'census' ? '#00a2e8' : 'transparent',
-              color: activeSubTab === 'census' ? '#ffffff' : '#64748b'
-            }}
-          >
-            Diner Census & Production
           </button>
         </div>
       </div>
@@ -1093,126 +1064,6 @@ export default function FoodSpreadsheetEntry({
               </tr>
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* 6. DINER CENSUS & PRODUCTION FORMULAS SUB-TAB */}
-      {activeSubTab === 'census' && (
-        <div style={{ padding: '16px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Users size={16} color="#00a2e8" />
-              <span>Campus Diner Census, Production Volume & Unit Metrics ({activePeriodObj?.period_label})</span>
-            </h3>
-            <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-              Auto-calculates Per Diner / Meal economics dynamically
-            </span>
-          </div>
-
-          <div style={{ overflowX: 'auto', border: '1px solid #cbd5e1', borderRadius: '8px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: '800' }}>
-                  <th style={{ padding: '10px 18px', textAlign: 'left', width: '28%' }}>Census Parameter</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'center', width: '22%', backgroundColor: '#f0f9ff', color: '#0284c7' }}>
-                    {activePeriodObj?.period_label} • Input Value
-                  </th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', width: '30%' }}>Specification / Formula</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'right', width: '20%' }}>Unit Run-Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Students count */}
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 18px', fontWeight: '700', color: '#0f172a' }}>Students count</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', backgroundColor: '#f0f9ff' }}>
-                    <input
-                      type="number"
-                      value={censusDraft?.students?.[currStr] ?? 2450}
-                      onChange={(e) => handleCensusChange?.('students', e.target.value)}
-                      disabled={isClosed}
-                      style={{ width: '130px', textAlign: 'right', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                    />
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#64748b', fontSize: '12px' }}>Enrolled residential student diners</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>Primary headcount</td>
-                </tr>
-
-                {/* Staff count */}
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 18px', fontWeight: '700', color: '#0f172a' }}>Staff count</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', backgroundColor: '#f0f9ff' }}>
-                    <input
-                      type="number"
-                      value={censusDraft?.staff?.[currStr] ?? 180}
-                      onChange={(e) => handleCensusChange?.('staff', e.target.value)}
-                      disabled={isClosed}
-                      style={{ width: '130px', textAlign: 'right', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                    />
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#64748b', fontSize: '12px' }}>Faculty and institutional staff</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>Staff dining</td>
-                </tr>
-
-                {/* Others */}
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 18px', fontWeight: '700', color: '#0f172a' }}>Others</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', backgroundColor: '#f0f9ff' }}>
-                    <input
-                      type="number"
-                      value={censusDraft?.others?.[currStr] ?? 60}
-                      onChange={(e) => handleCensusChange?.('others', e.target.value)}
-                      disabled={isClosed}
-                      style={{ width: '130px', textAlign: 'right', padding: '5px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '700' }}
-                    />
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#64748b', fontSize: '12px' }}>Guests, events & VIP diners</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>Event variance</td>
-                </tr>
-
-                {/* Total Persons */}
-                <tr style={{ backgroundColor: '#ecfdf5', borderTop: '2px solid #a7f3d0', borderBottom: '2px solid #a7f3d0', fontWeight: '800' }}>
-                  <td style={{ padding: '10px 18px', color: '#065f46', fontSize: '13.5px' }}>Total Persons Count</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center', color: '#047857', fontSize: '14px' }}>
-                    {(parseInt(censusDraft?.students?.[currStr] ?? 2450, 10) + 
-                      parseInt(censusDraft?.staff?.[currStr] ?? 180, 10) + 
-                      parseInt(censusDraft?.others?.[currStr] ?? 60, 10)).toLocaleString()} Diners
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#047857', fontFamily: 'monospace' }}>=Students + Staff + Others</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#047857' }}>100% Volume</td>
-                </tr>
-
-                {/* Production meals */}
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 18px', fontWeight: '700', color: '#0f172a' }}>Monthly Meal Production (Meals)</td>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', backgroundColor: '#f0f9ff' }}>
-                    <input
-                      type="number"
-                      value={censusDraft?.production?.[currStr] ?? 85000}
-                      onChange={(e) => handleCensusChange?.('production', e.target.value)}
-                      disabled={isClosed}
-                      style={{ width: '130px', textAlign: 'right', padding: '5px 8px', borderRadius: '4px', border: '1.5px solid #00a2e8', fontWeight: '800', color: '#0284c7' }}
-                    />
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#64748b', fontSize: '12px' }}>Total kitchen plates & packed meals</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>Daily 3 meals * 30 days</td>
-                </tr>
-
-                {/* Cost Per Meal Ratio */}
-                <tr>
-                  <td style={{ padding: '10px 18px', fontWeight: '800', color: '#4f46e5' }}>Cost Per Meal Produced</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: '800', color: '#4f46e5', fontSize: '14px' }}>
-                    ₹{(
-                      (grandTotalsByPeriod.totals[editingPeriodId] || 1) / 
-                      (parseInt(censusDraft?.production?.[currStr] ?? 85000, 10) || 1)
-                    ).toFixed(2)} / Meal
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#64748b', fontFamily: 'monospace' }}>=Total Food Expenses / Meal Count</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#4f46e5', fontWeight: '700' }}>Efficiency KPI</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 

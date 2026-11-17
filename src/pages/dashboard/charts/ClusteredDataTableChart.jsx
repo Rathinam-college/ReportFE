@@ -65,13 +65,7 @@ export default function ClusteredDataTableChart({
           { key: 'vacant_pct', label: 'Vacant %', type: 'percentage', short: 'Vacant %' }
         ];
       } else if (selectedModule === 'food') {
-        return [
-          { key: 'students', label: 'Active Students', type: 'number', short: 'Students' },
-          { key: 'staff', label: 'Active Staff', type: 'number', short: 'Staff' },
-          { key: 'others', label: 'Guest & Others', type: 'number', short: 'Others' },
-          { key: 'total_persons', label: 'Total Diners', type: 'number', short: 'Diners' },
-          { key: 'production', label: 'Monthly Production', type: 'number', short: 'Meals' }
-        ];
+        return [];
       } else {
         // Transport fleet census
         return [
@@ -350,63 +344,64 @@ export default function ClusteredDataTableChart({
         {/* Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           
-          {/* Module-Specific Data Switcher (Expenses vs Census) */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            backgroundColor: '#f1f5f9',
-            padding: '3px',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0'
-          }}>
-            <button
-              type="button"
-              onClick={() => setDataViewMode('categories')}
-              style={{
-                padding: '5px 12px',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: dataViewMode === 'categories' ? '700' : '600',
-                backgroundColor: dataViewMode === 'categories' ? '#ffffff' : 'transparent',
-                color: dataViewMode === 'categories' ? '#1e293b' : '#64748b',
-                border: 'none',
-                boxShadow: dataViewMode === 'categories' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.12s ease'
-              }}
-            >
-              <Layers size={13} />
-              <span>Expense Categories</span>
-            </button>
+          {/* Module-Specific Data Switcher (Expenses vs Census for non-food) */}
+          {selectedModule !== 'food' && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: '#f1f5f9',
+              padding: '3px',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <button
+                type="button"
+                onClick={() => setDataViewMode('categories')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11.5px',
+                  fontWeight: dataViewMode === 'categories' ? '700' : '600',
+                  backgroundColor: dataViewMode === 'categories' ? '#ffffff' : 'transparent',
+                  color: dataViewMode === 'categories' ? '#1e293b' : '#64748b',
+                  border: 'none',
+                  boxShadow: dataViewMode === 'categories' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.12s ease'
+                }}
+              >
+                <Layers size={13} />
+                <span>Expense Categories</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setDataViewMode('census')}
-              style={{
-                padding: '5px 12px',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: dataViewMode === 'census' ? '700' : '600',
-                backgroundColor: dataViewMode === 'census' ? '#ffffff' : 'transparent',
-                color: dataViewMode === 'census' ? '#2563eb' : '#64748b',
-                border: 'none',
-                boxShadow: dataViewMode === 'census' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.12s ease'
-              }}
-            >
-              {selectedModule === 'hostel' && <Building2 size={13} />}
-              {selectedModule === 'food' && <Utensils size={13} />}
-              {selectedModule === 'transport' && <Bus size={13} />}
-              <span>{selectedModule === 'hostel' ? 'Hostel Census (Excel Model)' : selectedModule === 'food' ? 'Dining Headcount' : 'Fleet Census'}</span>
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => setDataViewMode('census')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11.5px',
+                  fontWeight: dataViewMode === 'census' ? '700' : '600',
+                  backgroundColor: dataViewMode === 'census' ? '#ffffff' : 'transparent',
+                  color: dataViewMode === 'census' ? '#2563eb' : '#64748b',
+                  border: 'none',
+                  boxShadow: dataViewMode === 'census' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.12s ease'
+                }}
+              >
+                {selectedModule === 'hostel' && <Building2 size={13} />}
+                {selectedModule === 'transport' && <Bus size={13} />}
+                <span>{selectedModule === 'hostel' ? 'Hostel Census (Excel Model)' : 'Fleet Census'}</span>
+              </button>
+            </div>
+          )}
 
           {/* Number Formatting Toggle */}
           {dataViewMode === 'categories' && (

@@ -1312,45 +1312,47 @@ export default function MasterMathTools({
         <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', flex: 1 }}>
           
           {/* HELPER 1: PER DINER PLATE COST */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', backgroundColor: '#f8fafc' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <TrendingUp size={15} color="#4f46e5" />
-              <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a' }}>Per-Diner & Plate Unit Cost</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '8px' }}>
-              <div>
-                <span style={{ fontSize: '10.5px', color: '#64748b' }}>Spend (₹):</span>
-                <input
-                  type="number"
-                  value={dinerSpend}
-                  onChange={(e) => setDinerSpend(e.target.value)}
-                  style={{ width: '100%', padding: '4px 6px', fontSize: '11px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                />
+          {!moduleName.toLowerCase().includes('food') && (
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', backgroundColor: '#f8fafc' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <TrendingUp size={15} color="#4f46e5" />
+                <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a' }}>Per-Diner & Plate Unit Cost</span>
               </div>
-              <div>
-                <span style={{ fontSize: '10.5px', color: '#64748b' }}>Diners:</span>
-                <input
-                  type="number"
-                  value={dinerCount}
-                  onChange={(e) => setDinerCount(e.target.value)}
-                  style={{ width: '100%', padding: '4px 6px', fontSize: '11px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '8px' }}>
+                <div>
+                  <span style={{ fontSize: '10.5px', color: '#64748b' }}>Spend (₹):</span>
+                  <input
+                    type="number"
+                    value={dinerSpend}
+                    onChange={(e) => setDinerSpend(e.target.value)}
+                    style={{ width: '100%', padding: '4px 6px', fontSize: '11px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+                <div>
+                  <span style={{ fontSize: '10.5px', color: '#64748b' }}>Diners:</span>
+                  <input
+                    type="number"
+                    value={dinerCount}
+                    onChange={(e) => setDinerCount(e.target.value)}
+                    style={{ width: '100%', padding: '4px 6px', fontSize: '11px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+                <div>
+                  <span style={{ fontSize: '10.5px', color: '#64748b' }}>Days:</span>
+                  <input
+                    type="number"
+                    value={dinerDays}
+                    onChange={(e) => setDinerDays(e.target.value)}
+                    style={{ width: '100%', padding: '4px 6px', fontSize: '11px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
               </div>
-              <div>
-                <span style={{ fontSize: '10.5px', color: '#64748b' }}>Days:</span>
-                <input
-                  type="number"
-                  value={dinerDays}
-                  onChange={(e) => setDinerDays(e.target.value)}
-                  style={{ width: '100%', padding: '4px 6px', fontSize: '11px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                />
+              <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#ffffff', padding: '6px 10px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '11.5px', color: '#475569' }}>Per Diner/Month: <strong>₹{totalPerDinerMonth}</strong></span>
+                <span style={{ fontSize: '11.5px', color: '#4f46e5' }}>Per Diner/Day: <strong>₹{totalPerPlateDay}</strong></span>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#ffffff', padding: '6px 10px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '11.5px', color: '#475569' }}>Per Diner/Month: <strong>₹{totalPerDinerMonth}</strong></span>
-              <span style={{ fontSize: '11.5px', color: '#4f46e5' }}>Per Diner/Day: <strong>₹{totalPerPlateDay}</strong></span>
-            </div>
-          </div>
+          )}
 
           {/* HELPER 2: FLEET FUEL MILEAGE & PER KM */}
           <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', backgroundColor: '#f8fafc' }}>
