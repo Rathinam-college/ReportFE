@@ -138,12 +138,13 @@ export default function DashboardPage({
 
   // Real category breakdown matching Hostel Data Entry exactly (sums to expenses_occurred)
   const hostelCategoryItems = useMemo(() => {
-    if (currentModule !== 'hostel') return [];
-    const exp = num(activeHostelCensus?.expenses_occurred, 9349172);
-    const pow = num(activeHostelCensus?.power_cost, 1469211);
-    const wat = num(activeHostelCensus?.water_purchase_cost, 248765) + num(activeHostelCensus?.normal_water_cost, 820200) + num(activeHostelCensus?.drinking_water_cost, 23200);
-    const maint = num(activeHostelCensus?.maintenance_expenses, 119394);
+    if (currentModule !== 'hostel' || !activeHostelCensus) return [];
+    const exp = num(activeHostelCensus?.expenses_occurred, 0);
+    const pow = num(activeHostelCensus?.power_cost, 0);
+    const wat = num(activeHostelCensus?.water_purchase_cost, 0) + num(activeHostelCensus?.normal_water_cost, 0) + num(activeHostelCensus?.drinking_water_cost, 0);
+    const maint = num(activeHostelCensus?.maintenance_expenses, 0);
     const ops = Math.max(0, exp - (pow + wat + maint));
+    if (exp === 0 && pow === 0 && wat === 0 && maint === 0) return [];
     return [
       { id: 1, name: 'Hostel Resident Facility Operations', value: ops, color: '#4f46e5' },
       { id: 2, name: 'Power consumption (EB + DG)', value: pow, color: '#f59e0b' },

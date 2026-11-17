@@ -67,26 +67,28 @@ export default function TransportDashboardDataTable({
     return isNaN(n) ? fb : n;
   };
 
-  // Helper to compute branch metrics
+  // Helper to compute branch metrics (strictly from live database)
   const getParamValue = (branchId, periodIdStr, paramKey) => {
     if (branchId === 'all') {
       const realBranches = ['Common', 'RPS', 'KPM', 'University'];
-      if (paramKey === 'vehicles_count') return '64 fleet';
       let tot = 0;
+      let hasAny = false;
       realBranches.forEach(b => {
         const d = computedMatrix?.transport_census_by_branch?.[b]?.[periodIdStr] || {};
-        tot += num(d[paramKey], 0);
+        if (d[paramKey] !== undefined && d[paramKey] !== null && d[paramKey] !== '') {
+          tot += num(d[paramKey], 0);
+          hasAny = true;
+        }
       });
+      if (!hasAny) return '—';
+      if (paramKey === 'vehicles_count') return `${tot} fleet`;
       return tot;
     }
     const bData = computedMatrix?.transport_census_by_branch?.[branchId]?.[periodIdStr];
-    if (bData && bData[paramKey] !== undefined && bData[paramKey] !== null) {
+    if (bData && bData[paramKey] !== undefined && bData[paramKey] !== null && bData[paramKey] !== '') {
       return bData[paramKey];
     }
-    if (paramKey === 'vehicles_count') {
-      return branchId === 'RPS' ? '18+1' : branchId === 'KPM' ? '12+1' : branchId === 'University' ? '24+2' : '10+1';
-    }
-    return 0;
+    return '—';
   };
 
   const formatVal = (param, val) => {

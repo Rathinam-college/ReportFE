@@ -139,11 +139,11 @@ export default function ClusteredDataTableChart({
           row.rowTotal = totOcc;
         } else if (selectedModule === 'food') {
           const c = computedMatrix?.census || {};
-          const s = Number(c.students?.[pStr] ?? c.students?.[p.id] ?? 2314);
-          const st = Number(c.staff?.[pStr] ?? c.staff?.[p.id] ?? 256);
-          const o = Number(c.others?.[pStr] ?? c.others?.[p.id] ?? 120);
+          const s = Number(c.students?.[pStr] ?? c.students?.[p.id] ?? 0);
+          const st = Number(c.staff?.[pStr] ?? c.staff?.[p.id] ?? 0);
+          const o = Number(c.others?.[pStr] ?? c.others?.[p.id] ?? 0);
           const tot = Number(c.total_persons?.[pStr] ?? c.total_persons?.[p.id] ?? (s + st + o));
-          const prod = Number(c.production?.[pStr] ?? c.production?.[p.id] ?? 85000);
+          const prod = Number(c.production?.[pStr] ?? c.production?.[p.id] ?? 0);
 
           row.values = {
             students: s,
@@ -155,12 +155,12 @@ export default function ClusteredDataTableChart({
           row.rowTotal = tot;
         } else {
           const tc = computedMatrix?.transport_census?.[pStr] || {};
-          const veh = parseInt(String(tc.vehicles_count || '').replace(/[^0-9]/g, ''), 10) || 19;
-          const pax = Number(tc.passengers_count) || 447;
-          const s = Number(tc.students_count) || 390;
-          const st = Number(tc.staff_count) || 57;
-          const kms = Number(tc.actual_kms) || 25777;
-          const fuel = Number(tc.diesel_litres) || 5184.8;
+          const veh = parseInt(String(tc.vehicles_count || '').replace(/[^0-9]/g, ''), 10) || 0;
+          const pax = Number(tc.passengers_count) || 0;
+          const s = Number(tc.students_count) || 0;
+          const st = Number(tc.staff_count) || 0;
+          const kms = Number(tc.actual_kms) || 0;
+          const fuel = Number(tc.diesel_litres) || 0;
 
           row.values = {
             vehicles_count: veh,

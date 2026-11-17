@@ -66,6 +66,27 @@ export default function HostelDashboardDataTable({
     return isNaN(n) ? fb : n;
   };
 
+  const fmtVal = (val, unit = '') => {
+    if (val === undefined || val === null || val === '') return '—';
+    const n = Number(val);
+    if (isNaN(n)) return String(val);
+    return unit ? `${n.toLocaleString()} ${unit}` : n.toLocaleString();
+  };
+
+  const fmtCost = (val) => {
+    if (val === undefined || val === null || val === '') return '—';
+    const n = Number(val);
+    if (isNaN(n)) return '—';
+    return formatINR(n);
+  };
+
+  const fmtPercent = (val) => {
+    if (val === undefined || val === null || val === '') return '—';
+    const n = Number(val);
+    if (isNaN(n)) return '—';
+    return `${n.toFixed(1)}%`;
+  };
+
   // Section definitions matching Hostel Data Entry exactly
   const HOSTEL_SECTIONS = [
     { id: 'occupancy', name: 'Bed Capacity & Occupancy', icon: BedDouble, color: '#059669', bg: '#ecfdf5' },
@@ -76,63 +97,72 @@ export default function HostelDashboardDataTable({
     { id: 'analytics', name: 'Per Student Cost & Area Metrics', icon: Calculator, color: '#ca8a04', bg: '#fef9c3' }
   ];
 
-  // Full 44 Operational Parameters matching Data Entry 100%
+  // Full 44 Operational Parameters matching Data Entry 100% (Strictly shows entered database values)
   const PARAMETERS = useMemo(() => [
     // 1. Bed Capacity & Occupancy
-    { sNo: '1', name: 'Bed Capacity - Boys', section: 'occupancy', calc: c => num(c.bed_capacity_boys, 2223).toLocaleString(), unit: 'Beds' },
-    { sNo: '1', name: 'Bed Capacity - Girls', section: 'occupancy', calc: c => num(c.bed_capacity_girls, 896).toLocaleString(), unit: 'Beds' },
-    { sNo: '1', name: 'Total Bed Capacity', section: 'occupancy', isHeaderVal: true, calc: c => (num(c.bed_capacity_total, 0) || (num(c.bed_capacity_boys, 2223) + num(c.bed_capacity_girls, 896))).toLocaleString(), unit: 'Beds', highlight: true },
-    { sNo: '2', name: 'No. of Students - Boys', section: 'occupancy', calc: c => num(c.students_boys, 2075).toLocaleString(), unit: 'Persons' },
-    { sNo: '2', name: 'No. of Students - Girls', section: 'occupancy', calc: c => num(c.students_girls, 768).toLocaleString(), unit: 'Persons' },
-    { sNo: '2', name: 'Total Students Count', section: 'occupancy', calc: c => (num(c.students_total, 0) || (num(c.students_boys, 2075) + num(c.students_girls, 768))).toLocaleString(), unit: 'Students' },
-    { sNo: '3', name: 'No. of Staffs - Boys', section: 'occupancy', calc: c => num(c.staff_boys, 72).toLocaleString(), unit: 'Staff' },
-    { sNo: '3', name: 'No. of Staffs - Girls', section: 'occupancy', calc: c => num(c.staff_girls, 59).toLocaleString(), unit: 'Staff' },
-    { sNo: '3', name: 'Total Staffs Count', section: 'occupancy', calc: c => (num(c.staff_total, 0) || (num(c.staff_boys, 72) + num(c.staff_girls, 59))).toLocaleString(), unit: 'Staff' },
-    { sNo: '4', name: 'Total Occupied (Students + Staff)', section: 'occupancy', calc: c => num(c.total_occupied, 2974).toLocaleString(), unit: 'Occupants', highlight: true, highlightBg: '#f0fdf4', highlightColor: '#166534' },
-    { sNo: '5', name: 'Vacant Beds Total', section: 'occupancy', calc: c => num(c.vacant_total, 145).toLocaleString(), unit: 'Beds' },
-    { sNo: '6', name: 'Vacant for College Students', section: 'occupancy', calc: c => num(c.vacant_college, 104).toLocaleString(), unit: 'Beds' },
-    { sNo: '7', name: 'Occupied %', section: 'occupancy', isBadge: true, calc: c => `${num(c.occupied_pct, 95.35).toFixed(1)}%`, highlight: true, highlightColor: '#059669' },
-    { sNo: '8', name: 'Vacant %', section: 'occupancy', calc: c => `${num(c.vacant_pct, 4.65).toFixed(1)}%` },
-    { sNo: '9', name: 'Students Vacated', section: 'occupancy', calc: c => num(c.students_vacated, 86).toLocaleString() },
+    { sNo: '1', name: 'Bed Capacity - Boys', section: 'occupancy', calc: c => fmtVal(c.bed_capacity_boys), unit: 'Beds' },
+    { sNo: '1', name: 'Bed Capacity - Girls', section: 'occupancy', calc: c => fmtVal(c.bed_capacity_girls), unit: 'Beds' },
+    { sNo: '1', name: 'Total Bed Capacity', section: 'occupancy', isHeaderVal: true, calc: c => {
+      const tot = c.bed_capacity_total ?? (c.bed_capacity_boys !== undefined && c.bed_capacity_girls !== undefined ? (num(c.bed_capacity_boys) + num(c.bed_capacity_girls)) : undefined);
+      return fmtVal(tot);
+    }, unit: 'Beds', highlight: true },
+    { sNo: '2', name: 'No. of Students - Boys', section: 'occupancy', calc: c => fmtVal(c.students_boys), unit: 'Persons' },
+    { sNo: '2', name: 'No. of Students - Girls', section: 'occupancy', calc: c => fmtVal(c.students_girls), unit: 'Persons' },
+    { sNo: '2', name: 'Total Students Count', section: 'occupancy', calc: c => {
+      const tot = c.students_total ?? (c.students_boys !== undefined && c.students_girls !== undefined ? (num(c.students_boys) + num(c.students_girls)) : undefined);
+      return fmtVal(tot);
+    }, unit: 'Students' },
+    { sNo: '3', name: 'No. of Staffs - Boys', section: 'occupancy', calc: c => fmtVal(c.staff_boys), unit: 'Staff' },
+    { sNo: '3', name: 'No. of Staffs - Girls', section: 'occupancy', calc: c => fmtVal(c.staff_girls), unit: 'Staff' },
+    { sNo: '3', name: 'Total Staffs Count', section: 'occupancy', calc: c => {
+      const tot = c.staff_total ?? (c.staff_boys !== undefined && c.staff_girls !== undefined ? (num(c.staff_boys) + num(c.staff_girls)) : undefined);
+      return fmtVal(tot);
+    }, unit: 'Staff' },
+    { sNo: '4', name: 'Total Occupied (Students + Staff)', section: 'occupancy', calc: c => fmtVal(c.total_occupied), unit: 'Occupants', highlight: true, highlightBg: '#f0fdf4', highlightColor: '#166534' },
+    { sNo: '5', name: 'Vacant Beds Total', section: 'occupancy', calc: c => fmtVal(c.vacant_total), unit: 'Beds' },
+    { sNo: '6', name: 'Vacant for College Students', section: 'occupancy', calc: c => fmtVal(c.vacant_college), unit: 'Beds' },
+    { sNo: '7', name: 'Occupied %', section: 'occupancy', isBadge: true, calc: c => fmtPercent(c.occupied_pct), highlight: true, highlightColor: '#059669' },
+    { sNo: '8', name: 'Vacant %', section: 'occupancy', calc: c => fmtPercent(c.vacant_pct) },
+    { sNo: '9', name: 'Students Vacated', section: 'occupancy', calc: c => fmtVal(c.students_vacated) },
 
     // 2. Maintenance & Service Tickets
-    { sNo: '10', name: 'No. of Maintenance Tickets Received', section: 'tickets', calc: c => num(c.tickets_received, 176).toLocaleString(), unit: 'Tickets' },
-    { sNo: '11', name: 'No. of Maintenance Tickets Closed', section: 'tickets', calc: c => num(c.tickets_closed, 176).toLocaleString(), unit: 'Tickets' },
-    { sNo: '12', name: 'No. of Maintenance Tickets Open', section: 'tickets', calc: c => num(c.tickets_open, 0).toLocaleString(), unit: 'Tickets', highlight: true },
-    { sNo: '13', name: 'TAT (Turnaround Time) Hours', section: 'tickets', calc: c => `${num(c.tat_hours, 62.29).toFixed(1)} hrs` },
-    { sNo: '14', name: 'No. of Quality Issues Received', section: 'tickets', calc: c => num(c.quality_issues_received, 5).toLocaleString() },
-    { sNo: '15', name: 'No. of Quality Issues Closed', section: 'tickets', calc: c => num(c.quality_issues_closed, 3).toLocaleString() },
-    { sNo: '16', name: 'No. of Quality Issues Open', section: 'tickets', calc: c => num(c.quality_issues_open, 2).toLocaleString() },
-    { sNo: '17', name: 'No. of Incidents', section: 'tickets', calc: c => num(c.incidents_count, 0).toLocaleString() },
+    { sNo: '10', name: 'No. of Maintenance Tickets Received', section: 'tickets', calc: c => fmtVal(c.tickets_received), unit: 'Tickets' },
+    { sNo: '11', name: 'No. of Maintenance Tickets Closed', section: 'tickets', calc: c => fmtVal(c.tickets_closed), unit: 'Tickets' },
+    { sNo: '12', name: 'No. of Maintenance Tickets Open', section: 'tickets', calc: c => fmtVal(c.tickets_open), unit: 'Tickets', highlight: true },
+    { sNo: '13', name: 'TAT (Turnaround Time) Hours', section: 'tickets', calc: c => (c.tat_hours !== undefined && c.tat_hours !== null && c.tat_hours !== '') ? `${num(c.tat_hours).toFixed(1)} hrs` : '—' },
+    { sNo: '14', name: 'No. of Quality Issues Received', section: 'tickets', calc: c => fmtVal(c.quality_issues_received) },
+    { sNo: '15', name: 'No. of Quality Issues Closed', section: 'tickets', calc: c => fmtVal(c.quality_issues_closed) },
+    { sNo: '16', name: 'No. of Quality Issues Open', section: 'tickets', calc: c => fmtVal(c.quality_issues_open) },
+    { sNo: '17', name: 'No. of Incidents', section: 'tickets', calc: c => fmtVal(c.incidents_count) },
 
     // 3. Power Consumption (EB + DG)
-    { sNo: '18', name: 'Power Consumption Units (EB + DG)', section: 'power', calc: c => `${num(c.power_units, 105116).toLocaleString()} kWh`, unit: 'kWh' },
-    { sNo: '19', name: 'Power Consumption Cost (EB + DG)', section: 'power', isCurrency: true, calc: c => formatINR(num(c.power_cost, 1469211)), highlight: true, highlightBg: '#fff7ed', highlightColor: '#9a3412' },
-    { sNo: '20', name: 'Power Cost per Sq.Ft', section: 'power', calc: c => `₹${num(c.power_cost_sqft, 6.34).toFixed(2)} / sq.ft` },
-    { sNo: '21', name: 'Units per Occupant per Month', section: 'power', calc: c => `${num(c.units_per_occupant, 35.34).toFixed(1)} kWh/occ` },
-    { sNo: '22', name: 'Power Cost per Occupant per Month', section: 'power', calc: c => `₹${Math.round(num(c.power_cost_occupant, 494)).toLocaleString()} / occ` },
+    { sNo: '18', name: 'Power Consumption Units (EB + DG)', section: 'power', calc: c => fmtVal(c.power_units, 'kWh'), unit: 'kWh' },
+    { sNo: '19', name: 'Power Consumption Cost (EB + DG)', section: 'power', isCurrency: true, calc: c => fmtCost(c.power_cost), highlight: true, highlightBg: '#fff7ed', highlightColor: '#9a3412' },
+    { sNo: '20', name: 'Power Cost per Sq.Ft', section: 'power', calc: c => (c.power_cost_sqft !== undefined && c.power_cost_sqft !== null && c.power_cost_sqft !== '') ? `₹${num(c.power_cost_sqft).toFixed(2)} / sq.ft` : '—' },
+    { sNo: '21', name: 'Units per Occupant per Month', section: 'power', calc: c => (c.units_per_occupant !== undefined && c.units_per_occupant !== null && c.units_per_occupant !== '') ? `${num(c.units_per_occupant).toFixed(1)} kWh/occ` : '—' },
+    { sNo: '22', name: 'Power Cost per Occupant per Month', section: 'power', calc: c => (c.power_cost_occupant !== undefined && c.power_cost_occupant !== null && c.power_cost_occupant !== '') ? `₹${Math.round(num(c.power_cost_occupant)).toLocaleString()} / occ` : '—' },
 
     // 4. Water Supply, RO & Tankers
-    { sNo: '23', name: 'Water Purchase Expenses (Tanker Refill)', section: 'water', isCurrency: true, calc: c => formatINR(num(c.water_purchase_cost, 248765)) },
-    { sNo: '24', name: 'Normal Water Consumption Litres', section: 'water', calc: c => `${(num(c.normal_water_litres, 8202000) / 100000).toFixed(2)} Lakh L` },
-    { sNo: '25', name: 'Normal Water Cost', section: 'water', isCurrency: true, calc: c => formatINR(num(c.normal_water_cost, 820200)) },
-    { sNo: '26', name: 'Drinking RO Purified Water Litres', section: 'water', calc: c => `${num(c.drinking_water_litres, 92800).toLocaleString()} L` },
-    { sNo: '27', name: 'Drinking RO Purified Water Cost', section: 'water', isCurrency: true, calc: c => formatINR(num(c.drinking_water_cost, 23200)) },
-    { sNo: '28', name: 'Normal Water Ltr / Student / Day', section: 'water', calc: c => `${num(c.normal_water_ltr_day, 96.17).toFixed(1)} L/day` },
-    { sNo: '29', name: 'Normal Water Cost / Student / Day', section: 'water', calc: c => `₹${num(c.normal_water_cost_day, 9.62).toFixed(2)}/day` },
+    { sNo: '23', name: 'Water Purchase Expenses (Tanker Refill)', section: 'water', isCurrency: true, calc: c => fmtCost(c.water_purchase_cost) },
+    { sNo: '24', name: 'Normal Water Consumption Litres', section: 'water', calc: c => (c.normal_water_litres !== undefined && c.normal_water_litres !== null && c.normal_water_litres !== '') ? `${(num(c.normal_water_litres) / 100000).toFixed(2)} Lakh L` : '—' },
+    { sNo: '25', name: 'Normal Water Cost', section: 'water', isCurrency: true, calc: c => fmtCost(c.normal_water_cost) },
+    { sNo: '26', name: 'Drinking RO Purified Water Litres', section: 'water', calc: c => fmtVal(c.drinking_water_litres, 'L') },
+    { sNo: '27', name: 'Drinking RO Purified Water Cost', section: 'water', isCurrency: true, calc: c => fmtCost(c.drinking_water_cost) },
+    { sNo: '28', name: 'Normal Water Ltr / Student / Day', section: 'water', calc: c => (c.normal_water_ltr_day !== undefined && c.normal_water_ltr_day !== null && c.normal_water_ltr_day !== '') ? `${num(c.normal_water_ltr_day).toFixed(1)} L/day` : '—' },
+    { sNo: '29', name: 'Normal Water Cost / Student / Day', section: 'water', calc: c => (c.normal_water_cost_day !== undefined && c.normal_water_cost_day !== null && c.normal_water_cost_day !== '') ? `₹${num(c.normal_water_cost_day).toFixed(2)}/day` : '—' },
 
     // 5. Operating Budget & Expenses Occurred
-    { sNo: '30', name: 'Routine Facilities Maintenance Expenses', section: 'budget', isCurrency: true, calc: c => formatINR(num(c.maintenance_expenses, 119394)) },
-    { sNo: '31', name: 'Expenses Occurred (Total Monthly Spend)', section: 'budget', isCurrency: true, calc: c => formatINR(num(c.expenses_occurred, 9349172)), highlight: true, highlightBg: '#fed7aa', highlightColor: '#7c2d12' },
-    { sNo: '32', name: 'Approved Operating Budget', section: 'budget', isCurrency: true, calc: c => formatINR(num(c.approved_budget, 131788118)) },
-    { sNo: '33', name: 'Cumulative Budget Spent (till now)', section: 'budget', isCurrency: true, calc: c => formatINR(num(c.cumulative_budget_spent, 34527814)) },
-    { sNo: '34', name: 'Balance Budget Remaining', section: 'budget', isCurrency: true, calc: c => formatINR(num(c.balance, 97260304)), highlight: true, highlightBg: '#86efac', highlightColor: '#14532d' },
+    { sNo: '30', name: 'Routine Facilities Maintenance Expenses', section: 'budget', isCurrency: true, calc: c => fmtCost(c.maintenance_expenses) },
+    { sNo: '31', name: 'Expenses Occurred (Total Monthly Spend)', section: 'budget', isCurrency: true, calc: c => fmtCost(c.expenses_occurred), highlight: true, highlightBg: '#fed7aa', highlightColor: '#7c2d12' },
+    { sNo: '32', name: 'Approved Operating Budget', section: 'budget', isCurrency: true, calc: c => fmtCost(c.approved_budget) },
+    { sNo: '33', name: 'Cumulative Budget Spent (till now)', section: 'budget', isCurrency: true, calc: c => fmtCost(c.cumulative_budget_spent) },
+    { sNo: '34', name: 'Balance Budget Remaining', section: 'budget', isCurrency: true, calc: c => fmtCost(c.balance), highlight: true, highlightBg: '#86efac', highlightColor: '#14532d' },
 
     // 6. Per Student Run-Rate & Area
-    { sNo: '35', name: 'Total Hostel Area (Sq Feet)', section: 'analytics', calc: c => `${num(c.sq_feet, 231701).toLocaleString()} sq.ft` },
-    { sNo: '36', name: 'Sq Feet per Occupant', section: 'analytics', calc: c => `${num(c.sq_feet_per_occupant, 77.91).toFixed(1)} sq.ft/occ` },
-    { sNo: '37', name: 'Per Student Cost per Month', section: 'analytics', isCurrency: true, calc: c => `₹ ${Math.round(num(c.per_student_cost_month, 3288)).toLocaleString()} / mo`, highlight: true, highlightBg: '#fef08a', highlightColor: '#713f12' },
-    { sNo: '38', name: 'Per Student Cost per Day', section: 'analytics', calc: c => `₹ ${num(c.per_student_cost_day, 109.62).toFixed(2)} / day` }
+    { sNo: '35', name: 'Total Hostel Area (Sq Feet)', section: 'analytics', calc: c => fmtVal(c.sq_feet, 'sq.ft') },
+    { sNo: '36', name: 'Sq Feet per Occupant', section: 'analytics', calc: c => (c.sq_feet_per_occupant !== undefined && c.sq_feet_per_occupant !== null && c.sq_feet_per_occupant !== '') ? `${num(c.sq_feet_per_occupant).toFixed(1)} sq.ft/occ` : '—' },
+    { sNo: '37', name: 'Per Student Cost per Month', section: 'analytics', isCurrency: true, calc: c => (c.per_student_cost_month !== undefined && c.per_student_cost_month !== null && c.per_student_cost_month !== '') ? `₹ ${Math.round(num(c.per_student_cost_month)).toLocaleString()} / mo` : '—', highlight: true, highlightBg: '#fef08a', highlightColor: '#713f12' },
+    { sNo: '38', name: 'Per Student Cost per Day', section: 'analytics', calc: c => (c.per_student_cost_day !== undefined && c.per_student_cost_day !== null && c.per_student_cost_day !== '') ? `₹ ${num(c.per_student_cost_day).toFixed(2)} / day` : '—' }
   ], []);
 
   // Filtered parameters by search term and section
