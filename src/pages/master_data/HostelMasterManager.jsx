@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  FileSpreadsheet, Plus, Search, Filter, Trash2, Edit2, CheckCircle2, 
+  Building2, Plus, Search, Filter, Trash2, Edit2, CheckCircle2, 
   AlertTriangle, Calculator, Layers, HelpCircle, Save, Check, X, Shield, ArrowUpDown
 } from 'lucide-react';
 import AddHostelParameterModal from './AddHostelParameterModal';
@@ -28,7 +28,7 @@ export default function HostelMasterManager() {
       }
     } catch (err) {
       console.error('Error fetching hostel parameters:', err);
-      setMessage({ type: 'error', text: 'Could not fetch parameters from database. Please check connection.' });
+      setMessage({ type: 'error', text: 'Could not fetch parameters from database. Please check backend connection.' });
     } finally {
       setLoading(false);
     }
@@ -84,11 +84,13 @@ export default function HostelMasterManager() {
   const handleStartEdit = (param) => {
     setEditingParamId(param.id);
     setEditForm({
+      s_no: param.s_no !== undefined && param.s_no !== null ? param.s_no : (param.display_order || ''),
       param_name: param.param_name,
       section: param.section,
       input_type: param.input_type,
       unit: param.unit || '',
-      formula: param.formula || ''
+      formula: param.formula || '',
+      display_order: param.display_order || 50
     });
   };
 
@@ -149,7 +151,8 @@ export default function HostelMasterManager() {
     return parameters.filter(p => {
       const matchSearch = p.param_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           p.section.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (p.formula && p.formula.toLowerCase().includes(searchTerm.toLowerCase()));
+                          (p.formula && p.formula.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (p.s_no && String(p.s_no).toLowerCase().includes(searchTerm.toLowerCase()));
       const matchSection = selectedSection === 'ALL' || p.section === selectedSection;
       return matchSearch && matchSection;
     });
@@ -183,7 +186,7 @@ export default function HostelMasterManager() {
             Hostel Parameters & Spreadsheet Template Manager
           </h2>
           <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-            Configure and manage parameters, formulas, and sections for the Hostel Data Entry spreadsheet.
+            Configure and manage parameters, formulas, S.No, and sections for the Hostel Data Entry spreadsheet.
           </p>
         </div>
 
@@ -219,7 +222,7 @@ export default function HostelMasterManager() {
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '18px', fontWeight: '800', color: '#047857' }}>{totalCalculated}</div>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: '#065f46' }}>Formulas</div>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#065f46' }}>Auto Formulas</div>
           </div>
 
           <button
@@ -241,7 +244,7 @@ export default function HostelMasterManager() {
             }}
           >
             <Plus size={16} />
-            <span>Add Parameter / Row</span>
+            <span>Add Hostel Parameter</span>
           </button>
         </div>
       </div>
@@ -291,7 +294,7 @@ export default function HostelMasterManager() {
           <Search size={15} color="#94a3b8" />
           <input
             type="text"
-            placeholder="Search parameter, section, or formula..."
+            placeholder="Search parameter, formula, S.No..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -359,9 +362,9 @@ export default function HostelMasterManager() {
       <div style={{
         backgroundColor: '#ffffff',
         borderRadius: '12px',
-        border: '1px solid #e2e8f0',
+        border: '1.5px solid #cbd5e1',
         overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+        boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
       }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{
@@ -373,21 +376,20 @@ export default function HostelMasterManager() {
             <thead>
               <tr style={{
                 backgroundColor: '#f8fafc',
-                borderBottom: '1px solid #e2e8f0',
-                color: '#475569',
+                borderBottom: '2px solid #cbd5e1',
+                color: '#1e293b',
                 fontSize: '12px',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                letterSpacing: '0.03em'
+                fontWeight: '800',
+                letterSpacing: '0.02em'
               }}>
-                <th style={{ padding: '12px 14px', width: '60px', textAlign: 'center' }}>#</th>
+                <th style={{ padding: '12px 14px', width: '65px', textAlign: 'center' }}>S.No</th>
                 <th style={{ padding: '12px 16px', minWidth: '240px' }}>Parameter Name</th>
                 <th style={{ padding: '12px 16px', width: '220px' }}>Section / Group</th>
                 <th style={{ padding: '12px 14px', width: '160px' }}>Input Format</th>
                 <th style={{ padding: '12px 12px', width: '90px' }}>Unit</th>
                 <th style={{ padding: '12px 16px', minWidth: '220px' }}>Formula / Calculation Rule</th>
                 <th style={{ padding: '12px 14px', width: '100px', textAlign: 'center' }}>Type</th>
-                <th style={{ padding: '12px 14px', width: '90px', textAlign: 'center' }}>Actions</th>
+                <th style={{ padding: '12px 14px', width: '100px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -418,12 +420,42 @@ export default function HostelMasterManager() {
                       }}
                     >
                       {/* S.No */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748b', fontWeight: '600' }}>
-                        {param.display_order || idx + 1}
+                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.s_no !== undefined ? editForm.s_no : ''}
+                            onChange={(e) => setEditForm({ ...editForm, s_no: e.target.value })}
+                            placeholder="S.No"
+                            style={{
+                              width: '46px',
+                              padding: '5px 4px',
+                              borderRadius: '6px',
+                              border: '1.5px solid #0284c7',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              textAlign: 'center',
+                              outline: 'none'
+                            }}
+                          />
+                        ) : (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: '#f0f9ff',
+                            border: '1px solid #bae6fd',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            color: '#0369a1'
+                          }}>
+                            {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || idx + 1)}
+                          </span>
+                        )}
                       </td>
 
                       {/* Parameter Name */}
-                      <td style={{ padding: '12px 16px', fontWeight: '700', color: '#0f172a' }}>
+                      <td style={{ padding: '10px 16px' }}>
                         {isEditing ? (
                           <input
                             type="text"
@@ -431,18 +463,22 @@ export default function HostelMasterManager() {
                             onChange={(e) => setEditForm({ ...editForm, param_name: e.target.value })}
                             style={{
                               width: '100%',
-                              padding: '5px 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #0284c7',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              border: '1.5px solid #0284c7',
                               fontSize: '13px',
-                              fontWeight: '700'
+                              fontWeight: '700',
+                              outline: 'none'
                             }}
                           />
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>{param.param_name}</span>
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{param.param_name}</span>
+                            <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                              ({param.param_key})
+                            </span>
                             {param.is_system && (
-                              <span title="System Parameter" style={{ color: '#94a3b8' }}>
+                              <span title="Standard Master Parameter" style={{ color: '#94a3b8' }}>
                                 <Shield size={12} />
                               </span>
                             )}
@@ -451,17 +487,18 @@ export default function HostelMasterManager() {
                       </td>
 
                       {/* Section */}
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '10px 16px' }}>
                         {isEditing ? (
                           <select
                             value={editForm.section}
                             onChange={(e) => setEditForm({ ...editForm, section: e.target.value })}
                             style={{
                               width: '100%',
-                              padding: '5px 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #0284c7',
-                              fontSize: '12.5px'
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '12.5px',
+                              outline: 'none'
                             }}
                           >
                             {existingSections.map(s => (
@@ -485,17 +522,18 @@ export default function HostelMasterManager() {
                       </td>
 
                       {/* Input Format */}
-                      <td style={{ padding: '12px 14px' }}>
+                      <td style={{ padding: '10px 14px' }}>
                         {isEditing ? (
                           <select
                             value={editForm.input_type}
                             onChange={(e) => setEditForm({ ...editForm, input_type: e.target.value })}
                             style={{
                               width: '100%',
-                              padding: '5px 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #0284c7',
-                              fontSize: '12px'
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '12px',
+                              outline: 'none'
                             }}
                           >
                             <option value="cost">Amount (₹)</option>
@@ -527,7 +565,7 @@ export default function HostelMasterManager() {
                       </td>
 
                       {/* Unit */}
-                      <td style={{ padding: '12px 12px', color: '#64748b', fontSize: '12.5px' }}>
+                      <td style={{ padding: '10px 12px', color: '#64748b', fontSize: '12.5px' }}>
                         {isEditing ? (
                           <input
                             type="text"
@@ -535,10 +573,11 @@ export default function HostelMasterManager() {
                             onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })}
                             style={{
                               width: '60px',
-                              padding: '4px 6px',
-                              borderRadius: '4px',
-                              border: '1px solid #0284c7',
-                              fontSize: '12px'
+                              padding: '5px 6px',
+                              borderRadius: '6px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '12px',
+                              outline: 'none'
                             }}
                           />
                         ) : (
@@ -547,36 +586,38 @@ export default function HostelMasterManager() {
                       </td>
 
                       {/* Formula / Calculation Rule */}
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '10px 16px' }}>
                         {isEditing ? (
                           <input
                             type="text"
-                            value={editForm.formula}
+                            value={editForm.formula || ''}
                             placeholder="e.g. Boys + Girls"
                             onChange={(e) => setEditForm({ ...editForm, formula: e.target.value })}
                             style={{
                               width: '100%',
-                              padding: '5px 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #0284c7',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              border: '1.5px solid #0284c7',
                               fontSize: '12px',
-                              fontFamily: 'monospace'
+                              fontFamily: 'monospace',
+                              outline: 'none'
                             }}
                           />
                         ) : param.formula ? (
                           <div style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '5px',
-                            backgroundColor: '#f0fdf4',
-                            border: '1px solid #bbf7d0',
-                            borderRadius: '4px',
-                            padding: '2px 8px',
+                            gap: '6px',
+                            backgroundColor: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '6px',
+                            padding: '3px 8px',
                             fontSize: '11.5px',
+                            color: '#1d4ed8',
                             fontFamily: 'monospace',
-                            color: '#166534'
+                            fontWeight: '700'
                           }}>
-                            <Calculator size={11} />
+                            <Calculator size={13} color="#2563eb" />
                             <span>= {param.formula}</span>
                           </div>
                         ) : (
@@ -585,7 +626,7 @@ export default function HostelMasterManager() {
                       </td>
 
                       {/* Type Badge (System vs Custom) */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                         <span style={{
                           fontSize: '10.5px',
                           fontWeight: '700',
@@ -599,19 +640,21 @@ export default function HostelMasterManager() {
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                         {isEditing ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                             <button
                               onClick={() => handleSaveEdit(param.id)}
                               title="Save changes"
                               style={{
-                                padding: '4px',
-                                borderRadius: '4px',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
                                 border: 'none',
                                 backgroundColor: '#10b981',
                                 color: '#ffffff',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center'
                               }}
                             >
                               <Check size={14} />
@@ -620,49 +663,49 @@ export default function HostelMasterManager() {
                               onClick={() => setEditingParamId(null)}
                               title="Cancel"
                               style={{
-                                padding: '4px',
-                                borderRadius: '4px',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
                                 border: 'none',
                                 backgroundColor: '#94a3b8',
                                 color: '#ffffff',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center'
                               }}
                             >
                               <X size={14} />
                             </button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                             <button
                               onClick={() => handleStartEdit(param)}
-                              title="Edit Parameter"
+                              title="Edit Parameter & Formula"
                               style={{
                                 padding: '5px',
                                 borderRadius: '4px',
                                 border: 'none',
                                 background: 'transparent',
-                                color: '#64748b',
+                                color: '#0284c7',
                                 cursor: 'pointer'
                               }}
                             >
-                              <Edit2 size={13} />
+                              <Edit2 size={14} />
                             </button>
-                            {!param.is_system && (
-                              <button
-                                onClick={() => handleDeleteParameter(param.id, param.param_name)}
-                                title="Delete Parameter"
-                                style={{
-                                  padding: '5px',
-                                  borderRadius: '4px',
-                                  border: 'none',
-                                  background: 'transparent',
-                                  color: '#ef4444',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleDeleteParameter(param.id, param.param_name)}
+                              title="Delete Parameter"
+                              style={{
+                                padding: '5px',
+                                borderRadius: '4px',
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#ef4444',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         )}
                       </td>

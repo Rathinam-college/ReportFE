@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Calculator, Layers, Tag, HelpCircle } from 'lucide-react';
+import { X, Plus, Calculator, Layers, Tag, HelpCircle, Building2, Sparkles } from 'lucide-react';
 
 export default function AddHostelParameterModal({
   isOpen,
@@ -19,7 +19,18 @@ export default function AddHostelParameterModal({
 
   const sections = Array.from(new Set([...defaultSections, ...existingSections]));
 
+  const commonHostelFormulas = [
+    { label: 'Boys + Girls', formula: 'Boys + Girls' },
+    { label: 'Students + Staffs', formula: 'Students + Staffs' },
+    { label: 'Bed Capacity - Total Occupied', formula: 'Bed Capacity - Total Occupied' },
+    { label: 'Occupancy %', formula: '(Total Occupied / Bed Capacity) * 100' },
+    { label: 'Balance Budget', formula: 'Approved Budget - Cumulative Budget Spent' },
+    { label: 'Per Student Cost', formula: 'Expenses occurred / Number of students' },
+    { label: 'Tickets Open', formula: 'Tickets Received - Tickets Closed' }
+  ];
+
   const [formData, setFormData] = useState({
+    s_no: '',
     param_name: '',
     section: 'Custom Parameters',
     new_section: '',
@@ -45,6 +56,7 @@ export default function AddHostelParameterModal({
       : formData.section;
 
     onAddParameter({
+      s_no: formData.s_no.trim() || undefined,
       param_name: formData.param_name.trim(),
       section: finalSection,
       input_type: formData.input_type,
@@ -72,10 +84,13 @@ export default function AddHostelParameterModal({
         backgroundColor: '#ffffff',
         borderRadius: '16px',
         width: '100%',
-        maxWidth: '540px',
+        maxWidth: '560px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         overflow: 'hidden',
-        border: '1px solid #e2e8f0'
+        border: '1px solid #e2e8f0',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         {/* Header */}
         <div style={{
@@ -88,23 +103,24 @@ export default function AddHostelParameterModal({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              width: '36px',
-              height: '36px',
+              width: '38px',
+              height: '38px',
               borderRadius: '10px',
               backgroundColor: '#e0f2fe',
               color: '#0284c7',
+              border: '1px solid #bae6fd',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <Plus size={20} />
+              <Building2 size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
-                Add Hostel Parameter / Row
+                Add Hostel Master Parameter
               </h3>
               <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
-                This parameter will immediately appear in the Hostel Data Entry sheet
+                Define parameter name, S.No, section, and calculation formula
               </p>
             </div>
           </div>
@@ -124,7 +140,7 @@ export default function AddHostelParameterModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
           {error && (
             <div style={{
               padding: '10px 14px',
@@ -139,84 +155,135 @@ export default function AddHostelParameterModal({
             </div>
           )}
 
-          {/* Parameter Name */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
-              Parameter Name *
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Laundry Machine Maintenance, Warden Honorarium"
-              value={formData.param_name}
-              onChange={(e) => {
-                setFormData({ ...formData, param_name: e.target.value });
-                if (error) setError('');
-              }}
-              required
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: '#0f172a',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          {/* Section / Category Group */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
-              Section / Category *
-            </label>
-            <select
-              value={formData.section}
-              onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: '#0f172a',
-                backgroundColor: '#ffffff',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            >
-              {sections.map(sec => (
-                <option key={sec} value={sec}>{sec}</option>
-              ))}
-              <option value="__new__">+ Create New Section...</option>
-            </select>
-
-            {formData.section === '__new__' && (
+          {/* Parameter Name & S.No */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Parameter Name *
+              </label>
               <input
                 type="text"
-                placeholder="Enter new section title..."
-                value={formData.new_section}
-                onChange={(e) => setFormData({ ...formData, new_section: e.target.value })}
+                placeholder="e.g. Laundry Maintenance, Warden Allowances"
+                value={formData.param_name}
+                onChange={(e) => {
+                  setFormData({ ...formData, param_name: e.target.value });
+                  if (error) setError('');
+                }}
+                required
                 style={{
-                  marginTop: '8px',
                   width: '100%',
-                  padding: '8px 12px',
+                  padding: '9px 12px',
                   borderRadius: '8px',
-                  border: '1px solid #0284c7',
-                  fontSize: '12.5px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#0f172a',
+                  outline: 'none',
                   boxSizing: 'border-box'
                 }}
               />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                S.No
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 46"
+                value={formData.s_no}
+                onChange={(e) => setFormData({ ...formData, s_no: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  textAlign: 'center',
+                  fontWeight: '800',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Section Selection */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                Section / Category Group
+              </label>
+              <select
+                value={formData.section}
+                onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#0f172a',
+                  backgroundColor: '#ffffff',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {sections.map(sec => (
+                  <option key={sec} value={sec}>{sec}</option>
+                ))}
+                <option value="__new__">+ Create New Section...</option>
+              </select>
+            </div>
+
+            {formData.section === '__new__' ? (
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  New Section Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Recreation & Sports"
+                  value={formData.new_section}
+                  onChange={(e) => setFormData({ ...formData, new_section: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #0284c7',
+                    fontSize: '13px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            ) : (
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Display Order
+                </label>
+                <input
+                  type="number"
+                  value={formData.display_order}
+                  onChange={(e) => setFormData({ ...formData, display_order: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
             )}
           </div>
 
-          {/* Input Mode / Type and Unit */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          {/* Input Format & Unit */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                 Input Mode / Format *
               </label>
               <select
@@ -228,6 +295,7 @@ export default function AddHostelParameterModal({
                   else if (t === 'single_count') defaultUnit = 'Count';
                   else if (t === 'percentage') defaultUnit = '%';
                   else if (t === 'units_and_cost') defaultUnit = 'Units / ₹';
+                  else if (t === 'single_number') defaultUnit = 'Qty';
                   setFormData({ ...formData, input_type: t, unit: defaultUnit });
                 }}
                 style={{
@@ -254,12 +322,12 @@ export default function AddHostelParameterModal({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
                 Unit Label
               </label>
               <input
                 type="text"
-                placeholder="e.g. ₹, Beds, Persons, Ltrs, kWh"
+                placeholder="e.g. ₹, Beds, Persons, Ltrs"
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 style={{
@@ -277,15 +345,18 @@ export default function AddHostelParameterModal({
             </div>
           </div>
 
-          {/* Optional Formula */}
+          {/* Optional Formula with Quick Chips */}
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
-              <Calculator size={14} color="#0284c7" />
-              <span>Calculation Formula (Optional)</span>
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#334155' }}>
+                <Calculator size={14} color="#0284c7" />
+                <span>Calculation Formula (Optional)</span>
+              </label>
+              <span style={{ fontSize: '11px', color: '#64748b' }}>Leave blank for manual entry</span>
+            </div>
             <input
               type="text"
-              placeholder="e.g. Boys + Girls, or [Expenses occurred] / 30"
+              placeholder="e.g. Boys + Girls or Approved Budget - Cumulative Budget Spent"
               value={formData.formula}
               onChange={(e) => setFormData({ ...formData, formula: e.target.value })}
               style={{
@@ -300,9 +371,35 @@ export default function AddHostelParameterModal({
                 boxSizing: 'border-box'
               }}
             />
-            <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '4px' }}>
-              Leave blank if entered manually during monthly data entry.
-            </span>
+
+            {/* Quick Formula Suggestions */}
+            <div style={{ marginTop: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '5px' }}>
+                <Sparkles size={11} color="#0284c7" />
+                Quick Formula Presets (Click to insert):
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {commonHostelFormulas.map((fItem) => (
+                  <button
+                    key={fItem.label}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, formula: fItem.formula })}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      backgroundColor: '#f0f9ff',
+                      color: '#0284c7',
+                      border: '1px solid #bae6fd',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + {fItem.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Modal Actions */}
