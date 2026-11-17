@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { formatINR, formatLakhs, DASH_COLORS } from '../../utils/formatters';
 import { 
   Calendar, Layers, PieChart as PieIcon, Calculator, FileSpreadsheet, 
