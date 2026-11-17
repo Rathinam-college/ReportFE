@@ -79,11 +79,14 @@ export default function ClusteredDataTableChart({
       }
     }
 
-    // Default: Expense Categories from Master Data (excluding non-expense categories)
+    // Default: Expense Categories from Master Data (excluding non-expense categories like Person, Total Person, Cost Per Person)
     return categories
       .filter(cat => {
-        const n = String(cat.category_name || cat.name || '').toLowerCase();
+        const n = String(cat.category_name || cat.name || '').toLowerCase().trim();
         return !(
+          n === 'person' ||
+          n === 'persons' ||
+          n.includes('person') ||
           n.includes('total person') ||
           n.includes('cost per person') ||
           n.includes('per person') ||
@@ -187,11 +190,14 @@ export default function ClusteredDataTableChart({
           row.rowTotal = pax;
         }
       } else {
-        // Categories expenditure (excluding Total Person & Cost Per Person)
+        // Categories expenditure (excluding Person, Total Person & Cost Per Person)
         let sum = 0;
         categories.forEach(cat => {
-          const catName = String(cat.category_name || cat.name || '').toLowerCase();
+          const catName = String(cat.category_name || cat.name || '').toLowerCase().trim();
           if (
+            catName === 'person' ||
+            catName === 'persons' ||
+            catName.includes('person') ||
             catName.includes('total person') ||
             catName.includes('cost per person') ||
             catName.includes('per person') ||

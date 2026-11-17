@@ -158,24 +158,43 @@ export default function FoodSpreadsheetEntry({
     return subs;
   }, [categories, periods, matrixDraft, newRowDrafts]);
 
-  // Helper to detect non-expense metrics (Total Person, Total Cost Per Person, etc.)
+  // Helper to detect non-expense metrics (Person, Total Person, Total Cost Per Person, etc.)
   const isNonExpenseItem = (catName = '', itemDesc = '') => {
-    const s = `${catName} ${itemDesc}`.toLowerCase().trim();
+    const c = String(catName || '').toLowerCase().trim();
+    const i = String(itemDesc || '').toLowerCase().trim();
+    const s = `${c} ${i}`.trim();
+
+    if (
+      c === 'person' ||
+      c === 'persons' ||
+      c.includes('person') ||
+      c.includes('diners') ||
+      c.includes('census') ||
+      c.includes('unit economics') ||
+      c.includes('economics')
+    ) {
+      return true;
+    }
+
     return (
+      i.includes('student') ||
+      i.includes('staff count') ||
+      i.includes('staffs count') ||
+      i.includes('cost per person') ||
+      i.includes('cost/person') ||
+      i.includes('cost / person') ||
+      i.includes('per person') ||
+      i.includes('per meal') ||
+      i.includes('diners') ||
+      i.includes('census') ||
+      i.includes('headcount') ||
       s.includes('total person') ||
+      s.includes('total persons') ||
       s.includes('cost per person') ||
       s.includes('per person') ||
-      s.includes('total persons') ||
-      s.includes('persons count') ||
-      s.includes('diners') ||
-      s.includes('per meal') ||
-      s.includes('cost per meal') ||
-      s.includes('unit economics') ||
-      s.includes('census') ||
-      s.includes('cost / person') ||
-      s.includes('cost/person') ||
-      s.includes('headcount') ||
-      s.includes('student count')
+      s.includes('students count') ||
+      s.includes('student count') ||
+      (c === 'person' && i.includes('other'))
     );
   };
 

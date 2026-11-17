@@ -290,24 +290,48 @@ export default function ChartDataTable({
     return categories.map(c => c.category_name);
   }, [categories]);
 
-  // Helper to check if a category is excluded from Grand Total (Total Person, Total Cost Per Person, Unit Economics)
+  // Helper to check if a category is excluded from Grand Total (Person, Total Person, Total Cost Per Person, Unit Economics)
   const isExcludedFromGrandTotal = (catName = '', itemDesc = '', code = '') => {
-    const s = `${catName} ${itemDesc} ${code}`.toLowerCase().trim();
+    const c = String(catName || '').toLowerCase().trim();
+    const i = String(itemDesc || '').toLowerCase().trim();
+    const cd = String(code || '').toLowerCase().trim();
+    const s = `${c} ${i} ${cd}`;
+
+    // Skip entire category if it's Person, Total Person, Cost Per Person, Census, etc.
+    if (
+      c === 'person' ||
+      c === 'persons' ||
+      c.includes('person') ||
+      c.includes('diners') ||
+      c.includes('census') ||
+      c.includes('unit economics') ||
+      c.includes('economics')
+    ) {
+      return true;
+    }
+
+    // Skip non-expense line items (Students count, Staff count, Cost Per Person, etc.)
     return (
+      i.includes('student') ||
+      i.includes('staff count') ||
+      i.includes('staffs count') ||
+      i.includes('cost per person') ||
+      i.includes('cost/person') ||
+      i.includes('cost / person') ||
+      i.includes('per person') ||
+      i.includes('per meal') ||
+      i.includes('diners') ||
+      i.includes('census') ||
+      i.includes('headcount') ||
+      cd.includes('person') ||
+      cd.includes('census') ||
       s.includes('total person') ||
+      s.includes('total persons') ||
       s.includes('cost per person') ||
       s.includes('per person') ||
-      s.includes('total persons') ||
-      s.includes('persons count') ||
-      s.includes('diners') ||
-      s.includes('per meal') ||
-      s.includes('cost per meal') ||
-      s.includes('unit economics') ||
-      s.includes('census') ||
-      s.includes('cost / person') ||
-      s.includes('cost/person') ||
-      s.includes('headcount') ||
-      s.includes('student count')
+      s.includes('students count') ||
+      s.includes('student count') ||
+      (c === 'person' && i.includes('other'))
     );
   };
 
