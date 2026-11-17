@@ -170,8 +170,17 @@ export default function FoodSpreadsheetEntry({
           catName.includes('total person') ||
           catName.includes('cost per person') ||
           catName.includes('per person') ||
+          catName.includes('total persons') ||
+          catName.includes('persons count') ||
           catName.includes('diners') ||
-          catName.includes('unit economics')
+          catName.includes('per meal') ||
+          catName.includes('cost per meal') ||
+          catName.includes('unit economics') ||
+          catName.includes('census') ||
+          catName.includes('cost / person') ||
+          catName.includes('cost/person') ||
+          catName.includes('headcount') ||
+          catName.includes('student count')
         ) return;
         pSum += categorySubtotals[cat.category_id]?.[p.id] || 0;
       });

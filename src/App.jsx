@@ -450,6 +450,27 @@ export default function App() {
   }, [currentUser, dashboardSubTab, dataEntrySubTab, masterDataSubTab, activeTab]);
 
   // --------------------------------------------------------------------------
+  // Helper to detect non-expense categories or items (Total Person, Total Cost Per Person, etc.)
+  const isNonExpenseFoodMetric = (catName = '', itemDesc = '', code = '') => {
+    const s = `${catName} ${itemDesc} ${code}`.toLowerCase().trim();
+    return (
+      s.includes('total person') ||
+      s.includes('cost per person') ||
+      s.includes('per person') ||
+      s.includes('total persons') ||
+      s.includes('persons count') ||
+      s.includes('diners') ||
+      s.includes('per meal') ||
+      s.includes('cost per meal') ||
+      s.includes('unit economics') ||
+      s.includes('census') ||
+      s.includes('cost / person') ||
+      s.includes('cost/person') ||
+      s.includes('headcount') ||
+      s.includes('student count')
+    );
+  };
+
   // LIVE COMPUTED MATRIX
   // --------------------------------------------------------------------------
   const computedMatrix = useMemo(() => {
@@ -465,10 +486,14 @@ export default function App() {
       const catSubtotalByPeriod = {};
       periods.forEach(p => { catSubtotalByPeriod[p.id] = 0.0; });
       let catOverallTotal = 0.0;
+      let catExpenseOnlyTotal = 0.0;
+
+      const isCatExcluded = isNonExpenseFoodMetric(cat.category_name, '', cat.category_code);
 
       const items = (cat.items || []).map(it => {
         const rowAmounts = {};
         let rowTotal = 0.0;
+        const isItemExcluded = isCatExcluded || isNonExpenseFoodMetric(cat.category_name, it.description, it.code);
 
         periods.forEach(p => {
           const draftVal = matrixDraft[it.cost_head_id]?.[p.id];
@@ -484,10 +509,17 @@ export default function App() {
           rowAmounts[p.id] = val;
           rowTotal += val;
           catSubtotalByPeriod[p.id] += val;
-          grandTotalByPeriod[p.id] += val;
+
+          // Do NOT add Total Person or Total Cost Per Person to Grand Total!
+          if (!isItemExcluded) {
+            grandTotalByPeriod[p.id] += val;
+          }
         });
 
         catOverallTotal += rowTotal;
+        if (!isItemExcluded) {
+          catExpenseOnlyTotal += rowTotal;
+        }
 
         return {
           cost_head_id: it.cost_head_id,
@@ -499,7 +531,8 @@ export default function App() {
         };
       });
 
-      overallGrandTotal += catOverallTotal;
+      // Do NOT add Total Person or Total Cost Per Person to Overall Grand Total!
+      overallGrandTotal += catExpenseOnlyTotal;
 
       return {
         ...cat,

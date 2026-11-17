@@ -291,17 +291,23 @@ export default function ChartDataTable({
   }, [categories]);
 
   // Helper to check if a category is excluded from Grand Total (Total Person, Total Cost Per Person, Unit Economics)
-  const isExcludedFromGrandTotal = (catName = '') => {
-    const n = String(catName || '').toLowerCase().trim();
+  const isExcludedFromGrandTotal = (catName = '', itemDesc = '', code = '') => {
+    const s = `${catName} ${itemDesc} ${code}`.toLowerCase().trim();
     return (
-      n.includes('total person') ||
-      n.includes('cost per person') ||
-      n.includes('per person') ||
-      n.includes('total persons') ||
-      n.includes('persons count') ||
-      n.includes('diners') ||
-      n.includes('per meal') ||
-      n.includes('unit economics')
+      s.includes('total person') ||
+      s.includes('cost per person') ||
+      s.includes('per person') ||
+      s.includes('total persons') ||
+      s.includes('persons count') ||
+      s.includes('diners') ||
+      s.includes('per meal') ||
+      s.includes('cost per meal') ||
+      s.includes('unit economics') ||
+      s.includes('census') ||
+      s.includes('cost / person') ||
+      s.includes('cost/person') ||
+      s.includes('headcount') ||
+      s.includes('student count')
     );
   };
 
@@ -315,8 +321,17 @@ export default function ChartDataTable({
         if (isExcludedFromGrandTotal(cat.category_name || cat.name)) {
           return; // DO NOT add Total Person or Total Cost Per Person to Grand Total!
         }
-        const val = cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0;
-        pSum += Number(val) || 0;
+        let catExpenseVal = 0;
+        if (Array.isArray(cat.items) && cat.items.length > 0) {
+          cat.items.forEach(it => {
+            if (!isExcludedFromGrandTotal(cat.category_name || cat.name, it.description || it.name, it.code)) {
+              catExpenseVal += Number(it.amounts?.[p.id] ?? it.amounts?.[String(p.id)] ?? 0);
+            }
+          });
+        } else {
+          catExpenseVal = Number(cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0);
+        }
+        pSum += catExpenseVal;
       });
       totals[p.id] = pSum;
       grandOverall += pSum;
@@ -1514,6 +1529,9 @@ export default function ChartDataTable({
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span>TOTAL EXPENSES • ALL CATEGORIES</span>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#93c5fd', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                    (Excludes Total Person & Total Cost Per Person)
+                  </span>
                 </div>
               </td>
 

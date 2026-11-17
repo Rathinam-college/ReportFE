@@ -87,8 +87,17 @@ export default function ClusteredDataTableChart({
           n.includes('total person') ||
           n.includes('cost per person') ||
           n.includes('per person') ||
+          n.includes('total persons') ||
+          n.includes('persons count') ||
           n.includes('diners') ||
-          n.includes('unit economics')
+          n.includes('per meal') ||
+          n.includes('cost per meal') ||
+          n.includes('unit economics') ||
+          n.includes('census') ||
+          n.includes('cost / person') ||
+          n.includes('cost/person') ||
+          n.includes('headcount') ||
+          n.includes('student count')
         );
       })
       .map(cat => ({
@@ -186,8 +195,17 @@ export default function ClusteredDataTableChart({
             catName.includes('total person') ||
             catName.includes('cost per person') ||
             catName.includes('per person') ||
+            catName.includes('total persons') ||
+            catName.includes('persons count') ||
             catName.includes('diners') ||
-            catName.includes('unit economics')
+            catName.includes('per meal') ||
+            catName.includes('cost per meal') ||
+            catName.includes('unit economics') ||
+            catName.includes('census') ||
+            catName.includes('cost / person') ||
+            catName.includes('cost/person') ||
+            catName.includes('headcount') ||
+            catName.includes('student count')
           ) return;
           const catId = cat.category_id || cat.id;
           const val = Number(cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[pStr] ?? 0);

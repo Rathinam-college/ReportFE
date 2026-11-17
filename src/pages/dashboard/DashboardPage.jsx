@@ -163,19 +163,34 @@ export default function DashboardPage({
     : 0;
 
   // Find largest cost head dynamically from active module's actual line items
+  const isNonExpenseMetric = (catName = '', itemDesc = '') => {
+    const s = `${catName} ${itemDesc}`.toLowerCase().trim();
+    return (
+      s.includes('total person') ||
+      s.includes('cost per person') ||
+      s.includes('per person') ||
+      s.includes('total persons') ||
+      s.includes('persons count') ||
+      s.includes('diners') ||
+      s.includes('per meal') ||
+      s.includes('cost per meal') ||
+      s.includes('unit economics') ||
+      s.includes('census') ||
+      s.includes('cost / person') ||
+      s.includes('cost/person') ||
+      s.includes('headcount') ||
+      s.includes('student count')
+    );
+  };
+
   const largestCostHead = useMemo(() => {
     let largest = { name: '—', total: 0 };
     if (effectiveMatrix?.categories && Array.isArray(effectiveMatrix.categories)) {
       effectiveMatrix.categories.forEach(cat => {
         const catName = String(cat.category_name || cat.name || '').toLowerCase();
-        if (
-          catName.includes('total person') ||
-          catName.includes('cost per person') ||
-          catName.includes('per person') ||
-          catName.includes('diners') ||
-          catName.includes('unit economics')
-        ) return;
+        if (isNonExpenseMetric(catName)) return;
         cat.items?.forEach(it => {
+          if (isNonExpenseMetric(catName, it.description || it.name)) return;
           const itTot = activePeriod === 'all'
             ? Number(it.total || 0)
             : Number(it.amounts?.[activePeriod] ?? it.amounts?.[String(activePeriod)] ?? 0);
@@ -194,14 +209,7 @@ export default function DashboardPage({
     return computedMatrix.categories
       .filter(cat => {
         const n = String(cat.category_name || cat.name || '').toLowerCase().trim();
-        return !(
-          n.includes('total person') ||
-          n.includes('cost per person') ||
-          n.includes('per person') ||
-          n.includes('total persons') ||
-          n.includes('diners') ||
-          n.includes('unit economics')
-        );
+        return !isNonExpenseMetric(n);
       })
       .map((cat, idx) => {
       let val = 0;
