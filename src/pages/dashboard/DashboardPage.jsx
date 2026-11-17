@@ -25,8 +25,6 @@ import ComparisonTool from './ComparisonTool';
 
 // Layout Cards from Design Mockup (Image 1)
 import TopCostHeadsCard from './TopCostHeadsCard';
-import HostelDashboardCensusView from './HostelDashboardCensusView';
-import TransportDashboardCensusView from './TransportDashboardCensusView';
 
 export default function DashboardPage({
   selectedModule = 'food',
@@ -368,32 +366,6 @@ export default function DashboardPage({
           </button>
         </div>
       </div>
-
-      {/* ========================================================================= */}
-      {/* HOSTEL LIVE OPERATIONAL CENSUS & PARAMETERS DASHBOARD                    */}
-      {/* ========================================================================= */}
-      {currentModule === 'hostel' && (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <HostelDashboardCensusView
-            computedMatrix={computedMatrix}
-            activePeriodObj={activePeriodObj}
-            periods={periods}
-          />
-        </section>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TRANSPORT FLEET OPERATIONS & MULTI-BRANCH CENSUS DASHBOARD               */}
-      {/* ========================================================================= */}
-      {currentModule === 'transport' && (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <TransportDashboardCensusView
-            computedMatrix={computedMatrix}
-            activePeriodObj={activePeriodObj}
-            periods={periods}
-          />
-        </section>
-      )}
 
       {/* ========================================================================= */}
       {/* LINE 1 (FIRST): MONTH BY MONTH SHOW THE DATA                               */}
