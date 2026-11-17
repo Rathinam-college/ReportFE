@@ -303,9 +303,11 @@ export default function HostelSpreadsheetEntry({
 
   // Helper to render custom parameters that belong to a specific section
   const renderCustomParamsForSection = (sectionName) => {
-    const list = (parameters || []).filter(
-      p => !p.is_system && p.is_active !== false && (p.section || '').toLowerCase().trim() === sectionName.toLowerCase().trim()
-    );
+    const list = (parameters || [])
+      .filter(
+        p => !p.is_system && p.is_active !== false && (p.section || '').toLowerCase().trim() === sectionName.toLowerCase().trim()
+      )
+      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
     if (!list.length) return null;
     return list.map((cp, cIdx) => {
       const cKey = cp.param_key;

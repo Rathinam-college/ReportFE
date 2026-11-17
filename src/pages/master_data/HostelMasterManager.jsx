@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, Plus, Search, Filter, Trash2, Edit2, CheckCircle2, 
-  AlertTriangle, Calculator, Layers, HelpCircle, Save, Check, X, Shield, ArrowUpDown
+  AlertTriangle, Calculator, Layers, HelpCircle, Save, Check, X, Shield, 
+  ArrowUpDown, GripVertical, ArrowUp, ArrowDown
 } from 'lucide-react';
 import AddHostelParameterModal from './AddHostelParameterModal';
 
@@ -14,6 +15,9 @@ export default function HostelMasterManager() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingParamId, setEditingParamId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   // Fetch parameters from backend API
   const fetchParameters = async () => {
@@ -113,6 +117,91 @@ export default function HostelMasterManager() {
       setMessage({ type: 'error', text: err.message || 'Error updating parameter' });
     } finally {
       setTimeout(() => setMessage(null), 4000);
+    }
+  };
+
+  // Drag and drop & step move handlers
+  const handleDragStart = (e, idx) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', String(idx));
+    } catch (_) {}
+  };
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === idx) return;
+    setDragOverIdx(idx);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDrop = async (e, targetIdx) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    const fromIdx = draggedIdx;
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+    await executeReorder(fromIdx, targetIdx);
+  };
+
+  const handleMoveStep = async (idx, step) => {
+    const targetIdx = idx + step;
+    if (targetIdx < 0 || targetIdx >= filteredParameters.length) return;
+    await executeReorder(idx, targetIdx);
+  };
+
+  const executeReorder = async (fromIdx, targetIdx) => {
+    const sourceParam = filteredParameters[fromIdx];
+    const targetParam = filteredParameters[targetIdx];
+    if (!sourceParam || !targetParam) return;
+
+    const fullFromIdx = parameters.findIndex(p => p.id === sourceParam.id);
+    const fullTargetIdx = parameters.findIndex(p => p.id === targetParam.id);
+    if (fullFromIdx === -1 || fullTargetIdx === -1 || fullFromIdx === fullTargetIdx) return;
+
+    const reordered = [...parameters];
+    const [moved] = reordered.splice(fullFromIdx, 1);
+    reordered.splice(fullTargetIdx, 0, moved);
+
+    // Update display_order sequentially
+    const updatedWithOrder = reordered.map((item, idx) => ({
+      ...item,
+      display_order: idx + 1
+    }));
+
+    setParameters(updatedWithOrder);
+    setIsReordering(true);
+
+    try {
+      const parameter_ids = updatedWithOrder.map(p => p.id);
+      const res = await fetch('/api/hostel/parameters/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parameter_ids })
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save new parameter sequence');
+      }
+      setMessage({ 
+        type: 'success', 
+        text: `Order updated: "${moved.param_name}" repositioned. Sequence synced with Hostel Data Entry form & Dashboard!` 
+      });
+    } catch (err) {
+      console.error('Reorder error:', err);
+      setMessage({ type: 'error', text: 'Failed to save new order in database. Reverting...' });
+      fetchParameters();
+    } finally {
+      setIsReordering(false);
+      setTimeout(() => setMessage(null), 5000);
     }
   };
 
@@ -358,6 +447,32 @@ export default function HostelMasterManager() {
         </div>
       </div>
 
+      {/* 3.5. DRAG & DROP INSTRUCTION BANNER */}
+      <div style={{
+        backgroundColor: '#f0f9ff',
+        borderRadius: '8px',
+        padding: '10px 16px',
+        border: '1px solid #bae6fd',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '8px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#0369a1', fontWeight: '600' }}>
+          <GripVertical size={16} color="#0284c7" />
+          <span>
+            <strong>Drag & Drop Reordering:</strong> Drag any row using the ⠿ grab handle or click the ⬆️ ⬇️ buttons to arrange parameters. The sequence set here automatically updates the <strong>Hostel Data Entry Form</strong> and <strong>Dashboard Tables</strong>.
+          </span>
+        </div>
+        {isReordering && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#0284c7' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0284c7' }} />
+            Saving new order...
+          </div>
+        )}
+      </div>
+
       {/* 4. PARAMETERS SPREADSHEET TABLE */}
       <div style={{
         backgroundColor: '#ffffff',
@@ -382,6 +497,7 @@ export default function HostelMasterManager() {
                 fontWeight: '800',
                 letterSpacing: '0.02em'
               }}>
+                <th style={{ padding: '12px 10px', width: '82px', textAlign: 'center' }}>Order</th>
                 <th style={{ padding: '12px 14px', width: '65px', textAlign: 'center' }}>S.No</th>
                 <th style={{ padding: '12px 16px', minWidth: '240px' }}>Parameter Name</th>
                 <th style={{ padding: '12px 16px', width: '220px' }}>Section / Group</th>
@@ -395,13 +511,13 @@ export default function HostelMasterManager() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={9} style={{ padding: '36px', textAlign: 'center', color: '#64748b' }}>
                     Loading hostel parameters from database...
                   </td>
                 </tr>
               ) : filteredParameters.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={9} style={{ padding: '36px', textAlign: 'center', color: '#64748b' }}>
                     No parameters found matching your search.
                   </td>
                 </tr>
@@ -409,16 +525,85 @@ export default function HostelMasterManager() {
                 filteredParameters.map((param, idx) => {
                   const secTheme = getSectionTheme(param.section);
                   const isEditing = editingParamId === param.id;
+                  const isDragging = draggedIdx === idx;
+                  const isOver = dragOverIdx === idx;
 
                   return (
                     <tr
                       key={param.id}
+                      draggable={!isEditing}
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e) => handleDrop(e, idx)}
                       style={{
                         borderBottom: '1px solid #f1f5f9',
-                        backgroundColor: isEditing ? '#f0f9ff' : idx % 2 === 0 ? '#ffffff' : '#fafafa',
-                        transition: 'background-color 0.1s ease'
+                        backgroundColor: isOver 
+                          ? '#e0f2fe' 
+                          : isDragging 
+                          ? '#bae6fd' 
+                          : isEditing 
+                          ? '#f0f9ff' 
+                          : (idx % 2 === 0 ? '#ffffff' : '#fafafa'),
+                        opacity: isDragging ? 0.45 : 1,
+                        outline: isOver ? '2px dashed #0284c7' : 'none',
+                        transition: 'background-color 0.15s ease',
+                        cursor: isEditing ? 'default' : 'grab'
                       }}
                     >
+                      {/* Reorder / Drag Handle & Step Controls */}
+                      <td style={{ padding: '8px 6px', textAlign: 'center', userSelect: 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                          <span 
+                            title="Drag row to reorder" 
+                            style={{ 
+                              cursor: isEditing ? 'default' : 'grab', 
+                              color: isDragging ? '#0284c7' : '#94a3b8', 
+                              display: 'flex', 
+                              alignItems: 'center' 
+                            }}
+                          >
+                            <GripVertical size={16} />
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleMoveStep(idx, -1); }}
+                            disabled={idx === 0 || isReordering}
+                            title="Move Up"
+                            style={{
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              backgroundColor: idx === 0 ? '#f8fafc' : '#f1f5f9',
+                              color: idx === 0 ? '#cbd5e1' : '#334155',
+                              cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleMoveStep(idx, 1); }}
+                            disabled={idx === filteredParameters.length - 1 || isReordering}
+                            title="Move Down"
+                            style={{
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              backgroundColor: idx === filteredParameters.length - 1 ? '#f8fafc' : '#f1f5f9',
+                              color: idx === filteredParameters.length - 1 ? '#cbd5e1' : '#334155',
+                              cursor: idx === filteredParameters.length - 1 ? 'not-allowed' : 'pointer',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                        </div>
+                      </td>
+
                       {/* S.No */}
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                         {isEditing ? (

@@ -701,13 +701,16 @@ export default function TransportSpreadsheetEntry({
     setTimeout(() => setLocalMessage(null), 5000);
   };
 
-  // Sort parameters canonically to match the user's Excel sheet 1-to-1
+  // Sort parameters canonically by display_order to match the user's Master Data sequence 1-to-1
   const canonicalParameters = useMemo(() => {
     return [...parameters].sort((a, b) => {
+      const aOrd = a.display_order !== undefined && a.display_order !== null ? a.display_order : 9999;
+      const bOrd = b.display_order !== undefined && b.display_order !== null ? b.display_order : 9999;
+      if (aOrd !== bOrd) return aOrd - bOrd;
       const aSec = a.section_order || 99;
       const bSec = b.section_order || 99;
       if (aSec !== bSec) return aSec - bSec;
-      return (a.display_order || 0) - (b.display_order || 0);
+      return (a.id || 0) - (b.id || 0);
     });
   }, [parameters]);
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   FileSpreadsheet, Plus, Search, Filter, Trash2, Edit2, CheckCircle2, 
-  AlertTriangle, Calculator, Layers, HelpCircle, Save, Check, X, Shield, ArrowUpDown, Bus
+  AlertTriangle, Calculator, Layers, HelpCircle, Save, Check, X, Shield, 
+  ArrowUpDown, Bus, GripVertical, ArrowUp, ArrowDown
 } from 'lucide-react';
 import AddTransportParameterModal from './AddTransportParameterModal';
 
@@ -14,6 +15,9 @@ export default function TransportMasterManager() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingParamId, setEditingParamId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   // Fetch parameters from backend API
   const fetchParameters = async () => {
@@ -112,6 +116,91 @@ export default function TransportMasterManager() {
       setMessage({ type: 'error', text: err.message || 'Error updating parameter' });
     } finally {
       setTimeout(() => setMessage(null), 4000);
+    }
+  };
+
+  // Drag and drop & step move handlers
+  const handleDragStart = (e, idx) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', String(idx));
+    } catch (_) {}
+  };
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === idx) return;
+    setDragOverIdx(idx);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDrop = async (e, targetIdx) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    const fromIdx = draggedIdx;
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+    await executeReorder(fromIdx, targetIdx);
+  };
+
+  const handleMoveStep = async (idx, step) => {
+    const targetIdx = idx + step;
+    if (targetIdx < 0 || targetIdx >= filteredParameters.length) return;
+    await executeReorder(idx, targetIdx);
+  };
+
+  const executeReorder = async (fromIdx, targetIdx) => {
+    const sourceParam = filteredParameters[fromIdx];
+    const targetParam = filteredParameters[targetIdx];
+    if (!sourceParam || !targetParam) return;
+
+    const fullFromIdx = parameters.findIndex(p => p.id === sourceParam.id);
+    const fullTargetIdx = parameters.findIndex(p => p.id === targetParam.id);
+    if (fullFromIdx === -1 || fullTargetIdx === -1 || fullFromIdx === fullTargetIdx) return;
+
+    const reordered = [...parameters];
+    const [moved] = reordered.splice(fullFromIdx, 1);
+    reordered.splice(fullTargetIdx, 0, moved);
+
+    // Update display_order sequentially
+    const updatedWithOrder = reordered.map((item, idx) => ({
+      ...item,
+      display_order: idx + 1
+    }));
+
+    setParameters(updatedWithOrder);
+    setIsReordering(true);
+
+    try {
+      const parameter_ids = updatedWithOrder.map(p => p.id);
+      const res = await fetch('/api/transport/parameters/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parameter_ids })
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save new parameter sequence');
+      }
+      setMessage({ 
+        type: 'success', 
+        text: `Order updated: "${moved.param_name}" repositioned. Sequence synced with Transport Data Entry form & Dashboard!` 
+      });
+    } catch (err) {
+      console.error('Reorder error:', err);
+      setMessage({ type: 'error', text: 'Failed to save new order in database. Reverting...' });
+      fetchParameters();
+    } finally {
+      setIsReordering(false);
+      setTimeout(() => setMessage(null), 5000);
     }
   };
 
@@ -345,6 +434,32 @@ export default function TransportMasterManager() {
         </div>
       </div>
 
+      {/* 3.5. DRAG & DROP INSTRUCTION BANNER */}
+      <div style={{
+        backgroundColor: '#fff7ed',
+        borderRadius: '8px',
+        padding: '10px 16px',
+        border: '1px solid #fed7aa',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '8px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#9a3412', fontWeight: '600' }}>
+          <GripVertical size={16} color="#ea580c" />
+          <span>
+            <strong>Drag & Drop Reordering:</strong> Drag any row using the ⠿ grab handle or click the ⬆️ ⬇️ buttons to arrange parameters. The order here automatically updates the <strong>Transport Data Entry Spreadsheet Form</strong> and <strong>Dashboard Tables</strong>.
+          </span>
+        </div>
+        {isReordering && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', color: '#ea580c' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ea580c' }} />
+            Saving new order...
+          </div>
+        )}
+      </div>
+
       {/* 4. PARAMETERS MASTER DATA TABLE */}
       <div style={{
         backgroundColor: '#ffffff',
@@ -357,6 +472,7 @@ export default function TransportMasterManager() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                <th style={{ padding: '12px 10px', fontWeight: '800', color: '#1e293b', width: '82px', textAlign: 'center' }}>Order</th>
                 <th style={{ padding: '12px 16px', fontWeight: '800', color: '#1e293b', width: '50px' }}>#</th>
                 <th style={{ padding: '12px 16px', fontWeight: '800', color: '#1e293b', minWidth: '240px' }}>Parameter Name</th>
                 <th style={{ padding: '12px 16px', fontWeight: '800', color: '#1e293b', minWidth: '180px' }}>Section</th>
@@ -369,29 +485,99 @@ export default function TransportMasterManager() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                     Loading Transport Master Parameters...
                   </td>
                 </tr>
               ) : filteredParameters.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                     No parameters found matching your filters.
                   </td>
                 </tr>
               ) : (
                 filteredParameters.map((param, pIdx) => {
                   const isEditing = editingParamId === param.id;
+                  const isDragging = draggedIdx === pIdx;
+                  const isOver = dragOverIdx === pIdx;
                   const theme = getSectionTheme(param.section);
 
                   return (
                     <tr
                       key={param.id}
+                      draggable={!isEditing}
+                      onDragStart={(e) => handleDragStart(e, pIdx)}
+                      onDragOver={(e) => handleDragOver(e, pIdx)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e) => handleDrop(e, pIdx)}
                       style={{
                         borderBottom: '1px solid #f1f5f9',
-                        backgroundColor: isEditing ? '#fff7ed' : (pIdx % 2 === 0 ? '#ffffff' : '#fcfcfd')
+                        backgroundColor: isOver 
+                          ? '#ffedd5' 
+                          : isDragging 
+                          ? '#fed7aa' 
+                          : isEditing 
+                          ? '#fff7ed' 
+                          : (pIdx % 2 === 0 ? '#ffffff' : '#fcfcfd'),
+                        opacity: isDragging ? 0.45 : 1,
+                        outline: isOver ? '2px dashed #ea580c' : 'none',
+                        transition: 'background-color 0.15s ease',
+                        cursor: isEditing ? 'default' : 'grab'
                       }}
                     >
+                      {/* Reorder / Drag Handle & Step Controls */}
+                      <td style={{ padding: '8px 6px', textAlign: 'center', userSelect: 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                          <span 
+                            title="Drag row to reorder" 
+                            style={{ 
+                              cursor: isEditing ? 'default' : 'grab', 
+                              color: isDragging ? '#ea580c' : '#94a3b8', 
+                              display: 'flex', 
+                              alignItems: 'center' 
+                            }}
+                          >
+                            <GripVertical size={16} />
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleMoveStep(pIdx, -1); }}
+                            disabled={pIdx === 0 || isReordering}
+                            title="Move Up"
+                            style={{
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              backgroundColor: pIdx === 0 ? '#f8fafc' : '#f1f5f9',
+                              color: pIdx === 0 ? '#cbd5e1' : '#334155',
+                              cursor: pIdx === 0 ? 'not-allowed' : 'pointer',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleMoveStep(pIdx, 1); }}
+                            disabled={pIdx === filteredParameters.length - 1 || isReordering}
+                            title="Move Down"
+                            style={{
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              backgroundColor: pIdx === filteredParameters.length - 1 ? '#f8fafc' : '#f1f5f9',
+                              color: pIdx === filteredParameters.length - 1 ? '#cbd5e1' : '#334155',
+                              cursor: pIdx === filteredParameters.length - 1 ? 'not-allowed' : 'pointer',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                        </div>
+                      </td>
+
                       {/* S.No */}
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                         {isEditing ? (

@@ -130,7 +130,13 @@ export default function TransportDashboardDataTable({
   };
 
   const activeParamsList = useMemo(() => {
-    return (masterParams && masterParams.length > 0) ? masterParams : CANONICAL_TRANSPORT_PARAMETERS;
+    const list = (masterParams && masterParams.length > 0) ? masterParams : CANONICAL_TRANSPORT_PARAMETERS;
+    return [...list].sort((a, b) => {
+      const aOrd = a.display_order !== undefined && a.display_order !== null ? a.display_order : 9999;
+      const bOrd = b.display_order !== undefined && b.display_order !== null ? b.display_order : 9999;
+      if (aOrd !== bOrd) return aOrd - bOrd;
+      return (a.section_order || 99) - (b.section_order || 99);
+    });
   }, [masterParams]);
 
   const filteredParams = useMemo(() => {
