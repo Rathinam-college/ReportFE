@@ -262,11 +262,9 @@ export default function TransportSpreadsheetEntry({
       return dbBranchData[paramKey];
     }
 
-    // 4. Default fallbacks based on branch
-    if (paramKey === 'vehicles_count') {
-      return branchId === 'RPS' ? '18+1' : branchId === 'KPM' ? '12+1' : branchId === 'University' ? '24+2' : '10+1';
-    }
-    return '';
+    // 4. Default for new month / unentered values: clean zero
+    if (paramKey === 'vehicles_count') return '0';
+    return 0;
   };
 
   // Helper to compute a branch's full metrics dictionary (with formulas calculated) for a period
@@ -342,7 +340,7 @@ export default function TransportSpreadsheetEntry({
       const totQualityOpen = Math.max(0, totQualityRec - totQualityCls);
 
       return {
-        vehicles_count: vehList.join(' / ') || '64 fleet',
+        vehicles_count: vehList.join(' / ') || '0 fleet',
         passengers_count: totPassengers,
         approved_kms: totApprovedKms,
         actual_kms: totActualKms,
@@ -383,88 +381,86 @@ export default function TransportSpreadsheetEntry({
         fee_discount: totFeeDiscount,
         paid_fee: totFeePaid,
         unpaid_fee: totFeeUnpaid,
-        per_student_cost_expenses: totPassengers > 0 ? Math.round(totExpenses / totPassengers) : '#REF!',
+        per_student_cost_expenses: totPassengers > 0 ? Math.round(totExpenses / totPassengers) : 0,
         per_student_fee_year: totPassengers > 0 ? Math.round(totFeeDemand / totPassengers) : 0,
         demand_per_km_day: totActualKms > 0 ? (totFeeDemand / (totActualKms * 30)).toFixed(2) : '0.00',
-        km_per_veh_day: (totActualKms / (64 * 30)).toFixed(2),
+        km_per_veh_day: (totActualKms > 0 && vehList.length > 0) ? (totActualKms / (vehList.length * 30)).toFixed(2) : '0.00',
         cumulative_demand_per_km: totActualKms > 0 ? (totFeeDemand / totActualKms).toFixed(2) : '0.00',
         cab_billing: totCabBilling
       };
     }
 
     // Single real branch calculations:
-    const g = (k, fb = 0) => num(getParamRawValue(branchId, periodIdStr, k), fb);
+    const g = (k) => num(getParamRawValue(branchId, periodIdStr, k), 0);
 
-    const vehicles_count = String(getParamRawValue(branchId, periodIdStr, 'vehicles_count') || (
-      branchId === 'RPS' ? '18+1' : branchId === 'KPM' ? '12+1' : branchId === 'University' ? '24+2' : '10+1'
-    ));
-    const passengers_count = g('passengers_count', branchId === 'RPS' ? 447 : branchId === 'KPM' ? 320 : branchId === 'University' ? 890 : 150);
-    const approved_kms = g('approved_kms', branchId === 'RPS' ? 26691 : branchId === 'KPM' ? 18500 : branchId === 'University' ? 42000 : 15000);
-    const actual_kms = g('actual_kms', branchId === 'RPS' ? 25777 : branchId === 'KPM' ? 17950 : branchId === 'University' ? 40800 : 14200);
+    const vehicles_count = String(getParamRawValue(branchId, periodIdStr, 'vehicles_count') ?? '0');
+    const passengers_count = g('passengers_count');
+    const approved_kms = g('approved_kms');
+    const actual_kms = g('actual_kms');
     const excess_minus_kms_rps = actual_kms - approved_kms; // Formula: Actual - Approved
-    const excess_kms_billed_rps = g('excess_kms_billed_rps', 0);
-    const additional_kms = g('additional_kms', branchId === 'RPS' ? 2481 : branchId === 'KPM' ? 1200 : branchId === 'University' ? 3500 : 950);
+    const excess_kms_billed_rps = g('excess_kms_billed_rps');
+    const additional_kms = g('additional_kms');
 
     // Section 2: Fleet Expenses & Operations
-    const fuel_expenses = g('fuel_expenses', branchId === 'RPS' ? 478461 : branchId === 'KPM' ? 338400 : branchId === 'University' ? 789600 : 272600);
-    const fc_cost = g('fc_cost', 0);
-    const statutory_cost = g('statutory_cost', branchId === 'RPS' ? 61896 : branchId === 'KPM' ? 42000 : branchId === 'University' ? 95000 : 35000);
-    const repair_maintenance_cost = g('repair_maintenance_cost', branchId === 'RPS' ? 82865 : branchId === 'KPM' ? 58000 : branchId === 'University' ? 134000 : 45000);
-    const other_cost = g('other_cost', branchId === 'RPS' ? 116532 : branchId === 'KPM' ? 78000 : branchId === 'University' ? 185000 : 62000);
-    const employee_cost = g('employee_cost', branchId === 'RPS' ? 474600 : branchId === 'KPM' ? 325000 : branchId === 'University' ? 740000 : 260000);
+    const fuel_expenses = g('fuel_expenses');
+    const fc_cost = g('fc_cost');
+    const statutory_cost = g('statutory_cost');
+    const repair_maintenance_cost = g('repair_maintenance_cost');
+    const other_cost = g('other_cost');
+    const employee_cost = g('employee_cost');
     
     // Formula: Total Expenses = Fuel + FC + Statutory + Repair + Others + Employees Cost
     const total_expenses = fuel_expenses + fc_cost + statutory_cost + repair_maintenance_cost + other_cost + employee_cost;
 
     // Section 3: Revenue, Deductions & Income
-    const students_count_income = g('students_count_income', branchId === 'RPS' ? 412 : branchId === 'KPM' ? 295 : branchId === 'University' ? 820 : 110);
-    const staff_count_income = g('staff_count_income', branchId === 'RPS' ? 35 : branchId === 'KPM' ? 25 : branchId === 'University' ? 70 : 40);
-    const fee_demand = g('fee_demand', branchId === 'RPS' ? 12500000 : branchId === 'KPM' ? 8500000 : branchId === 'University' ? 24000000 : 0);
-    const fee_collected = g('fee_collected', branchId === 'RPS' ? 8900000 : branchId === 'KPM' ? 6200000 : branchId === 'University' ? 17500000 : 0);
+    const students_count_income = g('students_count_income');
+    const staff_count_income = g('staff_count_income');
+    const fee_demand = g('fee_demand');
+    const fee_collected = g('fee_collected');
     const fee_unpaid = Math.max(0, fee_demand - fee_collected);
-    const rps_monthly_billing = g('rps_monthly_billing', 0);
-    const staff_travel_deduction = g('staff_travel_deduction', 0);
-    const additional_kms_billed_rps = g('additional_kms_billed_rps', 0);
-    const additional_kms_others_billing = g('additional_kms_others_billing', 0);
-    const cab_billing = g('cab_billing', branchId === 'RPS' ? 214440 : 0);
+    const rps_monthly_billing = g('rps_monthly_billing');
+    const staff_travel_deduction = g('staff_travel_deduction');
+    const additional_kms_billed_rps = g('additional_kms_billed_rps');
+    const additional_kms_others_billing = g('additional_kms_others_billing');
+    const cab_billing = g('cab_billing');
 
     // Formula: Cumulative Income = Paid + RPS monthly billing + Staff Travel Deduction + Additional KMs Billed + Others Billing + Cab billing
     const cumulative_income = fee_collected + rps_monthly_billing + staff_travel_deduction + additional_kms_billed_rps + additional_kms_others_billing + cab_billing;
 
     // Section 4: Operating Budget & Balance
-    const approved_budget = g('approved_budget', branchId === 'RPS' ? 13730138 : branchId === 'KPM' ? 9500000 : branchId === 'University' ? 28500000 : 7500000);
-    const cumulative_budget_spent = g('cumulative_budget_spent', branchId === 'RPS' ? 6471523 : branchId === 'KPM' ? 4300000 : branchId === 'University' ? 13200000 : 3100000);
+    const approved_budget = g('approved_budget');
+    const cumulative_budget_spent = g('cumulative_budget_spent');
     // Formula: Balance = Approved Budget - Cumulative Budget spent
     const balance = approved_budget - cumulative_budget_spent;
 
     // Section 5: Service Tickets & Compliance
-    const service_tickets_raised = g('service_tickets_raised', branchId === 'RPS' ? 38 : branchId === 'KPM' ? 24 : branchId === 'University' ? 56 : 18);
-    const service_tickets_closed = g('service_tickets_closed', branchId === 'RPS' ? 38 : branchId === 'KPM' ? 23 : branchId === 'University' ? 54 : 17);
+    const service_tickets_raised = g('service_tickets_raised');
+    const service_tickets_closed = g('service_tickets_closed');
     const service_tickets_open = Math.max(0, service_tickets_raised - service_tickets_closed);
 
-    const quality_issues_received = g('quality_issues_received', 0);
-    const quality_issues_closed = g('quality_issues_closed', 0);
+    const quality_issues_received = g('quality_issues_received');
+    const quality_issues_closed = g('quality_issues_closed');
     const quality_issues_open = Math.max(0, quality_issues_received - quality_issues_closed);
 
-    const statutory_compliance = g('statutory_compliance', 1);
-    const incidents_count = g('incidents_count', 1);
+    const statutory_compliance = g('statutory_compliance') || 1;
+    const incidents_count = g('incidents_count');
 
     // Section 6: Fuel Purchase
-    const diesel_litres = g('diesel_litres', branchId === 'RPS' ? 5185 : branchId === 'KPM' ? 3600 : branchId === 'University' ? 8400 : 2900);
+    const diesel_litres = g('diesel_litres');
 
     // Section 7: Student Transport Fee Analytics
-    const students_count_fee = g('students_count_fee', students_count_income);
-    const demand_fee = g('demand_fee', fee_demand);
-    const fee_discount = g('fee_discount', 0);
-    const paid_fee = g('paid_fee', fee_collected);
+    const students_count_fee = g('students_count_fee') || students_count_income;
+    const demand_fee = g('demand_fee') || fee_demand;
+    const fee_discount = g('fee_discount');
+    const paid_fee = g('paid_fee') || fee_collected;
     const unpaid_fee = Math.max(0, demand_fee - fee_discount - paid_fee);
 
     // Formula: Per student cost expenses = Total Expenses / Students Count
-    const per_student_cost_expenses = students_count_income > 0 ? Math.round(total_expenses / students_count_income) : '#REF!';
+    const per_student_cost_expenses = students_count_income > 0 ? Math.round(total_expenses / students_count_income) : (passengers_count > 0 ? Math.round(total_expenses / passengers_count) : 0);
     const per_student_fee_year = students_count_income > 0 ? Math.round(demand_fee / students_count_income) : 0;
     const demand_per_km_day = actual_kms > 0 ? (demand_fee / (actual_kms * 30)).toFixed(2) : '0.00';
-    const numVehicles = parseFloat(vehicles_count) || 19;
-    const km_per_veh_day = numVehicles > 0 ? (actual_kms / (numVehicles * 30)).toFixed(2) : '0.00';
+    const numVehicles = parseFloat(vehicles_count) || 0;
+    const km_per_veh_day = numVehicles > 0 && actual_kms > 0 ? (actual_kms / (numVehicles * 30)).toFixed(2) : '0.00';
     const cumulative_demand_per_km = actual_kms > 0 ? (demand_fee / actual_kms).toFixed(2) : '0.00';
 
     return {
@@ -629,7 +625,18 @@ export default function TransportSpreadsheetEntry({
         text: `Transport spreadsheet for ${activeBranchObj.label} (${activePeriodObj?.period_label || 'Current Period'}) saved to PostgreSQL successfully!`
       });
 
-      if (fetchData) fetchData('transport');
+      // Clear the local draft for this branch and period so it now reads saved data from DB
+      setBranchDrafts(prev => {
+        const next = { ...prev };
+        if (next[activeBranch]) {
+          const nextBranch = { ...next[activeBranch] };
+          delete nextBranch[currPeriodIdStr];
+          next[activeBranch] = nextBranch;
+        }
+        return next;
+      });
+
+      if (fetchData) await fetchData('transport');
     } catch (err) {
       setLocalMessage({
         type: 'error',
@@ -792,13 +799,13 @@ export default function TransportSpreadsheetEntry({
 
   // Helper to format table cell values
   const formatCellValue = (param, val) => {
-    if (param.param_key === 'per_student_cost_expenses' && (val === '#REF!' || !val || val === 0)) {
-      return '#REF!';
+    if (param.param_key === 'per_student_cost_expenses' && (val === '#REF!' || !val || val === 0 || val === '0')) {
+      return '₹0.00';
     }
     if (param.param_key === 'fc_cost' && (val === 0 || !val || val === '0' || val === '-')) {
       return '-';
     }
-    if (val === undefined || val === null || val === '') return '';
+    if (val === undefined || val === null || val === '') return '0';
     if (param.input_type === 'text') return String(val);
     if (typeof val === 'string' && isNaN(Number(val.replace(/,/g, '')))) return val;
     const n = Number(val);
@@ -1269,7 +1276,9 @@ export default function TransportSpreadsheetEntry({
               {canonicalParameters.map((param, idx) => {
                 const isFormula = !!param.formula;
                 const isTotalRow = param.param_key === 'total_expenses' || param.param_key === 'cumulative_income' || param.param_key === 'balance';
-                const cellVal = activeMetrics[param.param_key] !== undefined ? activeMetrics[param.param_key] : getParamRawValue(activeBranch, currPeriodIdStr, param.param_key);
+                const cellVal = isFormula 
+                  ? (activeMetrics[param.param_key] !== undefined ? activeMetrics[param.param_key] : 0) 
+                  : getParamRawValue(activeBranch, currPeriodIdStr, param.param_key);
                 const rowStyle = getExcelRowStyle(param);
                 const formattedVal = formatCellValue(param, cellVal);
                 const isRefError = param.param_key === 'per_student_cost_expenses' && (cellVal === '#REF!' || !cellVal || cellVal === 0);
@@ -1367,8 +1376,13 @@ export default function TransportSpreadsheetEntry({
                           <input
                             type={param.input_type === 'text' ? 'text' : 'number'}
                             step={param.input_type === 'cost' ? '1' : '0.01'}
-                            value={cellVal !== undefined && cellVal !== null ? cellVal : ''}
+                            value={cellVal !== undefined && cellVal !== null ? cellVal : '0'}
                             onChange={(e) => handleCellEdit(param.param_key, e.target.value)}
+                            onFocus={(e) => {
+                              if (e.target.value === '0') {
+                                e.target.select();
+                              }
+                            }}
                             style={{
                               width: '100%',
                               padding: '3px 4px',
@@ -1381,7 +1395,7 @@ export default function TransportSpreadsheetEntry({
                               backgroundColor: 'transparent',
                               color: '#000000'
                             }}
-                            placeholder=""
+                            placeholder="0"
                           />
                         )}
                       </td>
@@ -1554,7 +1568,9 @@ export default function TransportSpreadsheetEntry({
                       {periods.map(p => {
                         const pStr = String(p.id);
                         const pMetrics = computeBranchMetrics(activeBranch, pStr);
-                        const mVal = pMetrics[param.param_key] !== undefined ? pMetrics[param.param_key] : getParamRawValue(activeBranch, pStr, param.param_key);
+                        const mVal = isFormula 
+                          ? (pMetrics[param.param_key] !== undefined ? pMetrics[param.param_key] : 0) 
+                          : getParamRawValue(activeBranch, pStr, param.param_key);
                         const isRefError = param.param_key === 'per_student_cost_expenses' && (mVal === '#REF!' || !mVal || mVal === 0);
                         const formattedVal = formatCellValue(param, mVal);
 
@@ -1595,8 +1611,13 @@ export default function TransportSpreadsheetEntry({
                               <input
                                 type={param.input_type === 'text' ? 'text' : 'number'}
                                 step={param.input_type === 'cost' ? '1' : '0.01'}
-                                value={mVal !== undefined && mVal !== null ? mVal : ''}
+                                value={mVal !== undefined && mVal !== null ? mVal : '0'}
                                 onChange={(e) => handleCellEdit(param.param_key, e.target.value, pStr)}
+                                onFocus={(e) => {
+                                  if (e.target.value === '0') {
+                                    e.target.select();
+                                  }
+                                }}
                                 style={{
                                   width: '100%',
                                   padding: '3px 4px',
@@ -1609,7 +1630,7 @@ export default function TransportSpreadsheetEntry({
                                   backgroundColor: 'transparent',
                                   color: '#000000'
                                 }}
-                                placeholder=""
+                                placeholder="0"
                               />
                             )}
                           </td>

@@ -1468,8 +1468,8 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '8px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Bed Capacity</td>
                 {periods.map(p => {
                   const d = hostelCensusDraft[String(p.id)] || {};
-                  const b = num(d.bed_capacity_boys, 2223);
-                  const g = num(d.bed_capacity_girls, 896);
+                  const b = num(d.bed_capacity_boys, 0);
+                  const g = num(d.bed_capacity_girls, 0);
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
                       {b + g}
@@ -1483,10 +1483,10 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '8px 14px', fontWeight: '800', color: '#166534', borderRight: '1px solid #000000' }}>Total Occupied</td>
                 {periods.map(p => {
                   const d = hostelCensusDraft[String(p.id)] || {};
-                  const sb = num(d.students_boys, 2075);
-                  const sg = num(d.students_girls, 768);
-                  const fb = num(d.staff_boys, 72);
-                  const fg = num(d.staff_girls, 59);
+                  const sb = num(d.students_boys, 0);
+                  const sg = num(d.students_girls, 0);
+                  const fb = num(d.staff_boys, 0);
+                  const fg = num(d.staff_girls, 0);
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '800', color: '#166534', borderRight: '1px solid #000000' }}>
                       {sb + sg + fb + fg}
@@ -1500,8 +1500,8 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '8px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Occupied %</td>
                 {periods.map(p => {
                   const d = hostelCensusDraft[String(p.id)] || {};
-                  const b = num(d.bed_capacity_boys, 2223) + num(d.bed_capacity_girls, 896);
-                  const occ = num(d.students_boys, 2075) + num(d.students_girls, 768) + num(d.staff_boys, 72) + num(d.staff_girls, 59);
+                  const b = num(d.bed_capacity_boys, 0) + num(d.bed_capacity_girls, 0);
+                  const occ = num(d.students_boys, 0) + num(d.students_girls, 0) + num(d.staff_boys, 0) + num(d.staff_girls, 0);
                   const pct = b > 0 ? ((occ / b) * 100).toFixed(1) : '0';
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }}>
@@ -1518,7 +1518,7 @@ export default function HostelSpreadsheetEntry({
                   const d = hostelCensusDraft[String(p.id)] || {};
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', borderRight: '1px solid #000000' }}>
-                      {num(d.power_units, 108201).toLocaleString()}
+                      {num(d.power_units, 0).toLocaleString()}
                     </td>
                   );
                 })}
@@ -1531,7 +1531,7 @@ export default function HostelSpreadsheetEntry({
                   const d = hostelCensusDraft[String(p.id)] || {};
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }} className="currency-font">
-                      {formatINR(num(d.power_cost, 1325151))}
+                      {formatINR(num(d.power_cost, 0))}
                     </td>
                   );
                 })}
@@ -1544,7 +1544,7 @@ export default function HostelSpreadsheetEntry({
                   const d = hostelCensusDraft[String(p.id)] || {};
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', borderRight: '1px solid #000000' }} className="currency-font">
-                      {formatINR(num(d.water_purchase_cost, 248765))}
+                      {formatINR(num(d.water_purchase_cost, 0))}
                     </td>
                   );
                 })}
@@ -1557,7 +1557,7 @@ export default function HostelSpreadsheetEntry({
                   const d = hostelCensusDraft[String(p.id)] || {};
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '800', borderRight: '1px solid #000000' }} className="currency-font">
-                      {formatINR(num(d.expenses_occurred, 9349172))}
+                      {formatINR(num(d.expenses_occurred, 0))}
                     </td>
                   );
                 })}
@@ -1568,9 +1568,9 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '8px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>Per student cost per month</td>
                 {periods.map(p => {
                   const d = hostelCensusDraft[String(p.id)] || {};
-                  const st = num(d.students_boys, 2075) + num(d.students_girls, 768);
-                  const exp = num(d.expenses_occurred, 9349172);
-                  const psc = st > 0 ? Math.round(exp / st) : 3288;
+                  const st = num(d.students_boys, 0) + num(d.students_girls, 0);
+                  const exp = num(d.expenses_occurred, 0);
+                  const psc = st > 0 ? Math.round(exp / st) : 0;
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid #000000' }} className="currency-font">
                       ₹ {psc.toLocaleString()}
@@ -1584,8 +1584,8 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '8px 14px', fontWeight: '900', borderRight: '1px solid #000000' }}>Balance Budget</td>
                 {periods.map(p => {
                   const d = hostelCensusDraft[String(p.id)] || {};
-                  const ab = num(d.approved_budget, 131788118);
-                  const cb = num(d.cumulative_budget_spent, 34527814);
+                  const ab = num(d.approved_budget, 0);
+                  const cb = num(d.cumulative_budget_spent, 0);
                   return (
                     <td key={p.id} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '900', color: '#14532d', borderRight: '1px solid #000000' }} className="currency-font">
                       {formatINR(ab - cb)}

@@ -55,31 +55,31 @@ export default function TransportDashboardCensusView({
 
       realBranches.forEach(b => {
         const m = computedMatrix?.transport_census_by_branch?.[b]?.[pStr] || {};
-        if (m.vehicles_count) totVeh.push(`${b}: ${m.vehicles_count}`);
-        totPassengers += num(m.passengers_count, b === 'RPS' ? 447 : b === 'KPM' ? 320 : b === 'University' ? 890 : 150);
-        totAppKms += num(m.approved_kms, b === 'RPS' ? 26691 : b === 'KPM' ? 18500 : b === 'University' ? 42000 : 15000);
-        totActKms += num(m.actual_kms, b === 'RPS' ? 25777 : b === 'KPM' ? 17950 : b === 'University' ? 40800 : 14200);
-        totAddKms += num(m.additional_kms, b === 'RPS' ? 2481 : b === 'KPM' ? 1200 : b === 'University' ? 3500 : 950);
-        totFuel += num(m.fuel_expenses, b === 'RPS' ? 478461 : b === 'KPM' ? 338400 : b === 'University' ? 789600 : 272600);
+        if (m.vehicles_count && m.vehicles_count !== '0') totVeh.push(`${b}: ${m.vehicles_count}`);
+        totPassengers += num(m.passengers_count, 0);
+        totAppKms += num(m.approved_kms, 0);
+        totActKms += num(m.actual_kms, 0);
+        totAddKms += num(m.additional_kms, 0);
+        totFuel += num(m.fuel_expenses, 0);
         totFc += num(m.fc_cost, 0);
-        totStat += num(m.statutory_cost, b === 'RPS' ? 61896 : b === 'KPM' ? 42000 : b === 'University' ? 95000 : 35000);
-        totRep += num(m.repair_maintenance_cost, b === 'RPS' ? 82865 : b === 'KPM' ? 58000 : b === 'University' ? 134000 : 45000);
-        totOth += num(m.other_cost, b === 'RPS' ? 116532 : b === 'KPM' ? 78000 : b === 'University' ? 185000 : 62000);
-        totEmp += num(m.employee_cost, b === 'RPS' ? 474600 : b === 'KPM' ? 325000 : b === 'University' ? 740000 : 260000);
-        totDemand += num(m.fee_demand, b === 'RPS' ? 12500000 : b === 'KPM' ? 8500000 : b === 'University' ? 24000000 : 0);
-        totPaid += num(m.fee_collected, b === 'RPS' ? 8900000 : b === 'KPM' ? 6200000 : b === 'University' ? 17500000 : 0);
+        totStat += num(m.statutory_cost, 0);
+        totRep += num(m.repair_maintenance_cost, 0);
+        totOth += num(m.other_cost, 0);
+        totEmp += num(m.employee_cost, 0);
+        totDemand += num(m.fee_demand, 0);
+        totPaid += num(m.fee_collected, 0);
         totRpsBill += num(m.rps_monthly_billing, 0);
         totStaffDed += num(m.staff_travel_deduction, 0);
         totAddKmsRps += num(m.additional_kms_billed_rps, 0);
-        totCab += num(m.cab_billing, b === 'RPS' ? 214440 : 0);
-        totAppBud += num(m.approved_budget, b === 'RPS' ? 13730138 : b === 'KPM' ? 9500000 : b === 'University' ? 28500000 : 7500000);
-        totSpentBud += num(m.cumulative_budget_spent, b === 'RPS' ? 6471523 : b === 'KPM' ? 4300000 : b === 'University' ? 13200000 : 3100000);
-        totTkRaised += num(m.service_tickets_raised, b === 'RPS' ? 38 : b === 'KPM' ? 24 : b === 'University' ? 56 : 18);
-        totTkClosed += num(m.service_tickets_closed, b === 'RPS' ? 38 : b === 'KPM' ? 23 : b === 'University' ? 54 : 17);
+        totCab += num(m.cab_billing, 0);
+        totAppBud += num(m.approved_budget, 0);
+        totSpentBud += num(m.cumulative_budget_spent, 0);
+        totTkRaised += num(m.service_tickets_raised, 0);
+        totTkClosed += num(m.service_tickets_closed, 0);
         totQRec += num(m.quality_issues_received, 0);
         totQCls += num(m.quality_issues_closed, 0);
-        totInc += num(m.incidents_count, 1);
-        totDiesel += num(m.diesel_litres, b === 'RPS' ? 5185 : b === 'KPM' ? 3600 : b === 'University' ? 8400 : 2900);
+        totInc += num(m.incidents_count, 0);
+        totDiesel += num(m.diesel_litres, 0);
       });
 
       const totExpenses = totFuel + totFc + totStat + totRep + totOth + totEmp;
@@ -90,7 +90,7 @@ export default function TransportDashboardCensusView({
       const totQOpen = Math.max(0, totQRec - totQCls);
 
       return {
-        vehicles_count: totVeh.join(' / ') || '64 fleet',
+        vehicles_count: totVeh.join(' / ') || '0 fleet',
         passengers_count: totPassengers,
         approved_kms: totAppKms,
         actual_kms: totActKms,
@@ -128,37 +128,37 @@ export default function TransportDashboardCensusView({
 
     // Specific branch data
     const m = computedMatrix?.transport_census_by_branch?.[branchId]?.[pStr] || {};
-    const veh = String(m.vehicles_count || (branchId === 'RPS' ? '18+1' : branchId === 'KPM' ? '12+1' : branchId === 'University' ? '24+2' : '10+1'));
-    const pass = num(m.passengers_count, branchId === 'RPS' ? 447 : branchId === 'KPM' ? 320 : branchId === 'University' ? 890 : 150);
-    const appKms = num(m.approved_kms, branchId === 'RPS' ? 26691 : branchId === 'KPM' ? 18500 : branchId === 'University' ? 42000 : 15000);
-    const actKms = num(m.actual_kms, branchId === 'RPS' ? 25777 : branchId === 'KPM' ? 17950 : branchId === 'University' ? 40800 : 14200);
-    const addKms = num(m.additional_kms, branchId === 'RPS' ? 2481 : branchId === 'KPM' ? 1200 : branchId === 'University' ? 3500 : 950);
+    const veh = String(m.vehicles_count ?? '0');
+    const pass = num(m.passengers_count, 0);
+    const appKms = num(m.approved_kms, 0);
+    const actKms = num(m.actual_kms, 0);
+    const addKms = num(m.additional_kms, 0);
     const excessKms = actKms - appKms;
 
-    const fuel = num(m.fuel_expenses, branchId === 'RPS' ? 478461 : branchId === 'KPM' ? 338400 : branchId === 'University' ? 789600 : 272600);
+    const fuel = num(m.fuel_expenses, 0);
     const fc = num(m.fc_cost, 0);
-    const stat = num(m.statutory_cost, branchId === 'RPS' ? 61896 : branchId === 'KPM' ? 42000 : branchId === 'University' ? 95000 : 35000);
-    const rep = num(m.repair_maintenance_cost, branchId === 'RPS' ? 82865 : branchId === 'KPM' ? 58000 : branchId === 'University' ? 134000 : 45000);
-    const oth = num(m.other_cost, branchId === 'RPS' ? 116532 : branchId === 'KPM' ? 78000 : branchId === 'University' ? 185000 : 62000);
-    const emp = num(m.employee_cost, branchId === 'RPS' ? 474600 : branchId === 'KPM' ? 325000 : branchId === 'University' ? 740000 : 260000);
+    const stat = num(m.statutory_cost, 0);
+    const rep = num(m.repair_maintenance_cost, 0);
+    const oth = num(m.other_cost, 0);
+    const emp = num(m.employee_cost, 0);
     const totExpenses = fuel + fc + stat + rep + oth + emp;
 
-    const demand = num(m.fee_demand, branchId === 'RPS' ? 12500000 : branchId === 'KPM' ? 8500000 : branchId === 'University' ? 24000000 : 0);
-    const paid = num(m.fee_collected, branchId === 'RPS' ? 8900000 : branchId === 'KPM' ? 6200000 : branchId === 'University' ? 17500000 : 0);
+    const demand = num(m.fee_demand, 0);
+    const paid = num(m.fee_collected, 0);
     const unpaid = Math.max(0, demand - paid);
     const rpsBill = num(m.rps_monthly_billing, 0);
     const staffDed = num(m.staff_travel_deduction, 0);
-    const cab = num(m.cab_billing, branchId === 'RPS' ? 214440 : 0);
+    const cab = num(m.cab_billing, 0);
     const cumulativeIncome = paid + rpsBill + staffDed + cab;
 
-    const appBud = num(m.approved_budget, branchId === 'RPS' ? 13730138 : branchId === 'KPM' ? 9500000 : branchId === 'University' ? 28500000 : 7500000);
-    const spentBud = num(m.cumulative_budget_spent, branchId === 'RPS' ? 6471523 : branchId === 'KPM' ? 4300000 : branchId === 'University' ? 13200000 : 3100000);
+    const appBud = num(m.approved_budget, 0);
+    const spentBud = num(m.cumulative_budget_spent, 0);
     const bal = appBud - spentBud;
 
-    const tkRaised = num(m.service_tickets_raised, branchId === 'RPS' ? 38 : branchId === 'KPM' ? 24 : branchId === 'University' ? 56 : 18);
-    const tkClosed = num(m.service_tickets_closed, branchId === 'RPS' ? 38 : branchId === 'KPM' ? 23 : branchId === 'University' ? 54 : 17);
+    const tkRaised = num(m.service_tickets_raised, 0);
+    const tkClosed = num(m.service_tickets_closed, 0);
     const tkOpen = Math.max(0, tkRaised - tkClosed);
-    const diesel = num(m.diesel_litres, branchId === 'RPS' ? 5185 : branchId === 'KPM' ? 3600 : branchId === 'University' ? 8400 : 2900);
+    const diesel = num(m.diesel_litres, 0);
 
     return {
       vehicles_count: veh,

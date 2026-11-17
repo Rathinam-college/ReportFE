@@ -33,70 +33,70 @@ export default function HostelDashboardCensusView({
   };
 
   // Pre-calculated values for active month
-  const bedTotal = num(activeCensus.bed_capacity_total, 3119);
-  const totalOcc = num(activeCensus.total_occupied, 2974);
-  const occPct = bedTotal > 0 ? ((totalOcc / bedTotal) * 100).toFixed(1) : '95.3';
+  const bedTotal = num(activeCensus.bed_capacity_total, 0);
+  const totalOcc = num(activeCensus.total_occupied, 0);
+  const occPct = bedTotal > 0 ? ((totalOcc / bedTotal) * 100).toFixed(1) : '0.0';
   const vacantTotal = num(activeCensus.vacant_total, Math.max(0, bedTotal - totalOcc));
 
-  const powerCost = num(activeCensus.power_cost, 1469211);
-  const powerUnits = num(activeCensus.power_units, 105116);
-  const normalWaterLtrs = num(activeCensus.normal_water_litres, 8202000);
-  const normalWaterCost = num(activeCensus.normal_water_cost, 820200);
-  const drinkingWaterLtrs = num(activeCensus.drinking_water_litres, 92800);
-  const drinkingWaterCost = num(activeCensus.drinking_water_cost, 23200);
-  const tankerCost = num(activeCensus.water_purchase_cost, 248765);
+  const powerCost = num(activeCensus.power_cost, 0);
+  const powerUnits = num(activeCensus.power_units, 0);
+  const normalWaterLtrs = num(activeCensus.normal_water_litres, 0);
+  const normalWaterCost = num(activeCensus.normal_water_cost, 0);
+  const drinkingWaterLtrs = num(activeCensus.drinking_water_litres, 0);
+  const drinkingWaterCost = num(activeCensus.drinking_water_cost, 0);
+  const tankerCost = num(activeCensus.water_purchase_cost, 0);
   const totalWaterCost = normalWaterCost + drinkingWaterCost + tankerCost;
 
-  const appBudget = num(activeCensus.approved_budget, 131788118);
-  const spentBudget = num(activeCensus.cumulative_budget_spent, 34527814);
+  const appBudget = num(activeCensus.approved_budget, 0);
+  const spentBudget = num(activeCensus.cumulative_budget_spent, 0);
   const balBudget = num(activeCensus.balance, appBudget - spentBudget);
-  const perStudentCost = num(activeCensus.per_student_cost_month, 3288);
+  const perStudentCost = num(activeCensus.per_student_cost_month, 0);
 
-  const ticketsRec = num(activeCensus.tickets_received, 176);
-  const ticketsCls = num(activeCensus.tickets_closed, 176);
+  const ticketsRec = num(activeCensus.tickets_received, 0);
+  const ticketsCls = num(activeCensus.tickets_closed, 0);
   const ticketsOpn = num(activeCensus.tickets_open, Math.max(0, ticketsRec - ticketsCls));
-  const qualityRec = num(activeCensus.quality_issues_received, 5);
-  const qualityCls = num(activeCensus.quality_issues_closed, 3);
+  const qualityRec = num(activeCensus.quality_issues_received, 0);
+  const qualityCls = num(activeCensus.quality_issues_closed, 0);
   const qualityOpn = num(activeCensus.quality_issues_open, Math.max(0, qualityRec - qualityCls));
 
   // The 28 canonical hostel parameters matching Image 1 & 2
   const HOSTEL_PARAM_ROWS = [
-    { sNo: '1', name: 'Bed Capacity (Boys / Girls / Total)', key: 'bed_capacity_total', type: 'count', section: 'occupancy', calc: c => `${num(c.bed_capacity_boys, 2223)} B / ${num(c.bed_capacity_girls, 896)} G = ${num(c.bed_capacity_total, 3119)}` },
-    { sNo: '2', name: 'No. of students (Boys / Girls / Total)', key: 'students_total', type: 'count', section: 'occupancy', calc: c => `${num(c.students_boys, 2075)} B / ${num(c.students_girls, 768)} G = ${num(c.students_total, 2843)}` },
-    { sNo: '3', name: 'No. of staffs (Boys / Girls / Total)', key: 'staff_total', type: 'count', section: 'occupancy', calc: c => `${num(c.staff_boys, 72)} B / ${num(c.staff_girls, 59)} G = ${num(c.staff_total, 131)}` },
-    { sNo: '4', name: 'Total Occupied (Residents)', key: 'total_occupied', type: 'count', section: 'occupancy', highlight: true, calc: c => num(c.total_occupied, 2974).toLocaleString() },
-    { sNo: '5', name: 'Vacant Beds Total', key: 'vacant_total', type: 'count', section: 'occupancy', calc: c => num(c.vacant_total, 145).toLocaleString() },
-    { sNo: '6', name: 'Vacant for college students', key: 'vacant_college', type: 'count', section: 'occupancy', calc: c => num(c.vacant_college, 28).toLocaleString() },
-    { sNo: '7', name: 'Occupied %', key: 'occupied_pct', type: 'pct', section: 'occupancy', highlight: true, calc: c => `${num(c.occupied_pct, 95.3).toFixed(1)}%` },
-    { sNo: '8', name: 'Vacant %', key: 'vacant_pct', type: 'pct', section: 'occupancy', calc: c => `${num(c.vacant_pct, 4.7).toFixed(1)}%` },
-    { sNo: '9', name: 'Students Vacated', key: 'students_vacated', type: 'count', section: 'occupancy', calc: c => num(c.students_vacated, 86).toLocaleString() },
+    { sNo: '1', name: 'Bed Capacity (Boys / Girls / Total)', key: 'bed_capacity_total', type: 'count', section: 'occupancy', calc: c => `${num(c.bed_capacity_boys, 0)} B / ${num(c.bed_capacity_girls, 0)} G = ${num(c.bed_capacity_total, 0)}` },
+    { sNo: '2', name: 'No. of students (Boys / Girls / Total)', key: 'students_total', type: 'count', section: 'occupancy', calc: c => `${num(c.students_boys, 0)} B / ${num(c.students_girls, 0)} G = ${num(c.students_total, 0)}` },
+    { sNo: '3', name: 'No. of staffs (Boys / Girls / Total)', key: 'staff_total', type: 'count', section: 'occupancy', calc: c => `${num(c.staff_boys, 0)} B / ${num(c.staff_girls, 0)} G = ${num(c.staff_total, 0)}` },
+    { sNo: '4', name: 'Total Occupied (Residents)', key: 'total_occupied', type: 'count', section: 'occupancy', highlight: true, calc: c => num(c.total_occupied, 0).toLocaleString() },
+    { sNo: '5', name: 'Vacant Beds Total', key: 'vacant_total', type: 'count', section: 'occupancy', calc: c => num(c.vacant_total, 0).toLocaleString() },
+    { sNo: '6', name: 'Vacant for college students', key: 'vacant_college', type: 'count', section: 'occupancy', calc: c => num(c.vacant_college, 0).toLocaleString() },
+    { sNo: '7', name: 'Occupied %', key: 'occupied_pct', type: 'pct', section: 'occupancy', highlight: true, calc: c => `${num(c.occupied_pct, 0).toFixed(1)}%` },
+    { sNo: '8', name: 'Vacant %', key: 'vacant_pct', type: 'pct', section: 'occupancy', calc: c => `${num(c.vacant_pct, 0).toFixed(1)}%` },
+    { sNo: '9', name: 'Students Vacated', key: 'students_vacated', type: 'count', section: 'occupancy', calc: c => num(c.students_vacated, 0).toLocaleString() },
 
     // Tickets & Quality
-    { sNo: '10', name: 'No. of Maintenance Tickets Received', key: 'tickets_received', type: 'count', section: 'maintenance', calc: c => num(c.tickets_received, 176).toLocaleString() },
-    { sNo: '11', name: 'No. of Maintenance Tickets Closed', key: 'tickets_closed', type: 'count', section: 'maintenance', calc: c => num(c.tickets_closed, 176).toLocaleString() },
+    { sNo: '10', name: 'No. of Maintenance Tickets Received', key: 'tickets_received', type: 'count', section: 'maintenance', calc: c => num(c.tickets_received, 0).toLocaleString() },
+    { sNo: '11', name: 'No. of Maintenance Tickets Closed', key: 'tickets_closed', type: 'count', section: 'maintenance', calc: c => num(c.tickets_closed, 0).toLocaleString() },
     { sNo: '12', name: 'No. of Maintenance Tickets in Open', key: 'tickets_open', type: 'count', section: 'maintenance', highlight: true, calc: c => num(c.tickets_open, 0).toLocaleString() },
-    { sNo: '13', name: 'Quality Issues Received / Closed / Open', key: 'quality_issues', type: 'text', section: 'maintenance', calc: c => `${num(c.quality_issues_received, 5)} Rec / ${num(c.quality_issues_closed, 3)} Cls / ${num(c.quality_issues_open, 2)} Opn` },
+    { sNo: '13', name: 'Quality Issues Received / Closed / Open', key: 'quality_issues', type: 'text', section: 'maintenance', calc: c => `${num(c.quality_issues_received, 0)} Rec / ${num(c.quality_issues_closed, 0)} Cls / ${num(c.quality_issues_open, 0)} Opn` },
     { sNo: '14', name: 'No. of Incidents', key: 'incidents_count', type: 'count', section: 'maintenance', calc: c => num(c.incidents_count, 0).toLocaleString() },
 
     // Utilities & Power
-    { sNo: '15', name: 'Power Consumption Cost (EB + DG)', key: 'power_cost', type: 'currency', section: 'utilities', highlight: true, calc: c => formatINR(num(c.power_cost, 1469211)) },
-    { sNo: '16', name: 'Power Units Consumed (kWh)', key: 'power_units', type: 'count', section: 'utilities', calc: c => `${num(c.power_units, 105116).toLocaleString()} kWh` },
-    { sNo: '17', name: 'Power Cost per sq.ft', key: 'power_cost_sqft', type: 'text', section: 'utilities', calc: c => `₹${num(c.power_cost_sqft, 6.34).toFixed(2)}/sq.ft` },
-    { sNo: '18', name: 'Units per occupant per month', key: 'units_per_occupant', type: 'text', section: 'utilities', calc: c => `${num(c.units_per_occupant, 35.3).toFixed(1)} kWh/occ` },
-    { sNo: '19', name: 'Power cost per occupant per month', key: 'power_cost_occupant', type: 'text', section: 'utilities', calc: c => `₹${Math.round(num(c.power_cost_occupant, 494))}/occ` },
+    { sNo: '15', name: 'Power Consumption Cost (EB + DG)', key: 'power_cost', type: 'currency', section: 'utilities', highlight: true, calc: c => formatINR(num(c.power_cost, 0)) },
+    { sNo: '16', name: 'Power Units Consumed (kWh)', key: 'power_units', type: 'count', section: 'utilities', calc: c => `${num(c.power_units, 0).toLocaleString()} kWh` },
+    { sNo: '17', name: 'Power Cost per sq.ft', key: 'power_cost_sqft', type: 'text', section: 'utilities', calc: c => `₹${num(c.power_cost_sqft, 0).toFixed(2)}/sq.ft` },
+    { sNo: '18', name: 'Units per occupant per month', key: 'units_per_occupant', type: 'text', section: 'utilities', calc: c => `${num(c.units_per_occupant, 0).toFixed(1)} kWh/occ` },
+    { sNo: '19', name: 'Power cost per occupant per month', key: 'power_cost_occupant', type: 'text', section: 'utilities', calc: c => `₹${Math.round(num(c.power_cost_occupant, 0))}/occ` },
 
     // Water Economics
-    { sNo: '20', name: 'Normal Water Consumption Litres', key: 'normal_water_litres', type: 'count', section: 'water', calc: c => `${(num(c.normal_water_litres, 8202000) / 100000).toFixed(2)}L Lakhs` },
-    { sNo: '21', name: 'Normal Water Cost', key: 'normal_water_cost', type: 'currency', section: 'water', calc: c => formatINR(num(c.normal_water_cost, 820200)) },
-    { sNo: '22', name: 'Normal Water Ltr / Student / Day', key: 'normal_water_ltr_day', type: 'text', section: 'water', calc: c => `${num(c.normal_water_ltr_day, 91.93).toFixed(1)} L/day` },
-    { sNo: '23', name: 'Drinking RO Water (Litres & Cost)', key: 'drinking_water', type: 'text', section: 'water', calc: c => `${num(c.drinking_water_litres, 92800).toLocaleString()}L (₹${num(c.drinking_water_cost, 23200).toLocaleString()})` },
-    { sNo: '24', name: 'Water Purchase Tanker Expenses', key: 'water_purchase_cost', type: 'currency', section: 'water', calc: c => formatINR(num(c.water_purchase_cost, 248765)) },
+    { sNo: '20', name: 'Normal Water Consumption Litres', key: 'normal_water_litres', type: 'count', section: 'water', calc: c => `${(num(c.normal_water_litres, 0) / 100000).toFixed(2)}L Lakhs` },
+    { sNo: '21', name: 'Normal Water Cost', key: 'normal_water_cost', type: 'currency', section: 'water', calc: c => formatINR(num(c.normal_water_cost, 0)) },
+    { sNo: '22', name: 'Normal Water Ltr / Student / Day', key: 'normal_water_ltr_day', type: 'text', section: 'water', calc: c => `${num(c.normal_water_ltr_day, 0).toFixed(1)} L/day` },
+    { sNo: '23', name: 'Drinking RO Water (Litres & Cost)', key: 'drinking_water', type: 'text', section: 'water', calc: c => `${num(c.drinking_water_litres, 0).toLocaleString()}L (₹${num(c.drinking_water_cost, 0).toLocaleString()})` },
+    { sNo: '24', name: 'Water Purchase Tanker Expenses', key: 'water_purchase_cost', type: 'currency', section: 'water', calc: c => formatINR(num(c.water_purchase_cost, 0)) },
 
     // Financial Budget
-    { sNo: '25', name: 'Approved Operating Budget', key: 'approved_budget', type: 'currency', section: 'budget', calc: c => formatINR(num(c.approved_budget, 131788118)) },
-    { sNo: '26', name: 'Cumulative Budget Spent', key: 'cumulative_budget_spent', type: 'currency', section: 'budget', calc: c => formatINR(num(c.cumulative_budget_spent, 34527814)) },
-    { sNo: '27', name: 'Balance Budget Remaining', key: 'balance', type: 'currency', section: 'budget', highlight: true, calc: c => formatINR(num(c.balance, 97260304)) },
-    { sNo: '28', name: 'Per Student Cost per Month / Day', key: 'per_student_cost', type: 'text', section: 'budget', calc: c => `₹${num(c.per_student_cost_month, 3288).toLocaleString()}/mo • ₹${num(c.per_student_cost_day, 110)}/day` }
+    { sNo: '25', name: 'Approved Operating Budget', key: 'approved_budget', type: 'currency', section: 'budget', calc: c => formatINR(num(c.approved_budget, 0)) },
+    { sNo: '26', name: 'Cumulative Budget Spent', key: 'cumulative_budget_spent', type: 'currency', section: 'budget', calc: c => formatINR(num(c.cumulative_budget_spent, 0)) },
+    { sNo: '27', name: 'Balance Budget Remaining', key: 'balance', type: 'currency', section: 'budget', highlight: true, calc: c => formatINR(num(c.balance, 0)) },
+    { sNo: '28', name: 'Per Student Cost per Month / Day', key: 'per_student_cost', type: 'text', section: 'budget', calc: c => `₹${num(c.per_student_cost_month, 0).toLocaleString()}/mo • ₹${num(c.per_student_cost_day, 0)}/day` }
   ];
 
   return (
