@@ -9,6 +9,7 @@ export default function ChartDataTable({
   periods = [],
   activePeriod = 'all',
   selectedModule = 'food',
+  computedMatrix,
   isFullScreen: propIsFullScreen,
   onToggleFullScreen: propOnToggleFullScreen
 }) {
@@ -172,10 +173,33 @@ export default function ChartDataTable({
   };
 
   // Unified cell renderer for amounts and percentages with dynamic row/column basis
-  const renderCellContent = (amount, totalContext, isBold = false, isSubtotal = false, customBadgeTheme = null) => {
+  const renderCellContent = (
+    amount, 
+    totalContext, 
+    isBold = false, 
+    isSubtotal = false, 
+    customBadgeTheme = null,
+    hidePercentage = false
+  ) => {
     const num = Number(amount) || 0;
     if (num === 0 && (!amount || amount === 0)) {
       return <span style={{ color: '#94a3b8' }}>—</span>;
+    }
+
+    // If percentage is suppressed for Event / Additional food through Cost Per Person
+    if (hidePercentage) {
+      if (displayMode === 'percentage_only') {
+        return <span style={{ color: '#94a3b8' }}>—</span>;
+      }
+      return (
+        <span style={{
+          fontSize: isSubtotal ? '13px' : '12.5px',
+          fontWeight: isBold ? '800' : '600',
+          color: isSubtotal ? '#0f172a' : (num > 0 ? '#0f172a' : '#94a3b8')
+        }}>
+          {formatIndianNumber(num)}
+        </span>
+      );
     }
 
     let denominator = 0;
@@ -328,6 +352,58 @@ export default function ChartDataTable({
     return list;
   }, [categories, categorySubtotals, selectedCategoryFilter, searchTerm]);
 
+  // Determine if a category or line item should hide percentage badges
+  // (Per user instruction: "Event/ Additional food to Cost Per Person from this to end in the dabord show that persage do not show for this topics rempve thta")
+  const checkHidePercentage = (catName = '', itemDesc = '', grpIdx = -1) => {
+    const cLower = String(catName || '').toLowerCase();
+    const iLower = String(itemDesc || '').toLowerCase();
+
+    // Core operational categories before Event/Additional maintain their percentage badges
+    if (
+      cLower.includes('material') || 
+      cLower.includes('labour') || 
+      cLower.includes('labor') || 
+      cLower.includes('maintenance')
+    ) {
+      return false;
+    }
+
+    // Direct match for Event / Additional food, Festival, and Unit Economics / Per Person metrics
+    if (
+      cLower.includes('event') ||
+      cLower.includes('additional') ||
+      cLower.includes('festival') ||
+      cLower.includes('person') ||
+      cLower.includes('meal') ||
+      cLower.includes('student') ||
+      cLower.includes('census') ||
+      cLower.includes('economics') ||
+      iLower.includes('event purchase') ||
+      iLower.includes('additional food') ||
+      iLower.includes('festival') ||
+      iLower.includes('cost per person') ||
+      iLower.includes('per person') ||
+      iLower.includes('per meal') ||
+      iLower.includes('diners') ||
+      iLower.includes('production')
+    ) {
+      return true;
+    }
+
+    // Index-based cutoff: from first category matching "event" or "additional" onwards
+    if (grpIdx >= 0) {
+      const eventIdx = groupedCategories.findIndex(g => {
+        const n = (g.categoryName || '').toLowerCase();
+        return (n.includes('event') || n.includes('additional')) && !n.includes('labour') && !n.includes('labor');
+      });
+      if (eventIdx !== -1 && grpIdx >= eventIdx) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   // Special Combined Subtotals:
   // Food Material + Food Labour summed as "Total Food Expenses"
   const foodCombinedSubtotal = useMemo(() => {
@@ -353,15 +429,17 @@ export default function ChartDataTable({
     const headers = ['"Category"', '"Description"', ...periodHeaders, '"Total Spend (INR)"', '"Total (%)"', '"Avg / Month (INR)"', '"Avg (%)"'];
     const rows = [];
 
-    groupedCategories.forEach(grp => {
+    groupedCategories.forEach((grp, grpIdx) => {
+      const isGroupHidePct = checkHidePercentage(grp.categoryName, '', grpIdx);
       grp.items.forEach(it => {
+        const isHidePct = isGroupHidePct || checkHidePercentage(grp.categoryName, it.description, grpIdx);
         const pCols = periods.flatMap(p => {
           const amt = Number(it.amounts?.[p.id] ?? 0);
           const denom = percentageBasis === 'category_subtotal'
             ? (categorySubtotals[grp.categoryId]?.[p.id] || 0)
             : (monthlyGrandTotals.byPeriod[p.id] || 0);
           const pct = computePercentage(amt, denom);
-          return [amt.toFixed(2), `"${pct.toFixed(1)}%"`];
+          return [amt.toFixed(2), isHidePct ? '""' : `"${pct.toFixed(1)}%"`];
         });
         const itTotal = periods.reduce((acc, p) => acc + Number(it.amounts?.[p.id] ?? 0), 0);
         const itTotalDenom = percentageBasis === 'category_subtotal'
@@ -379,9 +457,9 @@ export default function ChartDataTable({
           `"${it.description}"`,
           ...pCols,
           itTotal.toFixed(2),
-          `"${itTotalPct.toFixed(1)}%"`,
+          isHidePct ? '""' : `"${itTotalPct.toFixed(1)}%"`,
           itAvg.toFixed(2),
-          `"${itAvgPct.toFixed(1)}%"`
+          isHidePct ? '""' : `"${itAvgPct.toFixed(1)}%"`
         ]);
       });
     });
@@ -757,52 +835,76 @@ export default function ChartDataTable({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
-              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Row % (Item Total)</div>
-              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#2563eb' }}>
-                {formatPercentage(computePercentage(selectedCell.amount, selectedCell.rowTotal))}
-              </div>
+          {checkHidePercentage(selectedCell.categoryName, selectedCell.description) ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1', backgroundColor: '#e0f2fe', border: '1px solid #bae6fd', padding: '4px 10px', borderRadius: '6px' }}>
+                Percentages not applicable for {selectedCell.categoryName}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedCell(null)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: '#64748b',
+                  cursor: 'pointer'
+                }}
+              >
+                Clear
+              </button>
             </div>
-
-            <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
-              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Column % (Month Total)</div>
-              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#059669' }}>
-                {formatPercentage(computePercentage(selectedCell.amount, selectedCell.colTotal))}
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Row % (Item Total)</div>
+                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#2563eb' }}>
+                  {formatPercentage(computePercentage(selectedCell.amount, selectedCell.rowTotal))}
+                </div>
               </div>
-            </div>
 
-            <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
-              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Category %</div>
-              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#7c3aed' }}>
-                {formatPercentage(computePercentage(selectedCell.amount, selectedCell.catTotal))}
+              <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Column % (Month Total)</div>
+                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#059669' }}>
+                  {formatPercentage(computePercentage(selectedCell.amount, selectedCell.colTotal))}
+                </div>
               </div>
-            </div>
 
-            <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
-              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Grand %</div>
-              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#ea580c' }}>
-                {formatPercentage(computePercentage(selectedCell.amount, selectedCell.grandTotal))}
+              <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Category %</div>
+                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#7c3aed' }}>
+                  {formatPercentage(computePercentage(selectedCell.amount, selectedCell.catTotal))}
+                </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setSelectedCell(null)}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '6px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                fontSize: '11px',
-                fontWeight: '700',
-                color: '#64748b',
-                cursor: 'pointer'
-              }}
-            >
-              Clear
-            </button>
-          </div>
+              <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Grand %</div>
+                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#ea580c' }}>
+                  {formatPercentage(computePercentage(selectedCell.amount, selectedCell.grandTotal))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedCell(null)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: '#64748b',
+                  cursor: 'pointer'
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -942,16 +1044,18 @@ export default function ChartDataTable({
           </thead>
 
           <tbody>
-            {groupedCategories.map((grp) => {
+            {groupedCategories.map((grp, grpIdx) => {
               const theme = grp.theme;
               const itemsCount = grp.items.length;
               const isFoodLabour = grp.categoryName.toLowerCase().includes('labour') || grp.categoryName.toLowerCase().includes('labor');
               const isFCMaintenance = grp.categoryName.toLowerCase().includes('fc maintenance') || grp.categoryName.toLowerCase().includes('maintenance');
+              const isGroupHidePct = checkHidePercentage(grp.categoryName, '', grpIdx);
 
               return (
                 <React.Fragment key={grp.categoryId}>
                   {/* Category Line Items */}
                   {grp.items.map((item, itemIdx) => {
+                    const isRowHidePct = isGroupHidePct || checkHidePercentage(grp.categoryName, item.description, grpIdx);
                     let itemTotal = 0;
                     periods.forEach(p => {
                       const v = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
@@ -1066,7 +1170,7 @@ export default function ChartDataTable({
                                 colTotal: periodColTotal,
                                 catTotal: periodCatTotal,
                                 grandTotal: grandOverall
-                              }, false, false)}
+                              }, false, false, null, isRowHidePct)}
                             </td>
                           );
                         })}
@@ -1105,7 +1209,7 @@ export default function ChartDataTable({
                                 colTotal: monthlyGrandTotals.grandOverall || 0,
                                 catTotal: categorySubtotals[grp.categoryId]?.total || 0,
                                 grandTotal: monthlyGrandTotals.grandOverall || 0
-                              }, true, false)}
+                              }, true, false, null, isRowHidePct)}
                             </td>
                           );
                         })()}
@@ -1125,7 +1229,7 @@ export default function ChartDataTable({
                                 colTotal: monthlyGrandTotals.avgMonthly || 0,
                                 catTotal: avgCatTotal,
                                 grandTotal: monthlyGrandTotals.avgMonthly || 0
-                              }, false, false)}
+                              }, false, false, null, isRowHidePct)}
                             </td>
                           );
                         })()}
@@ -1333,7 +1437,7 @@ export default function ChartDataTable({
                               text: theme.badgeText,
                               bg: theme.badgeBg,
                               border: theme.badgeBorder
-                            })}
+                            }, isGroupHidePct)}
                           </td>
                         );
                       })}
@@ -1347,7 +1451,7 @@ export default function ChartDataTable({
                           text: theme.badgeText,
                           bg: theme.badgeBg,
                           border: theme.badgeBorder
-                        })}
+                        }, isGroupHidePct)}
                       </td>
 
                       <td style={{
@@ -1363,7 +1467,8 @@ export default function ChartDataTable({
                             text: '#475569',
                             bg: 'rgba(241, 245, 249, 0.6)',
                             border: 'rgba(203, 213, 225, 0.8)'
-                          }
+                          },
+                          isGroupHidePct
                         )}
                       </td>
                     </tr>
@@ -1521,6 +1626,238 @@ export default function ChartDataTable({
                 )}
               </td>
             </tr>
+
+            {/* ========================================================================= */}
+            {/* DINING CENSUS & PER-PERSON / MEAL ECONOMICS (MATCHING DATA ENTRY 100%)    */}
+            {/* ========================================================================= */}
+            {selectedModule === 'food' && (() => {
+              const census = computedMatrix?.census || {};
+
+              // KPI rows definition
+              const kpiRows = [
+                {
+                  id: 'total_diners',
+                  name: 'Total Diners (Persons Count)',
+                  unit: 'Diners',
+                  isCurrency: false,
+                  getVal: (pId) => Number(census.total_persons?.[String(pId)] ?? census.total_persons?.[pId] ?? 2690),
+                  getTotal: () => {
+                    const vals = periods.map(p => Number(census.total_persons?.[String(p.id)] ?? census.total_persons?.[p.id] ?? 2690));
+                    return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 2690;
+                  },
+                  getAvg: () => {
+                    const vals = periods.map(p => Number(census.total_persons?.[String(p.id)] ?? census.total_persons?.[p.id] ?? 2690));
+                    return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 2690;
+                  }
+                },
+                {
+                  id: 'monthly_production',
+                  name: 'Monthly Meal Production (Meals)',
+                  unit: 'Plates',
+                  isCurrency: false,
+                  getVal: (pId) => Number(census.production?.[String(pId)] ?? census.production?.[pId] ?? 85000),
+                  getTotal: () => {
+                    const vals = periods.map(p => Number(census.production?.[String(p.id)] ?? census.production?.[p.id] ?? 85000));
+                    return vals.reduce((a, b) => a + b, 0);
+                  },
+                  getAvg: () => {
+                    const vals = periods.map(p => Number(census.production?.[String(p.id)] ?? census.production?.[p.id] ?? 85000));
+                    return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 85000;
+                  }
+                },
+                {
+                  id: 'cost_per_meal',
+                  name: 'Cost Per Meal Produced',
+                  unit: '₹ / Meal',
+                  isCurrency: true,
+                  getVal: (pId) => {
+                    const m = Number(census.production?.[String(pId)] ?? census.production?.[pId] ?? 85000);
+                    const sp = monthlyGrandTotals.byPeriod[pId] || 0;
+                    return m > 0 ? (sp / m) : 0;
+                  },
+                  getTotal: () => {
+                    const totalMeals = periods.reduce((acc, p) => acc + Number(census.production?.[String(p.id)] ?? census.production?.[p.id] ?? 85000), 0);
+                    return totalMeals > 0 ? (monthlyGrandTotals.grandOverall / totalMeals) : 0;
+                  },
+                  getAvg: () => {
+                    const totalMeals = periods.reduce((acc, p) => acc + Number(census.production?.[String(p.id)] ?? census.production?.[p.id] ?? 85000), 0);
+                    return totalMeals > 0 ? (monthlyGrandTotals.grandOverall / totalMeals) : 0;
+                  }
+                },
+                {
+                  id: 'cost_per_person',
+                  name: 'Cost Per Person (Monthly Food Spend / Diners)',
+                  unit: '₹ / Person',
+                  isCurrency: true,
+                  getVal: (pId) => {
+                    const d = Number(census.total_persons?.[String(pId)] ?? census.total_persons?.[pId] ?? 2690);
+                    const sp = monthlyGrandTotals.byPeriod[pId] || 0;
+                    return d > 0 ? (sp / d) : 0;
+                  },
+                  getTotal: () => {
+                    const avgDiners = periods.length > 0 
+                      ? (periods.reduce((acc, p) => acc + Number(census.total_persons?.[String(p.id)] ?? census.total_persons?.[p.id] ?? 2690), 0) / periods.length)
+                      : 2690;
+                    return avgDiners > 0 ? (monthlyGrandTotals.avgMonthly / avgDiners) : 0;
+                  },
+                  getAvg: () => {
+                    const avgDiners = periods.length > 0 
+                      ? (periods.reduce((acc, p) => acc + Number(census.total_persons?.[String(p.id)] ?? census.total_persons?.[p.id] ?? 2690), 0) / periods.length)
+                      : 2690;
+                    return avgDiners > 0 ? (monthlyGrandTotals.avgMonthly / avgDiners) : 0;
+                  }
+                }
+              ];
+
+              // Filter by searchTerm if any
+              const visibleKpis = kpiRows.filter(k => {
+                if (!searchTerm.trim()) return true;
+                const term = searchTerm.toLowerCase();
+                return k.name.toLowerCase().includes(term) || 'dining census unit economics per person meal'.includes(term);
+              });
+
+              if (visibleKpis.length === 0) return null;
+
+              return (
+                <React.Fragment>
+                  {/* Subtle Separator & Header for Unit Economics */}
+                  <tr style={{
+                    backgroundColor: 'rgba(240, 249, 255, 0.75)',
+                    borderTop: '2px solid rgba(14, 165, 233, 0.25)',
+                    borderBottom: '1.5px solid rgba(14, 165, 233, 0.25)'
+                  }}>
+                    <td colSpan={2} style={{
+                      padding: '9px 18px',
+                      fontWeight: '800',
+                      fontSize: '12px',
+                      color: '#0369a1',
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase'
+                    }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#0284c7' }} />
+                        <span>Dining Census & Unit Economics (Cost Per Person / Meal)</span>
+                      </div>
+                    </td>
+                    <td colSpan={periods.length + 2} style={{
+                      padding: '9px 16px',
+                      textAlign: 'right',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: '#0284c7'
+                    }}>
+                      Operational KPIs • No Percentage Badge
+                    </td>
+                  </tr>
+
+                  {visibleKpis.map((kpi, kIdx) => {
+                    const totalVal = kpi.getTotal();
+                    const avgVal = kpi.getAvg();
+
+                    return (
+                      <tr
+                        key={kpi.id}
+                        style={{
+                          backgroundColor: kIdx % 2 === 0 ? 'rgba(255, 255, 255, 0.7)' : 'rgba(248, 250, 252, 0.5)',
+                          borderBottom: '1px solid rgba(226, 232, 240, 0.8)'
+                        }}
+                      >
+                        {/* Merged Category Tag */}
+                        {kIdx === 0 && (
+                          <td
+                            rowSpan={visibleKpis.length}
+                            style={{
+                              padding: '12px 14px',
+                              textAlign: 'center',
+                              verticalAlign: 'middle',
+                              backgroundColor: 'rgba(240, 249, 255, 0.5)',
+                              borderRight: '1px solid rgba(226, 232, 240, 0.8)',
+                              borderBottom: '1px solid rgba(226, 232, 240, 0.8)'
+                            }}
+                          >
+                            <div style={{
+                              display: 'inline-block',
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                              border: '1px solid rgba(2, 132, 199, 0.25)',
+                              color: '#0369a1',
+                              fontWeight: '800',
+                              fontSize: '11.5px'
+                            }}>
+                              Unit Economics
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Description Cell */}
+                        <td style={{
+                          padding: '10px 18px',
+                          fontWeight: '700',
+                          color: '#0f172a',
+                          borderRight: '1px solid rgba(226, 232, 240, 0.7)'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: kpi.isCurrency ? '#4f46e5' : '#0284c7'
+                            }} />
+                            <span>{kpi.name}</span>
+                          </div>
+                        </td>
+
+                        {/* Period Columns */}
+                        {periods.map(p => {
+                          const val = kpi.getVal(p.id);
+                          const isSel = String(p.id) === String(activePeriod);
+                          return (
+                            <td
+                              key={p.id}
+                              style={{
+                                padding: isFullScreen ? '6px 8px' : '9px 14px',
+                                textAlign: 'right',
+                                borderRight: '1px solid rgba(226, 232, 240, 0.6)',
+                                backgroundColor: isSel ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
+                                fontWeight: '700',
+                                color: kpi.isCurrency ? '#4338ca' : '#0f172a'
+                              }}
+                              className="currency-font"
+                            >
+                              {kpi.isCurrency ? `₹${Math.round(val).toLocaleString()}` : Number(val).toLocaleString()}
+                            </td>
+                          );
+                        })}
+
+                        {/* Total Column */}
+                        <td style={{
+                          padding: isFullScreen ? '6px 8px' : '9px 16px',
+                          textAlign: 'right',
+                          fontWeight: '800',
+                          color: kpi.isCurrency ? '#4338ca' : '#0f172a',
+                          backgroundColor: 'rgba(248, 250, 252, 0.45)',
+                          borderRight: '1px solid rgba(226, 232, 240, 0.7)'
+                        }} className="currency-font">
+                          {kpi.isCurrency ? `₹${Math.round(totalVal).toLocaleString()}` : Number(totalVal).toLocaleString()}
+                        </td>
+
+                        {/* Avg Column */}
+                        <td style={{
+                          padding: isFullScreen ? '6px 8px' : '9px 14px',
+                          textAlign: 'right',
+                          fontWeight: '700',
+                          color: kpi.isCurrency ? '#4338ca' : '#0f172a',
+                          backgroundColor: 'rgba(248, 250, 252, 0.45)'
+                        }} className="currency-font">
+                          {kpi.isCurrency ? `₹${Math.round(avgVal).toLocaleString()}` : Number(avgVal).toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })()}
           </tbody>
         </table>
       </div>

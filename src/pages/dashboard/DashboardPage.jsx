@@ -484,6 +484,7 @@ export default function DashboardPage({
             periods={periods}
             activePeriod={activePeriod}
             selectedModule={currentModule}
+            computedMatrix={effectiveMatrix}
             isFullScreen={isTableFullScreen}
             onToggleFullScreen={setIsTableFullScreen}
           />
