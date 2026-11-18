@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatPeriodLabel } from '../../../utils/formatters';
 
 /**
  * CategoryCard Component
@@ -246,6 +247,7 @@ export default function CategoryCard({
                     }}>
                       <span style={{ fontWeight: '800', color: '#94a3b8', fontSize: '11.5px' }}>
                         {p.period_label || p.period_code}
+                        {formatPeriodLabel(p) !== (p.period_label || p.period_code) ? ` (${formatPeriodLabel(p)})` : ''}
                       </span>
                       <span style={{ fontWeight: '900', color: '#38bdf8', fontVariantNumeric: 'tabular-nums', fontSize: '12px' }}>
                         {formatFull(mVal)}
@@ -328,7 +330,7 @@ export default function CategoryCard({
                 {/* Under: Month label */}
                 <span
                   style={{
-                    fontSize: '9.5px',
+                    fontSize: periods.length > 8 ? '8.5px' : '9.5px',
                     fontWeight: isCurrentMonthSelected ? '800' : '600',
                     color: isCurrentMonthSelected ? color : 'var(--text-muted, #6b7090)',
                     opacity: opacity,
@@ -339,8 +341,9 @@ export default function CategoryCard({
                     textOverflow: 'ellipsis',
                     maxWidth: '100%'
                   }}
+                  title={p.period_label || p.period_code}
                 >
-                  {p.period_label || p.period_code}
+                  {formatPeriodLabel(p)}
                 </span>
               </div>
             );

@@ -48,32 +48,34 @@ export default function DashboardPage({
 
   const currentModule = selectedModule || 'food';
 
-  // Self-healing fallback: If parent computedMatrix has no periods, fetch directly!
-  const [internalMatrix, setInternalMatrix] = useState(null);
-  const [matrixLoading, setMatrixLoading] = useState(false);
+  // Ensure effectiveMatrix matches currentModule; otherwise fetch immediately
+  const isMatrixMatchingCurrent = 
+    computedMatrix?.periods && 
+    computedMatrix.periods.length > 0 && 
+    (!computedMatrix.module || computedMatrix.module === currentModule);
 
   useEffect(() => {
-    const hasValidPeriods = computedMatrix?.periods && computedMatrix.periods.length > 0;
-    if (!hasValidPeriods) {
+    if (!isMatrixMatchingCurrent) {
       setMatrixLoading(true);
       fetch(`/api/matrix?module=${currentModule}`)
         .then(res => res.json())
         .then(data => {
           if (data && data.periods && data.periods.length > 0) {
+            data.module = currentModule;
             setInternalMatrix(data);
           }
           setMatrixLoading(false);
         })
         .catch(err => {
-          console.error('[DashboardPage] Matrix fallback fetch error:', err);
+          console.error('[DashboardPage] Matrix fetch error:', err);
           setMatrixLoading(false);
         });
     }
-  }, [currentModule, computedMatrix]);
+  }, [currentModule, isMatrixMatchingCurrent]);
 
-  const effectiveMatrix = (computedMatrix?.periods && computedMatrix.periods.length > 0)
+  const effectiveMatrix = isMatrixMatchingCurrent
     ? computedMatrix
-    : (internalMatrix || {});
+    : ((internalMatrix && internalMatrix.module === currentModule && internalMatrix.periods) ? internalMatrix : (computedMatrix || {}));
 
   const periods = effectiveMatrix?.periods || [];
   const categories = effectiveMatrix?.categories || [];
@@ -133,8 +135,14 @@ export default function DashboardPage({
   const activeTransportCensus = useMemo(() => {
     if (currentModule !== 'transport') return null;
     const pid = activePeriodObj ? String(activePeriodObj.id) : null;
-    const rpsData = effectiveMatrix?.transport_census_by_branch?.['RPS']?.[pid] || effectiveMatrix?.transport_census?.[pid];
-    return rpsData || null;
+    const census = (pid && effectiveMatrix?.transport_census?.[pid]) || 
+                   (pid && effectiveMatrix?.transport_census_by_branch?.['RPS']?.[pid]) || 
+                   (pid && effectiveMatrix?.transport_census_by_branch?.['Common']?.[pid]);
+    if (census) return census;
+    const keys = Object.keys(effectiveMatrix?.transport_census || {});
+    if (keys.length > 0) return effectiveMatrix.transport_census[keys[0]];
+    const branchKeys = Object.keys(effectiveMatrix?.transport_census_by_branch?.['RPS'] || {});
+    return branchKeys.length > 0 ? effectiveMatrix.transport_census_by_branch['RPS'][branchKeys[0]] : null;
   }, [currentModule, effectiveMatrix, activePeriodObj]);
 
   // Real category breakdown matching Hostel Data Entry exactly (sums to expenses_occurred)
@@ -612,6 +620,71 @@ export default function DashboardPage({
           </div>
         </div>
 
+        {/* Quick Module Switcher Pills (Food, Hostel, Transport) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          paddingTop: '6px'
+        }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            backgroundColor: '#f1f3f9',
+            padding: '4px',
+            borderRadius: '9999px',
+            border: '1px solid #e2e8f0'
+          }}>
+            {[
+              { id: 'food', label: 'Food Operations', icon: '🍽️' },
+              { id: 'hostel', label: 'Hostel Resident Facilities', icon: '🏠' },
+              { id: 'transport', label: 'Transport Fleet & Mileage', icon: '🚌' }
+            ].map((tab) => {
+              const isActive = currentModule === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onSelectModule && onSelectModule(tab.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 18px',
+                    borderRadius: '9999px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '12.5px',
+                    fontWeight: isActive ? '800' : '600',
+                    backgroundColor: isActive ? '#6c56db' : 'transparent',
+                    color: isActive ? '#ffffff' : '#64748b',
+                    boxShadow: isActive ? '0 4px 12px rgba(108, 86, 219, 0.3)' : 'none',
+                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.backgroundColor = '#e5e7f2';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: '14px' }}>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>
+            <span>Active Module: <strong style={{ color: currentMeta.badgeColor || '#6c56db' }}>{currentMeta.title}</strong></span>
+            <span>•</span>
+            <span>{periods.length} Recorded Cycles</span>
+          </div>
+        </div>
+
       </div>
 
       {/* ========================================================================= */}
@@ -819,10 +892,10 @@ export default function DashboardPage({
                   Fleet Operations & Distance
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
-                  {activeTransportCensus?.vehicles_count || '18+1 Fleet'} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>({num(activeTransportCensus?.actual_kms, 25777).toLocaleString()} KMs)</span>
+                  {activeTransportCensus?.vehicles_count || '18+1 Fleet'} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>({num(activeTransportCensus?.actual_kms, 82006).toLocaleString()} KMs)</span>
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  Approved: {num(activeTransportCensus?.approved_kms, 26691).toLocaleString()} KMs • Addl: +{num(activeTransportCensus?.additional_kms, 2481).toLocaleString()} KMs
+                  Approved: {num(activeTransportCensus?.approved_kms, 96303).toLocaleString()} KMs • Addl: +{num(activeTransportCensus?.additional_kms, 9553).toLocaleString()} KMs
                 </div>
               </div>
 
@@ -838,13 +911,13 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {activePeriodObj?.period_label || 'Focus Month'} Total Expenses
+                  {activePeriod === 'all' ? `All ${periods.length}-Month Total Expenses` : `${activePeriodObj?.period_label || 'Focus Month'} Total Expenses`}
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
-                  {formatINR(1214354)}
+                  {formatINR(activePeriod === 'all' ? (effectiveMatrix?.grand_total?.total || 18322733) : (latestMonthTotal || 4453115))}
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  Fuel: {formatINR(num(activeTransportCensus?.fuel_expenses, 478461))} • Transport Staff: ₹4.75L
+                  Fuel: {formatINR(num(activeTransportCensus?.fuel_expenses, 1788764))} • Diesel: {num(activeTransportCensus?.diesel_litres, 19252).toLocaleString()} L
                 </div>
               </div>
 
@@ -863,14 +936,14 @@ export default function DashboardPage({
                   Transport Balance Budget
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
-                  {formatINR(num(activeTransportCensus?.balance, 7258615))}
+                  {formatINR(num(activeTransportCensus?.balance, 29007225))}
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  Budget: {formatINR(num(activeTransportCensus?.approved_budget, 13730138))} • Spent: {formatINR(num(activeTransportCensus?.cumulative_budget_spent, 6471523))}
+                  Budget: {formatINR(num(activeTransportCensus?.approved_budget, 37730138))} • Spent: {formatINR(num(activeTransportCensus?.cumulative_budget_spent, 8722912))}
                 </div>
               </div>
 
-              {/* Transport Card 4: Service Tickets & Fuel */}
+              {/* Transport Card 4: Service Tickets & Passengers */}
               <div style={{
                 backgroundColor: '#ffffff',
                 borderRadius: '18px',
@@ -885,10 +958,10 @@ export default function DashboardPage({
                   Service Tickets & Compliance
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
-                  38 / 38 Closed
+                  {num(activeTransportCensus?.service_tickets_closed, 47)} / {num(activeTransportCensus?.service_tickets_raised, 47)} Closed
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  100% Statutory Compliant • 5,185 L Diesel Purchased
+                  100% Statutory Compliant • Passengers: {num(activeTransportCensus?.passengers_count, 2070).toLocaleString()}
                 </div>
               </div>
             </>

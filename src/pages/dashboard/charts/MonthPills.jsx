@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatPeriodLabel } from '../../../utils/formatters';
 
 /**
  * MonthPills Component
@@ -65,7 +66,8 @@ export default function MonthPills({
       {/* Dynamic Month Pills from Data */}
       {periods.map((period) => {
         const isSelected = String(selectedPeriod) === String(period.id);
-        const label = period.period_label || period.label || period.period_code || 'Month';
+        const rawLabel = period.period_label || period.label || period.period_code || 'Month';
+        const label = (rawLabel.length <= 10 && rawLabel.includes("'")) ? rawLabel : formatPeriodLabel(period);
 
         return (
           <button
@@ -74,6 +76,7 @@ export default function MonthPills({
             role="tab"
             aria-selected={isSelected}
             aria-pressed={isSelected}
+            title={period.period_label || period.period_code}
             onClick={() => onSelectPeriod && onSelectPeriod(period.id)}
             style={{
               flexShrink: 0,

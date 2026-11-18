@@ -366,6 +366,7 @@ export default function App() {
       if (ovRes.ok) setOverview(await ovRes.json());
       if (matRes.ok) {
         const mData = await matRes.json();
+        mData.module = activeMod;
         setMatrixData(mData);
 
         const draftMap = {};
@@ -404,6 +405,7 @@ export default function App() {
             const retryRes = await fetch(`/api/matrix?module=${activeMod}`);
             if (retryRes.ok) {
               const retryData = await retryRes.json();
+              retryData.module = activeMod;
               setMatrixData(retryData);
               const draftMap = {};
               const remarkMap = {};
@@ -577,6 +579,7 @@ export default function App() {
 
     return {
       ...matrixData,
+      module: matrixData.module || (activeTab === 'dashboard' ? (dashboardSubTab || 'food') : (activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab)),
       periods,
       categories,
       grand_total: {

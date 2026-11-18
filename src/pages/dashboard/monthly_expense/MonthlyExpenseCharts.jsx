@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Info } from 'lucide-react';
+import { formatPeriodLabel } from '../../../utils/formatters';
 
 export default function MonthlyExpenseCharts({
   chartModel = 'clustered_columns',
@@ -269,11 +270,11 @@ export default function MonthlyExpenseCharts({
                 x={colX + colW / 2}
                 y={height - padBottom + 20}
                 textAnchor="middle"
-                fontSize="12"
+                fontSize={months.length > 8 ? "10" : "12"}
                 fontWeight="700"
                 fill="#141a33"
               >
-                {m.period_label || m.period_code}
+                {formatPeriodLabel(m)}
               </text>
 
               {/* Stack segments */}
@@ -380,11 +381,11 @@ export default function MonthlyExpenseCharts({
               x={x}
               y={height - padBottom + 22}
               textAnchor="middle"
-              fontSize="12"
+              fontSize={months.length > 8 ? "10" : "12"}
               fontWeight="700"
               fill="#141a33"
             >
-              {m.period_label || m.period_code}
+              {formatPeriodLabel(m)}
             </text>
           );
         })}
@@ -495,11 +496,11 @@ export default function MonthlyExpenseCharts({
               x={x}
               y={height - padBottom + 22}
               textAnchor="middle"
-              fontSize="12"
+              fontSize={months.length > 8 ? "10" : "12"}
               fontWeight="700"
               fill="#141a33"
             >
-              {m.period_label || m.period_code}
+              {formatPeriodLabel(m)}
             </text>
           );
         })}
@@ -839,9 +840,10 @@ export default function MonthlyExpenseCharts({
               {months.map((m, mIdx) => (
                 <th
                   key={m.id || mIdx}
-                  style={{ textAlign: 'center', padding: '8px 12px', color: '#141a33', fontWeight: '700' }}
+                  title={m.period_label || m.period_code}
+                  style={{ textAlign: 'center', padding: '8px 10px', color: '#141a33', fontWeight: '700', whiteSpace: 'nowrap' }}
                 >
-                  {m.period_label || m.period_code}
+                  {formatPeriodLabel(m)}
                 </th>
               ))}
             </tr>

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Download, Search, X, Maximize2, Minimize2, Percent, SlidersHorizontal, LayoutGrid, FileSpreadsheet
 } from 'lucide-react';
+import { formatPeriodLabel } from '../../../utils/formatters';
 import MonthPills from './MonthPills';
 import HeroSummary from './HeroSummary';
 import CategoryCard from './CategoryCard';
@@ -95,6 +96,16 @@ export default function ChartDataTable({
       setSelectedPeriod(activePeriod);
     }
   }, [activePeriod]);
+
+  // Reset selectedPeriod when module or periods change if the selected period does not exist
+  useEffect(() => {
+    if (selectedPeriod !== 'all') {
+      const exists = periods.some(p => String(p.id) === String(selectedPeriod));
+      if (!exists) {
+        setSelectedPeriod('all');
+      }
+    }
+  }, [selectedModule, periods, selectedPeriod]);
 
   // Live Hostel and Transport census data (with self-healing fallback)
   const [localHostelCensus, setLocalHostelCensus] = useState(() => computedMatrix?.hostel_census || {});

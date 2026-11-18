@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatPeriodLabel } from '../../../utils/formatters';
 
 export default function MonthlyExpenseLegend({
   chartModel,
@@ -13,7 +14,8 @@ export default function MonthlyExpenseLegend({
   const legendItems = isMonthSeries
     ? months.map((m, idx) => ({
         id: m.id || idx,
-        label: m.period_label || m.period_code || `Month ${idx + 1}`,
+        label: formatPeriodLabel(m),
+        fullLabel: m.period_label || m.period_code || `Month ${idx + 1}`,
         color: monthPalette[idx % monthPalette.length]
       }))
     : categories.map((cat, idx) => ({
@@ -69,7 +71,7 @@ export default function MonthlyExpenseLegend({
               display: 'inline-block'
             }}
           />
-          <span>{item.label}</span>
+          <span title={item.fullLabel || item.label}>{item.label}</span>
         </div>
       ))}
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart3, 
   Layers, 
@@ -9,7 +9,7 @@ import {
   LayoutGrid, 
   AlignLeft 
 } from 'lucide-react';
-import { formatINR } from '../../../utils/formatters';
+import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
 import MonthlyExpenseKpis from './MonthlyExpenseKpis';
 import MonthlyExpenseControls from './MonthlyExpenseControls';
 import MonthlyExpenseChips from './MonthlyExpenseChips';
@@ -17,8 +17,12 @@ import MonthlyExpenseCharts from './MonthlyExpenseCharts';
 import MonthlyExpenseLegend from './MonthlyExpenseLegend';
 import MonthlyExpenseTable from './MonthlyExpenseTable';
 
-// Curated palettes as specified
-const MONTH_PALETTE = ['#6c5ce7', '#ff6b9d', '#1fbf8f', '#3fb8ff', '#f5a524'];
+// Curated palettes as specified - 16 vibrant distinct colors to support up to 16 cycles without repeating
+const MONTH_PALETTE = [
+  '#6c5ce7', '#ff6b9d', '#1fbf8f', '#3fb8ff', '#f5a524',
+  '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f97316',
+  '#6366f1', '#14b8a6', '#e11d48', '#84cc16', '#a855f7', '#0ea5e9'
+];
 const CATEGORY_PALETTE = ['#6c5ce7', '#ff6b9d', '#1fbf8f', '#3fb8ff', '#f5a524', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
 export const CHART_MODELS = [
@@ -43,6 +47,16 @@ export default function MonthlyExpenseSection({
   const [reportingCycle, setReportingCycle] = useState('all');
   const [unitMode, setUnitMode] = useState('full'); // 'full' | 'lakhs'
   const [showTable, setShowTable] = useState(true);
+
+  // Reset reporting cycle if the selected cycle does not exist in current periods
+  useEffect(() => {
+    if (reportingCycle !== 'all' && reportingCycle !== 'first_n' && reportingCycle !== 'last_n') {
+      const exists = periods.some((p) => String(p.id) === String(reportingCycle));
+      if (!exists) {
+        setReportingCycle('all');
+      }
+    }
+  }, [selectedModule, periods, reportingCycle]);
 
   // 1. Filter out non-expense categories (Person, Headcount, Cost Per Person)
   const expenseCategories = useMemo(() => {
@@ -81,7 +95,10 @@ export default function MonthlyExpenseSection({
       opts.push({ id: 'last_n', label: `Last ${n} Months` });
     }
     periods.forEach((p) => {
-      opts.push({ id: String(p.id), label: `${p.period_label || p.period_code} (Single Cycle)` });
+      const pLabel = formatPeriodLabel(p);
+      const fullLabel = p.period_label || p.period_code;
+      const displayLabel = pLabel === fullLabel ? `${pLabel} (Single Cycle)` : `${pLabel} • ${fullLabel}`;
+      opts.push({ id: String(p.id), label: displayLabel });
     });
     return opts;
   }, [periods]);

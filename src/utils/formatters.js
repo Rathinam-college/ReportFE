@@ -18,6 +18,43 @@ export const formatLakhs = (val) => {
   return `₹${lk} L`;
 };
 
+/**
+ * Standardize period labels across modules (e.g. "Sep 1st to 30th" -> "Sep'25", "2026-06" -> "Jun'26")
+ * Prevents text collisions on charts and cards while preserving clear monthly context.
+ */
+export const formatPeriodLabel = (p) => {
+  if (!p) return '';
+  const label = typeof p === 'string' ? p : (p.period_label || p.period_code || '');
+  if (!label) return '';
+
+  // Already compact standard like "Jun'26", "Jul'26", "Sept'26", "Oct'26"
+  if (/^[A-Za-z]{3,4}'\d{2}$/.test(label)) return label;
+
+  // YYYY-MM code
+  const code = typeof p === 'object' ? (p.period_code || '') : (typeof p === 'string' && /^\d{4}-\d{2}$/.test(p) ? p : '');
+  if (code && /^\d{4}-\d{2}$/.test(code)) {
+    const [year, month] = code.split('-');
+    const mNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const mIdx = parseInt(month, 10) - 1;
+    if (mIdx >= 0 && mIdx < 12) {
+      return `${mNames[mIdx]}'${year.slice(2)}`;
+    }
+  }
+
+  // Matches "Sep 1st to 30th", "March 1st to 31st"
+  const match = label.match(/^([A-Za-z]{3,})/);
+  if (match) {
+    const mPrefix = match[1].slice(0, 3);
+    const startDate = typeof p === 'object' ? (p.start_date || '') : '';
+    if (startDate && startDate.length >= 4) {
+      return `${mPrefix}'${startDate.slice(2, 4)}`;
+    }
+    return mPrefix;
+  }
+
+  return label;
+};
+
 // SVG Donut Path Calculator
 export const getDonutSlicePath = (cx, cy, rOuter, rInner, startAngle, endAngle) => {
   if (endAngle - startAngle >= 2 * Math.PI - 0.001) {
