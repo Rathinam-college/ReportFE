@@ -1,20 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-light: #6366f1;
-  --primary-dark: #312e81;
-  --accent: #8b5cf6;
-  --success: #10b981;
+  --primary: #6c56db;
+  --primary-hover: #5d44db;
+  --primary-light: #7c68ee;
+  --primary-dark: #39287a;
+  --primary-gradient: linear-gradient(135deg, #745df0 0%, #5d44db 100%);
+  --coral: #ff6088;
+  --coral-gradient: linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%);
+  --mint: #10b981;
+  --mint-light: #e6f9f3;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --bg-main: #f4f6fa;
+  --bg-canvas: #ffffff;
   --bg-card: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --border: #e2e8f0;
-  --border-focus: #4f46e5;
+  --bg-subtle: #f8fafc;
+  --text-main: #1a1d36;
+  --text-muted: #6e768e;
+  --text-dim: #8f9bb3;
+  --border: #edf0f8;
+  --border-focus: #6c56db;
+  --shadow-sm: 0 2px 8px rgba(110, 80, 180, 0.04);
+  --shadow-md: 0 6px 20px rgba(110, 80, 180, 0.08);
+  --shadow-lg: 0 15px 40px rgba(108, 86, 219, 0.14);
 }
 
 * {
@@ -23,14 +31,26 @@
   padding: 0;
 }
 
-html, body {
+html, body, #root {
+  height: 100%;
+  width: 100%;
   max-width: 100vw;
-  overflow-x: clip;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: var(--bg-main);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #ffffff;
   color: var(--text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 768px) {
+  html, body, #root {
+    height: auto;
+    overflow: auto;
+    background-color: #ffffff;
+  }
 }
 
 button {
@@ -38,30 +58,200 @@ button {
   cursor: pointer;
   border: none;
   background: none;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:active {
+  transform: scale(0.98);
 }
 
 input, select, textarea {
   font-family: inherit;
 }
 
-/* Scrollbar */
+/* Custom Scrollbar matching modern Bento style */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #f1f3f9;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: #cdd3e6;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #a9b3d0;
 }
 
 .currency-font {
   font-family: 'JetBrains Mono', monospace;
   font-feature-settings: 'tnum' on, 'zero' on;
+}
+
+/* Subtle glassmorphism card */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Glow effects */
+.purple-glow {
+  box-shadow: 0 8px 24px rgba(108, 86, 219, 0.28);
+}
+
+.coral-glow {
+  box-shadow: 0 8px 24px rgba(255, 96, 136, 0.32);
+}
+
+/* Card-based Expenditure Dashboard */
+.expenditure-card-dashboard {
+  --bg-page: #f6f7fb;
+  --bg-card: #ffffff;
+  --text-main: #14172b;
+  --text-muted: #6b7090;
+  --border-card: #e6e8f2;
+  --bg-pill: #eceefa;
+  --bg-pill-hover: #e0e4f5;
+  --pill-active-bg: #5b5bf0;
+  --pill-active-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .expenditure-card-dashboard {
+    --bg-page: #0f111c;
+    --bg-card: #181b2b;
+    --text-main: #eef0ff;
+    --text-muted: #9096b8;
+    --border-card: #272b42;
+    --bg-pill: #222640;
+    --bg-pill-hover: #2b3052;
+    --pill-active-bg: #5b5bf0;
+    --pill-active-text: #ffffff;
+  }
+}
+
+/* ========================================================================== */
+/* FULL FIT & MOBILE RESPONSIVE STYLES (Zero outer blue border, 100% viewport) */
+/* ========================================================================== */
+
+@media (max-width: 768px) {
+  #bento-app-root {
+    zoom: 1 !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    height: auto !important;
+    max-height: none !important;
+    flex-direction: column !important;
+    overflow-y: visible !important;
+    background-color: #ffffff !important;
+  }
+
+  .bento-navbar-aside {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 60px !important;
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    flex-direction: row !important;
+    padding: 0 16px !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    background: linear-gradient(90deg, #745df0 0%, #5d44db 100%) !important;
+    box-shadow: 0 -4px 20px rgba(93, 68, 219, 0.25) !important;
+  }
+
+  .bento-navbar-aside .nav-top-section {
+    flex-direction: row !important;
+    gap: 8px !important;
+    width: 100% !important;
+    justify-content: space-around !important;
+  }
+
+  .bento-navbar-aside nav {
+    flex-direction: row !important;
+    margin-top: 0 !important;
+    gap: 6px !important;
+    width: 100% !important;
+    justify-content: space-around !important;
+  }
+
+  .bento-navbar-aside .nav-item-btn {
+    width: 50px !important;
+    height: 48px !important;
+    border-radius: 12px !important;
+  }
+
+  .bento-navbar-aside .nav-bottom-section {
+    display: none !important;
+  }
+
+  .bento-navbar-aside .nav-brand-dot {
+    display: none !important;
+  }
+
+  .bento-navbar-aside .nav-bell-btn {
+    display: none !important;
+  }
+
+  .bento-right-area {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow: visible !important;
+  }
+
+  .bento-subnav-header {
+    padding: 10px 14px 8px 14px !important;
+    gap: 10px !important;
+  }
+
+  .bento-subnav-modules {
+    order: 3 !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 4px !important;
+    scrollbar-width: none !important;
+  }
+
+  .bento-subnav-modules::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .bento-subnav-right {
+    gap: 8px !important;
+  }
+
+  .bento-subnav-search {
+    min-width: 110px !important;
+    max-width: 130px !important;
+  }
+
+  .bento-main-workspace {
+    padding: 12px 14px 75px 14px !important;
+    overflow-y: visible !important;
+  }
+
+  .dashboard-top-bento-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .dashboard-lower-bento-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .bento-hero-shelf {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
 }

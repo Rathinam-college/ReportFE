@@ -8,7 +8,7 @@ import { formatINR, formatLakhs } from '../../utils/formatters';
 
 export default function MasterMathTools({ 
   onClose, 
-  moduleName = 'Food & Dining',
+  moduleName = 'Food',
   categoriesList = [],
   computedMatrix = null
 }) {

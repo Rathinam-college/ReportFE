@@ -3,7 +3,7 @@ import { formatINR, formatLakhs, DASH_COLORS } from '../../utils/formatters';
 import { 
   Calendar, Layers, PieChart as PieIcon, Calculator, FileSpreadsheet, 
   TrendingUp, Hash, Users, ArrowRight, Table, BarChart3, CheckCircle2,
-  Maximize2, Minimize2 
+  Maximize2, Minimize2, Download 
 } from 'lucide-react';
 
 // 12 Chart Components & Master Selector
@@ -24,9 +24,9 @@ import ChartDataTable from './charts/ChartDataTable';
 import ComparisonTool from './ComparisonTool';
 
 // Layout Cards from Design Mockup (Image 1)
-import TopCostHeadsCard from './TopCostHeadsCard';
 import HostelDashboardDataTable from './HostelDashboardDataTable';
 import TransportDashboardDataTable from './TransportDashboardDataTable';
+import MonthlyExpenseSection from './monthly_expense/MonthlyExpenseSection';
 
 export default function DashboardPage({
   selectedModule = 'food',
@@ -38,7 +38,8 @@ export default function DashboardPage({
   setCompareBasePeriod,
   compareTargetPeriod,
   setCompareTargetPeriod,
-  onOpenDataEntry
+  onOpenDataEntry,
+  remarksDraft = {}
 }) {
   const [activeChart, setActiveChart] = useState('clustered_table'); // Default: Excel-style Clustered Columns with Data Sheet
   const [activePeriod, setActivePeriod] = useState('all'); // 'all' or period id
@@ -79,9 +80,9 @@ export default function DashboardPage({
 
   const moduleMeta = {
     food: {
-      title: 'Food & Dining Operations Dashboard',
-      subtitle: `Food & Dining overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
-      badge: 'Food & Dining',
+      title: 'Food Operations Dashboard',
+      subtitle: `Food overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
+      badge: 'Food',
       badgeColor: '#4f46e5',
       badgeBg: '#eef2ff'
     },
@@ -224,8 +225,8 @@ export default function DashboardPage({
 
   // 1. Prepare Category items for Bar, Pie, Doughnut with remarks (excluding Total Person & Cost Per Person)
   const categoryItems = useMemo(() => {
-    if (!computedMatrix || !computedMatrix.categories) return [];
-    return computedMatrix.categories
+    if (!effectiveMatrix || !effectiveMatrix.categories) return [];
+    return effectiveMatrix.categories
       .filter(cat => {
         const n = String(cat.category_name || cat.name || '').toLowerCase().trim();
         return !isNonExpenseMetric(n);
@@ -233,9 +234,9 @@ export default function DashboardPage({
       .map((cat, idx) => {
       let val = 0;
       if (activePeriod === 'all') {
-        val = cat.subtotal.total;
+        val = cat.subtotal?.total ?? 0;
       } else {
-        val = cat.subtotal.amounts[activePeriod] ?? cat.subtotal.amounts[String(activePeriod)] ?? 0;
+        val = cat.subtotal?.amounts?.[activePeriod] ?? cat.subtotal?.amounts?.[String(activePeriod)] ?? 0;
       }
       const catRemarks = [];
       cat.items?.forEach(it => {
@@ -263,13 +264,13 @@ export default function DashboardPage({
         remarks: catRemarks
       };
     });
-  }, [computedMatrix, activePeriod, periods]);
+  }, [effectiveMatrix, activePeriod, periods]);
 
   // Active remarks list across the current view
   const activeRemarksList = useMemo(() => {
-    if (!computedMatrix?.categories) return [];
+    if (!effectiveMatrix?.categories) return [];
     const list = [];
-    computedMatrix.categories.forEach(cat => {
+    effectiveMatrix.categories.forEach(cat => {
       cat.items?.forEach(it => {
         if (!it.remarks) return;
         if (activePeriod === 'all') {
@@ -304,19 +305,19 @@ export default function DashboardPage({
       });
     });
     return list;
-  }, [computedMatrix, activePeriod, periods]);
+  }, [effectiveMatrix, activePeriod, periods]);
 
   // 2. Prepare all line items for Treemap, Histogram
   const allLineItems = useMemo(() => {
-    if (!computedMatrix || !computedMatrix.categories) return [];
+    if (!effectiveMatrix || !effectiveMatrix.categories) return [];
     const list = [];
-    computedMatrix.categories.forEach(cat => {
-      cat.items.forEach(it => {
+    effectiveMatrix.categories.forEach(cat => {
+      cat.items?.forEach(it => {
         let val = 0;
         if (activePeriod === 'all') {
           val = it.total || 0;
         } else {
-          val = it.amounts[activePeriod] || 0;
+          val = it.amounts?.[activePeriod] ?? it.amounts?.[String(activePeriod)] ?? 0;
         }
         list.push({
           cost_head_id: it.cost_head_id,
@@ -331,7 +332,7 @@ export default function DashboardPage({
       });
     });
     return list;
-  }, [computedMatrix, activePeriod]);
+  }, [effectiveMatrix, activePeriod]);
 
   // 3. Comparison items for Scatter & Bubble
   const comparisonItems = useMemo(() => {
@@ -353,193 +354,268 @@ export default function DashboardPage({
     return list;
   }, [comparisonData]);
 
-  // Export report action
+  // Export report action: Generates CSV and opens printable report in a new page window
   const handleExportReport = () => {
-    window.print();
+    try {
+      // 1. Build CSV content for instant file download
+      const periodHeaders = periods.map(p => `"${p.period_label || p.code || p.id}"`);
+      const csvRows = [
+        [`"Rathinam Group - ${currentMeta.title}"`],
+        [`"Generated on: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}"`],
+        [`"Currency: INR (₹)"`],
+        [],
+        ['"Category"', '"Line Item Description"', ...periodHeaders, '"Total (₹)"']
+      ];
+
+      categories.forEach(cat => {
+        cat.items?.forEach(item => {
+          const rowVals = periods.map(p => {
+            const amt = item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0;
+            return Number(amt || 0).toFixed(2);
+          });
+          const itemTotal = Number(item.total || 0).toFixed(2);
+          csvRows.push([`"${cat.category_name}"`, `"${item.description || item.name}"`, ...rowVals, itemTotal]);
+        });
+        // Category subtotal
+        const subVals = periods.map(p => {
+          const amt = cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0;
+          return Number(amt || 0).toFixed(2);
+        });
+        const catTotal = Number(cat.subtotal?.total || 0).toFixed(2);
+        csvRows.push([`"${cat.category_name} Total"`, '""', ...subVals, catTotal]);
+      });
+
+      // Grand Total Row
+      if (effectiveMatrix?.grand_total) {
+        const gtVals = periods.map(p => {
+          const amt = effectiveMatrix.grand_total.amounts?.[p.id] ?? effectiveMatrix.grand_total.amounts?.[String(p.id)] ?? 0;
+          return Number(amt || 0).toFixed(2);
+        });
+        const gtTotal = Number(effectiveMatrix.grand_total.total || 0).toFixed(2);
+        csvRows.push(['"TOTAL EXPENDITURE"', '""', ...gtVals, gtTotal]);
+      }
+
+      const csvString = csvRows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `Rathinam_${currentModule}_Report_${periods[0]?.period_label || 'Cycle'}_to_${periods[periods.length - 1]?.period_label || 'Current'}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (csvErr) {
+      console.warn('CSV download error:', csvErr);
+    }
+
+    // 2. Open printable/preview HTML report in a new page window!
+    try {
+      const reportWin = window.open('', '_blank');
+      if (reportWin) {
+        const periodThs = periods.map(p => `<th style="padding: 10px 14px; border: 1px solid #cbd5e1; background: #6c56db; color: #ffffff; text-align: right; font-size: 13px;">${p.period_label}</th>`).join('');
+        
+        let tableRowsHtml = '';
+        categories.forEach(cat => {
+          cat.items?.forEach(item => {
+            const cells = periods.map(p => {
+              const val = item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0;
+              return `<td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right; font-size: 12.5px;">₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>`;
+            }).join('');
+            tableRowsHtml += `<tr>
+              <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-size: 12.5px; font-weight: 600; color: #1e293b;">${cat.category_name}</td>
+              <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-size: 12.5px; color: #334155;">${item.description || item.name}</td>
+              ${cells}
+              <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 700; color: #0f172a; font-size: 12.5px;">₹${Number(item.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+            </tr>`;
+          });
+          // Subtotal row
+          const subCells = periods.map(p => {
+            const val = cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0;
+            return `<td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: 700; background: #f8fafc; color: #0f172a;">₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>`;
+          }).join('');
+          tableRowsHtml += `<tr style="background: #f8fafc; font-weight: 800;">
+            <td colspan="2" style="padding: 8px 12px; border: 1px solid #cbd5e1; color: #6c56db;">${cat.category_name} Subtotal</td>
+            ${subCells}
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: right; color: #6c56db; font-weight: 800;">₹${Number(cat.subtotal?.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          </tr>`;
+        });
+
+        // Grand Total row
+        let gtHtml = '';
+        if (effectiveMatrix?.grand_total) {
+          const gtCells = periods.map(p => {
+            const val = effectiveMatrix.grand_total.amounts?.[p.id] ?? effectiveMatrix.grand_total.amounts?.[String(p.id)] ?? 0;
+            return `<td style="padding: 10px 12px; border: 2px solid #0f172a; text-align: right; font-size: 14px; font-weight: 900; background: #0f172a; color: #ffffff;">₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>`;
+          }).join('');
+          gtHtml = `<tr>
+            <td colspan="2" style="padding: 10px 14px; border: 2px solid #0f172a; font-size: 14px; font-weight: 900; background: #0f172a; color: #ffffff;">TOTAL EXPENSES (ALL CATEGORIES)</td>
+            ${gtCells}
+            <td style="padding: 10px 14px; border: 2px solid #0f172a; text-align: right; font-size: 14px; font-weight: 900; background: #0f172a; color: #ffffff;">₹${Number(effectiveMatrix.grand_total.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          </tr>`;
+        }
+
+        reportWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Rathinam Group - ${currentMeta.title} Report</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 24px 32px; color: #0f172a; }
+    @media print { .no-print { display: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #efeefc; border: 1.5px solid #6c56db; border-radius: 12px;">
+    <div>
+      <strong style="color: #6c56db; font-size: 15px;">✓ Report Generated Successfully</strong>
+      <div style="font-size: 12px; color: #475569;">Ready for review, auditing or printing.</div>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button onclick="window.print()" style="padding: 8px 20px; border-radius: 9999px; background: #6c56db; color: #fff; font-weight: 700; border: none; cursor: pointer;">🖨️ Print / Save to PDF</button>
+      <button onclick="window.close()" style="padding: 8px 16px; border-radius: 9999px; background: #fff; color: #475569; font-weight: 700; border: 1px solid #cbd5e1; cursor: pointer;">Close</button>
+    </div>
+  </div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #6c56db; padding-bottom: 16px; margin-bottom: 20px;">
+    <div>
+      <h1 style="margin: 0; font-size: 24px; color: #0f172a; font-weight: 800;">Rathinam Group of Institutions</h1>
+      <h2 style="margin: 4px 0 0 0; font-size: 17px; color: #6c56db;">${currentMeta.title}</h2>
+      <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">${currentMeta.subtitle}</p>
+    </div>
+    <div style="text-align: right; font-size: 12.5px; color: #64748b;">
+      <div>Date: <strong>${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></div>
+      <div>Grand Total: <strong style="color: #0f172a; font-size: 16px;">₹${Number(effectiveMatrix?.grand_total?.total || grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></div>
+    </div>
+  </div>
+  <table style="width: 100%; border-collapse: collapse; margin-top: 16px; border: 1px solid #cbd5e1;">
+    <thead>
+      <tr>
+        <th style="padding: 10px 14px; border: 1px solid #cbd5e1; background: #6c56db; color: #ffffff; text-align: left; font-size: 13px;">Category</th>
+        <th style="padding: 10px 14px; border: 1px solid #cbd5e1; background: #6c56db; color: #ffffff; text-align: left; font-size: 13px;">Description</th>
+        ${periodThs}
+        <th style="padding: 10px 14px; border: 1px solid #cbd5e1; background: #6c56db; color: #ffffff; text-align: right; font-size: 13px;">Total (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${tableRowsHtml}
+      ${gtHtml}
+    </tbody>
+  </table>
+  <div style="margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+    Confidential Internal Operations Audit Report • Rathinam Group PostgreSQL 18 Canonical Matrix
+  </div>
+</body>
+</html>`);
+        reportWin.document.close();
+      } else {
+        window.print();
+      }
+    } catch (winErr) {
+      console.warn('Window open error, fallback to print:', winErr);
+      window.print();
+    }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
       
-      {/* OPERATIONS DASHBOARD HEADER */}
+      {/* TOP HEADER & REPORT ACTIONS (PURPLE & CORAL BENTO STYLE) */}
       <div style={{
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        flexWrap: 'wrap',
-        gap: '14px',
+        flexDirection: 'column',
+        gap: '16px',
         backgroundColor: '#ffffff',
-        padding: '18px 24px',
-        borderRadius: '12px',
-        border: '1.5px solid #e2e8f0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        padding: '4px 0 16px 0',
+        borderBottom: '1px solid #edf0f8'
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '23px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-              {currentMeta.title}
-            </h1>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: '700',
-              padding: '2px 9px',
-              borderRadius: '9999px',
-              backgroundColor: currentMeta.badgeBg,
-              color: currentMeta.badgeColor,
-              border: `1px solid ${currentMeta.badgeColor}33`
-            }}>
-              {currentMeta.badge}
-            </span>
+        {/* Top Line: Title & Action Pill Buttons */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1a1d36', margin: 0, letterSpacing: '-0.02em' }}>
+                {currentMeta.title}
+              </h1>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                padding: '3px 12px',
+                borderRadius: '9999px',
+                backgroundColor: '#efeefc',
+                color: '#6c56db',
+                border: '1px solid #d8d4fa'
+              }}>
+                {currentMeta.badge}
+              </span>
+            </div>
+            <p style={{ fontSize: '13px', color: '#6e768e', margin: '4px 0 0 0' }}>
+              {currentMeta.subtitle}
+            </p>
           </div>
-          <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>
-            {currentMeta.subtitle}
-          </p>
-        </div>
 
-        {/* Right Header Controls: Cycle pill, Export Report, Open Data Entry */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          
-          {/* Cycle Selector Pill */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            backgroundColor: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            fontSize: '12.5px',
-            fontWeight: '600',
-            color: '#334155'
-          }}>
-            <Calendar size={14} color="#64748b" />
-            <span style={{ color: '#64748b' }}>Cycle:</span>
-            <select
-              value={activePeriod}
-              onChange={(e) => setActivePeriod(e.target.value)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Download Report Button (Vibrant Royal Purple Pill Button) */}
+            <button
+              type="button"
+              onClick={handleExportReport}
               style={{
+                padding: '9px 22px',
+                borderRadius: '9999px',
+                backgroundColor: '#6c56db',
+                color: '#ffffff',
                 border: 'none',
-                outline: 'none',
+                fontSize: '12.5px',
                 fontWeight: '700',
-                color: '#4f46e5',
-                backgroundColor: 'transparent',
-                cursor: 'pointer'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(108, 86, 219, 0.35)',
+                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5d44db'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c56db'}
             >
-              <option value="all">{periods.length}-Mo Aggregate</option>
-              {periods.map(p => (
-                <option key={p.id} value={p.id}>{p.period_label}</option>
-              ))}
-            </select>
+              <Download size={14} />
+              <span>Download report</span>
+            </button>
+
+            {/* Open Data Entry Button (Vibrant Coral Pink Pill Button from Image) */}
+            <button
+              type="button"
+              onClick={onOpenDataEntry}
+              style={{
+                padding: '9px 22px',
+                borderRadius: '9999px',
+                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+                color: '#ffffff',
+                border: 'none',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(255, 96, 136, 0.35)',
+                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <span>Open Data Entry</span>
+              <ArrowRight size={14} />
+            </button>
           </div>
-
-          {/* Export Report Button */}
-          <button
-            type="button"
-            onClick={handleExportReport}
-            style={{
-              padding: '7px 16px',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-            }}
-          >
-            Export Report
-          </button>
-
-          {/* Open Data Entry Button */}
-          <button
-            type="button"
-            onClick={onOpenDataEntry}
-            style={{
-              padding: '7px 18px',
-              borderRadius: '8px',
-              backgroundColor: '#4f46e5',
-              color: '#ffffff',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)'
-            }}
-          >
-            Open Data Entry
-          </button>
         </div>
+
       </div>
 
       {/* ========================================================================= */}
       {/* LINE 1 (FIRST): MONTH BY MONTH SHOW THE DATA                               */}
-      {/* ========================================================================= */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              backgroundColor: '#4f46e5',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '800'
-            }}>
-              1
-            </span>
-            <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Month-by-Month Expenditure Data Sheet
-            </h2>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#4338ca', backgroundColor: '#eef2ff', padding: '2px 8px', borderRadius: '4px' }}>
-              Line-by-Line Monthly Columns
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>
-              Displaying each monthly cycle side-by-side with exact values & category subtotals
-            </span>
-          </div>
-        </div>
-
-        {/* The Full Month-by-Month Data Table (Module-Specific matching Data Entry 100%) */}
-        {currentModule === 'hostel' ? (
-          <HostelDashboardDataTable
-            periods={periods}
-            activePeriod={activePeriod}
-            computedMatrix={effectiveMatrix}
-            isFullScreen={isTableFullScreen}
-            onToggleFullScreen={setIsTableFullScreen}
-          />
-        ) : currentModule === 'transport' ? (
-          <TransportDashboardDataTable
-            periods={periods}
-            activePeriod={activePeriod}
-            computedMatrix={effectiveMatrix}
-            isFullScreen={isTableFullScreen}
-            onToggleFullScreen={setIsTableFullScreen}
-          />
-        ) : (
-          <ChartDataTable
-            categories={categories}
-            periods={periods}
-            activePeriod={activePeriod}
-            selectedModule={currentModule}
-            computedMatrix={effectiveMatrix}
-            isFullScreen={isTableFullScreen}
-            onToggleFullScreen={setIsTableFullScreen}
-          />
-        )}
-      </section>
-
-      {/* ========================================================================= */}
-      {/* LINE 2 (SECOND): MONTHLY EXPENSE BY CATEGORY                               */}
       {/* ========================================================================= */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
@@ -548,189 +624,54 @@ export default function DashboardPage({
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '24px',
-              height: '24px',
+              width: '26px',
+              height: '26px',
               borderRadius: '50%',
-              backgroundColor: '#2563eb',
+              backgroundColor: '#0f172a',
               color: '#ffffff',
               fontSize: '12px',
               fontWeight: '800'
             }}>
-              2
+              1
             </span>
-            <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Monthly Expense by Category
+            <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+              Month-by-Month Expenditure Data Sheet
             </h2>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#1d4ed8', backgroundColor: '#eff6ff', padding: '2px 8px', borderRadius: '4px' }}>
-              Visual Distribution & Rankings
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#4338ca', backgroundColor: '#eef2ff', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #c7d2fe' }}>
+              Line-by-Line Monthly Columns
             </span>
           </div>
 
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Category expenditure breakdown, visual distributions & top spending cost heads
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12.5px', color: '#64748b' }}>
+              Displaying each monthly cycle side-by-side with exact values & category subtotals
+            </span>
           </div>
         </div>
 
-        {/* Middle Split: Category Chart + Top Cost Heads Ranking */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: activeChart === 'clustered_table' ? '1fr' : 'minmax(0, 1.8fr) minmax(300px, 1fr)',
-          gap: '20px',
-          alignItems: 'stretch'
-        }}>
-          {/* Left: Monthly Expense by Category Stacked/Selected Chart */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '20px 24px',
-            border: '1.5px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px'
-          }}>
-            {/* Chart Header & Legend */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Monthly Expense by Category Breakdown
-                </h3>
-                <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-                  {activeChart === 'clustered_table' 
-                    ? 'Clustered column distribution with synchronized monthly audit data sheet' 
-                    : 'Stacked totals & proportion across recorded billing cycles'}
-                </p>
-              </div>
-
-              {/* Dynamic Category Color Legend */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                {currentModule === 'hostel' ? (
-                  hostelCategoryItems.map((cat, idx) => (
-                    <div key={cat.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
-                      <span style={{ width: '9px', height: '9px', borderRadius: '2px', backgroundColor: cat.color }} />
-                      <span style={{ fontWeight: '600' }}>{cat.name}</span>
-                    </div>
-                  ))
-                ) : categories.length > 0 ? (
-                  categories.slice(0, 6).map((cat, idx) => (
-                    <div key={cat.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
-                      <span style={{ width: '9px', height: '9px', borderRadius: '2px', backgroundColor: DASH_COLORS[idx % DASH_COLORS.length] }} />
-                      <span style={{ fontWeight: '600' }}>{cat.name}</span>
-                    </div>
-                  ))
-                ) : (
-                  <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>Loading categories...</span>
-                )}
-              </div>
-            </div>
-
-            {/* Chart Selector Pills (Switch between 13 styles seamlessly) */}
-            <ChartSelectorBar
-              activeChart={activeChart}
-              setActiveChart={setActiveChart}
-              activePeriod={activePeriod}
-              setActivePeriod={setActivePeriod}
-              periods={periods}
-              showDataTable={showDataTable}
-              setShowDataTable={setShowDataTable}
-            />
-
-            {/* ACTIVE OPERATIONAL REMARKS BANNER DIRECTLY ON THE CHART SECTION */}
-            {activeRemarksList.length > 0 && (
-              <div style={{
-                backgroundColor: '#fffbeb',
-                border: '1.5px solid #fde68a',
-                borderRadius: '10px',
-                padding: '12px 18px',
-                marginTop: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <span style={{ fontSize: '18px' }}>💬</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Operational Remarks & Notes ({activePeriod === 'all' ? 'All Recorded Cycles' : (activePeriodObj?.period_label || 'Selected Cycle')}):
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
-                    {activeRemarksList.map((r, rIdx) => (
-                      <div key={rIdx} style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #fcd34d',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '12px',
-                        color: '#78350f',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                      }}>
-                        <span style={{ fontWeight: '800', color: '#b45309' }}>{r.description}</span>
-                        <span style={{ color: '#d97706' }}>•</span>
-                        <span style={{ fontWeight: '700', color: '#1e293b' }}>"{r.text}"</span>
-                        <span style={{ fontSize: '10.5px', color: '#4f46e5', backgroundColor: '#eef2ff', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
-                          {r.periodLabel}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Active Chart Component */}
-            <div style={{ flex: 1, minHeight: '340px' }}>
-              {activeChart === 'clustered_table' && (
-                <ClusteredDataTableChart
-                  periods={periods}
-                  categories={categories}
-                  computedMatrix={computedMatrix}
-                  selectedModule={currentModule}
-                  activePeriod={activePeriod}
-                />
-              )}
-              {activeChart === 'stacked' && <StackedChart periods={periods} categories={categories} />}
-              {activeChart === 'column' && <ColumnChart periods={periods} categories={categories} activePeriod={activePeriod} />}
-              {activeChart === 'bar' && <BarChart data={currentModule === 'hostel' ? hostelCategoryItems : categoryItems} title={`Category Expenditure • ${activePeriod === 'all' ? 'All Months Aggregate' : periods.find(p => p.id === activePeriod)?.period_label || ''}`} />}
-              {activeChart === 'line' && <LineChart periods={periods} categories={categories} />}
-              {activeChart === 'area' && <AreaChart periods={periods} categories={categories} />}
-              {activeChart === 'combo' && <ComboChart periods={periods} categories={categories} />}
-              {activeChart === 'pie' && <PieChart data={currentModule === 'hostel' ? hostelCategoryItems : categoryItems} isDonut={false} />}
-              {activeChart === 'doughnut' && <PieChart data={currentModule === 'hostel' ? hostelCategoryItems : categoryItems} isDonut={true} />}
-              {activeChart === 'treemap' && <TreemapChart items={allLineItems} />}
-              {activeChart === 'scatter' && <ScatterPlotChart items={comparisonItems} />}
-              {activeChart === 'bubble' && <BubbleChart items={comparisonItems} />}
-              {activeChart === 'histogram' && <HistogramChart items={allLineItems} />}
-              {activeChart === 'comparison' && comparisonData && (
-                <ComparisonTool
-                  comparisonData={comparisonData}
-                  compareBasePeriod={compareBasePeriod}
-                  setCompareBasePeriod={setCompareBasePeriod}
-                  compareTargetPeriod={compareTargetPeriod}
-                  setCompareTargetPeriod={setCompareTargetPeriod}
-                  periods={periods}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Right: Top Cost Heads Ranking Card (when side-by-side) */}
-          {activeChart !== 'clustered_table' && (
-            <div style={{ height: '100%' }}>
-              <TopCostHeadsCard computedMatrix={computedMatrix} />
-            </div>
-          )}
-        </div>
-
-        {/* When in Clustered Table mode, render Top Cost Heads Card below full width */}
-        {activeChart === 'clustered_table' && (
-          <div style={{ marginTop: '2px' }}>
-            <TopCostHeadsCard computedMatrix={computedMatrix} />
-          </div>
-        )}
+        {/* The Full Month-by-Month Data Table (Modern Card Dashboard across Food, Hostel, Transport) */}
+        <ChartDataTable
+          categories={categories}
+          periods={periods}
+          activePeriod={activePeriod}
+          selectedModule={currentModule}
+          computedMatrix={effectiveMatrix}
+          isFullScreen={isTableFullScreen}
+          onToggleFullScreen={setIsTableFullScreen}
+          remarksDraft={remarksDraft}
+        />
       </section>
+
+      {/* ========================================================================= */}
+      {/* LINE 2 (SECOND): MONTHLY EXPENSE BY CATEGORY                               */}
+      {/* ========================================================================= */}
+      <MonthlyExpenseSection
+        computedMatrix={effectiveMatrix}
+        categories={categories}
+        periods={periods}
+        selectedModule={currentModule}
+        onExportReport={handleExportReport}
+      />
 
       {/* ========================================================================= */}
       {/* LINE 3 (LAST): TOTAL COUNT SHOW                                           */}
@@ -742,55 +683,55 @@ export default function DashboardPage({
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '24px',
-              height: '24px',
+              width: '26px',
+              height: '26px',
               borderRadius: '50%',
-              backgroundColor: '#10b981',
+              backgroundColor: '#0f172a',
               color: '#ffffff',
               fontSize: '12px',
               fontWeight: '800'
             }}>
               3
             </span>
-            <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+            <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
               Executive Financial Totals Summary
             </h2>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#047857', backgroundColor: '#ecfdf5', padding: '2px 8px', borderRadius: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#047857', backgroundColor: '#ecfdf5', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #a7f3d0' }}>
               Financial Spend Summary
             </span>
           </div>
 
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
+          <div style={{ fontSize: '12.5px', color: '#64748b' }}>
             Cumulative spend, active cycle total, monthly normalized average & largest expense head
           </div>
         </div>
 
-        {/* 1. TOP 4 EXECUTIVE FINANCIAL TOTAL CARDS */}
+        {/* 1. TOP 4 EXECUTIVE FINANCIAL TOTAL CARDS (BENTO STYLE) */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px'
+          gap: '18px'
         }}>
           {currentModule === 'hostel' ? (
             <>
               {/* Hostel Card 1: Bed Capacity & Total Occupancy */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #bbf7d0',
-                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #10b981',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Bed Capacity & Resident Occupancy
                 </div>
-                <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }}>
-                  {num(activeHostelCensus?.total_occupied, 2974).toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b' }}>/ {num(activeHostelCensus?.bed_capacity_total, 3119).toLocaleString()} Beds</span>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
+                  {num(activeHostelCensus?.total_occupied, 2974).toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>/ {num(activeHostelCensus?.bed_capacity_total, 3119).toLocaleString()} Beds</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#059669', fontWeight: '700' }}>
+                <div style={{ fontSize: '11.5px', color: '#059669', fontWeight: '700', marginTop: '4px' }}>
                   {num(activeHostelCensus?.occupied_pct, 95.4).toFixed(1)}% Occupancy • {num(activeHostelCensus?.students_total, 2843).toLocaleString()} Students • {num(activeHostelCensus?.staff_total, 131)} Staff
                 </div>
               </div>
@@ -798,21 +739,21 @@ export default function DashboardPage({
               {/* Hostel Card 2: Expenses Occurred (Total Monthly Spend) */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #fed7aa',
-                boxShadow: '0 2px 6px rgba(234, 88, 12, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #ea580c',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ea580c' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {activePeriodObj?.period_label || 'Focus Month'} Expenses Occurred
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(num(activeHostelCensus?.expenses_occurred, 9349172))}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   Total monthly operating expenses matching Data Entry Row 20
                 </div>
               </div>
@@ -820,21 +761,21 @@ export default function DashboardPage({
               {/* Hostel Card 3: Operating Budget & Balance */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #86efac',
-                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #16a34a',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#16a34a' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Balance Budget Remaining
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(num(activeHostelCensus?.balance, 97260304))}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   Budget: {formatINR(num(activeHostelCensus?.approved_budget, 131788118))} • Spent: {formatINR(num(activeHostelCensus?.cumulative_budget_spent, 34527814))}
                 </div>
               </div>
@@ -842,21 +783,21 @@ export default function DashboardPage({
               {/* Hostel Card 4: Monthly Cost per Student */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #fef08a',
-                boxShadow: '0 2px 6px rgba(202, 138, 4, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #ca8a04',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ca8a04' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#854d0e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#854d0e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Monthly Cost per Student
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
-                  ₹ {Math.round(num(activeHostelCensus?.per_student_cost_month, 3288)).toLocaleString()} <span style={{ fontSize: '13px', color: '#64748b' }}>/ mo</span>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  ₹ {Math.round(num(activeHostelCensus?.per_student_cost_month, 3288)).toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>/ mo</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   Daily: ₹{num(activeHostelCensus?.per_student_cost_day, 109.62).toFixed(2)}/day • Power: ₹{Math.round(num(activeHostelCensus?.power_cost_occupant, 494))}/occ
                 </div>
               </div>
@@ -866,21 +807,21 @@ export default function DashboardPage({
               {/* Transport Card 1: Fleet & Distance */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #fed7aa',
-                boxShadow: '0 2px 6px rgba(234, 88, 12, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #ea580c',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ea580c' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Fleet Operations & Distance
                 </div>
-                <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }}>
-                  {activeTransportCensus?.vehicles_count || '18+1 Fleet'} <span style={{ fontSize: '14px', color: '#64748b' }}>({num(activeTransportCensus?.actual_kms, 25777).toLocaleString()} KMs)</span>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
+                  {activeTransportCensus?.vehicles_count || '18+1 Fleet'} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>({num(activeTransportCensus?.actual_kms, 25777).toLocaleString()} KMs)</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   Approved: {num(activeTransportCensus?.approved_kms, 26691).toLocaleString()} KMs • Addl: +{num(activeTransportCensus?.additional_kms, 2481).toLocaleString()} KMs
                 </div>
               </div>
@@ -888,21 +829,21 @@ export default function DashboardPage({
               {/* Transport Card 2: Total Expenses */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #86efac',
-                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #16a34a',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#16a34a' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {activePeriodObj?.period_label || 'Focus Month'} Total Expenses
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(1214354)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   Fuel: {formatINR(num(activeTransportCensus?.fuel_expenses, 478461))} • Transport Staff: ₹4.75L
                 </div>
               </div>
@@ -910,21 +851,21 @@ export default function DashboardPage({
               {/* Transport Card 3: Budget & Balance */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #bbf7d0',
-                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #10b981',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Transport Balance Budget
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(num(activeTransportCensus?.balance, 7258615))}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   Budget: {formatINR(num(activeTransportCensus?.approved_budget, 13730138))} • Spent: {formatINR(num(activeTransportCensus?.cumulative_budget_spent, 6471523))}
                 </div>
               </div>
@@ -932,21 +873,21 @@ export default function DashboardPage({
               {/* Transport Card 4: Service Tickets & Fuel */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #e9d5ff',
-                boxShadow: '0 2px 6px rgba(147, 51, 234, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #9333ea',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#9333ea' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Service Tickets & Compliance
                 </div>
-                <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }}>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
                   38 / 38 Closed
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   100% Statutory Compliant • 5,185 L Diesel Purchased
                 </div>
               </div>
@@ -956,85 +897,85 @@ export default function DashboardPage({
               {/* Default Food Executive Cards */}
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #bbf7d0',
-                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #10b981',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#10b981' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {periods.length > 0 ? `Total Count • ${periods.length}-Month Spend` : 'Total Expenditure'}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(grandTotal)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   {periods.length > 0 ? `${periods[0]?.period_label} – ${periods[periods.length - 1]?.period_label} Cumulative` : 'All cycles recorded in DB'}
                 </div>
               </div>
 
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #c7d2fe',
-                boxShadow: '0 2px 6px rgba(79, 70, 229, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #4f46e5',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#4f46e5' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Count` : 'Current Cycle Total'}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(latestMonthTotal)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   {activePeriodObj ? (activePeriodObj.is_closed ? 'Locked cycle status' : 'Active draft cycle') : 'Current cycle'}
                 </div>
               </div>
 
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #fde68a',
-                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #f59e0b',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#f59e0b' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Monthly Average Total
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(monthlyAvg)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
                   {periods.length > 0 ? `Normalized across ${periods.length} cycle${periods.length > 1 ? 's' : ''}` : 'Average run-rate'}
                 </div>
               </div>
 
               <div style={{
                 backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                padding: '18px 22px',
-                border: '1.5px solid #fbcfe8',
-                boxShadow: '0 2px 6px rgba(236, 72, 153, 0.06)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #ec4899',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px', backgroundColor: '#ec4899' }} />
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#be185d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#be185d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Largest Expense Head
                 </div>
-                <div style={{ fontSize: '19px', fontWeight: '800', color: '#0f172a', margin: '8px 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '8px 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {largestCostHead.name}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }} className="currency-font">
-                  {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length}-month)` : '₹0.00'}
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }} className="currency-font">
+                  {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length}-month)` : '₹0'}
                 </div>
               </div>
             </>

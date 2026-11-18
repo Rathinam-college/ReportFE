@@ -100,10 +100,10 @@ export default function ChartSelectorBar({
       justifyContent: 'space-between',
       flexWrap: 'wrap',
       gap: '12px',
-      padding: '10px 14px',
-      backgroundColor: '#f8fafc',
-      borderRadius: '10px',
-      border: '1px solid #e2e8f0',
+      padding: '10px 18px',
+      backgroundColor: '#f4f6fc',
+      borderRadius: '24px',
+      border: '1px solid #edf0f8',
       position: 'relative'
     }}>
       {/* LEFT: CHART MODEL & REPORTING CYCLE DROPDOWNS */}
@@ -121,24 +121,24 @@ export default function ChartSelectorBar({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '7px 14px',
-              borderRadius: '8px',
+              padding: '7px 18px',
+              borderRadius: '9999px',
               backgroundColor: '#ffffff',
-              border: chartDropdownOpen ? '1.5px solid #4f46e5' : '1px solid #cbd5e1',
-              color: '#0f172a',
+              border: chartDropdownOpen ? '1.5px solid #6c56db' : '1px solid #edf0f8',
+              color: '#1a1d36',
               fontSize: '12.5px',
               fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              boxShadow: '0 2px 8px rgba(110, 80, 180, 0.05)',
               transition: 'all 0.15s ease'
             }}
           >
             <div style={{
-              width: '22px',
-              height: '22px',
-              borderRadius: '5px',
-              backgroundColor: '#eef2ff',
-              color: '#4f46e5',
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              backgroundColor: '#efeefc',
+              color: '#6c56db',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -147,15 +147,15 @@ export default function ChartSelectorBar({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
-              <span style={{ fontSize: '9.5px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>
+              <span style={{ fontSize: '9.5px', color: '#8f9bb3', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>
                 Chart Model
               </span>
-              <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>
+              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1a1d36', lineHeight: 1.2 }}>
                 {currentChartObj.label}
               </span>
             </div>
 
-            <ChevronDown size={14} color="#64748b" style={{ transform: chartDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease', marginLeft: '2px' }} />
+            <ChevronDown size={14} color="#8f9bb3" style={{ transform: chartDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease', marginLeft: '2px' }} />
           </button>
 
           {/* DROPDOWN MENU POPOVER */}
@@ -166,11 +166,11 @@ export default function ChartSelectorBar({
               left: 0,
               width: '380px',
               backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 8px -2px rgba(15, 23, 42, 0.06)',
+              borderRadius: '20px',
+              border: '1px solid #edf0f8',
+              boxShadow: '0 16px 36px rgba(108, 86, 219, 0.16)',
               zIndex: 100,
-              padding: '8px',
+              padding: '10px',
               maxHeight: '440px',
               overflowY: 'auto',
               display: 'flex',
@@ -182,7 +182,7 @@ export default function ChartSelectorBar({
                   <div style={{
                     fontSize: '10px',
                     fontWeight: '800',
-                    color: '#94a3b8',
+                    color: '#8f9bb3',
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
                     padding: '4px 10px 2px 10px'
@@ -206,9 +206,9 @@ export default function ChartSelectorBar({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          padding: '8px 10px',
-                          borderRadius: '8px',
-                          backgroundColor: isSelected ? '#eef2ff' : 'transparent',
+                          padding: '8px 12px',
+                          borderRadius: '12px',
+                          backgroundColor: isSelected ? '#efeefc' : 'transparent',
                           border: 'none',
                           cursor: 'pointer',
                           textAlign: 'left',
@@ -223,33 +223,27 @@ export default function ChartSelectorBar({
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '6px',
-                            backgroundColor: isSelected ? '#4f46e5' : '#f1f5f9',
-                            color: isSelected ? '#ffffff' : '#475569',
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '8px',
+                            backgroundColor: isSelected ? '#6c56db' : '#f1f3f9',
+                            color: isSelected ? '#ffffff' : '#6e768e',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
+                            justifyContent: 'center'
                           }}>
-                            <Icon size={15} />
+                            <Icon size={14} />
                           </div>
                           <div>
-                            <div style={{ fontSize: '13px', fontWeight: isSelected ? '800' : '600', color: isSelected ? '#4f46e5' : '#0f172a' }}>
+                            <div style={{ fontSize: '13px', fontWeight: isSelected ? '800' : '600', color: isSelected ? '#6c56db' : '#1a1d36' }}>
                               {chart.label}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.2 }}>
+                            <div style={{ fontSize: '11px', color: '#8f9bb3' }}>
                               {chart.desc}
                             </div>
                           </div>
                         </div>
-
-                        {isSelected && (
-                          <div style={{ color: '#4f46e5', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                            <Check size={16} />
-                          </div>
-                        )}
+                        {isSelected && <Check size={16} color="#6c56db" strokeWidth={2.5} />}
                       </button>
                     );
                   })}
@@ -271,24 +265,24 @@ export default function ChartSelectorBar({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '7px 14px',
-              borderRadius: '8px',
+              padding: '7px 18px',
+              borderRadius: '9999px',
               backgroundColor: '#ffffff',
-              border: cycleDropdownOpen ? '1.5px solid #4f46e5' : '1px solid #cbd5e1',
-              color: '#0f172a',
+              border: cycleDropdownOpen ? '1.5px solid #6c56db' : '1px solid #edf0f8',
+              color: '#1a1d36',
               fontSize: '12.5px',
               fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              boxShadow: '0 2px 8px rgba(110, 80, 180, 0.05)',
               transition: 'all 0.15s ease'
             }}
           >
             <div style={{
-              width: '22px',
-              height: '22px',
-              borderRadius: '5px',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
+              width: '24px',
+              height: '24px',
+              borderRadius: '50%',
+              backgroundColor: '#efeefc',
+              color: '#6c56db',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -404,15 +398,15 @@ export default function ChartSelectorBar({
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          padding: '7px 14px',
-          borderRadius: '8px',
+          padding: '8px 18px',
+          borderRadius: '9999px',
           fontSize: '12.5px',
           fontWeight: '700',
-          backgroundColor: showDataTable ? '#eef2ff' : '#ffffff',
-          color: showDataTable ? '#4f46e5' : '#475569',
-          border: showDataTable ? '1.5px solid #6366f1' : '1px solid #cbd5e1',
+          backgroundColor: showDataTable ? '#efeefc' : '#ffffff',
+          color: showDataTable ? '#6c56db' : '#6e768e',
+          border: showDataTable ? '1.5px solid #d8d4fa' : '1px solid #edf0f8',
           cursor: 'pointer',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+          boxShadow: '0 2px 8px rgba(110, 80, 180, 0.04)',
           transition: 'all 0.15s ease'
         }}
       >

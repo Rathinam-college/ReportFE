@@ -2,9 +2,10 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { formatINR } from '../../utils/formatters';
 import { 
   Search, X, Maximize2, Minimize2, Download, Bus, 
-  Users, Fuel, Wrench, ShieldCheck, DollarSign, Calculator, Layers
+  Users, Fuel, Wrench, ShieldCheck, DollarSign, Calculator, Layers, LayoutGrid, Table
 } from 'lucide-react';
 import { TRANSPORT_BRANCHES, CANONICAL_TRANSPORT_PARAMETERS } from '../data_entry/TransportSpreadsheetEntry';
+import TransportFleetCard from './charts/TransportFleetCard';
 
 export default function TransportDashboardDataTable({
   periods: propPeriods = [],
@@ -19,6 +20,7 @@ export default function TransportDashboardDataTable({
   const [localMatrix, setLocalMatrix] = useState(null);
   const [loadingLocal, setLoadingLocal] = useState(false);
   const [masterParams, setMasterParams] = useState([]);
+  const [viewMode, setViewMode] = useState('table'); // 'cards' | 'table'
 
   // Fetch live transport parameters from Master Data API
   useEffect(() => {
@@ -212,6 +214,52 @@ export default function TransportDashboardDataTable({
 
         {/* Branch Selector & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* View Toggle: Cards vs Table */}
+          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fed7aa', padding: '2px', borderRadius: '6px' }}>
+            <button
+              type="button"
+              onClick={() => setViewMode('cards')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 9px',
+                borderRadius: '4px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'cards' ? '#ea580c' : 'transparent',
+                color: viewMode === 'cards' ? '#ffffff' : '#7c2d12',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <LayoutGrid size={12} />
+              <span>Cards View</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 9px',
+                borderRadius: '4px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'table' ? '#ea580c' : 'transparent',
+                color: viewMode === 'table' ? '#ffffff' : '#7c2d12',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Table size={12} />
+              <span>Ledger Table</span>
+            </button>
+          </div>
+
           {/* Branch Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '2px 4px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
             {TRANSPORT_BRANCHES.map(b => {
@@ -281,16 +329,35 @@ export default function TransportDashboardDataTable({
         </div>
       </div>
 
-      {/* 2. THE MULTI-MONTH TABLE WITH STICKY HEADERS */}
-      <div style={{
-        overflowX: 'auto',
-        overflowY: 'auto',
-        maxHeight: isFullScreen ? 'calc(100vh - 65px)' : '650px',
-        backgroundColor: '#ffffff',
-        width: '100%',
-        maxWidth: '100%',
-        boxSizing: 'border-box'
-      }}>
+      {/* 2. THE MULTI-MONTH TABLE OR CARDS VIEW */}
+      {viewMode === 'cards' ? (
+        <div style={{
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          backgroundColor: '#fffaf5',
+          maxHeight: isFullScreen ? 'calc(100vh - 65px)' : '680px',
+          overflowY: 'auto',
+          boxSizing: 'border-box'
+        }}>
+          <TransportFleetCard
+            transportCensus={computedMatrix?.transport_census || localMatrix?.transport_census}
+            transportCensusByBranch={computedMatrix?.transport_census_by_branch || localMatrix?.transport_census_by_branch}
+            periods={periods}
+            selectedPeriod={activePeriod}
+          />
+        </div>
+      ) : (
+        <div style={{
+          overflowX: 'auto',
+          overflowY: 'auto',
+          maxHeight: isFullScreen ? 'calc(100vh - 65px)' : '650px',
+          backgroundColor: '#ffffff',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box'
+        }}>
         <table style={{
           width: 'max-content',
           minWidth: '100%',
@@ -458,6 +525,7 @@ export default function TransportDashboardDataTable({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

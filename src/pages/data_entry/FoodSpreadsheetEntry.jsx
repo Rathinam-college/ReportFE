@@ -5,6 +5,7 @@ import {
   Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Utensils, 
   AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, Users, Award 
 } from 'lucide-react';
+import FoodCardSpreadsheet from './cards/FoodCardSpreadsheet';
 
 export default function FoodSpreadsheetEntry({
   activePeriodObj,
@@ -23,9 +24,11 @@ export default function FoodSpreadsheetEntry({
   fetchData,
   openAddCostHeadModal,
   handleDeleteCostHead,
-  openAddCategoryModal
+  openAddCategoryModal,
+  handleCloneFromPrev,
+  handleToggleLock
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('excel_grid'); // 'excel_grid', 'single_month', 'census'
+  const [activeSubTab, setActiveSubTab] = useState('cards'); // 'cards' (card-based dashboard), 'excel_grid', 'single_month'
   const [localMessage, setLocalMessage] = useState(null);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
@@ -309,7 +312,10 @@ export default function FoodSpreadsheetEntry({
         categories.forEach(cat => {
           cat.items?.forEach(it => {
             const amt = getCellAmount(it.cost_head_id, p.id);
-            const rmk = remarksDraft[it.cost_head_id]?.[p.id] ?? it.remarks?.[p.id] ?? '';
+            const rmk = remarksDraft[it.cost_head_id]?.[p.id] ??
+                        remarksDraft[it.cost_head_id]?.[String(p.id)] ??
+                        it.remarks?.[p.id] ??
+                        it.remarks?.[String(p.id)] ?? '';
             pEntries.push({
               cost_head_id: it.cost_head_id,
               amount: amt,
@@ -368,20 +374,57 @@ export default function FoodSpreadsheetEntry({
     }
   };
 
+  if (activeSubTab === 'cards') {
+    return (
+      <FoodCardSpreadsheet
+        periods={periods}
+        categories={categories}
+        editingPeriodId={editingPeriodId}
+        setEditingPeriodId={setEditingPeriodId}
+        activePeriodObj={activePeriodObj}
+        isClosed={isClosed}
+        getCellAmount={getCellAmount}
+        categorySubtotals={categorySubtotals}
+        grandTotalsByPeriod={grandTotalsByPeriod}
+        isNonExpenseItem={isNonExpenseItem}
+        editedCostHeadNames={editedCostHeadNames}
+        handleCostHeadNameChange={handleCostHeadNameChange}
+        editedCategoryNames={editedCategoryNames}
+        handleCategoryNameChange={handleCategoryNameChange}
+        newRowDrafts={newRowDrafts}
+        handleAddNewRow={handleAddNewRow}
+        handleRemoveDraftRow={handleRemoveDraftRow}
+        handleDraftRowAmountChange={handleDraftRowAmountChange}
+        handleCellChange={handleCellChange}
+        handleDeleteCostHead={handleDeleteCostHead}
+        remarksDraft={remarksDraft}
+        handleRemarkChange={handleRemarkChange}
+        handleSaveAllSpreadsheetData={handleSaveAllSpreadsheetData}
+        isSavingLocal={isSavingLocal}
+        localMessage={localMessage}
+        openAddCategoryModal={openAddCategoryModal}
+        handleCloneFromPrev={handleCloneFromPrev}
+        handleToggleLock={handleToggleLock}
+        viewMode={activeSubTab}
+        setViewMode={setActiveSubTab}
+      />
+    );
+  }
+
   return (
     <div style={{
       backgroundColor: '#ffffff',
-      borderRadius: '12px',
-      border: '1.5px solid #00a2e8',
-      boxShadow: '0 4px 16px rgba(0, 162, 232, 0.1)',
+      borderRadius: '24px',
+      border: '1px solid rgba(108, 86, 219, 0.15)',
+      boxShadow: '0 20px 45px rgba(108, 86, 219, 0.08)',
       overflow: 'hidden',
       marginBottom: '22px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      fontFamily: 'Plus Jakarta Sans, sans-serif'
     }}>
       {/* 1. SPREADSHEET TOOLBAR & HEADER */}
       <div style={{
-        backgroundColor: '#00a2e8',
-        padding: '14px 20px',
+        background: 'linear-gradient(135deg, #745df0 0%, #5d44db 100%)',
+        padding: '16px 22px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -391,15 +434,15 @@ export default function FoodSpreadsheetEntry({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
+            width: '38px',
+            height: '38px',
+            borderRadius: '12px',
             backgroundColor: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#00a2e8',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            color: '#6c56db',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
           }}>
             <FileSpreadsheet size={20} />
           </div>
@@ -411,15 +454,15 @@ export default function FoodSpreadsheetEntry({
               <span style={{
                 fontSize: '11px',
                 fontWeight: '800',
-                padding: '2px 8px',
-                borderRadius: '4px',
+                padding: '3px 10px',
+                borderRadius: '9999px',
                 backgroundColor: '#ffffff',
-                color: '#0284c7'
+                color: '#6c56db'
               }}>
                 Rathinam Report Excel Grid
               </span>
             </div>
-            <p style={{ fontSize: '11.5px', color: '#e0f2fe', margin: '2px 0 0 0' }}>
+            <p style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.85)', margin: '2px 0 0 0' }}>
               Full Editable Matrix • Click to edit line item descriptions, category titles, cell values & formulas • Direct DB Save
             </p>
           </div>
@@ -435,14 +478,15 @@ export default function FoodSpreadsheetEntry({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px',
-                padding: '7px 12px',
-                borderRadius: '6px',
+                padding: '7px 18px',
+                borderRadius: '9999px',
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 border: '1px solid rgba(255, 255, 255, 0.4)',
                 color: '#ffffff',
                 fontSize: '12px',
                 fontWeight: '700',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
               }}
             >
               <Plus size={13} />
@@ -458,15 +502,16 @@ export default function FoodSpreadsheetEntry({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 18px',
-              borderRadius: '6px',
-              backgroundColor: '#ffffff',
-              color: '#0087c2',
+              padding: '8px 22px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+              color: '#ffffff',
               fontSize: '13px',
               fontWeight: '800',
               border: 'none',
               cursor: isSavingLocal ? 'not-allowed' : 'pointer',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.18)'
+              boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
+              transition: 'all 0.15s ease'
             }}
           >
             {isSavingLocal ? <RefreshCw size={14} className="spin" /> : <Save size={14} />}
@@ -495,9 +540,9 @@ export default function FoodSpreadsheetEntry({
 
       {/* 3. CYCLE SELECTION & VIEW TOGGLE */}
       <div style={{
-        backgroundColor: '#f0f9ff',
+        backgroundColor: '#f4f6fc',
         padding: '10px 20px',
-        borderBottom: '1px solid #bae6fd',
+        borderBottom: '1px solid #edf0f8',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -516,18 +561,18 @@ export default function FoodSpreadsheetEntry({
                 type="button"
                 onClick={() => setEditingPeriodId(p.id)}
                 style={{
-                  padding: '5px 14px',
-                  borderRadius: '20px',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
                   fontSize: '12px',
                   fontWeight: '800',
-                  border: isSel ? '2px solid #00a2e8' : '1px solid #cbd5e1',
-                  backgroundColor: isSel ? '#00a2e8' : '#ffffff',
+                  border: isSel ? 'none' : '1px solid #cbd5e1',
+                  backgroundColor: isSel ? '#6c56db' : '#ffffff',
                   color: isSel ? '#ffffff' : '#334155',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: isSel ? '0 2px 4px rgba(0, 162, 232, 0.25)' : 'none'
+                  boxShadow: isSel ? '0 4px 12px rgba(108, 86, 219, 0.3)' : 'none'
                 }}
               >
                 <span>{p.period_label}</span>
@@ -538,18 +583,34 @@ export default function FoodSpreadsheetEntry({
         </div>
 
         {/* View mode toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '4px', borderRadius: '9999px', border: '1px solid #e2e8f0' }}>
           <button
             type="button"
-            onClick={() => setActiveSubTab('excel_grid')}
+            onClick={() => setActiveSubTab('cards')}
             style={{
-              padding: '4px 12px',
-              borderRadius: '6px',
+              padding: '6px 14px',
+              borderRadius: '9999px',
               fontSize: '11.5px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'excel_grid' ? '#00a2e8' : 'transparent',
+              backgroundColor: activeSubTab === 'cards' ? '#0aa0e8' : 'transparent',
+              color: activeSubTab === 'cards' ? '#ffffff' : '#64748b'
+            }}
+          >
+            🗂️ Cards View
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('excel_grid')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              fontSize: '11.5px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: activeSubTab === 'excel_grid' ? '#6c56db' : 'transparent',
               color: activeSubTab === 'excel_grid' ? '#ffffff' : '#64748b'
             }}
           >
@@ -559,13 +620,13 @@ export default function FoodSpreadsheetEntry({
             type="button"
             onClick={() => setActiveSubTab('single_month')}
             style={{
-              padding: '4px 12px',
-              borderRadius: '6px',
+              padding: '6px 14px',
+              borderRadius: '9999px',
               fontSize: '11.5px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'single_month' ? '#00a2e8' : 'transparent',
+              backgroundColor: activeSubTab === 'single_month' ? '#6c56db' : 'transparent',
               color: activeSubTab === 'single_month' ? '#ffffff' : '#64748b'
             }}
           >
@@ -584,7 +645,7 @@ export default function FoodSpreadsheetEntry({
         gap: '12px',
         fontSize: '12px'
       }}>
-        <div style={{ fontWeight: '800', color: '#00a2e8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ fontWeight: '800', color: '#6c56db', display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span>fx</span>
         </div>
         <div style={{ height: '14px', width: '1px', backgroundColor: '#e2e8f0' }} />
@@ -813,7 +874,7 @@ export default function FoodSpreadsheetEntry({
                                       textAlign: 'right',
                                       padding: '4px 6px',
                                       borderRadius: '4px',
-                                      border: isSel ? '1.5px solid #00a2e8' : '1px solid #cbd5e1',
+                                      border: isSel ? '1.5px solid #6c56db' : '1px solid #cbd5e1',
                                       backgroundColor: cat.category_type === 'FORMULA' ? '#ecfdf5' : '#ffffff',
                                       fontWeight: '700',
                                       color: cat.category_type === 'FORMULA' ? '#15803d' : '#000000',
@@ -844,7 +905,7 @@ export default function FoodSpreadsheetEntry({
                                   textAlign: 'right',
                                   padding: '4px 8px',
                                   borderRadius: '4px',
-                                  border: '1.5px solid #00a2e8',
+                                  border: '1.5px solid #6c56db',
                                   backgroundColor: cat.category_type === 'FORMULA' ? '#ecfdf5' : '#ffffff',
                                   fontWeight: '800',
                                   color: cat.category_type === 'FORMULA' ? '#15803d' : '#000000',

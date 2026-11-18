@@ -321,15 +321,15 @@ export default function HostelMasterManager() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              backgroundColor: '#0284c7',
+              padding: '10px 22px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #6c52d6 0%, #5439ba 100%)',
               color: '#ffffff',
               fontSize: '13px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.35)'
+              boxShadow: '0 4px 14px rgba(108, 86, 219, 0.3)'
             }}
           >
             <Plus size={16} />
@@ -410,14 +410,15 @@ export default function HostelMasterManager() {
           <button
             onClick={() => setSelectedSection('ALL')}
             style={{
-              padding: '4px 12px',
-              borderRadius: '20px',
-              fontSize: '11.5px',
+              padding: '6px 16px',
+              borderRadius: '9999px',
+              fontSize: '12px',
               fontWeight: selectedSection === 'ALL' ? '700' : '600',
-              backgroundColor: selectedSection === 'ALL' ? '#0284c7' : '#f1f5f9',
-              color: selectedSection === 'ALL' ? '#ffffff' : '#475569',
+              backgroundColor: selectedSection === 'ALL' ? '#6c56db' : '#f1f3f9',
+              color: selectedSection === 'ALL' ? '#ffffff' : '#64748b',
               border: 'none',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              boxShadow: selectedSection === 'ALL' ? '0 4px 12px rgba(108, 86, 219, 0.25)' : 'none'
             }}
           >
             All ({parameters.length})
@@ -430,14 +431,15 @@ export default function HostelMasterManager() {
                 key={sec}
                 onClick={() => setSelectedSection(sec)}
                 style={{
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: '11.5px',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
                   fontWeight: isSel ? '700' : '600',
-                  backgroundColor: isSel ? '#0284c7' : '#f1f5f9',
-                  color: isSel ? '#ffffff' : '#475569',
+                  backgroundColor: isSel ? '#6c56db' : '#f1f3f9',
+                  color: isSel ? '#ffffff' : '#64748b',
                   border: 'none',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  boxShadow: isSel ? '0 4px 12px rgba(108, 86, 219, 0.25)' : 'none'
                 }}
               >
                 {sec} ({count})

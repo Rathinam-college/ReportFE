@@ -319,10 +319,10 @@ export default function TransportMasterManager() {
             type="button"
             onClick={() => setIsAddModalOpen(true)}
             style={{
-              padding: '10px 18px',
-              backgroundColor: '#ea580c',
+              padding: '10px 22px',
+              background: 'linear-gradient(135deg, #6c52d6 0%, #5439ba 100%)',
               color: '#ffffff',
-              borderRadius: '8px',
+              borderRadius: '9999px',
               fontWeight: '700',
               fontSize: '13px',
               border: 'none',
@@ -330,7 +330,7 @@ export default function TransportMasterManager() {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              boxShadow: '0 2px 6px rgba(234, 88, 12, 0.25)'
+              boxShadow: '0 4px 14px rgba(108, 86, 219, 0.3)'
             }}
           >
             <Plus size={16} />
@@ -396,14 +396,15 @@ export default function TransportMasterManager() {
             type="button"
             onClick={() => setSelectedSection('ALL')}
             style={{
-              padding: '5px 12px',
-              borderRadius: '6px',
+              padding: '6px 16px',
+              borderRadius: '9999px',
               fontSize: '12px',
               fontWeight: selectedSection === 'ALL' ? '700' : '600',
-              backgroundColor: selectedSection === 'ALL' ? '#ea580c' : '#f1f5f9',
+              backgroundColor: selectedSection === 'ALL' ? '#6c56db' : '#f1f3f9',
               color: selectedSection === 'ALL' ? '#ffffff' : '#64748b',
               border: 'none',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              boxShadow: selectedSection === 'ALL' ? '0 4px 12px rgba(108, 86, 219, 0.25)' : 'none'
             }}
           >
             All Sections ({parameters.length})
@@ -417,14 +418,15 @@ export default function TransportMasterManager() {
                 type="button"
                 onClick={() => setSelectedSection(sec)}
                 style={{
-                  padding: '5px 12px',
-                  borderRadius: '6px',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
                   fontSize: '12px',
                   fontWeight: isSel ? '700' : '600',
-                  backgroundColor: isSel ? '#ea580c' : '#f8fafc',
-                  color: isSel ? '#ffffff' : '#475569',
-                  border: isSel ? 'none' : '1px solid #e2e8f0',
-                  cursor: 'pointer'
+                  backgroundColor: isSel ? '#6c56db' : '#f1f3f9',
+                  color: isSel ? '#ffffff' : '#64748b',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: isSel ? '0 4px 12px rgba(108, 86, 219, 0.25)' : 'none'
                 }}
               >
                 {sec} ({count})

@@ -83,7 +83,7 @@ const STARTER_FORMULAS = {
 };
 
 export default function CategoryFormulaManager({
-  moduleName = 'Food & Dining',
+  moduleName = 'Food',
   categoriesList = [],
   computedMatrix = null,
   openAddCategoryModal = null

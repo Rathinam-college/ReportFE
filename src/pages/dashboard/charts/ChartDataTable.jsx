@@ -1,8 +1,72 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { formatINR } from '../../../utils/formatters';
 import { 
-  Download, Search, X, Maximize2, Minimize2, Sparkles, Filter, Percent
+  Download, Search, X, Maximize2, Minimize2, Percent, SlidersHorizontal, LayoutGrid, FileSpreadsheet
 } from 'lucide-react';
+import MonthPills from './MonthPills';
+import HeroSummary from './HeroSummary';
+import CategoryCard from './CategoryCard';
+import PersonStats from './PersonStats';
+import HostelOccupancyCard from './HostelOccupancyCard';
+import TransportFleetCard from './TransportFleetCard';
+import HostelDashboardDataTable from '../HostelDashboardDataTable';
+import TransportDashboardDataTable from '../TransportDashboardDataTable';
+
+// Category color cycle per specification:
+// indigo #5b5bf0, violet #8b5cf6, amber #f59e0b, emerald #10b981, pink #ec4899, then cyan #06b6d4, rose #f43f5e
+const CATEGORY_COLORS = [
+  '#5b5bf0', // 1. Indigo
+  '#8b5cf6', // 2. Violet
+  '#f59e0b', // 3. Amber
+  '#10b981', // 4. Emerald
+  '#ec4899', // 5. Pink
+  '#06b6d4', // 6. Cyan
+  '#f43f5e'  // 7. Rose
+];
+
+/**
+ * Format compact Indian currency (e.g. ₹58.4 L, ₹1.37 Cr)
+ */
+function formatIndianCompact(val) {
+  if (val === undefined || val === null || val === '' || isNaN(Number(val))) return '—';
+  const num = Number(val);
+  if (num === 0) return '₹0';
+  const abs = Math.abs(num);
+  const sign = num < 0 ? '-' : '';
+
+  if (abs >= 10000000) { // 1 Crore = 10,000,000
+    const cr = abs / 10000000;
+    return `${sign}₹${cr.toFixed(cr >= 10 ? 1 : 2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')} Cr`;
+  }
+  if (abs >= 100000) { // 1 Lakh = 100,000
+    const lk = abs / 100000;
+    return `${sign}₹${lk.toFixed(lk >= 10 ? 1 : 2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')} L`;
+  }
+  if (abs >= 1000) { // 1 Thousand
+    const k = abs / 1000;
+    return `${sign}₹${k.toFixed(1).replace(/\.0$/, '')} K`;
+  }
+  return `${sign}₹${num.toLocaleString('en-IN')}`;
+}
+
+/**
+ * Format full Indian currency for tooltips (e.g. ₹58,39,142)
+ */
+function formatIndianFull(val) {
+  if (val === undefined || val === null || val === '' || isNaN(Number(val))) return '—';
+  const num = Number(val);
+  return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Safe percentage calculation
+ */
+function computePercentage(val, total) {
+  if (!val || !total || total === 0) return 0;
+  const num = Number(val);
+  const tot = Number(total);
+  if (isNaN(num) || isNaN(tot) || tot === 0) return 0;
+  return (num / tot) * 100;
+}
 
 export default function ChartDataTable({
   categories = [],
@@ -11,18 +75,69 @@ export default function ChartDataTable({
   selectedModule = 'food',
   computedMatrix,
   isFullScreen: propIsFullScreen,
-  onToggleFullScreen: propOnToggleFullScreen
+  onToggleFullScreen: propOnToggleFullScreen,
+  remarksDraft = {}
 }) {
+  // 1. Controls state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
-  const [internalFullScreen, setInternalFullScreen] = useState(false);
-  const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
+  const [selectedPeriod, setSelectedPeriod] = useState(activePeriod || 'all');
   const [displayMode, setDisplayMode] = useState('both'); // 'both' | 'percentage_only' | 'amount_only'
-  const [percentageBasis, setPercentageBasis] = useState('column_total'); // 'column_total' | 'row_total' | 'category_subtotal' | 'grand_total'
-  const [selectedCell, setSelectedCell] = useState(null); // { costHeadId, description, categoryName, periodId, periodLabel, amount, rowTotal, colTotal, catTotal, grandTotal }
+  const [expandedCardIds, setExpandedCardIds] = useState({}); // { [catId]: boolean }, persists across month changes
+  const [internalFullScreen, setInternalFullScreen] = useState(false);
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' (Modern Card Dashboard) | 'spreadsheet' (Full Sheet/Table)
+  const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
   const containerRef = useRef(null);
 
-  // Toggle Fullscreen mode seamlessly
+  // Sync selectedPeriod with activePeriod prop changes
+  useEffect(() => {
+    if (activePeriod && activePeriod !== selectedPeriod) {
+      setSelectedPeriod(activePeriod);
+    }
+  }, [activePeriod]);
+
+  // Live Hostel and Transport census data (with self-healing fallback)
+  const [localHostelCensus, setLocalHostelCensus] = useState(() => computedMatrix?.hostel_census || {});
+  const [localTransportCensus, setLocalTransportCensus] = useState(() => computedMatrix?.transport_census || {});
+  const [localTransportByBranch, setLocalTransportByBranch] = useState(() => computedMatrix?.transport_census_by_branch || {});
+
+  useEffect(() => {
+    if (computedMatrix?.hostel_census && Object.keys(computedMatrix.hostel_census).length > 0) {
+      setLocalHostelCensus(computedMatrix.hostel_census);
+    } else {
+      fetch('/api/matrix?module=hostel')
+        .then(res => res.json())
+        .then(data => {
+          if (data?.hostel_census && Object.keys(data.hostel_census).length > 0) {
+            setLocalHostelCensus(data.hostel_census);
+          }
+        })
+        .catch(err => console.error('[ChartDataTable] Error fetching hostel census:', err));
+    }
+  }, [computedMatrix]);
+
+  useEffect(() => {
+    if (computedMatrix?.transport_census && Object.keys(computedMatrix.transport_census).length > 0) {
+      setLocalTransportCensus(computedMatrix.transport_census);
+      if (computedMatrix.transport_census_by_branch) {
+        setLocalTransportByBranch(computedMatrix.transport_census_by_branch);
+      }
+    } else {
+      fetch('/api/matrix?module=transport')
+        .then(res => res.json())
+        .then(data => {
+          if (data?.transport_census) {
+            setLocalTransportCensus(data.transport_census);
+          }
+          if (data?.transport_census_by_branch) {
+            setLocalTransportByBranch(data.transport_census_by_branch);
+          }
+        })
+        .catch(err => console.error('[ChartDataTable] Error fetching transport census:', err));
+    }
+  }, [computedMatrix]);
+
+  // Toggle fullscreen mode
   const toggleFullScreen = () => {
     const nextState = !isFullScreen;
     if (propOnToggleFullScreen) {
@@ -79,225 +194,21 @@ export default function ChartDataTable({
     };
   }, [isFullScreen, propOnToggleFullScreen]);
 
-  // Lock body scroll when in fullscreen
-  useEffect(() => {
-    if (isFullScreen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [isFullScreen]);
-
-  // Transparent UI Category Theme Palette (Refined Glass Accents)
-  const getCategoryTheme = (catName, idx) => {
-    const nameLower = (catName || '').toLowerCase();
-    if (nameLower.includes('material') || nameLower.includes('fuel')) {
-      return {
-        badgeBg: 'rgba(59, 130, 246, 0.08)',
-        badgeBorder: 'rgba(59, 130, 246, 0.25)',
-        badgeText: '#1d4ed8',
-        subtotalBg: 'rgba(59, 130, 246, 0.05)',
-        dotColor: '#3b82f6'
-      };
-    }
-    if (nameLower.includes('labour') || nameLower.includes('labor') || nameLower.includes('driver') || nameLower.includes('crew') || nameLower.includes('manpower')) {
-      return {
-        badgeBg: 'rgba(139, 92, 246, 0.08)',
-        badgeBorder: 'rgba(139, 92, 246, 0.25)',
-        badgeText: '#6d28d9',
-        subtotalBg: 'rgba(139, 92, 246, 0.05)',
-        dotColor: '#8b5cf6'
-      };
-    }
-    if (nameLower.includes('maintenance') || nameLower.includes('fc') || nameLower.includes('power') || nameLower.includes('repair')) {
-      return {
-        badgeBg: 'rgba(245, 158, 11, 0.08)',
-        badgeBorder: 'rgba(245, 158, 11, 0.25)',
-        badgeText: '#b45309',
-        subtotalBg: 'rgba(245, 158, 11, 0.05)',
-        dotColor: '#f59e0b'
-      };
-    }
-    if (nameLower.includes('event') || nameLower.includes('water') || nameLower.includes('statutory') || nameLower.includes('insurance')) {
-      return {
-        badgeBg: 'rgba(16, 185, 129, 0.08)',
-        badgeBorder: 'rgba(16, 185, 129, 0.25)',
-        badgeText: '#047857',
-        subtotalBg: 'rgba(16, 185, 129, 0.05)',
-        dotColor: '#10b981'
-      };
-    }
-    if (nameLower.includes('festival') || nameLower.includes('resident')) {
-      return {
-        badgeBg: 'rgba(236, 72, 153, 0.08)',
-        badgeBorder: 'rgba(236, 72, 153, 0.25)',
-        badgeText: '#be185d',
-        subtotalBg: 'rgba(236, 72, 153, 0.05)',
-        dotColor: '#ec4899'
-      };
-    }
-    const fallbacks = [
-      { badgeBg: 'rgba(59, 130, 246, 0.08)', badgeBorder: 'rgba(59, 130, 246, 0.25)', badgeText: '#1d4ed8', subtotalBg: 'rgba(59, 130, 246, 0.05)', dotColor: '#3b82f6' },
-      { badgeBg: 'rgba(139, 92, 246, 0.08)', badgeBorder: 'rgba(139, 92, 246, 0.25)', badgeText: '#6d28d9', subtotalBg: 'rgba(139, 92, 246, 0.05)', dotColor: '#8b5cf6' },
-      { badgeBg: 'rgba(245, 158, 11, 0.08)', badgeBorder: 'rgba(245, 158, 11, 0.25)', badgeText: '#b45309', subtotalBg: 'rgba(245, 158, 11, 0.05)', dotColor: '#f59e0b' },
-      { badgeBg: 'rgba(16, 185, 129, 0.08)', badgeBorder: 'rgba(16, 185, 129, 0.25)', badgeText: '#047857', subtotalBg: 'rgba(16, 185, 129, 0.05)', dotColor: '#10b981' }
-    ];
-    return fallbacks[idx % fallbacks.length];
+  // Toggle card expansion (retains state when month changes)
+  const handleToggleExpand = (catId) => {
+    setExpandedCardIds((prev) => ({
+      ...prev,
+      [catId]: !prev[catId]
+    }));
   };
 
-  // Indian currency formatting (e.g. 58,39,162)
-  const formatIndianNumber = (val) => {
-    if (val === undefined || val === null || val === '' || val === 0) return '—';
-    const num = Number(val);
-    if (isNaN(num) || num === 0) return '—';
-    return num.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-  };
-
-  // Safe percentage calculation
-  const computePercentage = (val, total) => {
-    if (!val || !total || total === 0) return 0;
-    const num = Number(val);
-    const tot = Number(total);
-    if (isNaN(num) || isNaN(tot) || tot === 0) return 0;
-    return (num / tot) * 100;
-  };
-
-  // Formatted percentage string (e.g. 66.8% or <0.1%)
-  const formatPercentage = (pct) => {
-    if (pct === undefined || pct === null || isNaN(pct) || pct === 0) return '0.0%';
-    if (pct < 0.05 && pct > 0) return '<0.1%';
-    return `${pct.toFixed(1)}%`;
-  };
-
-  // Unified cell renderer for amounts and percentages with dynamic row/column basis
-  const renderCellContent = (
-    amount, 
-    totalContext, 
-    isBold = false, 
-    isSubtotal = false, 
-    customBadgeTheme = null,
-    hidePercentage = false
-  ) => {
-    const num = Number(amount) || 0;
-    if (num === 0 && (!amount || amount === 0)) {
-      return <span style={{ color: '#94a3b8' }}>—</span>;
-    }
-
-    // If percentage is suppressed for Event / Additional food through Cost Per Person
-    if (hidePercentage) {
-      if (displayMode === 'percentage_only') {
-        return <span style={{ color: '#94a3b8' }}>—</span>;
-      }
-      return (
-        <span style={{
-          fontSize: isSubtotal ? '13px' : '12.5px',
-          fontWeight: isBold ? '800' : '600',
-          color: isSubtotal ? '#0f172a' : (num > 0 ? '#0f172a' : '#94a3b8')
-        }}>
-          {formatIndianNumber(num)}
-        </span>
-      );
-    }
-
-    let denominator = 0;
-    if (typeof totalContext === 'number') {
-      denominator = totalContext;
-    } else if (totalContext && typeof totalContext === 'object') {
-      if (percentageBasis === 'row_total') {
-        denominator = totalContext.rowTotal;
-      } else if (percentageBasis === 'category_subtotal') {
-        denominator = totalContext.catTotal;
-      } else if (percentageBasis === 'grand_total') {
-        denominator = totalContext.grandTotal;
-      } else { // default 'column_total'
-        denominator = totalContext.colTotal;
-      }
-    }
-
-    const pct = computePercentage(num, denominator);
-    const pctStr = formatPercentage(pct);
-
-    if (displayMode === 'percentage_only') {
-      return (
-        <span style={{
-          fontSize: isSubtotal ? '12.5px' : '12px',
-          fontWeight: isBold ? '800' : '700',
-          color: customBadgeTheme ? customBadgeTheme.text : (isSubtotal ? '#1d4ed8' : '#4338ca'),
-          backgroundColor: customBadgeTheme ? customBadgeTheme.bg : (isSubtotal ? 'rgba(37, 99, 235, 0.1)' : 'rgba(99, 102, 241, 0.08)'),
-          border: `1px solid ${customBadgeTheme ? customBadgeTheme.border : (isSubtotal ? 'rgba(37, 99, 235, 0.25)' : 'rgba(99, 102, 241, 0.2)')}`,
-          padding: '2px 8px',
-          borderRadius: '6px',
-          letterSpacing: '0.01em',
-          display: 'inline-block'
-        }}>
-          {pctStr}
-        </span>
-      );
-    }
-
-    if (displayMode === 'amount_only') {
-      return (
-        <span style={{
-          fontSize: isSubtotal ? '13px' : '12.5px',
-          fontWeight: isBold ? '800' : '600',
-          color: isSubtotal ? '#0f172a' : (num > 0 ? '#0f172a' : '#94a3b8')
-        }}>
-          {formatIndianNumber(num)}
-        </span>
-      );
-    }
-
-    // Default: 'both' (Shows both Rupee Amount and Percentage badge)
-    return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-        gap: '2px'
-      }}>
-        <span style={{
-          fontSize: isSubtotal ? '13px' : '12.5px',
-          fontWeight: isBold ? '800' : '600',
-          color: isSubtotal ? '#0f172a' : (num > 0 ? '#0f172a' : '#94a3b8')
-        }}>
-          {formatIndianNumber(num)}
-        </span>
-        {num > 0 && (
-          <span style={{
-            fontSize: '10.5px',
-            fontWeight: isSubtotal ? '800' : '700',
-            color: customBadgeTheme ? customBadgeTheme.text : (isSubtotal ? '#1d4ed8' : '#4f46e5'),
-            backgroundColor: customBadgeTheme ? customBadgeTheme.bg : (isSubtotal ? 'rgba(59, 130, 246, 0.1)' : 'rgba(99, 102, 241, 0.08)'),
-            border: `1px solid ${customBadgeTheme ? customBadgeTheme.border : (isSubtotal ? 'rgba(59, 130, 246, 0.22)' : 'rgba(99, 102, 241, 0.18)')}`,
-            padding: '1px 5px',
-            borderRadius: '4px',
-            letterSpacing: '0.01em',
-            lineHeight: '1.2'
-          }}>
-            {pctStr}
-          </span>
-        )}
-      </div>
-    );
-  };
-
-  // Unique category names for filtering
-  const categoryNames = useMemo(() => {
-    return categories.map(c => c.category_name);
-  }, [categories]);
-
-  // Helper to check if a category is excluded from Grand Total (Person, Total Person, Total Cost Per Person, Unit Economics)
+  // Helper to check if a category/item is non-expense (Person, Census, Cost Per Person)
   const isExcludedFromGrandTotal = (catName = '', itemDesc = '', code = '') => {
     const c = String(catName || '').toLowerCase().trim();
     const i = String(itemDesc || '').toLowerCase().trim();
     const cd = String(code || '').toLowerCase().trim();
     const s = `${c} ${i} ${cd}`;
 
-    // Skip entire category if it's Person, Total Person, Cost Per Person, Census, etc.
     if (
       c === 'person' ||
       c === 'persons' ||
@@ -310,7 +221,6 @@ export default function ChartDataTable({
       return true;
     }
 
-    // Skip non-expense line items (Students count, Staff count, Cost Per Person, etc.)
     return (
       i.includes('student') ||
       i.includes('staff count') ||
@@ -328,39 +238,39 @@ export default function ChartDataTable({
       s.includes('total person') ||
       s.includes('total persons') ||
       s.includes('cost per person') ||
-      s.includes('per person') ||
-      s.includes('students count') ||
       s.includes('student count') ||
+      s.includes('students count') ||
       (c === 'person' && i.includes('other'))
     );
   };
 
-  // Compute month-by-month grand totals across all categories (EXCLUDING Total Person, Total Cost Per Person)
+  // Compute month-by-month grand totals across all categories (excluding Person metrics)
   const monthlyGrandTotals = useMemo(() => {
     const totals = {};
     let grandOverall = 0;
-    periods.forEach(p => {
+    periods.forEach((p) => {
       let pSum = 0;
-      categories.forEach(cat => {
+      categories.forEach((cat) => {
         if (isExcludedFromGrandTotal(cat.category_name || cat.name)) {
-          return; // DO NOT add Total Person or Total Cost Per Person to Grand Total!
+          return;
         }
-        let catExpenseVal = 0;
+        let catVal = 0;
         if (Array.isArray(cat.items) && cat.items.length > 0) {
-          cat.items.forEach(it => {
+          cat.items.forEach((it) => {
             if (!isExcludedFromGrandTotal(cat.category_name || cat.name, it.description || it.name, it.code)) {
-              catExpenseVal += Number(it.amounts?.[p.id] ?? it.amounts?.[String(p.id)] ?? 0);
+              catVal += Number(it.amounts?.[p.id] ?? it.amounts?.[String(p.id)] ?? 0);
             }
           });
         } else {
-          catExpenseVal = Number(cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0);
+          catVal = Number(cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0);
         }
-        pSum += catExpenseVal;
+        pSum += catVal;
       });
       totals[p.id] = pSum;
       grandOverall += pSum;
     });
-    const avgMonthly = periods.length > 0 ? (grandOverall / periods.length) : 0;
+
+    const avgMonthly = periods.length > 0 ? grandOverall / periods.length : 0;
     return {
       byPeriod: totals,
       grandOverall,
@@ -368,178 +278,219 @@ export default function ChartDataTable({
     };
   }, [categories, periods]);
 
-  // Subtotals by category for each period
+  // Subtotals by category for each period and overall
   const categorySubtotals = useMemo(() => {
     const subs = {};
-    categories.forEach(cat => {
-      subs[cat.category_id] = {};
+    categories.forEach((cat) => {
+      const catId = cat.category_id || cat.id;
+      subs[catId] = {};
       let cTot = 0;
-      periods.forEach(p => {
-        const amt = Number(cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0);
-        subs[cat.category_id][p.id] = amt;
+      periods.forEach((p) => {
+        let amt = 0;
+        if (Array.isArray(cat.items) && cat.items.length > 0) {
+          cat.items.forEach((it) => {
+            amt += Number(it.amounts?.[p.id] ?? it.amounts?.[String(p.id)] ?? 0);
+          });
+        } else {
+          amt = Number(cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0);
+        }
+        subs[catId][p.id] = amt;
         cTot += amt;
       });
-      subs[cat.category_id].total = cTot;
+      subs[catId].total = cTot;
     });
     return subs;
   }, [categories, periods]);
 
-  // Grouped by Category for Transparent UI presentation
-  const groupedCategories = useMemo(() => {
-    const list = [];
-    categories.forEach((cat, idx) => {
-      if (selectedCategoryFilter !== 'all' && cat.category_name !== selectedCategoryFilter) return;
-
-      const items = cat.items?.filter(it => {
-        if (!searchTerm.trim()) return true;
-        const term = searchTerm.toLowerCase();
-        return it.description.toLowerCase().includes(term) || cat.category_name.toLowerCase().includes(term);
-      }) || [];
-
-      if (items.length === 0 && searchTerm.trim()) return;
-
-      list.push({
-        categoryId: cat.category_id,
-        categoryName: cat.category_name,
-        theme: getCategoryTheme(cat.category_name, idx),
-        items: items,
-        subtotal: categorySubtotals[cat.category_id] || {}
+  // Max monthly amount per category (to scale sparklines proportionally)
+  const categoryMaxMonths = useMemo(() => {
+    const maxMap = {};
+    categories.forEach((cat) => {
+      const catId = cat.category_id || cat.id;
+      let maxVal = 1;
+      periods.forEach((p) => {
+        const val = Number(categorySubtotals[catId]?.[p.id] || 0);
+        if (val > maxVal) maxVal = val;
       });
+      maxMap[catId] = maxVal;
     });
-    return list;
-  }, [categories, categorySubtotals, selectedCategoryFilter, searchTerm]);
+    return maxMap;
+  }, [categories, periods, categorySubtotals]);
 
-  // Determine if a category or line item should hide percentage badges
-  // (Per user instruction: "Event/ Additional food to Cost Per Person from this to end in the dabord show that persage do not show for this topics rempve thta")
-  const checkHidePercentage = (catName = '', itemDesc = '', grpIdx = -1) => {
-    const cLower = String(catName || '').toLowerCase();
-    const iLower = String(itemDesc || '').toLowerCase();
+  // Filtered categories and assigned colors
+  const filteredCategories = useMemo(() => {
+    let colorIdx = 0;
+    return categories
+      .map((cat) => {
+        const catName = cat.category_name || cat.name || '';
+        const catId = cat.category_id || cat.id;
+        const assignedColor = CATEGORY_COLORS[colorIdx % CATEGORY_COLORS.length];
+        colorIdx++;
 
-    // Core operational categories before Event/Additional maintain their percentage badges
-    if (
-      cLower.includes('material') || 
-      cLower.includes('labour') || 
-      cLower.includes('labor') || 
-      cLower.includes('maintenance')
-    ) {
-      return false;
-    }
+        const items = cat.items || [];
+        const filteredItems = items.filter((it) => {
+          if (!searchTerm.trim()) return true;
+          const term = searchTerm.toLowerCase();
+          return (
+            (it.description || it.name || '').toLowerCase().includes(term) ||
+            catName.toLowerCase().includes(term)
+          );
+        });
 
-    // Direct match for Event / Additional food, Festival, and Unit Economics / Per Person metrics
-    if (
-      cLower.includes('event') ||
-      cLower.includes('additional') ||
-      cLower.includes('festival') ||
-      cLower.includes('person') ||
-      cLower.includes('meal') ||
-      cLower.includes('student') ||
-      cLower.includes('census') ||
-      cLower.includes('economics') ||
-      iLower.includes('event purchase') ||
-      iLower.includes('additional food') ||
-      iLower.includes('festival') ||
-      iLower.includes('cost per person') ||
-      iLower.includes('per person') ||
-      iLower.includes('per meal') ||
-      iLower.includes('diners') ||
-      iLower.includes('production')
-    ) {
-      return true;
-    }
-
-    // Index-based cutoff: from first category matching "event" or "additional" onwards
-    if (grpIdx >= 0) {
-      const eventIdx = groupedCategories.findIndex(g => {
-        const n = (g.categoryName || '').toLowerCase();
-        return (n.includes('event') || n.includes('additional')) && !n.includes('labour') && !n.includes('labor');
-      });
-      if (eventIdx !== -1 && grpIdx >= eventIdx) {
-        return true;
-      }
-    }
-
-    return false;
-  };
-
-  // Special Combined Subtotals:
-  // Food Material + Food Labour summed as "Total Food Expenses"
-  const foodCombinedSubtotal = useMemo(() => {
-    const totals = {};
-    let allTotal = 0;
-    periods.forEach(p => {
-      let pSum = 0;
-      categories.forEach(cat => {
-        const lower = cat.category_name.toLowerCase();
-        if (lower.includes('material') || lower.includes('labour') || lower.includes('labor')) {
-          pSum += Number(cat.subtotal?.amounts?.[p.id] ?? cat.subtotal?.amounts?.[String(p.id)] ?? 0);
+        return {
+          ...cat,
+          categoryId: catId,
+          categoryName: catName,
+          color: assignedColor,
+          items: filteredItems,
+          isExcluded: isExcludedFromGrandTotal(catName)
+        };
+      })
+      .filter((cat) => {
+        if (selectedCategoryFilter !== 'all' && cat.categoryName !== selectedCategoryFilter) {
+          return false;
         }
+        if (searchTerm.trim() && cat.items.length === 0) {
+          return false;
+        }
+        return true;
       });
-      totals[p.id] = pSum;
-      allTotal += pSum;
-    });
-    return { totals, allTotal };
-  }, [categories, periods]);
+  }, [categories, searchTerm, selectedCategoryFilter]);
 
-  // Export to CSV with percentages
+  // Expense categories (used for Hero total & Share breakdown)
+  const expenseCategories = useMemo(() => {
+    return filteredCategories.filter((cat) => !cat.isExcluded);
+  }, [filteredCategories]);
+
+  // Special person categories / items for PersonStats
+  const personRows = useMemo(() => {
+    const pRows = [];
+    categories.forEach((cat) => {
+      const catName = cat.category_name || cat.name || '';
+      if (isExcludedFromGrandTotal(catName)) {
+        if (cat.items && cat.items.length > 0) {
+          cat.items.forEach((it) => pRows.push(it));
+        } else {
+          pRows.push({
+            description: catName,
+            total: categorySubtotals[cat.category_id || cat.id]?.total || 0,
+            amounts: categorySubtotals[cat.category_id || cat.id] || {}
+          });
+        }
+      }
+    });
+    return pRows;
+  }, [categories, categorySubtotals]);
+
+  // Selected period label and totals
+  const selectedPeriodObj = useMemo(() => {
+    if (selectedPeriod === 'all') return null;
+    return periods.find((p) => String(p.id) === String(selectedPeriod)) || null;
+  }, [periods, selectedPeriod]);
+
+  const selectedPeriodLabel = useMemo(() => {
+    if (selectedPeriod === 'all') return 'All months';
+    return selectedPeriodObj?.period_label || selectedPeriodObj?.period_code || 'Selected month';
+  }, [selectedPeriod, selectedPeriodObj]);
+
+  const currentGrandTotal = useMemo(() => {
+    if (selectedPeriod === 'all') {
+      return monthlyGrandTotals.grandOverall;
+    }
+    return monthlyGrandTotals.byPeriod[selectedPeriod] || 0;
+  }, [selectedPeriod, monthlyGrandTotals]);
+
+  // Previous period total and label for MoM calculation in Hero
+  const { prevPeriodTotal, prevPeriodLabel, isFirstPeriod } = useMemo(() => {
+    if (selectedPeriod === 'all') {
+      return { prevPeriodTotal: null, prevPeriodLabel: null, isFirstPeriod: false };
+    }
+    const idx = periods.findIndex((p) => String(p.id) === String(selectedPeriod));
+    if (idx === 0) {
+      return { prevPeriodTotal: null, prevPeriodLabel: null, isFirstPeriod: true };
+    }
+    if (idx > 0) {
+      const prevP = periods[idx - 1];
+      return {
+        prevPeriodTotal: monthlyGrandTotals.byPeriod[prevP.id] || 0,
+        prevPeriodLabel: prevP.period_label || prevP.period_code || 'Prev month',
+        isFirstPeriod: false
+      };
+    }
+    return { prevPeriodTotal: null, prevPeriodLabel: null, isFirstPeriod: false };
+  }, [periods, selectedPeriod, monthlyGrandTotals]);
+
+  // Category shares for Hero summary stacked bar
+  const categoryShares = useMemo(() => {
+    const denom = currentGrandTotal > 0 ? currentGrandTotal : 1;
+    return expenseCategories.map((cat) => {
+      let amt = 0;
+      if (selectedPeriod === 'all') {
+        amt = categorySubtotals[cat.categoryId]?.total || 0;
+      } else {
+        amt = categorySubtotals[cat.categoryId]?.[selectedPeriod] || 0;
+      }
+      const pct = currentGrandTotal > 0 ? (amt / denom) * 100 : 0;
+      return {
+        categoryId: cat.categoryId,
+        categoryName: cat.categoryName,
+        color: cat.color,
+        amount: amt,
+        percent: pct
+      };
+    });
+  }, [expenseCategories, selectedPeriod, currentGrandTotal, categorySubtotals]);
+
+  // Census data fallback for PersonStats
+  const activeCensusData = useMemo(() => {
+    const pid = selectedPeriod !== 'all' ? selectedPeriod : periods[0]?.id;
+    return (
+      computedMatrix?.hostel_census?.[pid] ||
+      computedMatrix?.transport_census?.[pid] ||
+      computedMatrix?.census?.[pid] ||
+      null
+    );
+  }, [computedMatrix, selectedPeriod, periods]);
+
+  // CSV Export handler
   const handleExportCSV = () => {
-    const periodHeaders = periods.flatMap(p => [`"${p.period_label} (INR)"`, `"${p.period_label} (%)"`]);
-    const headers = ['"Category"', '"Description"', ...periodHeaders, '"Total Spend (INR)"', '"Total (%)"', '"Avg / Month (INR)"', '"Avg (%)"'];
+    const periodHeaders = periods.map((p) => `"${p.period_label || p.period_code} (INR)"`);
+    const headers = ['"Category"', '"Description"', ...periodHeaders, '"Total Spend (INR)"', '"Avg / Month (INR)"'];
     const rows = [];
 
-    groupedCategories.forEach((grp, grpIdx) => {
-      const isGroupHidePct = checkHidePercentage(grp.categoryName, '', grpIdx);
-      grp.items.forEach(it => {
-        const isHidePct = isGroupHidePct || checkHidePercentage(grp.categoryName, it.description, grpIdx);
-        const pCols = periods.flatMap(p => {
+    filteredCategories.forEach((cat) => {
+      cat.items.forEach((it) => {
+        const pCols = periods.map((p) => {
           const amt = Number(it.amounts?.[p.id] ?? 0);
-          const denom = percentageBasis === 'category_subtotal'
-            ? (categorySubtotals[grp.categoryId]?.[p.id] || 0)
-            : (monthlyGrandTotals.byPeriod[p.id] || 0);
-          const pct = computePercentage(amt, denom);
-          return [amt.toFixed(2), isHidePct ? '""' : `"${pct.toFixed(1)}%"`];
+          return amt.toFixed(2);
         });
         const itTotal = periods.reduce((acc, p) => acc + Number(it.amounts?.[p.id] ?? 0), 0);
-        const itTotalDenom = percentageBasis === 'category_subtotal'
-          ? (categorySubtotals[grp.categoryId]?.total || 0)
-          : (monthlyGrandTotals.grandOverall || 0);
-        const itTotalPct = computePercentage(itTotal, itTotalDenom);
         const itAvg = periods.length > 0 ? itTotal / periods.length : 0;
-        const itAvgDenom = percentageBasis === 'category_subtotal'
-          ? ((categorySubtotals[grp.categoryId]?.total || 0) / (periods.length || 1))
-          : (monthlyGrandTotals.avgMonthly || 0);
-        const itAvgPct = computePercentage(itAvg, itAvgDenom);
 
         rows.push([
-          `"${grp.categoryName}"`,
-          `"${it.description}"`,
+          `"${cat.categoryName}"`,
+          `"${it.description || it.name}"`,
           ...pCols,
           itTotal.toFixed(2),
-          isHidePct ? '""' : `"${itTotalPct.toFixed(1)}%"`,
-          itAvg.toFixed(2),
-          isHidePct ? '""' : `"${itAvgPct.toFixed(1)}%"`
+          itAvg.toFixed(2)
         ]);
       });
     });
 
-    const grandPCols = periods.flatMap(p => [
-      (monthlyGrandTotals.byPeriod[p.id] || 0).toFixed(2),
-      '"100.0%"'
-    ]);
+    const grandPCols = periods.map((p) => (monthlyGrandTotals.byPeriod[p.id] || 0).toFixed(2));
     rows.push([
       '"ALL CATEGORIES"',
       '"TOTAL EXPENSES"',
       ...grandPCols,
       monthlyGrandTotals.grandOverall.toFixed(2),
-      '"100.0%"',
-      monthlyGrandTotals.avgMonthly.toFixed(2),
-      '"100.0%"'
+      monthlyGrandTotals.avgMonthly.toFixed(2)
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `rathinam_${selectedModule}_expenditure_ledger.csv`);
+    link.setAttribute('download', `rathinam_${selectedModule}_expenditure_cards.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -548,16 +499,13 @@ export default function ChartDataTable({
   return (
     <div
       ref={containerRef}
+      className="expenditure-card-dashboard"
       style={{
-        backgroundColor: isFullScreen ? '#ffffff' : 'rgba(255, 255, 255, 0.72)',
-        backdropFilter: isFullScreen ? 'none' : 'blur(16px)',
-        WebkitBackdropFilter: isFullScreen ? 'none' : 'blur(16px)',
-        borderRadius: isFullScreen ? '0px' : '16px',
-        border: isFullScreen ? 'none' : '1px solid rgba(226, 232, 240, 0.85)',
-        boxShadow: isFullScreen 
-          ? 'none' 
-          : '0 10px 30px -5px rgba(99, 102, 241, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.02)',
-        overflow: 'hidden',
+        backgroundColor: 'var(--bg-page, #f6f7fb)',
+        color: 'var(--text-main, #14172b)',
+        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+        borderRadius: isFullScreen ? '0px' : '24px',
+        padding: isFullScreen ? '28px 32px' : '22px 24px',
         position: isFullScreen ? 'fixed' : 'relative',
         top: isFullScreen ? 0 : undefined,
         left: isFullScreen ? 0 : undefined,
@@ -565,256 +513,247 @@ export default function ChartDataTable({
         bottom: isFullScreen ? 0 : undefined,
         width: isFullScreen ? '100vw' : '100%',
         height: isFullScreen ? '100vh' : 'auto',
+        overflowY: 'auto',
         zIndex: isFullScreen ? 999999 : 1,
-        display: isFullScreen ? 'flex' : 'block',
-        flexDirection: isFullScreen ? 'column' : undefined,
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        transition: 'all 0.3s ease'
       }}
     >
-      {/* 1. GLASS HEADER CONTROL BAR */}
+      {/* 1. HEADER & SLIM TOOLBAR */}
       <div style={{
-        padding: isFullScreen ? '14px 28px' : '14px 22px',
-        backgroundColor: isFullScreen ? '#ffffff' : 'rgba(248, 250, 252, 0.75)',
-        backdropFilter: isFullScreen ? 'none' : 'blur(12px)',
-        WebkitBackdropFilter: isFullScreen ? 'none' : 'blur(12px)',
-        borderBottom: '1.5px solid rgba(226, 232, 240, 0.85)',
         display: 'flex',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '12px',
-        flexShrink: 0,
-        position: 'relative',
-        zIndex: 35
+        gap: '14px',
+        borderBottom: '1px solid var(--border-card, #e6e8f2)',
+        paddingBottom: '16px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            border: '1px solid rgba(99, 102, 241, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#4f46e5'
+        {/* Title & Subtitle */}
+        <div>
+          <h2 style={{
+            fontSize: '20px',
+            fontWeight: '800',
+            letterSpacing: '-0.02em',
+            margin: 0,
+            color: 'var(--text-main, #14172b)'
           }}>
-            <Sparkles size={16} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>
-                Month-by-Month Expenditure Data Sheet
-              </h3>
-              <span style={{
-                fontSize: '11px',
-                fontWeight: '700',
-                padding: '2px 8px',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                color: '#4338ca',
-                border: '1px solid rgba(99, 102, 241, 0.2)'
-              }}>
-                Transparent Glass UI
-              </span>
-              {isFullScreen && (
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  backgroundColor: '#ecfdf5',
-                  color: '#047857',
-                  border: '1px solid #a7f3d0'
-                }}>
-                  Full Screen • Press Esc to exit
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-              Translucent multi-cycle financial ledger • Exact figures & percentage share of total expenditure
-            </p>
-          </div>
+            {selectedModule === 'hostel'
+              ? 'Hostel Month-by-Month Expenditure'
+              : selectedModule === 'transport'
+              ? 'Transport Month-by-Month Expenditure'
+              : 'Food Month-by-Month Expenditure'}
+          </h2>
+          <p style={{
+            fontSize: '12.5px',
+            color: 'var(--text-muted, #6b7090)',
+            margin: '3px 0 0 0'
+          }}>
+            {selectedModule === 'hostel'
+              ? 'Tap a month to filter hostel expenses · tap a card to see line items'
+              : selectedModule === 'transport'
+              ? 'Tap a month to filter transport expenses · tap a card to see line items'
+              : 'Tap a month to filter · tap a card to see line items'}
+          </p>
         </div>
 
-        {/* View mode controls: Search, Category filter, Percentage Mode Switch, CSV & Full Screen */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Transparent Search box */}
+        {/* Slim Controls Toolbar: View Mode, Search, Filter, ₹/%, CSV, Fullscreen */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          flexWrap: 'wrap'
+        }}>
+          {/* View Mode Switcher Pill */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: 'var(--bg-pill, #eceefa)',
+            padding: '2px',
+            borderRadius: '9999px',
+            border: '1px solid var(--border-card, #e6e8f2)'
+          }}>
+            <button
+              type="button"
+              onClick={() => setViewMode('cards')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 12px',
+                borderRadius: '9999px',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'cards' ? '#5b5bf0' : 'transparent',
+                color: viewMode === 'cards' ? '#ffffff' : 'var(--text-muted, #6b7090)',
+                fontSize: '11.5px',
+                fontWeight: viewMode === 'cards' ? '700' : '500',
+                boxShadow: viewMode === 'cards' ? '0 2px 6px rgba(91, 91, 240, 0.25)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <LayoutGrid size={12} />
+              <span>Cards View</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('spreadsheet')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 12px',
+                borderRadius: '9999px',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'spreadsheet' ? '#5b5bf0' : 'transparent',
+                color: viewMode === 'spreadsheet' ? '#ffffff' : 'var(--text-muted, #6b7090)',
+                fontSize: '11.5px',
+                fontWeight: viewMode === 'spreadsheet' ? '700' : '500',
+                boxShadow: viewMode === 'spreadsheet' ? '0 2px 6px rgba(91, 91, 240, 0.25)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <FileSpreadsheet size={12} />
+              <span>Spreadsheet</span>
+            </button>
+          </div>
+          {/* Search Box */}
           <div style={{ position: 'relative' }}>
-            <Search size={13} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+            <Search
+              size={13}
+              color="var(--text-muted, #6b7090)"
+              style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+            />
             <input
               type="text"
-              placeholder="Search line item..."
+              placeholder="Search items..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                padding: '5px 10px 5px 28px',
+                padding: '6px 26px 6px 28px',
                 fontSize: '12px',
-                borderRadius: '8px',
-                border: '1px solid rgba(203, 213, 225, 0.7)',
+                fontWeight: '500',
+                borderRadius: '9999px',
+                border: '1px solid var(--border-card, #e6e8f2)',
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                color: 'var(--text-main, #14172b)',
                 outline: 'none',
-                width: '160px',
-                backgroundColor: 'rgba(255, 255, 255, 0.85)',
-                color: '#1e293b'
+                width: '140px',
+                transition: 'border-color 0.2s ease'
               }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--pill-active-bg, #5b5bf0)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-card, #e6e8f2)'}
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
               >
-                <X size={12} color="#94a3b8" />
+                <X size={12} color="var(--text-muted, #6b7090)" />
               </button>
             )}
           </div>
 
-          {/* Transparent Category Filter Dropdown */}
+          {/* Category Filter Dropdown */}
           <select
             value={selectedCategoryFilter}
             onChange={(e) => setSelectedCategoryFilter(e.target.value)}
             style={{
-              padding: '5px 10px',
+              padding: '6px 12px',
               fontSize: '12px',
               fontWeight: '600',
-              borderRadius: '8px',
-              border: '1px solid rgba(203, 213, 225, 0.7)',
-              backgroundColor: 'rgba(255, 255, 255, 0.85)',
-              color: '#334155',
-              cursor: 'pointer'
+              borderRadius: '9999px',
+              border: '1px solid var(--border-card, #e6e8f2)',
+              backgroundColor: 'var(--bg-card, #ffffff)',
+              color: 'var(--text-main, #14172b)',
+              cursor: 'pointer',
+              outline: 'none'
             }}
           >
-            <option value="all">All Categories ({categoryNames.length})</option>
-            {categoryNames.map(cn => (
-              <option key={cn} value={cn}>{cn}</option>
-            ))}
+            <option value="all">All Categories ({categories.length})</option>
+            {categories.map((c) => {
+              const name = c.category_name || c.name;
+              return <option key={name} value={name}>{name}</option>;
+            })}
           </select>
 
-          {/* View Mode Segmented Control: [₹ + %] | [% Only] | [₹ Only] */}
+          {/* ₹ / % / Both Mode Toggle */}
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
-            backgroundColor: 'rgba(241, 245, 249, 0.95)',
-            borderRadius: '8px',
+            backgroundColor: 'var(--bg-pill, #eceefa)',
+            borderRadius: '9999px',
             padding: '2px',
-            border: '1px solid rgba(203, 213, 225, 0.8)'
+            gap: '1px'
           }}>
             <button
               type="button"
               onClick={() => setDisplayMode('both')}
-              title="Show both Rupee amount and percentage badge"
               style={{
                 padding: '4px 9px',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: displayMode === 'both' ? '800' : '600',
-                backgroundColor: displayMode === 'both' ? '#ffffff' : 'transparent',
-                color: displayMode === 'both' ? '#4f46e5' : '#64748b',
-                boxShadow: displayMode === 'both' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                borderRadius: '9999px',
+                fontSize: '11px',
+                fontWeight: displayMode === 'both' ? '700' : '500',
+                backgroundColor: displayMode === 'both' ? 'var(--bg-card, #ffffff)' : 'transparent',
+                color: displayMode === 'both' ? 'var(--pill-active-bg, #5b5bf0)' : 'var(--text-muted, #6b7090)',
                 border: 'none',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                transition: 'all 0.12s ease'
+                boxShadow: displayMode === 'both' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
               }}
             >
-              <Percent size={12} />
-              <span>₹ + %</span>
+              Both
             </button>
-
-            <button
-              type="button"
-              onClick={() => setDisplayMode('percentage_only')}
-              title="Show percentage values only"
-              style={{
-                padding: '4px 9px',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: displayMode === 'percentage_only' ? '800' : '600',
-                backgroundColor: displayMode === 'percentage_only' ? '#ffffff' : 'transparent',
-                color: displayMode === 'percentage_only' ? '#4f46e5' : '#64748b',
-                boxShadow: displayMode === 'percentage_only' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px',
-                transition: 'all 0.12s ease'
-              }}
-            >
-              <span>% Only</span>
-            </button>
-
             <button
               type="button"
               onClick={() => setDisplayMode('amount_only')}
-              title="Show Rupee amounts only"
               style={{
                 padding: '4px 9px',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: displayMode === 'amount_only' ? '800' : '600',
-                backgroundColor: displayMode === 'amount_only' ? '#ffffff' : 'transparent',
-                color: displayMode === 'amount_only' ? '#4f46e5' : '#64748b',
-                boxShadow: displayMode === 'amount_only' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                borderRadius: '9999px',
+                fontSize: '11px',
+                fontWeight: displayMode === 'amount_only' ? '700' : '500',
+                backgroundColor: displayMode === 'amount_only' ? 'var(--bg-card, #ffffff)' : 'transparent',
+                color: displayMode === 'amount_only' ? 'var(--pill-active-bg, #5b5bf0)' : 'var(--text-muted, #6b7090)',
                 border: 'none',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px',
-                transition: 'all 0.12s ease'
+                boxShadow: displayMode === 'amount_only' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
               }}
             >
-              <span>₹ Only</span>
+              ₹
+            </button>
+            <button
+              type="button"
+              onClick={() => setDisplayMode('percentage_only')}
+              style={{
+                padding: '4px 9px',
+                borderRadius: '9999px',
+                fontSize: '11px',
+                fontWeight: displayMode === 'percentage_only' ? '700' : '500',
+                backgroundColor: displayMode === 'percentage_only' ? 'var(--bg-card, #ffffff)' : 'transparent',
+                color: displayMode === 'percentage_only' ? 'var(--pill-active-bg, #5b5bf0)' : 'var(--text-muted, #6b7090)',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: displayMode === 'percentage_only' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              %
             </button>
           </div>
 
-          {/* User-Selected Percentage Mode: Column % vs Row % vs Category % vs Grand % */}
-          {displayMode !== 'amount_only' && (
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'rgba(241, 245, 249, 0.95)',
-              borderRadius: '8px',
-              padding: '2px',
-              border: '1px solid rgba(203, 213, 225, 0.8)',
-              gap: '1px'
-            }}>
-              <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '800', padding: '0 5px', textTransform: 'uppercase' }}>
-                % Basis:
-              </span>
-              {[
-                { id: 'column_total', label: 'Column % (Month)', tip: 'Percentage calculated vertically against that month\'s column total' },
-                { id: 'row_total', label: 'Row % (Item)', tip: 'Percentage calculated horizontally against that item\'s row total across months' },
-                { id: 'category_subtotal', label: 'Category %', tip: 'Percentage calculated within parent category' },
-                { id: 'grand_total', label: 'Grand %', tip: 'Percentage calculated against overall grand expenditure' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setPercentageBasis(opt.id)}
-                  title={opt.tip}
-                  style={{
-                    padding: '3px 7px',
-                    borderRadius: '5px',
-                    fontSize: '11px',
-                    fontWeight: percentageBasis === opt.id ? '800' : '600',
-                    backgroundColor: percentageBasis === opt.id ? '#ffffff' : 'transparent',
-                    color: percentageBasis === opt.id ? '#4f46e5' : '#64748b',
-                    boxShadow: percentageBasis === opt.id ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.12s ease'
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* CSV Export */}
+          {/* CSV Export Button */}
           <button
             type="button"
             onClick={handleExportCSV}
@@ -822,872 +761,210 @@ export default function ChartDataTable({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '5px',
-              padding: '5px 12px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(255, 255, 255, 0.85)',
-              border: '1px solid rgba(203, 213, 225, 0.8)',
-              color: '#334155',
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              backgroundColor: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border-card, #e6e8f2)',
+              color: 'var(--text-main, #14172b)',
               fontSize: '12px',
-              fontWeight: '700',
+              fontWeight: '600',
               cursor: 'pointer',
-              transition: 'all 0.12s ease'
+              transition: 'all 0.15s ease'
             }}
           >
-            <Download size={13} color="#475569" />
+            <Download size={13} />
             <span>CSV</span>
           </button>
 
-          {/* Full Screen Toggle Button with Icon & Label */}
+          {/* Fullscreen Maximize Button */}
           <button
             type="button"
             onClick={toggleFullScreen}
-            title={isFullScreen ? "Exit Full Screen / Normal View (Esc)" : "Maximise Sheet to Full Screen & Align Columns"}
-            aria-label={isFullScreen ? "Exit Full Screen" : "Maximise Sheet"}
+            title={isFullScreen ? 'Exit Full Screen (Esc)' : 'Maximize Dashboard'}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
               padding: '6px 14px',
-              borderRadius: '8px',
-              backgroundColor: isFullScreen ? '#4f46e5' : '#ffffff',
-              border: isFullScreen ? '1.5px solid #4338ca' : '1.5px solid #cbd5e1',
-              color: isFullScreen ? '#ffffff' : '#4f46e5',
-              cursor: 'pointer',
-              fontWeight: '700',
+              borderRadius: '9999px',
+              backgroundColor: isFullScreen ? 'var(--pill-active-bg, #5b5bf0)' : 'var(--bg-card, #ffffff)',
+              border: isFullScreen ? '1px solid var(--pill-active-bg, #5b5bf0)' : '1px solid var(--border-card, #e6e8f2)',
+              color: isFullScreen ? '#ffffff' : 'var(--pill-active-bg, #5b5bf0)',
               fontSize: '12px',
-              boxShadow: isFullScreen ? '0 2px 8px rgba(79, 70, 229, 0.35)' : '0 1px 3px rgba(0,0,0,0.05)',
+              fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: isFullScreen ? '0 4px 14px rgba(91, 91, 240, 0.35)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
-            {isFullScreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            <span>{isFullScreen ? 'Exit Fullscreen' : 'Maximise'}</span>
+            {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            <span>{isFullScreen ? 'Exit' : 'Maximize'}</span>
           </button>
         </div>
       </div>
 
-      {/* USER-SELECTED ROW & COLUMN PERCENTAGE INSPECTOR BANNER */}
-      {selectedCell && (
-        <div style={{
-          margin: isFullScreen ? '12px 20px' : '10px 16px',
-          backgroundColor: '#eff6ff',
-          border: '1.5px solid #bfdbfe',
-          borderRadius: '10px',
-          padding: '10px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          boxShadow: '0 2px 6px rgba(37, 99, 235, 0.08)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>🎯</span>
-            <div>
-              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#1e3a8a' }}>
-                Selected Cell: <span style={{ color: '#2563eb' }}>{selectedCell.description}</span> ({selectedCell.categoryName}) × <span style={{ color: '#059669' }}>{selectedCell.periodLabel}</span>
-              </div>
-              <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '1px' }}>
-                Actual Spend: <strong style={{ color: '#0f172a' }}>{formatIndianNumber(selectedCell.amount)} INR</strong>
-              </div>
-            </div>
+      {/* 2. CONDITIONAL VIEW: SPREADSHEET TABLE OR CARDS DASHBOARD */}
+      {viewMode === 'spreadsheet' ? (
+        selectedModule === 'hostel' ? (
+          <HostelDashboardDataTable
+            periods={periods}
+            activePeriod={selectedPeriod}
+            computedMatrix={computedMatrix}
+            isFullScreen={isFullScreen}
+            onToggleFullScreen={toggleFullScreen}
+          />
+        ) : selectedModule === 'transport' ? (
+          <TransportDashboardDataTable
+            periods={periods}
+            activePeriod={selectedPeriod}
+            computedMatrix={computedMatrix}
+            isFullScreen={isFullScreen}
+            onToggleFullScreen={toggleFullScreen}
+          />
+        ) : (
+          <div style={{ overflowX: 'auto', backgroundColor: '#ffffff', borderRadius: '16px', padding: '16px', border: '1px solid var(--border-card, #e6e8f2)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border-card, #e6e8f2)', textAlign: 'left' }}>
+                  <th style={{ padding: '8px' }}>Category</th>
+                  <th style={{ padding: '8px' }}>Description</th>
+                  {periods.map(p => (
+                    <th key={p.id} style={{ padding: '8px', textAlign: 'right' }}>{p.period_label || p.period_code}</th>
+                  ))}
+                  <th style={{ padding: '8px', textAlign: 'right' }}>Total</th>
+                  <th style={{ padding: '8px', textAlign: 'right' }}>Avg / Mo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCategories.map(cat => (
+                  <React.Fragment key={cat.categoryId}>
+                    <tr style={{ backgroundColor: 'var(--bg-pill, #eceefa)', fontWeight: '700' }}>
+                      <td colSpan={periods.length + 4} style={{ padding: '8px 10px', color: cat.color }}>
+                        {cat.categoryName}
+                      </td>
+                    </tr>
+                    {cat.items.map(it => (
+                      <tr key={it.id || it.description} style={{ borderBottom: '1px solid var(--border-card, #e6e8f2)' }}>
+                        <td style={{ padding: '6px 10px' }}></td>
+                        <td style={{ padding: '6px 10px', fontWeight: '600' }}>{it.description || it.name}</td>
+                        {periods.map(p => (
+                          <td key={p.id} style={{ padding: '6px 10px', textAlign: 'right' }}>
+                            {formatIndianCompact(it.amounts?.[p.id] ?? 0)}
+                          </td>
+                        ))}
+                        <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '700' }}>
+                          {formatIndianCompact(it.total || 0)}
+                        </td>
+                        <td style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-muted, #6b7090)' }}>
+                          {formatIndianCompact(periods.length > 0 ? (it.total || 0) / periods.length : 0)}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
+        )
+      ) : (
+        <>
+          {/* 2. MONTH PILLS (HORIZONTAL SCROLL) */}
+          <MonthPills
+            periods={periods}
+            selectedPeriod={selectedPeriod}
+            onSelectPeriod={(pId) => setSelectedPeriod(pId)}
+          />
 
-          {checkHidePercentage(selectedCell.categoryName, selectedCell.description) ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1', backgroundColor: '#e0f2fe', border: '1px solid #bae6fd', padding: '4px 10px', borderRadius: '6px' }}>
-                Percentages not applicable for {selectedCell.categoryName}
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedCell(null)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: '#64748b',
-                  cursor: 'pointer'
-                }}
-              >
-                Clear
-              </button>
-            </div>
+          {/* 3. HERO SUMMARY CARD */}
+          <HeroSummary
+            selectedPeriod={selectedPeriod}
+            selectedPeriodLabel={selectedPeriodLabel}
+            grandTotal={currentGrandTotal}
+            avgMonthly={monthlyGrandTotals.avgMonthly}
+            prevPeriodTotal={prevPeriodTotal}
+            prevPeriodLabel={prevPeriodLabel}
+            isFirstPeriod={isFirstPeriod}
+            categoryShares={categoryShares}
+            formatCompact={formatIndianCompact}
+            formatFull={formatIndianFull}
+          />
+
+          {/* 5. SPECIAL ROWS: PERSONS & OPERATIONAL CENSUS CARDS */}
+          {selectedModule === 'hostel' ? (
+            <HostelOccupancyCard
+              hostelCensusMap={localHostelCensus}
+              periods={periods}
+              selectedPeriod={selectedPeriod}
+              formatCompact={formatIndianCompact}
+              formatFull={formatIndianFull}
+            />
+          ) : selectedModule === 'transport' ? (
+            <TransportFleetCard
+              transportCensus={localTransportCensus}
+              transportCensusByBranch={localTransportByBranch}
+              periods={periods}
+              selectedPeriod={selectedPeriod}
+              formatCompact={formatIndianCompact}
+              formatFull={formatIndianFull}
+            />
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Row % (Item Total)</div>
-                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#2563eb' }}>
-                  {formatPercentage(computePercentage(selectedCell.amount, selectedCell.rowTotal))}
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Column % (Month Total)</div>
-                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#059669' }}>
-                  {formatPercentage(computePercentage(selectedCell.amount, selectedCell.colTotal))}
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Category %</div>
-                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#7c3aed' }}>
-                  {formatPercentage(computePercentage(selectedCell.amount, selectedCell.catTotal))}
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'center', backgroundColor: '#ffffff', padding: '3px 10px', borderRadius: '6px', border: '1px solid #dbeafe' }}>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Grand %</div>
-                <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#ea580c' }}>
-                  {formatPercentage(computePercentage(selectedCell.amount, selectedCell.grandTotal))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedCell(null)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: '#64748b',
-                  cursor: 'pointer'
-                }}
-              >
-                Clear
-              </button>
-            </div>
+            <PersonStats
+              personRows={personRows}
+              censusData={activeCensusData}
+              selectedPeriod={selectedPeriod}
+              selectedPeriodLabel={selectedPeriodLabel}
+              grandTotal={currentGrandTotal}
+              formatCompact={formatIndianCompact}
+              formatFull={formatIndianFull}
+            />
           )}
-        </div>
-      )}
 
-      {/* 2. TRANSPARENT TABLE PRESENTATION (Fit to Screen when Maximized, No Horizontal Scroll) */}
-      <div style={{ 
-        overflowX: isFullScreen ? 'hidden' : 'auto', 
-        overflowY: isFullScreen ? 'auto' : 'visible',
-        padding: isFullScreen ? '0 16px 16px 16px' : '0',
-        flex: isFullScreen ? 1 : undefined,
-        height: isFullScreen ? 'calc(100vh - 80px)' : undefined,
-        maxHeight: isFullScreen ? 'calc(100vh - 80px)' : undefined,
-        backgroundColor: isFullScreen ? '#ffffff' : 'transparent',
-        boxSizing: 'border-box',
-        width: '100%'
-      }}>
-        <table style={{
-          width: '100%',
-          maxWidth: '100%',
-          tableLayout: isFullScreen ? 'fixed' : 'auto',
-          borderCollapse: 'separate',
-          borderSpacing: 0,
-          fontSize: isFullScreen ? '12px' : '13px',
-          textAlign: 'left'
-        }}>
-          {/* Frosted Glass Table Header - Sticky when maximized */}
-          <thead style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 30,
-            backgroundColor: '#f8fafc'
-          }}>
-            <tr style={{
-              backgroundColor: '#f8fafc',
-              borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
-              color: '#334155',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              boxShadow: isFullScreen ? '0 2px 4px rgba(0,0,0,0.04)' : 'none'
-            }}>
-              <th style={{
-                position: isFullScreen ? 'sticky' : undefined,
-                top: 0,
-                backgroundColor: '#f8fafc',
-                zIndex: 31,
-                padding: isFullScreen ? '10px 10px' : '12px 18px',
-                width: isFullScreen ? '14%' : '180px',
-                minWidth: isFullScreen ? undefined : '150px',
-                textAlign: 'center',
-                borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
-                borderRight: '1px solid rgba(226, 232, 240, 0.8)'
-              }}>
-                Category
-              </th>
-              <th style={{
-                position: isFullScreen ? 'sticky' : undefined,
-                top: 0,
-                backgroundColor: '#f8fafc',
-                zIndex: 31,
-                padding: isFullScreen ? '10px 10px' : '12px 18px',
-                width: isFullScreen ? '22%' : '220px',
-                minWidth: isFullScreen ? undefined : '190px',
-                textAlign: 'left',
-                borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
-                borderRight: '1px solid rgba(226, 232, 240, 0.8)'
-              }}>
-                Description
-              </th>
+          {/* 4. CATEGORY CARDS GRID: CSS grid repeat(auto-fill, minmax(310px, 1fr)), 14px gap */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
+              gap: '14px',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
+            {filteredCategories.map((cat) => {
+              const catId = cat.categoryId;
+              let catAmount = 0;
+              if (selectedPeriod === 'all') {
+                catAmount = categorySubtotals[catId]?.total || 0;
+              } else {
+                catAmount = categorySubtotals[catId]?.[selectedPeriod] || 0;
+              }
 
-              {/* All Periods as columns */}
-              {periods.map(p => {
-                const isSel = String(p.id) === String(activePeriod);
-                return (
-                  <th
-                    key={p.id}
-                    style={{
-                      position: isFullScreen ? 'sticky' : undefined,
-                      top: 0,
-                      backgroundColor: isSel ? '#eef2ff' : '#f8fafc',
-                      zIndex: 31,
-                      padding: isFullScreen ? '8px 8px' : '10px 14px',
-                      width: isFullScreen ? `${(46 / (periods.length || 1))}%` : undefined,
-                      minWidth: isFullScreen ? undefined : '125px',
-                      textAlign: 'right',
-                      borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
-                      borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-                      color: isSel ? '#4338ca' : '#334155',
-                      fontWeight: isSel ? '800' : '700'
-                    }}
-                  >
-                    <div>{p.period_label} {isSel && '★'}</div>
-                    <div style={{ fontSize: '10px', fontWeight: '700', color: isSel ? '#6366f1' : '#94a3b8', marginTop: '2px' }}>
-                      {displayMode === 'percentage_only' ? '% Share' : displayMode === 'amount_only' ? 'INR (₹)' : '₹ & % Share'}
-                    </div>
-                  </th>
-                );
-              })}
-
-              <th style={{
-                position: isFullScreen ? 'sticky' : undefined,
-                top: 0,
-                backgroundColor: '#f1f5f9',
-                zIndex: 31,
-                padding: isFullScreen ? '10px 10px' : '10px 16px',
-                width: isFullScreen ? '10%' : '135px',
-                minWidth: isFullScreen ? undefined : '125px',
-                textAlign: 'right',
-                borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
-                borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-                color: '#0f172a',
-                fontWeight: '800'
-              }}>
-                <div>Total (All Mo)</div>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginTop: '2px' }}>
-                  {displayMode === 'percentage_only' ? '% of Total' : displayMode === 'amount_only' ? 'INR (₹)' : '₹ & % Total'}
-                </div>
-              </th>
-
-              <th style={{
-                position: isFullScreen ? 'sticky' : undefined,
-                top: 0,
-                backgroundColor: '#f1f5f9',
-                zIndex: 31,
-                padding: isFullScreen ? '10px 10px' : '10px 14px',
-                width: isFullScreen ? '8%' : '115px',
-                minWidth: isFullScreen ? undefined : '110px',
-                textAlign: 'right',
-                borderBottom: '2px solid rgba(203, 213, 225, 0.9)',
-                color: '#475569',
-                fontWeight: '700'
-              }}>
-                <div>Avg / Mo</div>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginTop: '2px' }}>
-                  {displayMode === 'percentage_only' ? '% of Avg' : displayMode === 'amount_only' ? 'INR (₹)' : '₹ & % Avg'}
-                </div>
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {groupedCategories.map((grp, grpIdx) => {
-              const theme = grp.theme;
-              const itemsCount = grp.items.length;
-              const isFoodLabour = grp.categoryName.toLowerCase().includes('labour') || grp.categoryName.toLowerCase().includes('labor');
-              const isFCMaintenance = grp.categoryName.toLowerCase().includes('fc maintenance') || grp.categoryName.toLowerCase().includes('maintenance');
-              const isGroupHidePct = checkHidePercentage(grp.categoryName, '', grpIdx);
+              const denom = currentGrandTotal > 0 ? currentGrandTotal : 1;
+              const catPercent = currentGrandTotal > 0 ? (catAmount / denom) * 100 : 0;
+              const maxMonth = categoryMaxMonths[catId] || 1;
+              const isExpanded = !!expandedCardIds[catId];
 
               return (
-                <React.Fragment key={grp.categoryId}>
-                  {/* Category Line Items */}
-                  {grp.items.map((item, itemIdx) => {
-                    const isRowHidePct = isGroupHidePct || checkHidePercentage(grp.categoryName, item.description, grpIdx);
-                    let itemTotal = 0;
-                    periods.forEach(p => {
-                      const v = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
-                      itemTotal += v;
-                    });
-                    const itemAvg = periods.length > 0 ? (itemTotal / periods.length) : 0;
-
-                    return (
-                      <tr
-                        key={item.cost_head_id}
-                        style={{
-                          borderBottom: '1px solid rgba(241, 245, 249, 0.85)',
-                          transition: 'background-color 0.12s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(241, 245, 249, 0.55)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        {/* Merged Category column on first row with soft transparent glass badge */}
-                        {itemIdx === 0 && (
-                          <td
-                            rowSpan={itemsCount}
-                            style={{
-                              padding: '14px 16px',
-                              textAlign: 'center',
-                              verticalAlign: 'middle',
-                              backgroundColor: 'rgba(255, 255, 255, 0.45)',
-                              borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-                              borderBottom: '1px solid rgba(226, 232, 240, 0.8)'
-                            }}
-                          >
-                            <div style={{
-                              display: 'inline-block',
-                              padding: '6px 12px',
-                              borderRadius: '8px',
-                              backgroundColor: theme.badgeBg,
-                              border: `1px solid ${theme.badgeBorder}`,
-                              color: theme.badgeText,
-                              fontWeight: '800',
-                              fontSize: '12.5px',
-                              letterSpacing: '0.01em'
-                            }}>
-                              {grp.categoryName}
-                            </div>
-                          </td>
-                        )}
-
-                        {/* Description Cell */}
-                        <td style={{
-                          padding: '10px 18px',
-                          fontWeight: '600',
-                          color: '#1e293b',
-                          borderRight: '1px solid rgba(226, 232, 240, 0.7)',
-                          borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{
-                              width: '6px',
-                              height: '6px',
-                              borderRadius: '50%',
-                              backgroundColor: theme.dotColor,
-                              display: 'inline-block',
-                              flexShrink: 0
-                            }} />
-                            <span>{item.description}</span>
-                          </div>
-                        </td>
-
-                        {/* Monthly Values with Transparent Glass Cells & User Selection */}
-                        {periods.map(p => {
-                          const val = Number(item.amounts?.[p.id] ?? item.amounts?.[String(p.id)] ?? 0);
-                          const isSel = String(p.id) === String(activePeriod);
-                          const periodColTotal = monthlyGrandTotals.byPeriod[p.id] || 0;
-                          const periodCatTotal = categorySubtotals[grp.categoryId]?.[p.id] || 0;
-                          const grandOverall = monthlyGrandTotals.grandOverall || 0;
-
-                          const isCellSelected = selectedCell && 
-                            selectedCell.costHeadId === item.cost_head_id && 
-                            String(selectedCell.periodId) === String(p.id);
-
-                          return (
-                            <td
-                              key={p.id}
-                              onClick={() => setSelectedCell({
-                                costHeadId: item.cost_head_id,
-                                description: item.description,
-                                categoryName: grp.categoryName,
-                                periodId: p.id,
-                                periodLabel: p.period_label,
-                                amount: val,
-                                rowTotal: itemTotal,
-                                colTotal: periodColTotal,
-                                catTotal: periodCatTotal,
-                                grandTotal: grandOverall
-                              })}
-                              style={{
-                                padding: isFullScreen ? '6px 8px' : '9px 14px',
-                                textAlign: 'right',
-                                backgroundColor: isCellSelected 
-                                  ? 'rgba(79, 70, 229, 0.15)' 
-                                  : (isSel ? 'rgba(99, 102, 241, 0.04)' : 'transparent'),
-                                outline: isCellSelected ? '2px solid #4f46e5' : 'none',
-                                outlineOffset: '-2px',
-                                borderRight: '1px solid rgba(226, 232, 240, 0.6)',
-                                borderBottom: '1px solid rgba(241, 245, 249, 0.9)',
-                                cursor: 'pointer',
-                                transition: 'all 0.12s ease'
-                              }}
-                              className="currency-font"
-                            >
-                              {renderCellContent(val, {
-                                rowTotal: itemTotal,
-                                colTotal: periodColTotal,
-                                catTotal: periodCatTotal,
-                                grandTotal: grandOverall
-                              }, false, false, null, isRowHidePct)}
-                            </td>
-                          );
-                        })}
-
-                        {/* Total Spend */}
-                        {(() => {
-                          const isTotalSelected = selectedCell && selectedCell.costHeadId === item.cost_head_id && selectedCell.periodId === 'total';
-                          return (
-                            <td
-                              onClick={() => setSelectedCell({
-                                costHeadId: item.cost_head_id,
-                                description: item.description,
-                                categoryName: grp.categoryName,
-                                periodId: 'total',
-                                periodLabel: 'All Months Combined',
-                                amount: itemTotal,
-                                rowTotal: itemTotal,
-                                colTotal: monthlyGrandTotals.grandOverall || 0,
-                                catTotal: categorySubtotals[grp.categoryId]?.total || 0,
-                                grandTotal: monthlyGrandTotals.grandOverall || 0
-                              })}
-                              style={{
-                                padding: isFullScreen ? '6px 8px' : '9px 16px',
-                                textAlign: 'right',
-                                backgroundColor: isTotalSelected ? 'rgba(79, 70, 229, 0.15)' : 'rgba(248, 250, 252, 0.45)',
-                                outline: isTotalSelected ? '2px solid #4f46e5' : 'none',
-                                outlineOffset: '-2px',
-                                borderRight: '1px solid rgba(226, 232, 240, 0.7)',
-                                borderBottom: '1px solid rgba(241, 245, 249, 0.9)',
-                                cursor: 'pointer'
-                              }}
-                              className="currency-font"
-                            >
-                              {renderCellContent(itemTotal, {
-                                rowTotal: itemTotal,
-                                colTotal: monthlyGrandTotals.grandOverall || 0,
-                                catTotal: categorySubtotals[grp.categoryId]?.total || 0,
-                                grandTotal: monthlyGrandTotals.grandOverall || 0
-                              }, true, false, null, isRowHidePct)}
-                            </td>
-                          );
-                        })()}
-
-                        {/* Avg / Mo */}
-                        {(() => {
-                          const avgCatTotal = (categorySubtotals[grp.categoryId]?.total || 0) / (periods.length || 1);
-                          return (
-                            <td style={{
-                              padding: isFullScreen ? '6px 8px' : '9px 14px',
-                              textAlign: 'right',
-                              backgroundColor: 'rgba(248, 250, 252, 0.45)',
-                              borderBottom: '1px solid rgba(241, 245, 249, 0.9)'
-                            }} className="currency-font">
-                              {renderCellContent(itemAvg, {
-                                rowTotal: itemTotal,
-                                colTotal: monthlyGrandTotals.avgMonthly || 0,
-                                catTotal: avgCatTotal,
-                                grandTotal: monthlyGrandTotals.avgMonthly || 0
-                              }, false, false, null, isRowHidePct)}
-                            </td>
-                          );
-                        })()}
-                      </tr>
-                    );
-                  })}
-
-                  {/* SPECIAL COMBINED SUBTOTAL 1: Food Labour -> "Total Food Expenses" */}
-                  {selectedModule === 'food' && isFoodLabour && (
-                    <tr style={{
-                      backgroundColor: 'rgba(99, 102, 241, 0.06)',
-                      backdropFilter: 'blur(8px)',
-                      color: '#0f172a',
-                      borderTop: '1.5px solid rgba(99, 102, 241, 0.25)',
-                      borderBottom: '1.5px solid rgba(99, 102, 241, 0.25)',
-                      fontWeight: '800',
-                      fontSize: '13px'
-                    }}>
-                      <td colSpan={2} style={{
-                        padding: '11px 18px',
-                        textAlign: 'left',
-                        borderRight: '1px solid rgba(99, 102, 241, 0.2)',
-                        letterSpacing: '0.01em',
-                        color: '#312e81'
-                      }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#6366f1' }} />
-                          <span>Total Food Expenses (Material + Labour)</span>
-                        </div>
-                      </td>
-
-                      {periods.map(p => {
-                        const tot = foodCombinedSubtotal.totals[p.id] || 0;
-                        const isSel = String(p.id) === String(activePeriod);
-                        const periodDenom = monthlyGrandTotals.byPeriod[p.id] || 0;
-                        return (
-                          <td
-                            key={p.id}
-                            style={{
-                              padding: '10px 14px',
-                              textAlign: 'right',
-                              borderRight: '1px solid rgba(99, 102, 241, 0.2)',
-                              backgroundColor: isSel ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
-                            }}
-                            className="currency-font"
-                          >
-                            {renderCellContent(tot, periodDenom, true, true, {
-                              text: '#312e81',
-                              bg: 'rgba(99, 102, 241, 0.12)',
-                              border: 'rgba(99, 102, 241, 0.25)'
-                            })}
-                          </td>
-                        );
-                      })}
-
-                      <td style={{
-                        padding: '10px 16px',
-                        textAlign: 'right',
-                        borderRight: '1px solid rgba(99, 102, 241, 0.2)'
-                      }} className="currency-font">
-                        {renderCellContent(foodCombinedSubtotal.allTotal, monthlyGrandTotals.grandOverall, true, true, {
-                          text: '#312e81',
-                          bg: 'rgba(99, 102, 241, 0.12)',
-                          border: 'rgba(99, 102, 241, 0.25)'
-                        })}
-                      </td>
-
-                      <td style={{
-                        padding: '10px 14px',
-                        textAlign: 'right'
-                      }} className="currency-font">
-                        {renderCellContent(
-                          periods.length > 0 ? (foodCombinedSubtotal.allTotal / periods.length) : 0,
-                          monthlyGrandTotals.avgMonthly,
-                          true,
-                          true,
-                          {
-                            text: '#4338ca',
-                            bg: 'rgba(99, 102, 241, 0.12)',
-                            border: 'rgba(99, 102, 241, 0.25)'
-                          }
-                        )}
-                      </td>
-                    </tr>
-                  )}
-
-                  {/* SPECIAL COMBINED SUBTOTAL 2: FC Maintenance -> "Total Maintenance Expenses" */}
-                  {selectedModule === 'food' && isFCMaintenance && (
-                    <tr style={{
-                      backgroundColor: 'rgba(245, 158, 11, 0.06)',
-                      backdropFilter: 'blur(8px)',
-                      color: '#0f172a',
-                      borderTop: '1.5px solid rgba(245, 158, 11, 0.25)',
-                      borderBottom: '1.5px solid rgba(245, 158, 11, 0.25)',
-                      fontWeight: '800',
-                      fontSize: '13px'
-                    }}>
-                      <td colSpan={2} style={{
-                        padding: '11px 18px',
-                        textAlign: 'left',
-                        borderRight: '1px solid rgba(245, 158, 11, 0.2)',
-                        letterSpacing: '0.01em',
-                        color: '#78350f'
-                      }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#f59e0b' }} />
-                          <span>Total Maintenance Expenses</span>
-                        </div>
-                      </td>
-
-                      {periods.map(p => {
-                        const subVal = grp.subtotal[p.id] || 0;
-                        const isSel = String(p.id) === String(activePeriod);
-                        const periodDenom = monthlyGrandTotals.byPeriod[p.id] || 0;
-                        return (
-                          <td
-                            key={p.id}
-                            style={{
-                              padding: '10px 14px',
-                              textAlign: 'right',
-                              borderRight: '1px solid rgba(245, 158, 11, 0.2)',
-                              backgroundColor: isSel ? 'rgba(245, 158, 11, 0.1)' : 'transparent'
-                            }}
-                            className="currency-font"
-                          >
-                            {renderCellContent(subVal, periodDenom, true, true, {
-                              text: '#78350f',
-                              bg: 'rgba(245, 158, 11, 0.12)',
-                              border: 'rgba(245, 158, 11, 0.25)'
-                            })}
-                          </td>
-                        );
-                      })}
-
-                      <td style={{
-                        padding: '10px 16px',
-                        textAlign: 'right',
-                        borderRight: '1px solid rgba(245, 158, 11, 0.2)'
-                      }} className="currency-font">
-                        {renderCellContent(grp.subtotal.total || 0, monthlyGrandTotals.grandOverall, true, true, {
-                          text: '#78350f',
-                          bg: 'rgba(245, 158, 11, 0.12)',
-                          border: 'rgba(245, 158, 11, 0.25)'
-                        })}
-                      </td>
-
-                      <td style={{
-                        padding: '10px 14px',
-                        textAlign: 'right'
-                      }} className="currency-font">
-                        {renderCellContent(
-                          periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0,
-                          monthlyGrandTotals.avgMonthly,
-                          true,
-                          true,
-                          {
-                            text: '#b45309',
-                            bg: 'rgba(245, 158, 11, 0.12)',
-                            border: 'rgba(245, 158, 11, 0.25)'
-                          }
-                        )}
-                      </td>
-                    </tr>
-                  )}
-
-                  {/* Standard Subtotal Row for other categories and modules */}
-                  {(!isFoodLabour && !isFCMaintenance) && (
-                    <tr style={{
-                      backgroundColor: theme.subtotalBg || 'rgba(248, 250, 252, 0.65)',
-                      backdropFilter: 'blur(8px)',
-                      color: '#0f172a',
-                      borderTop: '1.5px solid rgba(203, 213, 225, 0.8)',
-                      borderBottom: '1.5px solid rgba(203, 213, 225, 0.8)',
-                      fontWeight: '800',
-                      fontSize: '13px'
-                    }}>
-                      <td colSpan={2} style={{
-                        padding: '10px 18px',
-                        textAlign: 'left',
-                        borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-                        color: '#1e293b'
-                      }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: theme.dotColor }} />
-                          <span>Total {grp.categoryName}</span>
-                        </div>
-                      </td>
-
-                      {periods.map(p => {
-                        const subVal = grp.subtotal[p.id] || 0;
-                        const isSel = String(p.id) === String(activePeriod);
-                        const periodDenom = monthlyGrandTotals.byPeriod[p.id] || 0;
-                        return (
-                          <td
-                            key={p.id}
-                            style={{
-                              padding: '10px 14px',
-                              textAlign: 'right',
-                              borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-                              backgroundColor: isSel ? 'rgba(99, 102, 241, 0.08)' : 'transparent'
-                            }}
-                            className="currency-font"
-                          >
-                            {renderCellContent(subVal, periodDenom, true, true, {
-                              text: theme.badgeText,
-                              bg: theme.badgeBg,
-                              border: theme.badgeBorder
-                            }, isGroupHidePct)}
-                          </td>
-                        );
-                      })}
-
-                      <td style={{
-                        padding: '10px 16px',
-                        textAlign: 'right',
-                        borderRight: '1px solid rgba(226, 232, 240, 0.8)'
-                      }} className="currency-font">
-                        {renderCellContent(grp.subtotal.total || 0, monthlyGrandTotals.grandOverall, true, true, {
-                          text: theme.badgeText,
-                          bg: theme.badgeBg,
-                          border: theme.badgeBorder
-                        }, isGroupHidePct)}
-                      </td>
-
-                      <td style={{
-                        padding: '10px 14px',
-                        textAlign: 'right'
-                      }} className="currency-font">
-                        {renderCellContent(
-                          periods.length > 0 ? ((grp.subtotal.total || 0) / periods.length) : 0,
-                          monthlyGrandTotals.avgMonthly,
-                          true,
-                          true,
-                          {
-                            text: '#475569',
-                            bg: 'rgba(241, 245, 249, 0.6)',
-                            border: 'rgba(203, 213, 225, 0.8)'
-                          },
-                          isGroupHidePct
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
+                <CategoryCard
+                  key={catId || cat.categoryName}
+                  category={cat}
+                  periods={periods}
+                  selectedPeriod={selectedPeriod}
+                  selectedAmount={catAmount}
+                  selectedPercent={catPercent}
+                  monthlyAmounts={categorySubtotals[catId] || {}}
+                  maxMonthlyAmount={maxMonth}
+                  isExpanded={isExpanded}
+                  onToggleExpand={handleToggleExpand}
+                  formatCompact={formatIndianCompact}
+                  formatFull={formatIndianFull}
+                  hidePercentage={cat.isExcluded || displayMode === 'amount_only'}
+                  remarksDraft={remarksDraft}
+                />
               );
             })}
-
-            {/* BOTTOM GRAND TOTAL ROW: Transparent Deep Slate/Navy Glass Bar */}
-            <tr style={{
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.98) 100%)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              color: '#ffffff',
-              fontWeight: '900',
-              fontSize: '13.5px',
-              boxShadow: '0 -2px 10px rgba(0,0,0,0.06)'
-            }}>
-              <td colSpan={2} style={{
-                padding: '14px 20px',
-                textAlign: 'left',
-                borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-                letterSpacing: '0.03em',
-                color: '#ffffff'
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span>TOTAL EXPENSES • ALL CATEGORIES</span>
-                </div>
-              </td>
-
-              {periods.map(p => {
-                const gVal = monthlyGrandTotals.byPeriod[p.id] || 0;
-                const isSel = String(p.id) === String(activePeriod);
-                return (
-                  <td
-                    key={p.id}
-                    style={{
-                      padding: '12px 14px',
-                      textAlign: 'right',
-                      borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-                      fontWeight: '900',
-                      color: isSel ? '#60a5fa' : '#ffffff',
-                      backgroundColor: isSel ? 'rgba(59, 130, 246, 0.18)' : 'transparent'
-                    }}
-                    className="currency-font"
-                  >
-                    {displayMode === 'percentage_only' ? (
-                      <span style={{
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        color: '#93c5fd',
-                        backgroundColor: 'rgba(59, 130, 246, 0.25)',
-                        border: '1px solid rgba(147, 197, 253, 0.35)',
-                        padding: '2px 8px',
-                        borderRadius: '6px'
-                      }}>
-                        100.0%
-                      </span>
-                    ) : displayMode === 'amount_only' ? (
-                      <span>{formatIndianNumber(gVal)}</span>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                        <span>{formatIndianNumber(gVal)}</span>
-                        <span style={{
-                          fontSize: '10px',
-                          fontWeight: '800',
-                          color: '#93c5fd',
-                          backgroundColor: 'rgba(59, 130, 246, 0.25)',
-                          padding: '1px 5px',
-                          borderRadius: '4px',
-                          lineHeight: '1.2'
-                        }}>
-                          100.0%
-                        </span>
-                      </div>
-                    )}
-                  </td>
-                );
-              })}
-
-              {/* Overall Grand Total */}
-              <td style={{
-                padding: '12px 16px',
-                textAlign: 'right',
-                borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-                fontWeight: '900',
-                color: '#ffffff'
-              }} className="currency-font">
-                {displayMode === 'percentage_only' ? (
-                  <span style={{
-                    fontSize: '12px',
-                    fontWeight: '800',
-                    color: '#93c5fd',
-                    backgroundColor: 'rgba(59, 130, 246, 0.25)',
-                    border: '1px solid rgba(147, 197, 253, 0.35)',
-                    padding: '2px 8px',
-                    borderRadius: '6px'
-                  }}>
-                    100.0%
-                  </span>
-                ) : displayMode === 'amount_only' ? (
-                  <span>{formatIndianNumber(monthlyGrandTotals.grandOverall)}</span>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                    <span>{formatIndianNumber(monthlyGrandTotals.grandOverall)}</span>
-                    <span style={{
-                      fontSize: '10px',
-                      fontWeight: '800',
-                      color: '#93c5fd',
-                      backgroundColor: 'rgba(59, 130, 246, 0.25)',
-                      padding: '1px 5px',
-                      borderRadius: '4px',
-                      lineHeight: '1.2'
-                    }}>
-                      100.0%
-                    </span>
-                  </div>
-                )}
-              </td>
-
-              {/* Monthly Average */}
-              <td style={{
-                padding: '12px 14px',
-                textAlign: 'right',
-                fontWeight: '900',
-                color: '#93c5fd'
-              }} className="currency-font">
-                {displayMode === 'percentage_only' ? (
-                  <span style={{
-                    fontSize: '12px',
-                    fontWeight: '800',
-                    color: '#93c5fd',
-                    backgroundColor: 'rgba(59, 130, 246, 0.25)',
-                    border: '1px solid rgba(147, 197, 253, 0.35)',
-                    padding: '2px 8px',
-                    borderRadius: '6px'
-                  }}>
-                    100.0%
-                  </span>
-                ) : displayMode === 'amount_only' ? (
-                  <span>{formatIndianNumber(monthlyGrandTotals.avgMonthly)}</span>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                    <span>{formatIndianNumber(monthlyGrandTotals.avgMonthly)}</span>
-                    <span style={{
-                      fontSize: '10px',
-                      fontWeight: '800',
-                      color: '#93c5fd',
-                      backgroundColor: 'rgba(59, 130, 246, 0.25)',
-                      padding: '1px 5px',
-                      borderRadius: '4px',
-                      lineHeight: '1.2'
-                    }}>
-                      100.0%
-                    </span>
-                  </div>
-                )}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -82,12 +82,12 @@ export default function AddHostelParameterModal({
     }}>
       <div style={{
         backgroundColor: '#ffffff',
-        borderRadius: '16px',
+        borderRadius: '28px',
         width: '100%',
         maxWidth: '560px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        boxShadow: '0 30px 80px rgba(108, 86, 219, 0.2)',
         overflow: 'hidden',
-        border: '1px solid #e2e8f0',
+        border: '1px solid rgba(108, 86, 219, 0.15)',
         maxHeight: '90vh',
         display: 'flex',
         flexDirection: 'column'
@@ -99,16 +99,16 @@ export default function AddHostelParameterModal({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          backgroundColor: '#f8fafc'
+          backgroundColor: '#fafbff'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '38px',
               height: '38px',
-              borderRadius: '10px',
-              backgroundColor: '#e0f2fe',
-              color: '#0284c7',
-              border: '1px solid #bae6fd',
+              borderRadius: '12px',
+              backgroundColor: '#efeefc',
+              color: '#6c56db',
+              border: '1px solid #dcd7fc',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -128,14 +128,19 @@ export default function AddHostelParameterModal({
             onClick={onClose}
             style={{
               padding: '6px',
-              borderRadius: '8px',
+              borderRadius: '50%',
               border: 'none',
-              background: 'transparent',
-              color: '#94a3b8',
-              cursor: 'pointer'
+              background: '#f1f5f9',
+              color: '#64748b',
+              cursor: 'pointer',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
@@ -416,13 +421,13 @@ export default function AddHostelParameterModal({
               type="button"
               onClick={onClose}
               style={{
-                padding: '9px 18px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
+                padding: '10px 20px',
+                borderRadius: '9999px',
+                border: 'none',
+                backgroundColor: '#f1f5f9',
+                color: '#64748b',
                 fontSize: '13px',
-                fontWeight: '600',
+                fontWeight: '700',
                 cursor: 'pointer'
               }}
             >
@@ -431,15 +436,15 @@ export default function AddHostelParameterModal({
             <button
               type="submit"
               style={{
-                padding: '9px 22px',
-                borderRadius: '8px',
+                padding: '10px 24px',
+                borderRadius: '9999px',
                 border: 'none',
-                backgroundColor: '#0284c7',
+                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
                 color: '#ffffff',
                 fontSize: '13px',
-                fontWeight: '700',
+                fontWeight: '800',
                 cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(2, 132, 199, 0.3)'
+                boxShadow: '0 8px 20px rgba(255, 96, 136, 0.35)'
               }}
             >
               Save Parameter

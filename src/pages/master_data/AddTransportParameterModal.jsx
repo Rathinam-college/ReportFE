@@ -73,12 +73,12 @@ export default function AddTransportParameterModal({
     }}>
       <div style={{
         backgroundColor: '#ffffff',
-        borderRadius: '16px',
+        borderRadius: '28px',
         width: '100%',
         maxWidth: '540px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        boxShadow: '0 30px 80px rgba(108, 86, 219, 0.2)',
         overflow: 'hidden',
-        border: '1px solid #e2e8f0'
+        border: '1px solid rgba(108, 86, 219, 0.15)'
       }}>
         {/* Header */}
         <div style={{
@@ -87,16 +87,16 @@ export default function AddTransportParameterModal({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          backgroundColor: '#f8fafc'
+          backgroundColor: '#fafbff'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              backgroundColor: '#fff7ed',
-              color: '#ea580c',
-              border: '1px solid #fed7aa',
+              width: '38px',
+              height: '38px',
+              borderRadius: '12px',
+              backgroundColor: '#efeefc',
+              color: '#6c56db',
+              border: '1px solid #dcd7fc',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -116,14 +116,19 @@ export default function AddTransportParameterModal({
             onClick={onClose}
             style={{
               padding: '6px',
-              borderRadius: '8px',
+              borderRadius: '50%',
               border: 'none',
-              backgroundColor: 'transparent',
+              backgroundColor: '#f1f5f9',
               color: '#64748b',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
@@ -361,13 +366,13 @@ export default function AddTransportParameterModal({
               type="button"
               onClick={onClose}
               style={{
-                padding: '9px 16px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
+                padding: '10px 20px',
+                borderRadius: '9999px',
+                border: 'none',
+                backgroundColor: '#f1f5f9',
+                color: '#64748b',
                 fontSize: '13px',
-                fontWeight: '600',
+                fontWeight: '700',
                 cursor: 'pointer'
               }}
             >
@@ -376,15 +381,15 @@ export default function AddTransportParameterModal({
             <button
               type="submit"
               style={{
-                padding: '9px 20px',
-                borderRadius: '8px',
+                padding: '10px 24px',
+                borderRadius: '9999px',
                 border: 'none',
-                backgroundColor: '#ea580c',
+                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
                 color: '#ffffff',
                 fontSize: '13px',
-                fontWeight: '700',
+                fontWeight: '800',
                 cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(234, 88, 12, 0.25)'
+                boxShadow: '0 8px 20px rgba(255, 96, 136, 0.35)'
               }}
             >
               Save Parameter

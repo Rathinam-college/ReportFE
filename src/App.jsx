@@ -80,6 +80,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [dbStatus, setDbStatus] = useState('checking');
 
+  // UI Sizing Scale (85% for compact executive bento layout matching mockup)
+  const uiZoom = 0.85;
+
   // --------------------------------------------------------------------------
   // DATA STATES
   // --------------------------------------------------------------------------
@@ -166,11 +169,11 @@ export default function App() {
   useEffect(() => {
     let titleStr = 'Dashboard';
     if (activeTab === 'dashboard') {
-      titleStr = `Dashboard (${dashboardSubTab === 'food' ? 'Food & Dining' : dashboardSubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
+      titleStr = `Dashboard (${dashboardSubTab === 'food' ? 'Food' : dashboardSubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
     } else if (activeTab === 'data_entry') {
-      titleStr = `Data Entry (${dataEntrySubTab === 'food' ? 'Food & Dining' : dataEntrySubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
+      titleStr = `Data Entry (${dataEntrySubTab === 'food' ? 'Food' : dataEntrySubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
     } else if (activeTab === 'master_data') {
-      titleStr = `Master Data (${masterDataSubTab === 'food' ? 'Food & Dining' : masterDataSubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
+      titleStr = `Master Data (${masterDataSubTab === 'food' ? 'Food' : masterDataSubTab === 'hostel' ? 'Hostel' : 'Transport'})`;
     } else if (activeTab === 'settings') {
       titleStr = 'System Settings';
     }
@@ -1627,34 +1630,53 @@ export default function App() {
   }
 
   // --------------------------------------------------------------------------
-  // MAIN APP RENDER
+  // MAIN APP RENDER (PURPLE & CORAL BENTO FRAMEWORK REPLICATING UPLOADED IMAGE)
   // --------------------------------------------------------------------------
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f4f6fa', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100vw', overflowX: 'clip' }}>
-      
-      {/* 1 & 2. STICKY TOP GLOBAL NAVIGATION HEADER */}
-      <div
-        id="app-sticky-header"
+    <div 
+      id="bento-app-root"
+      className="bento-app-root"
+      style={{
+        zoom: uiZoom,
+        width: `calc(100vw / ${uiZoom})`,
+        height: `calc(100vh / ${uiZoom})`,
+        maxHeight: `calc(100vh / ${uiZoom})`,
+        backgroundColor: '#ffffff',
+        display: 'flex',
+        margin: 0,
+        padding: 0,
+        boxSizing: 'border-box',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Floating Left Pill Sidebar Dock (Vibrant Royal Purple Gradient matching Image) */}
+      <Navbar
+        currentUser={currentUser}
+        handleLogout={handleLogout}
+        dbStatus={dbStatus}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        permissions={pagePermissions}
+      />
+
+      {/* Right Main Content Area */}
+      <div 
+        className="bento-right-area"
         style={{
-          position: '-webkit-sticky',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1000,
-          width: '100%',
+          flex: 1,
           backgroundColor: '#ffffff',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          overflow: 'hidden',
+          height: '100%',
+          position: 'relative'
         }}
       >
-        <Navbar
-          currentUser={currentUser}
-          handleLogout={handleLogout}
-          dbStatus={dbStatus}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          permissions={pagePermissions}
-        />
-
+        {/* Top Header inside Area */}
         <SubNav
+          currentUser={currentUser}
+          dbStatus={dbStatus}
           activeTab={activeTab}
           dashboardSubTab={dashboardSubTab}
           setDashboardSubTab={setDashboardSubTab}
@@ -1663,18 +1685,20 @@ export default function App() {
           masterDataSubTab={masterDataSubTab}
           setMasterDataSubTab={setMasterDataSubTab}
         />
-      </div>
 
-      {/* 3. MAIN WORKSPACE CONTENT */}
-      <main style={{
-        flex: 1,
-        padding: activeTab === 'data_entry' ? '18px 20px' : '20px 24px',
-        maxWidth: '100%',
-        width: '100%',
-        margin: '0 auto',
-        boxSizing: 'border-box',
-        overflowX: 'clip'
-      }}>
+        {/* Main Page Workspace */}
+        <main 
+          className="bento-main-workspace"
+          style={{
+            flex: 1,
+            padding: activeTab === 'data_entry' ? '14px 20px' : '16px 24px',
+            maxWidth: '100%',
+            width: '100%',
+            boxSizing: 'border-box',
+            overflowY: 'auto',
+            scrollBehavior: 'smooth'
+          }}
+        >
         
         {/* DASHBOARD PAGE */}
         {activeTab === 'dashboard' && (
@@ -1690,6 +1714,7 @@ export default function App() {
             hoveredPieIndex={hoveredPieIndex}
             setHoveredPieIndex={setHoveredPieIndex}
             computedMatrix={computedMatrix}
+            remarksDraft={remarksDraft}
             comparisonData={comparisonData}
             compareBasePeriod={compareBasePeriod}
             setCompareBasePeriod={setCompareBasePeriod}
@@ -1698,6 +1723,7 @@ export default function App() {
             onOpenDataEntry={() => {
               setDataEntrySubTab(dashboardSubTab || 'food');
               setActiveTab('data_entry');
+              window.location.hash = 'data_entry';
             }}
           />
         )}
@@ -1793,7 +1819,7 @@ export default function App() {
             setNewMonthForm={setNewMonthForm}
             handleStartDateChange={handleStartDateChange}
             handleAddNewMonth={handleAddNewMonth}
-            moduleName={masterDataSubTab === 'food' ? 'Food & Dining' : masterDataSubTab === 'hostel' ? 'Hostel' : 'Transport'}
+            moduleName={masterDataSubTab === 'food' ? 'Food' : masterDataSubTab === 'hostel' ? 'Hostel' : 'Transport'}
           />
         )}
 
@@ -1820,6 +1846,7 @@ export default function App() {
       {/* 5. GLOBAL FOOTER */}
       <Footer />
 
+        </div>
     </div>
   );
 }

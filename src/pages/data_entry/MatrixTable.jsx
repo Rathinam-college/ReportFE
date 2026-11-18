@@ -31,7 +31,9 @@ export default function MatrixTable({
   handleSaveActiveMonth,
   savingBatch,
   isDirty,
-  fetchData
+  fetchData,
+  handleCloneFromPrev,
+  handleToggleLock
 }) {
   if (!computedMatrix || !computedMatrix.categories) return null;
 
@@ -141,6 +143,8 @@ export default function MatrixTable({
           openAddCostHeadModal={openAddCostHeadModal}
           handleDeleteCostHead={handleDeleteCostHead}
           openAddCategoryModal={openAddCategoryModal}
+          handleCloneFromPrev={handleCloneFromPrev}
+          handleToggleLock={handleToggleLock}
         />
       )}
 
@@ -164,6 +168,8 @@ export default function MatrixTable({
           openAddCostHeadModal={openAddCostHeadModal}
           handleDeleteCostHead={handleDeleteCostHead}
           openAddCategoryModal={openAddCategoryModal}
+          handleCloneFromPrev={handleCloneFromPrev}
+          handleToggleLock={handleToggleLock}
         />
       )}
     {/* 2. FOOD OPERATIONS SPREADSHEET (from user's Excel mockup image) */}
@@ -186,6 +192,8 @@ export default function MatrixTable({
           openAddCostHeadModal={openAddCostHeadModal}
           handleDeleteCostHead={handleDeleteCostHead}
           openAddCategoryModal={openAddCategoryModal}
+          handleCloneFromPrev={handleCloneFromPrev}
+          handleToggleLock={handleToggleLock}
         />
       )}
     </div>

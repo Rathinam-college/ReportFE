@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { formatINR, formatLakhs, DASH_COLORS } from '../../../utils/formatters';
+import { formatINR, formatLakhs } from '../../../utils/formatters';
 
 export default function ColumnChart({ periods = [], categories = [], activePeriod = 'all' }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
   // Compute column points based on periods
-  const columnData = periods.map((p, idx) => {
+  const columnData = periods.map((p) => {
     let periodTotal = 0;
     const periodRemarks = [];
     categories.forEach(cat => {
@@ -23,7 +23,6 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
       code: p.period_code,
       days: p.operating_days || 30,
       value: periodTotal,
-      color: DASH_COLORS[idx % DASH_COLORS.length],
       remarks: periodRemarks
     };
   });
@@ -31,20 +30,33 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
   const maxValue = Math.max(...columnData.map(d => d.value), 1);
   const totalSpend = columnData.reduce((acc, d) => acc + d.value, 0);
 
+  // Active highlighted period: either hovered, or activePeriod matching id, or latest period
+  const defaultHighlightIdx = columnData.findIndex(d => String(d.id) === String(activePeriod));
+  const activeIdx = hoveredIndex !== null 
+    ? hoveredIndex 
+    : (defaultHighlightIdx !== -1 ? defaultHighlightIdx : (columnData.length > 0 ? columnData.length - 1 : 0));
+
   return (
-    <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #cbd5e1' }}>
+    <div style={{ backgroundColor: '#ffffff', borderRadius: '18px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
         <div>
-          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
-            Monthly Expenditure (Vertical Column Chart)
+          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+            Monthly Expenditure Trend (Vertical Column Chart)
           </h3>
           <span style={{ fontSize: '12px', color: '#64748b' }}>
-            Discrete monthly billing actuals • Total 5-Month Spend: <strong>{formatINR(totalSpend)}</strong>
+            Discrete monthly billing actuals • Total Spend: <strong>{formatINR(totalSpend)}</strong>
           </span>
         </div>
-        <span style={{ fontSize: '11px', fontWeight: '700', color: '#2563eb', backgroundColor: '#eff6ff', padding: '3px 8px', borderRadius: '4px' }}>
-          • Column Chart Style
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ff6088' }} />
+            <span style={{ fontWeight: '600', color: '#1a1d36' }}>Focus Cycle</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#6c56db' }} />
+            <span style={{ fontWeight: '600', color: '#6e768e' }}>Recorded Actuals</span>
+          </div>
+        </div>
       </div>
 
       <div style={{
@@ -52,13 +64,14 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
         alignItems: 'flex-end',
         justifyContent: 'space-around',
         height: '280px',
-        borderBottom: '2px solid #cbd5e1',
+        borderBottom: '2px solid #f1f5f9',
         paddingBottom: '16px',
-        paddingTop: '30px'
+        paddingTop: '40px',
+        position: 'relative'
       }}>
         {columnData.map((col, idx) => {
-          const colHeight = (col.value / maxValue) * 200;
-          const isHovered = hoveredIndex === idx;
+          const colHeight = (col.value / maxValue) * 190;
+          const isHighlighted = idx === activeIdx;
 
           return (
             <div
@@ -71,15 +84,40 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
                 alignItems: 'center',
                 gap: '8px',
                 cursor: 'pointer',
-                transition: 'transform 0.15s ease',
-                transform: isHovered ? 'scale(1.05)' : 'scale(1)'
+                transition: 'all 0.2s ease',
+                position: 'relative',
+                transform: isHighlighted ? 'scale(1.03)' : 'scale(1)'
               }}
             >
-              {col.remarks.length > 0 && (
+              {/* PinHome Floating Tooltip Card above focus bar */}
+              {isHighlighted && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: `${Math.max(colHeight, 12) + 50}px`,
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  padding: '6px 12px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  border: '1px solid #f1f5f9',
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap',
+                  zIndex: 10,
+                  animation: 'fadeIn 0.2s ease'
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#6c56db' }} className="currency-font">
+                    {formatINR(col.value)}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#8f9bb3', fontWeight: '600' }}>
+                    Total per cycle
+                  </div>
+                </div>
+              )}
+
+              {col.remarks.length > 0 && !isHighlighted && (
                 <span
                   title={`Operational Remarks for ${col.label}:\n${col.remarks.join('\n')}`}
                   style={{
-                    fontSize: '11px',
+                    fontSize: '10.5px',
                     fontWeight: '700',
                     color: '#92400e',
                     backgroundColor: '#fef3c7',
@@ -99,9 +137,9 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
 
               <span
                 style={{
-                  fontSize: '12px',
+                  fontSize: '11.5px',
                   fontWeight: '800',
-                  color: isHovered ? '#2563eb' : '#0f172a',
+                  color: isHighlighted ? '#ff6088' : '#8f9bb3',
                   transition: 'color 0.15s ease'
                 }}
                 className="currency-font"
@@ -109,20 +147,25 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
                 {formatINR(col.value)}
               </span>
 
+              {/* Column Bar */}
               <div
                 style={{
-                  width: '64px',
-                  height: `${Math.max(colHeight, 8)}px`,
-                  backgroundColor: isHovered ? '#1d4ed8' : col.color,
-                  borderRadius: '6px 6px 0 0',
-                  boxShadow: isHovered ? '0 8px 16px -2px rgba(37,99,235,0.4)' : '0 2px 4px rgba(0,0,0,0.06)',
+                  width: '58px',
+                  height: `${Math.max(colHeight, 10)}px`,
+                  backgroundColor: isHighlighted ? '#ff6088' : '#6c56db',
+                  borderRadius: '12px 12px 0 0',
+                  boxShadow: isHighlighted ? '0 8px 18px rgba(255, 96, 136, 0.35)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               />
 
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>{col.label}</div>
-                <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>{col.days} Days</div>
+                <div style={{ fontSize: '13px', fontWeight: isHighlighted ? '800' : '700', color: isHighlighted ? '#0f172a' : '#475569' }}>
+                  {col.label}
+                </div>
+                <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>
+                  {col.days} Days
+                </div>
               </div>
             </div>
           );
@@ -130,14 +173,20 @@ export default function ColumnChart({ periods = [], categories = [], activePerio
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '18px', fontSize: '12px', flexWrap: 'wrap' }}>
-        {columnData.map((col) => (
+        {columnData.map((col, idx) => (
           <div key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: col.color }} />
-            <span style={{ color: '#475569', fontWeight: '600' }}>{col.label}: <strong>{formatLakhs(col.value)}</strong></span>
+            <span style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '2px',
+              backgroundColor: idx === activeIdx ? '#fcd34d' : '#bfe8f6'
+            }} />
+            <span style={{ color: '#475569', fontWeight: '600' }}>
+              {col.label}: <strong>{formatLakhs(col.value)}</strong>
+            </span>
           </div>
         ))}
       </div>
     </div>
   );
 }
-

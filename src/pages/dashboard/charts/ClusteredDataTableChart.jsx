@@ -7,20 +7,20 @@ import {
 
 // Curated 14-color palette for periods, matching modern enterprise BI styling
 const PERIOD_PALETTE = [
-  '#2563eb', // 1. Royal Blue
-  '#db2777', // 2. Magenta / Pink
-  '#059669', // 3. Emerald Green
-  '#7c3aed', // 4. Purple / Violet
-  '#15803d', // 5. Forest Green
-  '#0284c7', // 6. Sky Blue
-  '#d97706', // 7. Amber / Rust
-  '#65a30d', // 8. Olive / Lime
-  '#c026d3', // 9. Fuchsia / Orchid
-  '#b45309', // 10. Golden Ochre
-  '#ea580c', // 11. Orange
-  '#0ea5e9', // 12. Cyan Azure
-  '#f43f5e', // 13. Rose Red
-  '#64748b'  // 14. Slate
+  '#6c56db', // 1. Royal Purple
+  '#ff6088', // 2. Coral Pink
+  '#10b981', // 3. Mint Green
+  '#38bdf8', // 4. Sky Blue
+  '#f59e0b', // 5. Warm Amber
+  '#8b5cf6', // 6. Violet
+  '#ec4899', // 7. Hot Pink
+  '#14b8a6', // 8. Teal
+  '#f97316', // 9. Orange
+  '#6366f1', // 10. Indigo
+  '#0ea5e9', // 11. Cyan Azure
+  '#f43f5e', // 12. Rose Red
+  '#64748b', // 13. Slate
+  '#a855f7'  // 14. Purple Light
 ];
 
 export default function ClusteredDataTableChart({

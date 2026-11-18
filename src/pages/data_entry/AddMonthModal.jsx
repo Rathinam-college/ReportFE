@@ -27,35 +27,36 @@ export default function AddMonthModal({
     }}>
       <div style={{
         backgroundColor: '#ffffff',
-        borderRadius: '12px',
+        borderRadius: '28px',
         width: '100%',
         maxWidth: '480px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        overflow: 'hidden'
+        boxShadow: '0 30px 80px rgba(108, 86, 219, 0.2)',
+        overflow: 'hidden',
+        border: '1px solid rgba(108, 86, 219, 0.15)'
       }}>
         <div style={{
-          padding: '16px 22px',
-          backgroundColor: '#0f172a',
+          padding: '18px 24px',
+          background: 'linear-gradient(135deg, #6c52d6 0%, #5439ba 100%)',
           color: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Add New Billing Month / Cycle</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: '800', letterSpacing: '-0.01em' }}>Add New Billing Month / Cycle</h3>
           <button
             type="button"
             onClick={onClose}
-            style={{ color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ color: '#e0f2fe', background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        <form onSubmit={handleAddNewMonth} style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleAddNewMonth} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Start Date to End Date */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
                 Start Date *
               </label>
               <input
@@ -64,20 +65,20 @@ export default function AddMonthModal({
                 onChange={(e) => handleStartDateChange(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1.5px solid #cbd5e1',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
                   fontSize: '13.5px',
                   fontWeight: '600',
                   color: '#0f172a',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#f8fafc'
                 }}
                 required
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
                 End Date *
               </label>
               <input
@@ -86,13 +87,13 @@ export default function AddMonthModal({
                 onChange={(e) => setNewMonthForm({ ...newMonthForm, end_date: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1.5px solid #cbd5e1',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
                   fontSize: '13.5px',
                   fontWeight: '600',
                   color: '#0f172a',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#f8fafc'
                 }}
                 required
               />
@@ -100,7 +101,7 @@ export default function AddMonthModal({
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
               Month / Cycle Label *
             </label>
             <input
@@ -110,12 +111,13 @@ export default function AddMonthModal({
               onChange={(e) => setNewMonthForm({ ...newMonthForm, period_label: e.target.value })}
               style={{
                 width: '100%',
-                padding: '10px 12px',
-                borderRadius: '6px',
-                border: '1.5px solid #cbd5e1',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: '1.5px solid #e2e8f0',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#0f172a'
+                color: '#0f172a',
+                backgroundColor: '#f8fafc'
               }}
               required
             />
@@ -128,12 +130,12 @@ export default function AddMonthModal({
             display: 'flex',
             alignItems: 'flex-start',
             gap: '10px',
-            padding: '12px 14px',
-            backgroundColor: '#f8fafc',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
+            padding: '12px 16px',
+            backgroundColor: '#efeefc',
+            borderRadius: '14px',
+            border: '1px solid #dcd7fc',
             fontSize: '12.5px',
-            color: '#475569',
+            color: '#4338ca',
             lineHeight: '1.4'
           }}>
             <span style={{ fontSize: '15px', marginTop: '1px' }}>📋</span>
@@ -147,12 +149,12 @@ export default function AddMonthModal({
               type="button"
               onClick={onClose}
               style={{
-                padding: '9px 16px',
-                borderRadius: '6px',
+                padding: '10px 20px',
+                borderRadius: '9999px',
                 backgroundColor: '#f1f5f9',
-                color: '#475569',
+                color: '#64748b',
                 fontSize: '13px',
-                fontWeight: '600',
+                fontWeight: '700',
                 border: 'none',
                 cursor: 'pointer'
               }}
@@ -162,15 +164,15 @@ export default function AddMonthModal({
             <button
               type="submit"
               style={{
-                padding: '9px 20px',
-                borderRadius: '6px',
-                backgroundColor: '#2563eb',
+                padding: '10px 24px',
+                borderRadius: '9999px',
+                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
                 color: '#ffffff',
                 fontSize: '13px',
-                fontWeight: '700',
+                fontWeight: '800',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(37,99,235,0.3)'
+                boxShadow: '0 8px 20px rgba(255, 96, 136, 0.35)'
               }}
             >
               Create & Open for Entry

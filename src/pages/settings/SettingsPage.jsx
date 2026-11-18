@@ -4,7 +4,7 @@ import {
   AlertTriangle, CheckCircle2, ShieldAlert, Lock, KeyRound,
   Layers, HardDrive, Activity, Download, ArrowRight,
   Server, FileCheck, Building, Bus, Utensils, Bed,
-  Sparkles, Check, ChevronRight, Eye, Shield
+  Sparkles, Check, ChevronRight, Eye, Shield, ArrowUpRight
 } from 'lucide-react';
 import UserControl from './UserControl';
 import PageControl from './PageControl';
@@ -56,6 +56,26 @@ export default function SettingsPage({
     };
   }, [users, permissions]);
 
+  // Modern Avatar styling inspired by Images 1, 2, 6
+  const getAvatarGradient = (name = '') => {
+    const gradients = [
+      'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+      'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
+      'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
+      'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
+      'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return gradients[Math.abs(hash) % gradients.length];
+  };
+
+  const getInitials = (name = '') => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.slice(0, 2).toUpperCase() || 'U';
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
       
@@ -64,8 +84,8 @@ export default function SettingsPage({
           ========================================================================= */}
       <div style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #172554 100%)',
-        borderRadius: '18px',
-        padding: '24px 28px',
+        borderRadius: '20px',
+        padding: '26px 30px',
         color: '#ffffff',
         boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25), 0 8px 10px -6px rgba(15, 23, 42, 0.2)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -106,8 +126,8 @@ export default function SettingsPage({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
               <div style={{
-                width: '32px',
-                height: '32px',
+                width: '34px',
+                height: '34px',
                 borderRadius: '10px',
                 backgroundColor: 'rgba(99, 102, 241, 0.25)',
                 border: '1px solid rgba(165, 180, 252, 0.35)',
@@ -146,7 +166,7 @@ export default function SettingsPage({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 12px',
+              padding: '6px 14px',
               borderRadius: '9999px',
               backgroundColor: 'rgba(16, 185, 129, 0.15)',
               border: '1px solid rgba(52, 211, 153, 0.35)',
@@ -168,7 +188,7 @@ export default function SettingsPage({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 12px',
+              padding: '6px 14px',
               borderRadius: '9999px',
               backgroundColor: 'rgba(99, 102, 241, 0.15)',
               border: '1px solid rgba(129, 140, 248, 0.35)',
@@ -184,7 +204,7 @@ export default function SettingsPage({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 12px',
+              padding: '6px 14px',
               borderRadius: '9999px',
               backgroundColor: 'rgba(245, 158, 11, 0.15)',
               border: '1px solid rgba(251, 191, 36, 0.35)',
@@ -200,7 +220,7 @@ export default function SettingsPage({
       </div>
 
       {/* =========================================================================
-          IMPORTANT ALERTS (EXECUTIVE ADVISORY FEED)
+          IMPORTANT ALERTS (EXECUTIVE ADVISORY FEED - IMAGES 2 & 5)
           ========================================================================= */}
       {!alertsDismissed && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -226,14 +246,18 @@ export default function SettingsPage({
               type="button"
               onClick={() => setAlertsDismissed(true)}
               style={{
-                fontSize: '11.5px',
-                fontWeight: '600',
+                fontSize: '12px',
+                fontWeight: '700',
                 color: '#64748b',
-                background: 'transparent',
-                border: 'none',
+                background: '#f1f5f9',
+                border: '1px solid #e2e8f0',
+                borderRadius: '9999px',
+                padding: '4px 12px',
                 cursor: 'pointer',
-                textDecoration: 'underline'
+                transition: 'all 0.15s ease'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
             >
               Dismiss Alerts
             </button>
@@ -242,24 +266,24 @@ export default function SettingsPage({
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '12px'
+            gap: '14px'
           }}>
             {/* ALERT 1: ROOT SUPERADMIN PROTECTION */}
             <div style={{
               backgroundColor: '#ffffff',
               border: '1px solid #e2e8f0',
               borderLeft: '4px solid #6366f1',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              borderRadius: '16px',
+              padding: '16px 18px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
               display: 'flex',
               alignItems: 'flex-start',
               gap: '12px'
             }}>
               <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
                 backgroundColor: 'rgba(99, 102, 241, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
@@ -267,11 +291,11 @@ export default function SettingsPage({
                 color: '#4f46e5',
                 flexShrink: 0
               }}>
-                <Lock size={16} />
+                <Lock size={17} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                  <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
                     Root Superadmin Account Immutable
                   </span>
                   <span style={{
@@ -279,14 +303,14 @@ export default function SettingsPage({
                     fontWeight: '800',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     color: '#4338ca',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
                     letterSpacing: '0.02em'
                   }}>
                     SECURITY PINNED
                   </span>
                 </div>
-                <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.4' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.45' }}>
                   Master Account <strong>ID 1 ("admin")</strong> is permanently protected against deletion or role revocation to eliminate lockout vulnerability.
                 </p>
               </div>
@@ -297,17 +321,17 @@ export default function SettingsPage({
               backgroundColor: '#ffffff',
               border: '1px solid #e2e8f0',
               borderLeft: '4px solid #059669',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              borderRadius: '16px',
+              padding: '16px 18px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
               display: 'flex',
               alignItems: 'flex-start',
               gap: '12px'
             }}>
               <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
@@ -315,11 +339,11 @@ export default function SettingsPage({
                 color: '#059669',
                 flexShrink: 0
               }}>
-                <ShieldCheck size={16} />
+                <ShieldCheck size={17} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                  <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
                     Tombstone Shield & Parameter Persistence
                   </span>
                   <span style={{
@@ -327,14 +351,14 @@ export default function SettingsPage({
                     fontWeight: '800',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     color: '#065f46',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
                     letterSpacing: '0.02em'
                   }}>
                     PERSISTENCE ON
                   </span>
                 </div>
-                <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.4' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.45' }}>
                   All user-edited parameter names, order, formulas, and tombstoned deletions in Food, Hostel, and Transport are permanently preserved across refreshes and restarts.
                 </p>
               </div>
@@ -345,17 +369,17 @@ export default function SettingsPage({
               backgroundColor: '#ffffff',
               border: '1px solid #e2e8f0',
               borderLeft: '4px solid #d97706',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              borderRadius: '16px',
+              padding: '16px 18px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
               display: 'flex',
               alignItems: 'flex-start',
               gap: '12px'
             }}>
               <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
                 backgroundColor: 'rgba(245, 158, 11, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
@@ -363,11 +387,11 @@ export default function SettingsPage({
                 color: '#d97706',
                 flexShrink: 0
               }}>
-                <FileCheck size={16} />
+                <FileCheck size={17} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                  <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
                     Financial Ledger & Census Isolation
                   </span>
                   <span style={{
@@ -375,14 +399,14 @@ export default function SettingsPage({
                     fontWeight: '800',
                     backgroundColor: 'rgba(245, 158, 11, 0.1)',
                     color: '#92400e',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
                     letterSpacing: '0.02em'
                   }}>
                     AUDIT COMPLIANT
                   </span>
                 </div>
-                <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.4' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.45' }}>
                   Non-expense headcount census figures and unit cost rates are strictly segregated from monetary grand totals. Certified pure operations ledger.
                 </p>
               </div>
@@ -392,7 +416,7 @@ export default function SettingsPage({
       )}
 
       {/* =========================================================================
-          EXECUTIVE NAVIGATION BAR (TABS)
+          FLOATING PILL NAVIGATION BAR (FINEST LOOK FROM CREXTIO / FINEXY / QUIXOTIC)
           ========================================================================= */}
       <div style={{
         display: 'flex',
@@ -400,11 +424,11 @@ export default function SettingsPage({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '12px',
-        padding: '6px',
+        padding: '8px 12px',
         backgroundColor: '#ffffff',
-        borderRadius: '14px',
+        borderRadius: '9999px',
         border: '1px solid #e2e8f0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+        boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {/* TAB 1: EXECUTIVE BENTO OVERVIEW */}
@@ -415,19 +439,19 @@ export default function SettingsPage({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '8px 18px',
-              borderRadius: '10px',
+              padding: '10px 22px',
+              borderRadius: '9999px',
               fontSize: '13px',
               fontWeight: activeSection === 'overview' ? '800' : '600',
-              backgroundColor: activeSection === 'overview' ? '#0f172a' : 'transparent',
-              color: activeSection === 'overview' ? '#ffffff' : '#475569',
+              backgroundColor: activeSection === 'overview' ? '#6c56db' : 'transparent',
+              color: activeSection === 'overview' ? '#ffffff' : '#64748b',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: activeSection === 'overview' ? '0 4px 12px rgba(15,23,42,0.22)' : 'none',
+              boxShadow: activeSection === 'overview' ? '0 4px 14px rgba(108, 86, 219, 0.3)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
-            <Sparkles size={15} color={activeSection === 'overview' ? '#38bdf8' : '#64748b'} />
+            <Sparkles size={15} color={activeSection === 'overview' ? '#ffffff' : '#64748b'} />
             <span>Executive Bento Overview</span>
           </button>
 
@@ -439,15 +463,15 @@ export default function SettingsPage({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '8px 18px',
-              borderRadius: '10px',
+              padding: '10px 22px',
+              borderRadius: '9999px',
               fontSize: '13px',
               fontWeight: activeSection === 'users' ? '800' : '600',
-              backgroundColor: activeSection === 'users' ? '#4f46e5' : 'transparent',
-              color: activeSection === 'users' ? '#ffffff' : '#475569',
+              backgroundColor: activeSection === 'users' ? '#6c56db' : 'transparent',
+              color: activeSection === 'users' ? '#ffffff' : '#64748b',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: activeSection === 'users' ? '0 4px 12px rgba(79,70,229,0.28)' : 'none',
+              boxShadow: activeSection === 'users' ? '0 4px 14px rgba(108, 86, 219, 0.3)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
@@ -463,15 +487,15 @@ export default function SettingsPage({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '8px 18px',
-              borderRadius: '10px',
+              padding: '10px 22px',
+              borderRadius: '9999px',
               fontSize: '13px',
               fontWeight: activeSection === 'pages' ? '800' : '600',
-              backgroundColor: activeSection === 'pages' ? '#4f46e5' : 'transparent',
-              color: activeSection === 'pages' ? '#ffffff' : '#475569',
+              backgroundColor: activeSection === 'pages' ? '#6c56db' : 'transparent',
+              color: activeSection === 'pages' ? '#ffffff' : '#64748b',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: activeSection === 'pages' ? '0 4px 12px rgba(79,70,229,0.28)' : 'none',
+              boxShadow: activeSection === 'pages' ? '0 4px 14px rgba(108, 86, 219, 0.3)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
@@ -487,15 +511,15 @@ export default function SettingsPage({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '8px 18px',
-              borderRadius: '10px',
+              padding: '10px 22px',
+              borderRadius: '9999px',
               fontSize: '13px',
               fontWeight: activeSection === 'database' ? '800' : '600',
-              backgroundColor: activeSection === 'database' ? '#4f46e5' : 'transparent',
-              color: activeSection === 'database' ? '#ffffff' : '#475569',
+              backgroundColor: activeSection === 'database' ? '#6c56db' : 'transparent',
+              color: activeSection === 'database' ? '#ffffff' : '#64748b',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: activeSection === 'database' ? '0 4px 12px rgba(79,70,229,0.28)' : 'none',
+              boxShadow: activeSection === 'database' ? '0 4px 14px rgba(108, 86, 219, 0.3)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
@@ -504,17 +528,21 @@ export default function SettingsPage({
           </button>
         </div>
 
-        {/* Quick status stamp */}
+        {/* Quick status pill stamp */}
         <div style={{
-          padding: '4px 12px',
-          fontSize: '11px',
+          padding: '5px 14px',
+          fontSize: '11.5px',
           fontWeight: '700',
           color: '#64748b',
           backgroundColor: '#f8fafc',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0'
+          borderRadius: '9999px',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
         }}>
-          PostgreSQL Schema v2.4 Verified
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+          <span>PostgreSQL Schema v2.4 Verified</span>
         </div>
       </div>
 
@@ -525,82 +553,97 @@ export default function SettingsPage({
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(12, 1fr)',
-          gap: '16px'
+          gap: '18px'
         }}>
           
           {/* BENTO TILE 1: WORKFORCE & DIRECTORY GOVERNANCE (Span 4) */}
           <div style={{
             gridColumn: 'span 4',
             backgroundColor: '#ffffff',
-            borderRadius: '16px',
+            borderRadius: '20px',
             border: '1px solid #e2e8f0',
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            padding: '24px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             transition: 'transform 0.15s ease, box-shadow 0.15s ease'
           }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '12px',
                   backgroundColor: 'rgba(79, 70, 229, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#4f46e5'
                 }}>
-                  <Users size={18} />
+                  <Users size={20} />
                 </div>
                 <span style={{
                   fontSize: '11px',
                   fontWeight: '800',
                   color: '#4f46e5',
                   backgroundColor: 'rgba(79, 70, 229, 0.08)',
-                  padding: '3px 8px',
-                  borderRadius: '6px'
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  border: '1px solid rgba(79, 70, 229, 0.2)'
                 }}>
                   IDENTITY & ACCESS
                 </span>
               </div>
 
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', lineHeight: '1' }}>
-                {stats.totalUsers}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <div style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', lineHeight: '1', letterSpacing: '-0.02em' }}>
+                  {stats.totalUsers}
+                </div>
+                <span style={{
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  color: '#059669',
+                  backgroundColor: '#ecfdf5',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  border: '1px solid #a7f3d0'
+                }}>
+                  ↑ 100% Active
+                </span>
               </div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', marginTop: '4px', marginBottom: '14px' }}>
+
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', marginTop: '4px', marginBottom: '16px' }}>
                 Enrolled System Users
               </div>
 
-              {/* Breakdown badges */}
+              {/* Breakdown pills */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
                 <div style={{
-                  fontSize: '11px',
+                  fontSize: '11.5px',
                   fontWeight: '700',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
                   backgroundColor: '#f1f5f9',
                   color: '#334155'
                 }}>
                   {stats.activeUsers} Active
                 </div>
                 <div style={{
-                  fontSize: '11px',
+                  fontSize: '11.5px',
                   fontWeight: '700',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
                   backgroundColor: '#ede9fe',
                   color: '#6d28d9'
                 }}>
                   {stats.adminCount} Admins
                 </div>
                 <div style={{
-                  fontSize: '11px',
+                  fontSize: '11.5px',
                   fontWeight: '700',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
                   backgroundColor: '#dbeafe',
                   color: '#1d4ed8'
                 }}>
@@ -608,7 +651,7 @@ export default function SettingsPage({
                 </div>
               </div>
 
-              <div style={{ fontSize: '11.5px', color: '#64748b', lineHeight: '1.5' }}>
+              <div style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>
                 Departments: <strong>{stats.departments.join(', ')}</strong>
               </div>
             </div>
@@ -617,26 +660,26 @@ export default function SettingsPage({
               type="button"
               onClick={() => setActiveSection('users')}
               style={{
-                marginTop: '18px',
+                marginTop: '20px',
                 width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
+                padding: '10px 16px',
+                borderRadius: '9999px',
                 backgroundColor: '#f8fafc',
                 border: '1px solid #e2e8f0',
-                fontSize: '12px',
+                fontSize: '12.5px',
                 fontWeight: '700',
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
+                gap: '8px',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#4f46e5';
+                e.currentTarget.style.backgroundColor = '#0f172a';
                 e.currentTarget.style.color = '#ffffff';
-                e.currentTarget.style.borderColor = '#4f46e5';
+                e.currentTarget.style.borderColor = '#0f172a';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = '#f8fafc';
@@ -653,62 +696,77 @@ export default function SettingsPage({
           <div style={{
             gridColumn: 'span 4',
             backgroundColor: '#ffffff',
-            borderRadius: '16px',
+            borderRadius: '20px',
             border: '1px solid #e2e8f0',
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            padding: '24px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '12px',
                   backgroundColor: 'rgba(5, 150, 105, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#059669'
                 }}>
-                  <ShieldCheck size={18} />
+                  <ShieldCheck size={20} />
                 </div>
                 <span style={{
                   fontSize: '11px',
                   fontWeight: '800',
                   color: '#059669',
                   backgroundColor: 'rgba(5, 150, 105, 0.08)',
-                  padding: '3px 8px',
-                  borderRadius: '6px'
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  border: '1px solid rgba(5, 150, 105, 0.2)'
                 }}>
                   POLICY ENFORCED
                 </span>
               </div>
 
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', lineHeight: '1' }}>
-                16 Rules
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <div style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', lineHeight: '1', letterSpacing: '-0.02em' }}>
+                  16 Rules
+                </div>
+                <span style={{
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  color: '#059669',
+                  backgroundColor: '#ecfdf5',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  border: '1px solid #a7f3d0'
+                }}>
+                  ● 4x4 Grid
+                </span>
               </div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', marginTop: '4px', marginBottom: '14px' }}>
+
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', marginTop: '4px', marginBottom: '16px' }}>
                 RBAC Security Matrix
               </div>
 
               {/* Roles matrix summary */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#334155' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#334155' }}>
                   <span>Administrator (admin):</span>
                   <strong style={{ color: '#059669' }}>Unrestricted Full Access</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#334155' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#334155' }}>
                   <span>General Manager (gm):</span>
                   <strong style={{ color: '#2563eb' }}>Dashboard & Operations View</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#334155' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#334155' }}>
                   <span>Supervisor:</span>
                   <strong style={{ color: '#d97706' }}>Matrix & Data Entry Focus</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#334155' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#334155' }}>
                   <span>Auditor:</span>
                   <strong style={{ color: '#7c3aed' }}>Read-only Ledger Compliance</strong>
                 </div>
@@ -719,26 +777,26 @@ export default function SettingsPage({
               type="button"
               onClick={() => setActiveSection('pages')}
               style={{
-                marginTop: '18px',
+                marginTop: '20px',
                 width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
+                padding: '10px 16px',
+                borderRadius: '9999px',
                 backgroundColor: '#f8fafc',
                 border: '1px solid #e2e8f0',
-                fontSize: '12px',
+                fontSize: '12.5px',
                 fontWeight: '700',
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
+                gap: '8px',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#059669';
+                e.currentTarget.style.backgroundColor = '#0f172a';
                 e.currentTarget.style.color = '#ffffff';
-                e.currentTarget.style.borderColor = '#059669';
+                e.currentTarget.style.borderColor = '#0f172a';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = '#f8fafc';
@@ -755,57 +813,72 @@ export default function SettingsPage({
           <div style={{
             gridColumn: 'span 4',
             backgroundColor: '#ffffff',
-            borderRadius: '16px',
+            borderRadius: '20px',
             border: '1px solid #e2e8f0',
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            padding: '24px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '12px',
                   backgroundColor: 'rgba(2, 132, 199, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#0284c7'
                 }}>
-                  <Database size={18} />
+                  <Database size={20} />
                 </div>
                 <span style={{
                   fontSize: '11px',
                   fontWeight: '800',
                   color: '#0284c7',
                   backgroundColor: 'rgba(2, 132, 199, 0.08)',
-                  padding: '3px 8px',
-                  borderRadius: '6px'
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  border: '1px solid rgba(2, 132, 199, 0.2)'
                 }}>
                   DISASTER RECOVERY READY
                 </span>
               </div>
 
-              <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', lineHeight: '1' }}>
-                PostgreSQL 16
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <div style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', lineHeight: '1', letterSpacing: '-0.02em' }}>
+                  PostgreSQL 16
+                </div>
+                <span style={{
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  color: '#0284c7',
+                  backgroundColor: '#e0f2fe',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  border: '1px solid #bae6fd'
+                }}>
+                  ● Relational
+                </span>
               </div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', marginTop: '4px', marginBottom: '14px' }}>
+
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', marginTop: '4px', marginBottom: '16px' }}>
                 Relational Engine Telemetry
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#334155' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#334155' }}>
                   <Check size={14} color="#10b981" />
                   <span>16/16 Migrations Idempotently Applied</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#334155' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#334155' }}>
                   <Check size={14} color="#10b981" />
                   <span>Permanent Tombstone Registry Active</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#334155' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#334155' }}>
                   <Check size={14} color="#10b981" />
                   <span>Single-Click Production SQL Export</span>
                 </div>
@@ -816,26 +889,26 @@ export default function SettingsPage({
               type="button"
               onClick={() => setActiveSection('database')}
               style={{
-                marginTop: '18px',
+                marginTop: '20px',
                 width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
+                padding: '10px 16px',
+                borderRadius: '9999px',
                 backgroundColor: '#f8fafc',
                 border: '1px solid #e2e8f0',
-                fontSize: '12px',
+                fontSize: '12.5px',
                 fontWeight: '700',
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
+                gap: '8px',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#0284c7';
+                e.currentTarget.style.backgroundColor = '#0f172a';
                 e.currentTarget.style.color = '#ffffff';
-                e.currentTarget.style.borderColor = '#0284c7';
+                e.currentTarget.style.borderColor = '#0f172a';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = '#f8fafc';
@@ -848,82 +921,143 @@ export default function SettingsPage({
             </button>
           </div>
 
-          {/* BENTO TILE 4: ENTERPRISE MULTI-MODULE OPERATIONS COVERAGE (Span 7) */}
+          {/* BENTO TILE 4: ENTERPRISE MULTI-MODULE OPERATIONS COVERAGE (Span 7) - IMAGE 4 PASTEL CARDS */}
           <div style={{
             gridColumn: 'span 7',
             backgroundColor: '#ffffff',
-            borderRadius: '16px',
+            borderRadius: '20px',
             border: '1px solid #e2e8f0',
-            padding: '22px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+            padding: '24px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Layers size={18} color="#4f46e5" />
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#4f46e5'
+                }}>
+                  <Layers size={17} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
                   Multi-Module Governance Scope & Institution Mapping
                 </h3>
               </div>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', backgroundColor: '#ecfdf5', padding: '3px 8px', borderRadius: '6px' }}>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#059669',
+                backgroundColor: '#ecfdf5',
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                border: '1px solid #a7f3d0'
+              }}>
                 3 OF 3 ACTIVE
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-              {/* Module 1: Food & Dining */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+              {/* Module 1: Food (Soft Mint Pastel Card) */}
               <div style={{
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '14px'
+                backgroundColor: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>🍲</span>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>Food & Dining</span>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>🍲</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>Food</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: '#475569', lineHeight: '1.45' }}>
+                    Materials, Labour, FC Maintenance, Festival & Event Catering. Headcounts isolated from monetary ledger.
+                  </p>
                 </div>
-                <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b', lineHeight: '1.4' }}>
-                  Materials, Labour, FC Maintenance, Festival & Event Catering. Headcounts isolated from monetary ledger.
-                </p>
-                <div style={{ marginTop: '10px', fontSize: '11px', fontWeight: '700', color: '#2563eb' }}>
-                  ● Direct Operations
+                <div style={{
+                  marginTop: '12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: '#059669',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                  <span>Direct Operations</span>
                 </div>
               </div>
 
-              {/* Module 2: Hostel Facilities */}
+              {/* Module 2: Hostel Facilities (Soft Violet Pastel Card) */}
               <div style={{
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '14px'
+                backgroundColor: '#f5f3ff',
+                border: '1px solid #ddd6fe',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>🏢</span>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>Hostel Facilities</span>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>🏢</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>Hostel Facilities</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: '#475569', lineHeight: '1.45' }}>
+                    44 Master Parameters: EB/DG power, RO water tankers, room repairs, boys & girls census dynamics.
+                  </p>
                 </div>
-                <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b', lineHeight: '1.4' }}>
-                  44 Master Parameters: EB/DG power, RO water tankers, room repairs, boys & girls census dynamics.
-                </p>
-                <div style={{ marginTop: '10px', fontSize: '11px', fontWeight: '700', color: '#7c3aed' }}>
-                  ● Resident Services
+                <div style={{
+                  marginTop: '12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: '#7c3aed',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#8b5cf6' }} />
+                  <span>Resident Services</span>
                 </div>
               </div>
 
-              {/* Module 3: Transport Logistics */}
+              {/* Module 3: Transport Logistics (Soft Blue Pastel Card) */}
               <div style={{
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '14px'
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>🚌</span>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>Fleet Logistics</span>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>🚌</span>
+                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>Fleet Logistics</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: '#475569', lineHeight: '1.45' }}>
+                    47 Master Parameters: 4 Branches (RPS, KPM, Common, University), trip KMs, diesel liters & fees.
+                  </p>
                 </div>
-                <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b', lineHeight: '1.4' }}>
-                  47 Master Parameters: 4 Branches (RPS, KPM, Common, University), trip KMs, diesel liters & fees.
-                </p>
-                <div style={{ marginTop: '10px', fontSize: '11px', fontWeight: '700', color: '#059669' }}>
-                  ● Institutional Fleet
+                <div style={{
+                  marginTop: '12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: '#2563eb',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3b82f6' }} />
+                  <span>Institutional Fleet</span>
                 </div>
               </div>
             </div>
@@ -933,37 +1067,56 @@ export default function SettingsPage({
           <div style={{
             gridColumn: 'span 5',
             backgroundColor: '#ffffff',
-            borderRadius: '16px',
+            borderRadius: '20px',
             border: '1px solid #e2e8f0',
-            padding: '22px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            padding: '24px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Activity size={18} color="#d97706" />
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#d97706'
+                  }}>
+                    <Activity size={17} />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
                     Executive Audit & Active Session
                   </h3>
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#d97706', backgroundColor: '#fffbeb', padding: '3px 8px', borderRadius: '6px' }}>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  color: '#d97706',
+                  backgroundColor: '#fffbeb',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  border: '1px solid #fde68a'
+                }}>
                   SECURITY AUDITED
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
                   <span style={{ color: '#64748b' }}>Active Profile:</span>
                   <strong style={{ color: '#0f172a' }}>{currentUser?.full_name || currentUser?.username}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
                   <span style={{ color: '#64748b' }}>Assigned Security Role:</span>
                   <strong style={{ color: '#4f46e5', textTransform: 'capitalize' }}>{currentUser?.role || 'admin'}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
                   <span style={{ color: '#64748b' }}>Assigned Department:</span>
                   <strong style={{ color: '#0f172a' }}>{currentUser?.department || 'Operations'}</strong>
                 </div>
@@ -974,24 +1127,25 @@ export default function SettingsPage({
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
               <button
                 type="button"
                 onClick={() => setActiveSection('database')}
                 style={{
                   flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: '8px',
+                  padding: '9px 14px',
+                  borderRadius: '9999px',
                   backgroundColor: '#0f172a',
                   border: 'none',
                   color: '#ffffff',
-                  fontSize: '12px',
+                  fontSize: '12.5px',
                   fontWeight: '700',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  boxShadow: '0 4px 12px rgba(15,23,42,0.18)'
                 }}
               >
                 <Download size={13} />
@@ -1003,12 +1157,12 @@ export default function SettingsPage({
                 onClick={() => setActiveSection('pages')}
                 style={{
                   flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: '8px',
+                  padding: '9px 14px',
+                  borderRadius: '9999px',
                   backgroundColor: '#f1f5f9',
                   border: '1px solid #cbd5e1',
                   color: '#334155',
-                  fontSize: '12px',
+                  fontSize: '12.5px',
                   fontWeight: '700',
                   cursor: 'pointer',
                   display: 'flex',

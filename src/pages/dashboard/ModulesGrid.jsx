@@ -27,7 +27,7 @@ export default function ModulesGrid({
         gap: '16px'
       }}>
         
-        {/* Module 1: Food & Dining */}
+        {/* Module 1: Food */}
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '12px',
@@ -44,7 +44,7 @@ export default function ModulesGrid({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#6366f1' }} />
-                <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>Food & Dining</span>
+                <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>Food</span>
               </div>
               <span style={{
                 fontSize: '11px',

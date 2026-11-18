@@ -1,5 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Database, Download, Upload, Trash2, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert, FileText, HardDrive } from 'lucide-react';
+import { 
+  Database, Download, Upload, Trash2, RefreshCw, AlertTriangle, 
+  CheckCircle2, ShieldAlert, FileText, HardDrive, Server, Check, ArrowRight
+} from 'lucide-react';
 import TwoStepDeleteModal from './TwoStepDeleteModal';
 
 export default function DatabaseManager({
@@ -147,34 +150,53 @@ export default function DatabaseManager({
       {/* Header Banner */}
       <div style={{
         backgroundColor: '#ffffff',
-        borderRadius: '10px',
-        padding: '18px 22px',
-        border: '1px solid #cbd5e1',
+        borderRadius: '16px',
+        padding: '20px 24px',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '14px'
+        gap: '16px'
       }}>
         <div>
-          <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>
             Database Backup, Restore & Data Lifecycle Management
           </h3>
-          <p style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+          <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', marginBottom: 0 }}>
             Export standard PostgreSQL SQL dumps, reload backup scripts, or purge dummy transaction records with two-step validation.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#059669', backgroundColor: '#ecfdf5', padding: '6px 12px', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '12px',
+          fontWeight: '700',
+          color: '#059669',
+          backgroundColor: '#ecfdf5',
+          padding: '6px 14px',
+          borderRadius: '9999px',
+          border: '1px solid #a7f3d0'
+        }}>
+          <span style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            backgroundColor: '#10b981',
+            boxShadow: '0 0 6px #10b981'
+          }} />
           <Database size={14} />
-          <strong>PostgreSQL 18 Connected</strong>
+          <span>PostgreSQL 18 Connected</span>
         </div>
       </div>
 
       {message && (
         <div style={{
           padding: '12px 18px',
-          borderRadius: '8px',
+          borderRadius: '12px',
           fontSize: '13px',
           fontWeight: '600',
           display: 'flex',
@@ -189,34 +211,57 @@ export default function DatabaseManager({
         </div>
       )}
 
-      {/* Action Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+      {/* Action Bento Cards Grid (Images 2, 4, 5) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
         
         {/* CARD 1: DOWNLOAD SQL BACKUP DUMP */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '22px',
-          border: '1px solid #cbd5e1',
+          borderRadius: '18px',
+          padding: '24px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          gap: '16px'
+          gap: '20px',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Download size={20} color="#2563eb" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#2563eb'
+              }}>
+                <Download size={20} />
               </div>
-              <div>
-                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
-                  Download SQL Dump (.sql)
-                </h4>
-                <span style={{ fontSize: '11.5px', color: '#64748b' }}>PostgreSQL 18 DDL & DML Schema Dump</span>
-              </div>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#2563eb',
+                backgroundColor: '#eff6ff',
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                border: '1px solid #bfdbfe'
+              }}>
+                FULL REPOSITORY DUMP
+              </span>
             </div>
 
-            <p style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.5, marginTop: '6px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>
+              Download SQL Dump (.sql)
+            </h4>
+            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+              PostgreSQL 18 DDL & DML Schema Dump
+            </span>
+
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, marginTop: '12px', marginBottom: 0 }}>
               Generates a standard <code>.sql</code> backup file containing table schemas, categories, cost heads, billing cycles, users, permissions, and expense entries.
             </p>
           </div>
@@ -226,9 +271,10 @@ export default function DatabaseManager({
             onClick={handleDownloadBackup}
             disabled={downloading}
             style={{
-              padding: '10px 18px',
-              borderRadius: '6px',
-              backgroundColor: '#2563eb',
+              width: '100%',
+              padding: '12px 20px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #6c52d6 0%, #5439ba 100%)',
               color: '#ffffff',
               fontSize: '13px',
               fontWeight: '700',
@@ -238,9 +284,12 @@ export default function DatabaseManager({
               gap: '8px',
               border: 'none',
               cursor: downloading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 2px 6px rgba(37,99,235,0.3)',
-              opacity: downloading ? 0.7 : 1
+              boxShadow: '0 4px 14px rgba(108, 86, 219, 0.3)',
+              opacity: downloading ? 0.7 : 1,
+              transition: 'all 0.15s ease'
             }}
+            onMouseEnter={(e) => !downloading && (e.currentTarget.style.transform = 'translateY(-1px)')}
+            onMouseLeave={(e) => !downloading && (e.currentTarget.style.transform = 'translateY(0)')}
           >
             <Download size={16} />
             <span>{downloading ? 'Generating Dump...' : 'Download SQL Database Dump'}</span>
@@ -250,28 +299,51 @@ export default function DatabaseManager({
         {/* CARD 2: RELOAD / RESTORE FROM SQL FILE */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '22px',
-          border: '1px solid #cbd5e1',
+          borderRadius: '18px',
+          padding: '24px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          gap: '16px'
+          gap: '20px',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Upload size={20} color="#16a34a" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#059669'
+              }}>
+                <Upload size={20} />
               </div>
-              <div>
-                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
-                  Reload Data from SQL File
-                </h4>
-                <span style={{ fontSize: '11.5px', color: '#64748b' }}>Upload & Execute .sql Script</span>
-              </div>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#059669',
+                backgroundColor: '#ecfdf5',
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                border: '1px solid #a7f3d0'
+              }}>
+                DISASTER RECOVERY
+              </span>
             </div>
 
-            <p style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.5, marginTop: '6px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>
+              Reload Data from SQL File
+            </h4>
+            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+              Upload & Execute .sql Script
+            </span>
+
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, marginTop: '12px', marginBottom: 0 }}>
               Restore database from a previously downloaded <code>.sql</code> backup file. The script runs with transactional integrity directly on PostgreSQL.
             </p>
           </div>
@@ -290,9 +362,9 @@ export default function DatabaseManager({
               disabled={restoring}
               style={{
                 width: '100%',
-                padding: '10px 18px',
-                borderRadius: '6px',
-                backgroundColor: '#16a34a',
+                padding: '11px 20px',
+                borderRadius: '9999px',
+                backgroundColor: '#059669',
                 color: '#ffffff',
                 fontSize: '13px',
                 fontWeight: '700',
@@ -302,9 +374,12 @@ export default function DatabaseManager({
                 gap: '8px',
                 border: 'none',
                 cursor: restoring ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 6px rgba(22,163,74,0.3)',
-                opacity: restoring ? 0.7 : 1
+                boxShadow: '0 4px 14px rgba(5,150,105,0.25)',
+                opacity: restoring ? 0.7 : 1,
+                transition: 'all 0.15s ease'
               }}
+              onMouseEnter={(e) => !restoring && (e.currentTarget.style.transform = 'translateY(-1px)')}
+              onMouseLeave={(e) => !restoring && (e.currentTarget.style.transform = 'translateY(0)')}
             >
               <Upload size={16} />
               <span>{restoring ? 'Restoring Database...' : 'Choose .sql File to Reload'}</span>
@@ -315,28 +390,51 @@ export default function DatabaseManager({
         {/* CARD 3: REMOVE DUMMY DATA (TWO-STEP VALIDATION) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '22px',
+          borderRadius: '18px',
+          padding: '24px',
           border: '1.5px solid #fecaca',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          gap: '16px'
+          gap: '20px',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Trash2 size={20} color="#dc2626" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                backgroundColor: '#fef2f2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#dc2626'
+              }}>
+                <Trash2 size={20} />
               </div>
-              <div>
-                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#991b1b' }}>
-                  Remove Dummy Data
-                </h4>
-                <span style={{ fontSize: '11.5px', color: '#b91c1c' }}>Two-Step Validated Destructive Action</span>
-              </div>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#b91c1c',
+                backgroundColor: '#fee2e2',
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                border: '1px solid #fca5a5'
+              }}>
+                DESTRUCTIVE ACTION
+              </span>
             </div>
 
-            <p style={{ fontSize: '12.5px', color: '#7f1d1d', lineHeight: 1.5, marginTop: '6px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '800', color: '#991b1b', margin: '0 0 4px 0' }}>
+              Remove Dummy Data
+            </h4>
+            <span style={{ fontSize: '12px', color: '#b91c1c', fontWeight: '600' }}>
+              Two-Step Validated Destructive Action
+            </span>
+
+            <p style={{ fontSize: '13px', color: '#7f1d1d', lineHeight: 1.5, marginTop: '12px', marginBottom: 0 }}>
               Purges all sample/dummy transaction actuals from <code>monthly_expense_entries</code>. Categories, cost heads, billing cycles, and users are safely preserved.
             </p>
           </div>
@@ -345,8 +443,9 @@ export default function DatabaseManager({
             type="button"
             onClick={() => setShowTwoStepModal(true)}
             style={{
-              padding: '10px 18px',
-              borderRadius: '6px',
+              width: '100%',
+              padding: '11px 20px',
+              borderRadius: '9999px',
               backgroundColor: '#dc2626',
               color: '#ffffff',
               fontSize: '13px',
@@ -357,8 +456,11 @@ export default function DatabaseManager({
               gap: '8px',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(220,38,38,0.3)'
+              boxShadow: '0 4px 14px rgba(220,38,38,0.25)',
+              transition: 'all 0.15s ease'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
             <ShieldAlert size={16} />
             <span>Remove Dummy Data (2-Step Verify)</span>
@@ -368,28 +470,51 @@ export default function DatabaseManager({
         {/* CARD 4: RE-SEED DEFAULT DEMO ACTUALS */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '22px',
-          border: '1px solid #cbd5e1',
+          borderRadius: '18px',
+          padding: '24px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          gap: '16px'
+          gap: '20px',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <RefreshCw size={20} color="#7c3aed" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#7c3aed'
+              }}>
+                <RefreshCw size={20} />
               </div>
-              <div>
-                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
-                  Re-Seed Demo Actuals
-                </h4>
-                <span style={{ fontSize: '11.5px', color: '#64748b' }}>Jun'26 to Oct'26 Historical Records</span>
-              </div>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#7c3aed',
+                backgroundColor: '#f5f3ff',
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                border: '1px solid #ddd6fe'
+              }}>
+                CANONICAL SEED
+              </span>
             </div>
 
-            <p style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.5, marginTop: '6px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>
+              Re-Seed Demo Actuals
+            </h4>
+            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+              Jun'26 to Oct'26 Historical Records
+            </span>
+
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, marginTop: '12px', marginBottom: 0 }}>
               Quickly repopulates the standard audited 5-month demo numbers (Food ~₹6.27 Cr, Hostel ~₹87.48 L, Transport ~₹1.94 Cr) for presentation or testing.
             </p>
           </div>
@@ -399,8 +524,9 @@ export default function DatabaseManager({
             onClick={handleReseedDefault}
             disabled={reseeding}
             style={{
-              padding: '10px 18px',
-              borderRadius: '6px',
+              width: '100%',
+              padding: '11px 20px',
+              borderRadius: '9999px',
               backgroundColor: '#7c3aed',
               color: '#ffffff',
               fontSize: '13px',
@@ -411,9 +537,12 @@ export default function DatabaseManager({
               gap: '8px',
               border: 'none',
               cursor: reseeding ? 'not-allowed' : 'pointer',
-              boxShadow: '0 2px 6px rgba(124,58,237,0.3)',
-              opacity: reseeding ? 0.7 : 1
+              boxShadow: '0 4px 14px rgba(124,58,237,0.25)',
+              opacity: reseeding ? 0.7 : 1,
+              transition: 'all 0.15s ease'
             }}
+            onMouseEnter={(e) => !reseeding && (e.currentTarget.style.transform = 'translateY(-1px)')}
+            onMouseLeave={(e) => !reseeding && (e.currentTarget.style.transform = 'translateY(0)')}
           >
             <RefreshCw size={16} />
             <span>{reseeding ? 'Re-Seeding Data...' : 'Reload Default Demo Actuals'}</span>

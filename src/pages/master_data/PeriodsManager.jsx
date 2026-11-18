@@ -144,20 +144,22 @@ export default function PeriodsManager({
             type="button"
             onClick={() => setShowAddMonthModal(true)}
             style={{
-              padding: '9px 20px',
-              borderRadius: '6px',
-              backgroundColor: '#2563eb',
+              padding: '9px 22px',
+              borderRadius: '9999px',
+              backgroundColor: '#6c56db',
               color: '#ffffff',
               fontSize: '13px',
               fontWeight: '700',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '7px',
-              boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
+              boxShadow: '0 4px 14px rgba(108, 86, 219, 0.35)',
               border: 'none',
               cursor: 'pointer',
               transition: 'background-color 0.15s ease'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5d44db'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c56db'}
           >
             <Plus size={16} />
             <span>Add New Month / Cycle</span>

@@ -3,8 +3,9 @@ import { formatINR } from '../../utils/formatters';
 import { 
   Search, X, Maximize2, Minimize2, Download, Building2, BedDouble, 
   Users, Zap, Droplets, Wrench, DollarSign, Calculator, ChevronRight, Check,
-  FileSpreadsheet, Table, Calendar, ArrowRight, ExternalLink
+  FileSpreadsheet, Table, Calendar, ArrowRight, ExternalLink, LayoutGrid
 } from 'lucide-react';
+import HostelOccupancyCard from './charts/HostelOccupancyCard';
 
 export default function HostelDashboardDataTable({
   periods: propPeriods = [],
@@ -515,6 +516,28 @@ export default function HostelDashboardDataTable({
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#e2e8f0', padding: '2px', borderRadius: '7px' }}>
             <button
               type="button"
+              onClick={() => setViewMode('cards')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 12px',
+                borderRadius: '5px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'cards' ? '#5b5bf0' : 'transparent',
+                color: viewMode === 'cards' ? '#ffffff' : '#475569',
+                boxShadow: viewMode === 'cards' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <LayoutGrid size={13} />
+              <span>🗂️ Cards View</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setViewMode('excel')}
               style={{
                 display: 'inline-flex',
@@ -666,9 +689,26 @@ export default function HostelDashboardDataTable({
       </div>
 
       {/* ========================================================================= */}
-      {/* VIEW 1: EXACT EXCEL SPREADSHEET TEMPLATE (MATCHING SCREENSHOT 100%)      */}
+      {/* VIEW 0: MODERN BENTO CARDS DASHBOARD                                      */}
       {/* ========================================================================= */}
-      {viewMode === 'excel' ? (
+      {viewMode === 'cards' ? (
+        <div style={{
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          backgroundColor: '#f8fafc',
+          maxHeight: isFullScreen ? 'calc(100vh - 120px)' : '720px',
+          overflowY: 'auto',
+          boxSizing: 'border-box'
+        }}>
+          <HostelOccupancyCard
+            hostelCensusMap={hostelCensusMap}
+            periods={periods}
+            selectedPeriod={selectedPeriodId}
+          />
+        </div>
+      ) : viewMode === 'excel' ? (
         <div style={{
           overflowX: 'auto',
           overflowY: 'auto',

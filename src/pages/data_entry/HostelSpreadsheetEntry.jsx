@@ -5,6 +5,7 @@ import {
   AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, BedDouble, Users, Droplets, Wrench, ShieldCheck,
   ChevronRight, Calendar, ArrowRight, Settings
 } from 'lucide-react';
+import HostelCardSpreadsheet from './cards/HostelCardSpreadsheet';
 
 export default function HostelSpreadsheetEntry({
   activePeriodObj,
@@ -16,9 +17,11 @@ export default function HostelSpreadsheetEntry({
   handleSaveActiveMonth,
   savingBatch,
   isDirty,
-  fetchData
+  fetchData,
+  handleCloneFromPrev,
+  handleToggleLock
 }) {
-  const [activeView, setActiveView] = useState('sheet'); // 'sheet' (Image 1 Excel layout) or 'multi_month'
+  const [activeView, setActiveView] = useState('cards'); // 'cards' (card-based dashboard), 'sheet' (Image 1 Excel layout) or 'multi_month'
   const [parameters, setParameters] = useState([]);
   const [loadingParams, setLoadingParams] = useState(true);
   const [localMessage, setLocalMessage] = useState(null);
@@ -376,20 +379,44 @@ export default function HostelSpreadsheetEntry({
     });
   };
 
+  if (activeView === 'cards') {
+    return (
+      <HostelCardSpreadsheet
+        periods={periods}
+        editingPeriodId={editingPeriodId}
+        setEditingPeriodId={setEditingPeriodId}
+        activePeriodObj={activePeriodObj}
+        isClosed={isClosed}
+        currData={currData}
+        metrics={metrics}
+        handleValChange={handleValChange}
+        handleSaveMonth={handleSaveMonth}
+        isSaving={isSaving}
+        localMessage={localMessage}
+        handleCloneFromPreviousMonth={handleCloneFromPreviousMonth}
+        handleToggleLock={handleToggleLock}
+        parameters={parameters}
+        viewMode={activeView}
+        setViewMode={setActiveView}
+      />
+    );
+  }
+
   return (
     <div style={{
       backgroundColor: '#ffffff',
-      borderRadius: '12px',
-      border: '2px solid #00a2e8',
-      boxShadow: '0 4px 16px rgba(0, 162, 232, 0.08)',
+      borderRadius: '24px',
+      border: '1px solid #edf0f8',
+      boxShadow: '0 4px 20px rgba(110, 80, 180, 0.05)',
       overflow: 'hidden',
       marginBottom: '24px'
     }}>
       
       {/* 1. TOP TOOLBAR & HEADER */}
       <div style={{
-        backgroundColor: '#00a2e8',
-        padding: '14px 22px',
+        background: 'linear-gradient(135deg, #0aa0e8 0%, #0670c9 100%)',
+        padding: '18px 24px',
+        borderRadius: '20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -401,13 +428,13 @@ export default function HostelSpreadsheetEntry({
           <div style={{
             width: '38px',
             height: '38px',
-            borderRadius: '8px',
+            borderRadius: '12px',
             backgroundColor: '#ffffff',
-            color: '#00a2e8',
+            color: '#6c56db',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
           }}>
             <Home size={22} />
           </div>
@@ -421,13 +448,13 @@ export default function HostelSpreadsheetEntry({
                 fontWeight: '700',
                 backgroundColor: 'rgba(255, 255, 255, 0.25)',
                 padding: '2px 8px',
-                borderRadius: '12px',
+                borderRadius: '9999px',
                 color: '#ffffff'
               }}>
                 Excel Sheet
               </span>
             </div>
-            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#e0f2fe' }}>
+            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'rgba(255, 255, 255, 0.85)' }}>
               Exact multi-parameter spreadsheet format • Live calculation formulas • Saves directly to PostgreSQL
             </p>
           </div>
@@ -444,8 +471,8 @@ export default function HostelSpreadsheetEntry({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '9px 15px',
-              borderRadius: '6px',
+              padding: '9px 18px',
+              borderRadius: '9999px',
               backgroundColor: 'rgba(255, 255, 255, 0.2)',
               color: '#ffffff',
               fontSize: '12.5px',
@@ -466,15 +493,16 @@ export default function HostelSpreadsheetEntry({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '9px 20px',
-              borderRadius: '6px',
-              backgroundColor: '#ffffff',
-              color: '#0087c2',
+              padding: '9px 22px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+              color: '#ffffff',
               fontSize: '13px',
               fontWeight: '800',
               border: 'none',
               cursor: isSaving || isClosed ? 'not-allowed' : 'pointer',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.18)'
+              boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
+              transition: 'all 0.15s ease'
             }}
           >
             {isSaving ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
@@ -525,41 +553,59 @@ export default function HostelSpreadsheetEntry({
                 type="button"
                 onClick={() => setEditingPeriodId(p.id)}
                 style={{
-                  padding: '5px 14px',
-                  borderRadius: '20px',
+                  padding: '6px 18px',
+                  borderRadius: '9999px',
                   fontSize: '12px',
-                  fontWeight: '800',
-                  border: isSel ? '2px solid #00a2e8' : '1px solid #cbd5e1',
-                  backgroundColor: isSel ? '#00a2e8' : '#ffffff',
-                  color: isSel ? '#ffffff' : '#334155',
+                  fontWeight: isSel ? '800' : '600',
+                  border: 'none',
+                  backgroundColor: isSel ? '#0aa0e8' : '#ffffff',
+                  color: isSel ? '#ffffff' : '#6e768e',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
-                  boxShadow: isSel ? '0 2px 4px rgba(0, 162, 232, 0.25)' : 'none'
+                  boxShadow: isSel ? '0 4px 12px rgba(10, 160, 232, 0.35)' : 'none'
                 }}
               >
                 <span>{p.period_label}</span>
-                {isSel && <Check size={12} color="#ffffff" />}
+                {isSel && <span style={{ fontSize: '11px', color: '#ffffff' }}>★</span>}
               </button>
             );
           })}
         </div>
 
         {/* View Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '9999px', border: '1px solid #edf0f8' }}>
           <button
             type="button"
-            onClick={() => setActiveView('sheet')}
+            onClick={() => setActiveView('cards')}
             style={{
-              padding: '4px 14px',
-              borderRadius: '6px',
+              padding: '5px 16px',
+              borderRadius: '9999px',
               fontSize: '11.5px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeView === 'sheet' ? '#00a2e8' : 'transparent',
-              color: activeView === 'sheet' ? '#ffffff' : '#64748b'
+              backgroundColor: activeView === 'cards' ? '#0aa0e8' : 'transparent',
+              color: activeView === 'cards' ? '#ffffff' : '#6e768e',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🗂️ Cards View
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView('sheet')}
+            style={{
+              padding: '5px 16px',
+              borderRadius: '9999px',
+              fontSize: '11.5px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: activeView === 'sheet' ? '#6c56db' : 'transparent',
+              color: activeView === 'sheet' ? '#ffffff' : '#6e768e',
+              transition: 'all 0.15s ease'
             }}
           >
             📋 Excel Spreadsheet ({activePeriodObj?.period_label})
@@ -568,14 +614,15 @@ export default function HostelSpreadsheetEntry({
             type="button"
             onClick={() => setActiveView('multi_month')}
             style={{
-              padding: '4px 14px',
-              borderRadius: '6px',
+              padding: '5px 16px',
+              borderRadius: '9999px',
               fontSize: '11.5px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeView === 'multi_month' ? '#00a2e8' : 'transparent',
-              color: activeView === 'multi_month' ? '#ffffff' : '#64748b'
+              backgroundColor: activeView === 'multi_month' ? '#6c56db' : 'transparent',
+              color: activeView === 'multi_month' ? '#ffffff' : '#6e768e',
+              transition: 'all 0.15s ease'
             }}
           >
             📊 Multi-Month Ledger View
@@ -585,15 +632,15 @@ export default function HostelSpreadsheetEntry({
 
       {/* 4. FORMULA BAR RIBBON */}
       <div style={{
-        padding: '7px 20px',
+        padding: '8px 22px',
         backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid #edf0f8',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
         fontSize: '12px'
       }}>
-        <div style={{ fontWeight: '800', color: '#00a2e8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ fontWeight: '800', color: '#6c56db', display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span>fx</span>
         </div>
         <div style={{ height: '14px', width: '1px', backgroundColor: '#e2e8f0' }} />

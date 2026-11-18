@@ -64,7 +64,7 @@ export default function MasterDataPage({
   setNewMonthForm,
   handleStartDateChange,
   handleAddNewMonth,
-  moduleName = 'Food & Dining'
+  moduleName = 'Food'
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -73,8 +73,8 @@ export default function MasterDataPage({
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        borderBottom: '1px solid #eef2f6',
+        gap: '10px',
+        borderBottom: '1px solid #edf0f8',
         paddingBottom: '14px',
         flexWrap: 'wrap'
       }}>
@@ -84,19 +84,20 @@ export default function MasterDataPage({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '7px 18px',
+            gap: '8px',
+            padding: '8px 22px',
             borderRadius: '9999px',
             fontSize: '12.5px',
-            fontWeight: masterFoodView === 'cost_heads' ? '700' : '600',
-            backgroundColor: masterFoodView === 'cost_heads' ? '#4f46e5' : '#ffffff',
-            color: masterFoodView === 'cost_heads' ? '#ffffff' : '#475569',
-            border: masterFoodView === 'cost_heads' ? '1px solid #4f46e5' : '1px solid #cbd5e1',
+            fontWeight: masterFoodView === 'cost_heads' ? '800' : '600',
+            backgroundColor: masterFoodView === 'cost_heads' ? '#6c56db' : '#ffffff',
+            color: masterFoodView === 'cost_heads' ? '#ffffff' : '#6e768e',
+            border: masterFoodView === 'cost_heads' ? '1px solid #6c56db' : '1px solid #edf0f8',
             cursor: 'pointer',
-            boxShadow: masterFoodView === 'cost_heads' ? '0 2px 6px rgba(79,70,229,0.28)' : 'none'
+            boxShadow: masterFoodView === 'cost_heads' ? '0 4px 14px rgba(108,86,219,0.32)' : 'none',
+            transition: 'all 0.15s ease'
           }}
         >
-          <SlidersHorizontal size={14} />
+          <SlidersHorizontal size={14} color={masterFoodView === 'cost_heads' ? '#ff6088' : '#8f9bb3'} />
           <span>{moduleName === 'Hostel' ? 'Hostel Parameters & Template' : moduleName === 'Transport' ? 'Transport Fleet Parameters & Template' : `Categories & Cost Heads (${costHeadsList.length} Items)`}</span>
         </button>
 
@@ -106,19 +107,20 @@ export default function MasterDataPage({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '7px 18px',
+            gap: '8px',
+            padding: '8px 22px',
             borderRadius: '9999px',
             fontSize: '12.5px',
-            fontWeight: masterFoodView === 'periods' ? '700' : '600',
-            backgroundColor: masterFoodView === 'periods' ? '#4f46e5' : '#ffffff',
-            color: masterFoodView === 'periods' ? '#ffffff' : '#475569',
-            border: masterFoodView === 'periods' ? '1px solid #4f46e5' : '1px solid #cbd5e1',
+            fontWeight: masterFoodView === 'periods' ? '800' : '600',
+            backgroundColor: masterFoodView === 'periods' ? '#6c56db' : '#ffffff',
+            color: masterFoodView === 'periods' ? '#ffffff' : '#6e768e',
+            border: masterFoodView === 'periods' ? '1px solid #6c56db' : '1px solid #edf0f8',
             cursor: 'pointer',
-            boxShadow: masterFoodView === 'periods' ? '0 2px 6px rgba(79,70,229,0.28)' : 'none'
+            boxShadow: masterFoodView === 'periods' ? '0 4px 14px rgba(108,86,219,0.32)' : 'none',
+            transition: 'all 0.15s ease'
           }}
         >
-          <Calendar size={14} />
+          <Calendar size={14} color={masterFoodView === 'periods' ? '#ff6088' : '#8f9bb3'} />
           <span>Monthly Billing Cycles ({computedMatrix?.periods?.length || 0} Months)</span>
         </button>
 
@@ -128,19 +130,20 @@ export default function MasterDataPage({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '7px 18px',
+            gap: '8px',
+            padding: '8px 22px',
             borderRadius: '9999px',
             fontSize: '12.5px',
-            fontWeight: masterFoodView === 'formulas' ? '700' : '600',
-            backgroundColor: masterFoodView === 'formulas' ? '#4f46e5' : '#ffffff',
-            color: masterFoodView === 'formulas' ? '#ffffff' : '#475569',
-            border: masterFoodView === 'formulas' ? '1px solid #4f46e5' : '1px solid #cbd5e1',
+            fontWeight: masterFoodView === 'formulas' ? '800' : '600',
+            backgroundColor: masterFoodView === 'formulas' ? '#6c56db' : '#ffffff',
+            color: masterFoodView === 'formulas' ? '#ffffff' : '#6e768e',
+            border: masterFoodView === 'formulas' ? '1px solid #6c56db' : '1px solid #edf0f8',
             cursor: 'pointer',
-            boxShadow: masterFoodView === 'formulas' ? '0 2px 6px rgba(79,70,229,0.28)' : 'none'
+            boxShadow: masterFoodView === 'formulas' ? '0 4px 14px rgba(108,86,219,0.32)' : 'none',
+            transition: 'all 0.15s ease'
           }}
         >
-          <Calculator size={14} />
+          <Calculator size={14} color={masterFoodView === 'formulas' ? '#ff6088' : '#8f9bb3'} />
           <span>📐 Category Formulas & Functions</span>
         </button>
       </div>

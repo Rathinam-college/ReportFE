@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatINR } from '../../utils/formatters';
-import { Plus } from 'lucide-react';
+import { Plus, Copy, Lock, Unlock, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import MatrixTable from './MatrixTable';
 import AddMonthModal from './AddMonthModal';
 
@@ -66,7 +66,7 @@ export default function DataEntryPage({
           Loading Operational Data Entry...
         </h3>
         <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px 0', textAlign: 'center' }}>
-          Fetching monthly billing sheets and category balances for {selectedModule === 'food' ? 'Food & Dining' : selectedModule === 'hostel' ? 'Hostel' : 'Transport'}
+          Fetching monthly billing sheets and category balances for {selectedModule === 'food' ? 'Food' : selectedModule === 'hostel' ? 'Hostel' : 'Transport'}
         </p>
         {fetchData && (
           <button
@@ -93,8 +93,8 @@ export default function DataEntryPage({
     );
   }
 
-  const moduleLabel = selectedModule === 'food' ? 'Food & Dining Operations' : selectedModule === 'hostel' ? 'Hostel Resident Operations' : 'Transport & Fleet Operations';
-  const matrixTitle = selectedModule === 'food' ? 'Food & Dining Expense Matrix' : selectedModule === 'hostel' ? 'Hostel Operations & Expense Matrix' : 'Transport Fleet Operations & Expense Matrix';
+  const moduleLabel = selectedModule === 'food' ? 'Food Operations' : selectedModule === 'hostel' ? 'Hostel Resident Operations' : 'Transport & Fleet Operations';
+  const matrixTitle = selectedModule === 'food' ? 'Food Expense Matrix' : selectedModule === 'hostel' ? 'Hostel Operations & Expense Matrix' : 'Transport Fleet Operations & Expense Matrix';
 
   const periods = computedMatrix.periods || [];
   const currentIdx = periods.findIndex(p => p.id === editingPeriodId);
@@ -102,63 +102,82 @@ export default function DataEntryPage({
   const isClosed = !!activePeriodObj?.is_closed;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       
-      {/* Top Utility Bar (Lock & Clone actions) */}
+      {/* Top Utility Bar (Lock & Clone actions - Images 2 & 5 Pill Style) */}
       <div style={{
         display: 'flex',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        gap: '8px'
+        gap: '10px'
       }}>
         <button
           type="button"
           onClick={handleCloneFromPrev}
           style={{
-            padding: '6px 14px',
-            borderRadius: '6px',
+            padding: '7px 16px',
+            borderRadius: '9999px',
             backgroundColor: '#ffffff',
             border: '1px solid #cbd5e1',
             color: '#334155',
-            fontSize: '12px',
-            fontWeight: '600',
+            fontSize: '12.5px',
+            fontWeight: '700',
             cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.15s ease'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
         >
-          Clone from Prev
+          <Copy size={13} color="#64748b" />
+          <span>Clone from Prev</span>
         </button>
 
         <button
           type="button"
           onClick={handleToggleLock}
           style={{
-            padding: '6px 14px',
-            borderRadius: '6px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
-            color: '#334155',
-            fontSize: '12px',
-            fontWeight: '600',
+            padding: '7px 16px',
+            borderRadius: '9999px',
+            backgroundColor: isClosed ? '#fef2f2' : '#ffffff',
+            border: `1px solid ${isClosed ? '#fecaca' : '#cbd5e1'}`,
+            color: isClosed ? '#dc2626' : '#334155',
+            fontSize: '12.5px',
+            fontWeight: '700',
             cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.15s ease'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
-          {isClosed ? 'Unlock Month' : 'Lock Month'}
+          {isClosed ? <Unlock size={13} color="#dc2626" /> : <Lock size={13} color="#64748b" />}
+          <span>{isClosed ? 'Unlock Month' : 'Lock Month'}</span>
         </button>
       </div>
 
       {entryMessage && (
         <div style={{
-          padding: '10px 16px',
-          borderRadius: '8px',
+          padding: '12px 18px',
+          borderRadius: '14px',
           fontSize: '13px',
           fontWeight: '600',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
           backgroundColor: entryMessage.type === 'success' ? '#f0fdf4' : '#fef2f2',
           color: entryMessage.type === 'success' ? '#166534' : '#991b1b',
-          border: `1px solid ${entryMessage.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+          border: `1px solid ${entryMessage.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
-          {entryMessage.text}
+          {entryMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+          <span>{entryMessage.text}</span>
         </div>
       )}
 
@@ -188,6 +207,8 @@ export default function DataEntryPage({
           savingBatch={savingBatch}
           isDirty={isDirty}
           fetchData={fetchData}
+          handleCloneFromPrev={handleCloneFromPrev}
+          handleToggleLock={handleToggleLock}
         />
       </div>
 

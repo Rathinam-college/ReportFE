@@ -175,6 +175,8 @@ export const CANONICAL_TRANSPORT_PARAMETERS = [
   { id: 47, s_no: '37', param_key: 'cab_billing', param_name: 'Cab request Billing', section: 'Student Transport Fee Analytics', section_order: 7, display_order: 47, input_type: 'cost', unit: 'INR (₹)' }
 ];
 
+import TransportCardSpreadsheet from './cards/TransportCardSpreadsheet';
+
 export default function TransportSpreadsheetEntry({
   activePeriodObj,
   computedMatrix,
@@ -182,10 +184,12 @@ export default function TransportSpreadsheetEntry({
   setEditingPeriodId,
   transportCensusDraft = {},
   handleTransportCensusChange,
-  fetchData
+  fetchData,
+  handleCloneFromPrev,
+  handleToggleLock
 }) {
   const [activeBranch, setActiveBranch] = useState('RPS');
-  const [activeView, setActiveView] = useState('sheet'); // 'sheet' (Exact single-month spreadsheet) or 'multi_month'
+  const [activeView, setActiveView] = useState('cards'); // 'cards' (card-based dashboard), 'sheet' (Exact single-month spreadsheet) or 'multi_month'
   const [showFormulaDetails, setShowFormulaDetails] = useState(false);
   const [parameters, setParameters] = useState(CANONICAL_TRANSPORT_PARAMETERS);
   const [loadingParams, setLoadingParams] = useState(true);
@@ -820,21 +824,46 @@ export default function TransportSpreadsheetEntry({
     return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
   };
 
+  if (activeView === 'cards') {
+    return (
+      <TransportCardSpreadsheet
+        periods={periods}
+        editingPeriodId={editingPeriodId}
+        setEditingPeriodId={setEditingPeriodId}
+        activePeriodObj={activePeriodObj}
+        isClosed={isClosed}
+        branches={TRANSPORT_BRANCHES}
+        activeBranch={activeBranch}
+        setActiveBranch={setActiveBranch}
+        activeMetrics={activeMetrics}
+        getParamRawValue={getParamRawValue}
+        handleParamChange={handleCellEdit}
+        handleSaveActiveBranch={handleSaveActiveBranch}
+        isSaving={isSaving}
+        localMessage={localMessage}
+        handleCopyFromPreviousMonth={handleCopyFromPreviousMonth}
+        handleToggleLock={handleToggleLock}
+        viewMode={activeView}
+        setViewMode={setActiveView}
+      />
+    );
+  }
+
   return (
     <div style={{
       backgroundColor: '#ffffff',
-      borderRadius: '12px',
-      border: '2px solid #00a2e8',
-      boxShadow: '0 4px 16px rgba(0, 162, 232, 0.08)',
+      borderRadius: '24px',
+      border: '1px solid #edf0f8',
+      boxShadow: '0 4px 20px rgba(110, 80, 180, 0.05)',
       overflow: 'hidden',
-      marginBottom: '24px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      marginBottom: '24px'
     }}>
       
       {/* 1. TOP TOOLBAR & HEADER */}
       <div style={{
-        backgroundColor: '#00a2e8',
-        padding: '14px 22px',
+        background: 'linear-gradient(135deg, #0aa0e8 0%, #0670c9 100%)',
+        padding: '18px 24px',
+        borderRadius: '20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -846,13 +875,13 @@ export default function TransportSpreadsheetEntry({
           <div style={{
             width: '40px',
             height: '40px',
-            borderRadius: '10px',
+            borderRadius: '12px',
             backgroundColor: '#ffffff',
-            color: '#00a2e8',
+            color: '#6c56db',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
           }}>
             <Bus size={22} />
           </div>
@@ -866,7 +895,7 @@ export default function TransportSpreadsheetEntry({
                 fontWeight: '700',
                 backgroundColor: 'rgba(255, 255, 255, 0.25)',
                 padding: '2px 8px',
-                borderRadius: '12px',
+                borderRadius: '9999px',
                 color: '#ffffff'
               }}>
                 Excel Sheet Model
@@ -919,6 +948,8 @@ export default function TransportSpreadsheetEntry({
               borderRadius: '6px',
               backgroundColor: 'rgba(255, 255, 255, 0.18)',
               border: '1px solid rgba(255, 255, 255, 0.35)',
+              borderRadius: '9999px',
+              padding: '7px 16px',
               color: '#ffffff',
               fontSize: '12px',
               fontWeight: '700',
@@ -937,16 +968,16 @@ export default function TransportSpreadsheetEntry({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '7px 18px',
-              borderRadius: '6px',
-              backgroundColor: '#ffffff',
+              padding: '8px 22px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
               border: 'none',
-              color: '#00a2e8',
+              color: '#ffffff',
               fontSize: '13px',
               fontWeight: '800',
               cursor: (isSaving || isClosed || activeBranch === 'all') ? 'not-allowed' : 'pointer',
               opacity: (isSaving || isClosed || activeBranch === 'all') ? 0.6 : 1,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+              boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
               transition: 'all 0.15s ease'
             }}
           >
@@ -1056,42 +1087,59 @@ export default function TransportSpreadsheetEntry({
                 type="button"
                 onClick={() => setEditingPeriodId(p.id)}
                 style={{
-                  padding: '5px 14px',
-                  borderRadius: '20px',
+                  padding: '6px 18px',
+                  borderRadius: '9999px',
                   fontSize: '12px',
-                  fontWeight: '800',
-                  border: isSel ? '2px solid #00a2e8' : '1px solid #cbd5e1',
-                  backgroundColor: isSel ? '#00a2e8' : '#ffffff',
-                  color: isSel ? '#ffffff' : '#334155',
+                  fontWeight: isSel ? '800' : '600',
+                  border: 'none',
+                  backgroundColor: isSel ? '#0aa0e8' : '#ffffff',
+                  color: isSel ? '#ffffff' : '#6e768e',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: isSel ? '0 2px 4px rgba(0, 162, 232, 0.25)' : 'none',
+                  boxShadow: isSel ? '0 4px 12px rgba(10, 160, 232, 0.35)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
               >
                 <span>{p.period_label}</span>
-                {isSel && <Check size={12} color="#ffffff" />}
+                {isSel && <span style={{ fontSize: '11px', color: '#ffffff' }}>★</span>}
               </button>
             );
           })}
         </div>
 
         {/* View Mode Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '9999px', border: '1px solid #edf0f8' }}>
           <button
             type="button"
-            onClick={() => setActiveView('sheet')}
+            onClick={() => setActiveView('cards')}
             style={{
-              padding: '5px 14px',
-              borderRadius: '6px',
+              padding: '5px 16px',
+              borderRadius: '9999px',
               fontSize: '12px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeView === 'sheet' ? '#00a2e8' : 'transparent',
-              color: activeView === 'sheet' ? '#ffffff' : '#64748b',
+              backgroundColor: activeView === 'cards' ? '#0aa0e8' : 'transparent',
+              color: activeView === 'cards' ? '#ffffff' : '#6e768e',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🗂️ Cards View
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView('sheet')}
+            style={{
+              padding: '5px 16px',
+              borderRadius: '9999px',
+              fontSize: '12px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: activeView === 'sheet' ? '#6c56db' : 'transparent',
+              color: activeView === 'sheet' ? '#ffffff' : '#6e768e',
               transition: 'all 0.15s ease'
             }}
           >
@@ -1101,14 +1149,14 @@ export default function TransportSpreadsheetEntry({
             type="button"
             onClick={() => setActiveView('multi_month')}
             style={{
-              padding: '5px 14px',
-              borderRadius: '6px',
+              padding: '5px 16px',
+              borderRadius: '9999px',
               fontSize: '12px',
               fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeView === 'multi_month' ? '#00a2e8' : 'transparent',
-              color: activeView === 'multi_month' ? '#ffffff' : '#64748b',
+              backgroundColor: activeView === 'multi_month' ? '#6c56db' : 'transparent',
+              color: activeView === 'multi_month' ? '#ffffff' : '#6e768e',
               transition: 'all 0.15s ease'
             }}
           >
@@ -1682,7 +1730,7 @@ export default function TransportSpreadsheetEntry({
         color: '#64748b'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Zap size={15} color="#00a2e8" />
+          <Zap size={15} color="#6c56db" />
           <span>
             Connected to <strong>Transport Master Data</strong> ({parameters.length} active parameters). Any parameter or formula added in Master Data is automatically calculated here.
           </span>

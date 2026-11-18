@@ -115,9 +115,9 @@ export default function LoginPage({
         <div style={{
           width: '100%',
           backgroundColor: '#ffffff',
-          borderRadius: '20px',
+          borderRadius: '28px',
           padding: '36px 32px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+          boxShadow: '0 30px 80px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1)',
           boxSizing: 'border-box'
         }}>
 
@@ -126,15 +126,15 @@ export default function LoginPage({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '4px 10px',
+            padding: '5px 12px',
             borderRadius: '9999px',
-            backgroundColor: '#eef2ff',
-            color: '#4f46e5',
+            backgroundColor: '#efeefc',
+            color: '#6c56db',
             fontSize: '11.5px',
             fontWeight: '700',
             marginBottom: '14px'
           }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4f46e5' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#6c56db' }} />
             <span>Campus Operations & Reporting</span>
           </div>
 
@@ -148,7 +148,7 @@ export default function LoginPage({
           {loginError && (
             <div style={{
               padding: '10px 14px',
-              borderRadius: '8px',
+              borderRadius: '12px',
               backgroundColor: '#fef2f2',
               border: '1px solid #fecaca',
               color: '#991b1b',
@@ -175,9 +175,9 @@ export default function LoginPage({
                   style={{
                     width: '100%',
                     padding: '11px 14px 11px 38px',
-                    borderRadius: '8px',
-                    backgroundColor: '#ffffff',
-                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '12px',
+                    backgroundColor: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
                     color: '#0f172a',
                     fontSize: '13.5px',
                     fontWeight: '500',
@@ -185,8 +185,8 @@ export default function LoginPage({
                     boxSizing: 'border-box',
                     transition: 'all 0.15s ease'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#6366f1'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                  onFocus={(e) => e.target.style.borderColor = '#6c56db'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   required
                 />
                 <User size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
@@ -205,7 +205,7 @@ export default function LoginPage({
                   style={{
                     fontSize: '12px',
                     fontWeight: '600',
-                    color: '#4f46e5',
+                    color: '#6c56db',
                     background: 'none',
                     border: 'none',
                     padding: 0,
@@ -225,17 +225,17 @@ export default function LoginPage({
                   style={{
                     width: '100%',
                     padding: '11px 40px 11px 38px',
-                    borderRadius: '8px',
-                    backgroundColor: '#ffffff',
-                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '12px',
+                    backgroundColor: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
                     color: '#0f172a',
                     fontSize: '13.5px',
                     outline: 'none',
                     boxSizing: 'border-box',
                     transition: 'all 0.15s ease'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#6366f1'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                  onFocus={(e) => e.target.style.borderColor = '#6c56db'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   required
                 />
                 <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
@@ -267,7 +267,7 @@ export default function LoginPage({
                 id="keepSigned"
                 checked={keepSigned}
                 onChange={(e) => setKeepSigned(e.target.checked)}
-                style={{ width: '15px', height: '15px', accentColor: '#4f46e5', cursor: 'pointer' }}
+                style={{ width: '15px', height: '15px', accentColor: '#6c56db', cursor: 'pointer' }}
               />
               <label htmlFor="keepSigned" style={{ fontSize: '12.5px', color: '#475569', cursor: 'pointer' }}>
                 Keep me signed in on this device
@@ -280,9 +280,9 @@ export default function LoginPage({
               disabled={loginLoading}
               style={{
                 marginTop: '6px',
-                padding: '12px',
-                borderRadius: '10px',
-                backgroundColor: '#4f46e5',
+                padding: '13px',
+                borderRadius: '9999px',
+                background: 'linear-gradient(135deg, #6c52d6 0%, #5439ba 100%)',
                 color: '#ffffff',
                 fontSize: '14px',
                 fontWeight: '700',
@@ -292,11 +292,9 @@ export default function LoginPage({
                 gap: '8px',
                 cursor: loginLoading ? 'not-allowed' : 'pointer',
                 border: 'none',
-                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
+                boxShadow: '0 8px 24px rgba(108, 86, 219, 0.4)',
                 transition: 'all 0.15s ease'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#4338ca'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f46e5'}
             >
               <span>{loginLoading ? 'Signing In...' : 'Sign In'}</span>
               <ArrowRight size={16} />
