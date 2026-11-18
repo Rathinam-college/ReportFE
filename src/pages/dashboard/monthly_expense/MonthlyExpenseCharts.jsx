@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Info } from 'lucide-react';
 
 export default function MonthlyExpenseCharts({
@@ -14,13 +14,17 @@ export default function MonthlyExpenseCharts({
   monthPalette = ['#6c5ce7', '#ff6b9d', '#1fbf8f', '#3fb8ff', '#f5a524'],
   categoryPalette = ['#6c5ce7', '#ff6b9d', '#1fbf8f', '#3fb8ff', '#f5a524']
 }) {
+  const containerRef = useRef(null);
   const [tooltip, setTooltip] = useState(null); // { x, y, title, subtitle, value, percent }
 
   const handleMouseMove = (e, info) => {
-    const rect = e.currentTarget.getBoundingClientRect();
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
     setTooltip({
-      x: e.clientX - rect.left + 15,
-      y: e.clientY - rect.top - 10,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      containerWidth: rect.width,
+      containerHeight: rect.height,
       ...info
     });
   };
@@ -991,7 +995,7 @@ export default function MonthlyExpenseCharts({
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
       {chartModel === 'clustered_columns' && renderClusteredColumns()}
       {chartModel === 'stacked_columns' && renderStackedColumns()}
       {chartModel === 'trend_lines' && renderTrendLines()}
@@ -1001,41 +1005,56 @@ export default function MonthlyExpenseCharts({
       {chartModel === 'heatmap_grid' && renderHeatmapGrid()}
       {chartModel === 'ranking_bars' && renderRankingBars()}
 
-      {/* Interactive Tooltip Card */}
-      {tooltip && (
-        <div
-          style={{
-            position: 'absolute',
-            left: `${tooltip.x}px`,
-            top: `${tooltip.y}px`,
-            backgroundColor: '#0f172a',
-            color: '#ffffff',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            fontSize: '11.5px',
-            pointerEvents: 'none',
-            zIndex: 100,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            transform: 'translate(-50%, -100%)',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
-            {tooltip.color && (
-              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: tooltip.color }} />
-            )}
-            <span>{tooltip.title}</span>
-          </div>
-          {tooltip.subtitle && (
-            <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px' }}>
-              {tooltip.subtitle}
+      {/* Interactive Tooltip Card - Follows mouse directly at cursor */}
+      {tooltip && (() => {
+        const cWidth = tooltip.containerWidth || 800;
+        let transformX = '-50%';
+        if (tooltip.x < 110) {
+          transformX = '10px';
+        } else if (tooltip.x > cWidth - 110) {
+          transformX = 'calc(-100% - 10px)';
+        }
+
+        const isNearTop = tooltip.y < 70;
+        const topY = isNearTop ? tooltip.y + 16 : tooltip.y - 12;
+        const transformY = isNearTop ? '0%' : '-100%';
+
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: `${tooltip.x}px`,
+              top: `${topY}px`,
+              backgroundColor: '#0f172a',
+              color: '#ffffff',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              fontSize: '11.5px',
+              pointerEvents: 'none',
+              zIndex: 100,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              transform: `translate(${transformX}, ${transformY})`,
+              whiteSpace: 'nowrap',
+              border: '1px solid #334155'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
+              {tooltip.color && (
+                <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: tooltip.color }} />
+              )}
+              <span>{tooltip.title}</span>
             </div>
-          )}
-          <div style={{ fontSize: '13px', fontWeight: '800', marginTop: '4px', color: '#38bdf8' }}>
-            {tooltip.value}
+            {tooltip.subtitle && (
+              <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px' }}>
+                {tooltip.subtitle}
+              </div>
+            )}
+            <div style={{ fontSize: '13px', fontWeight: '800', marginTop: '4px', color: '#38bdf8' }}>
+              {tooltip.value}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
