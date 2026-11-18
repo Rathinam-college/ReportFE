@@ -27,6 +27,7 @@ import ComparisonTool from './ComparisonTool';
 import HostelDashboardDataTable from './HostelDashboardDataTable';
 import TransportDashboardDataTable from './TransportDashboardDataTable';
 import MonthlyExpenseSection from './monthly_expense/MonthlyExpenseSection';
+import HostelOperationsDashboard from './hostel/HostelOperationsDashboard';
 
 export default function DashboardPage({
   selectedModule = 'food',
@@ -525,6 +526,24 @@ export default function DashboardPage({
       window.print();
     }
   };
+
+  // Dedicated Enterprise Hostel Resident Operations Management Dashboard
+  if (currentModule === 'hostel') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
+        <HostelOperationsDashboard
+          computedMatrix={effectiveMatrix}
+          periods={periods}
+          categories={categories}
+          activePeriod={activePeriod}
+          setActivePeriod={setActivePeriod}
+          onOpenDataEntry={onOpenDataEntry}
+          handleExportReport={handleExportReport}
+          remarksDraft={remarksDraft}
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
