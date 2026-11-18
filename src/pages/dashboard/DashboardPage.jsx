@@ -685,7 +685,7 @@ export default function DashboardPage({
       />
 
       {/* ========================================================================= */}
-      {/* LINE 3 (LAST): TOTAL COUNT SHOW                                           */}
+      {/* LINE 3 (LAST): EXECUTIVE FINANCIAL TOTALS SUMMARY                         */}
       {/* ========================================================================= */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
@@ -917,7 +917,7 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {periods.length > 0 ? `Total Count • ${periods.length}-Month Spend` : 'Total Expenditure'}
+                  {periods.length > 0 ? `Total Expenditure • ${periods.length}-Month Spend` : 'Total Expenditure'}
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(grandTotal)}
@@ -938,7 +938,7 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Count` : 'Current Cycle Total'}
+                  {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Spend` : 'Current Cycle Total'}
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(latestMonthTotal)}
