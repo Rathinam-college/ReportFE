@@ -29,6 +29,42 @@ export default function MonthlyExpenseCharts({
     setTooltip(null);
   };
 
+  // Smart text wrapping for category labels to prevent collisions and overlays
+  const wrapCategoryText = (name, maxChars = 14, maxLines = 2) => {
+    if (!name) return [''];
+    if (name.length <= maxChars) return [name];
+
+    const formatted = String(name).replace(/\//g, '/ ').replace(/&/g, '& ');
+    const tokens = formatted.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let current = '';
+
+    for (const tok of tokens) {
+      const testLine = current ? (current + (current.endsWith('/') ? '' : ' ') + tok) : tok;
+      if (!current) {
+        current = tok;
+      } else if (testLine.length <= maxChars) {
+        current = testLine;
+      } else {
+        lines.push(current);
+        current = tok;
+      }
+    }
+    if (current) {
+      lines.push(current);
+    }
+
+    return lines.slice(0, maxLines).map((line, idx) => {
+      if (idx === maxLines - 1 && lines.length > maxLines) {
+        return line.length > maxChars - 1 ? line.slice(0, maxChars - 2) + '…' : line + '…';
+      }
+      if (line.length > maxChars + 2) {
+        return line.slice(0, maxChars) + '…';
+      }
+      return line;
+    });
+  };
+
   // 1. Clustered Columns Model
   const renderClusteredColumns = () => {
     let maxVal = 0;
@@ -43,11 +79,11 @@ export default function MonthlyExpenseCharts({
     const yMax = maxVal * 1.15;
 
     const width = 880;
-    const height = 340;
+    const height = 360;
     const padLeft = 75;
     const padRight = 30;
     const padTop = 30;
-    const padBottom = 65;
+    const padBottom = 75;
     const chartW = width - padLeft - padRight;
     const chartH = height - padTop - padBottom;
 
@@ -94,19 +130,30 @@ export default function MonthlyExpenseCharts({
           const cId = cat.category_id || cat.id;
           const clusterCenterX = padLeft + cIdx * clusterW + clusterW / 2;
           const clusterStartX = clusterCenterX - (monthCount * barW) / 2;
+          const rawName = cat.category_name || cat.name || '';
+          const maxChars = Math.max(11, Math.floor(clusterW / 8));
+          const lines = wrapCategoryText(rawName, maxChars, 2);
 
           return (
             <g key={cId || cIdx}>
-              {/* Category Label */}
+              {/* Category Label (Multi-line, no collision or overlay) */}
               <text
                 x={clusterCenterX}
-                y={height - padBottom + 20}
+                y={height - padBottom + 18}
                 textAnchor="middle"
-                fontSize="11.5"
+                fontSize={lines.length > 1 ? "10.5" : "11.5"}
                 fontWeight="700"
                 fill="#141a33"
               >
-                {cat.category_name || cat.name}
+                {lines.map((line, lIdx) => (
+                  <tspan
+                    key={lIdx}
+                    x={clusterCenterX}
+                    dy={lIdx === 0 ? 0 : 13}
+                  >
+                    {line}
+                  </tspan>
+                ))}
               </text>
 
               {months.map((m, mIdx) => {
@@ -705,21 +752,32 @@ export default function MonthlyExpenseCharts({
           const a = i * angleStep - Math.PI / 2;
           const spokeX = cx + radius * Math.cos(a);
           const spokeY = cy + radius * Math.sin(a);
-          const labelX = cx + (radius + 22) * Math.cos(a);
-          const labelY = cy + (radius + 16) * Math.sin(a);
+          const labelX = cx + (radius + 24) * Math.cos(a);
+          const labelY = cy + (radius + 18) * Math.sin(a);
+          const rawName = cat.category_name || cat.name || '';
+          const radarLines = wrapCategoryText(rawName, 13, 2);
+          const align = Math.abs(Math.cos(a)) < 0.25 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end';
 
           return (
             <g key={cat.category_id || i}>
               <line x1={cx} y1={cy} x2={spokeX} y2={spokeY} stroke="#e2e8f0" strokeWidth="1" />
               <text
                 x={labelX}
-                y={labelY + 4}
-                textAnchor={Math.abs(Math.cos(a)) < 0.2 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end'}
-                fontSize="11"
+                y={labelY - (radarLines.length > 1 ? 5 : 0)}
+                textAnchor={align}
+                fontSize="10"
                 fontWeight="700"
                 fill="#141a33"
               >
-                {cat.category_name || cat.name}
+                {radarLines.map((line, lIdx) => (
+                  <tspan
+                    key={lIdx}
+                    x={labelX}
+                    dy={lIdx === 0 ? 0 : 12}
+                  >
+                    {line}
+                  </tspan>
+                ))}
               </text>
             </g>
           );
