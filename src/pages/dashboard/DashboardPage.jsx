@@ -48,6 +48,9 @@ export default function DashboardPage({
 
   const currentModule = selectedModule || 'food';
 
+  const [internalMatrix, setInternalMatrix] = useState(null);
+  const [matrixLoading, setMatrixLoading] = useState(false);
+
   // Ensure effectiveMatrix matches currentModule; otherwise fetch immediately
   const isMatrixMatchingCurrent = 
     computedMatrix?.periods && 
