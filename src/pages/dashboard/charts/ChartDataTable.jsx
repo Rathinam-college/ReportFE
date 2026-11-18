@@ -918,17 +918,7 @@ export default function ChartDataTable({
               formatCompact={formatIndianCompact}
               formatFull={formatIndianFull}
             />
-          ) : (
-            <PersonStats
-              personRows={personRows}
-              censusData={activeCensusData}
-              selectedPeriod={selectedPeriod}
-              selectedPeriodLabel={selectedPeriodLabel}
-              grandTotal={currentGrandTotal}
-              formatCompact={formatIndianCompact}
-              formatFull={formatIndianFull}
-            />
-          )}
+          ) : null}
 
           {/* 4. CATEGORY CARDS GRID: CSS grid repeat(auto-fill, minmax(310px, 1fr)), 14px gap */}
           <div
