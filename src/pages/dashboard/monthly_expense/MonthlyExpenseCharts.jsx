@@ -35,23 +35,42 @@ export default function MonthlyExpenseCharts({
   };
 
   // Smart text wrapping for category labels to prevent collisions and overlays
-  const wrapCategoryText = (name, maxChars = 14, maxLines = 2) => {
+  const wrapCategoryText = (name, maxChars = 16, maxLines = 2) => {
     if (!name) return [''];
-    if (name.length <= maxChars) return [name];
+    const cleanName = String(name).trim();
 
-    const formatted = String(name).replace(/\//g, '/ ').replace(/&/g, '& ');
+    // Domain-specific clean splits for known compound category names
+    const lower = cleanName.toLowerCase();
+    if (lower.includes('fc maintenance') || lower.includes('fc maintenance/')) {
+      return ['FC Maintenance', 'Power / Water / Veh'];
+    }
+    if (lower.includes('additional food') || lower.includes('event/')) {
+      return ['Event / Additional', 'Food Expenses'];
+    }
+    if (lower.includes('food material')) {
+      return ['Food Material'];
+    }
+    if (lower.includes('food labour') || lower.includes('food labor')) {
+      return ['Food Labour'];
+    }
+    if (lower.includes('food festival')) {
+      return ['Food Festival'];
+    }
+
+    if (cleanName.length <= maxChars) return [cleanName];
+
+    // General intelligent word wrapping for hostel/transport/custom categories
+    const formatted = cleanName.replace(/\//g, '/ ').replace(/&/g, '& ');
     const tokens = formatted.split(/\s+/).filter(Boolean);
     const lines = [];
     let current = '';
 
     for (const tok of tokens) {
-      const testLine = current ? (current + (current.endsWith('/') ? '' : ' ') + tok) : tok;
-      if (!current) {
-        current = tok;
-      } else if (testLine.length <= maxChars) {
-        current = testLine;
+      const candidate = current ? `${current} ${tok}` : tok;
+      if (candidate.length <= maxChars) {
+        current = candidate;
       } else {
-        lines.push(current);
+        if (current) lines.push(current);
         current = tok;
       }
     }
@@ -59,15 +78,13 @@ export default function MonthlyExpenseCharts({
       lines.push(current);
     }
 
-    return lines.slice(0, maxLines).map((line, idx) => {
-      if (idx === maxLines - 1 && lines.length > maxLines) {
-        return line.length > maxChars - 1 ? line.slice(0, maxChars - 2) + '…' : line + '…';
-      }
-      if (line.length > maxChars + 2) {
-        return line.slice(0, maxChars) + '…';
-      }
-      return line;
-    });
+    if (lines.length <= maxLines) return lines;
+
+    // Merge excess into last line with ellipsis
+    const result = lines.slice(0, maxLines - 1);
+    const last = lines.slice(maxLines - 1).join(' ');
+    result.push(last.length > maxChars ? last.slice(0, maxChars - 1) + '…' : last);
+    return result;
   };
 
   // 1. Clustered Columns Model
@@ -84,11 +101,11 @@ export default function MonthlyExpenseCharts({
     const yMax = maxVal * 1.15;
 
     const width = 880;
-    const height = 360;
+    const height = 385;
     const padLeft = 75;
     const padRight = 30;
     const padTop = 30;
-    const padBottom = 75;
+    const padBottom = 82;
     const chartW = width - padLeft - padRight;
     const chartH = height - padTop - padBottom;
 
@@ -136,17 +153,16 @@ export default function MonthlyExpenseCharts({
           const clusterCenterX = padLeft + cIdx * clusterW + clusterW / 2;
           const clusterStartX = clusterCenterX - (monthCount * barW) / 2;
           const rawName = cat.category_name || cat.name || '';
-          const maxChars = Math.max(11, Math.floor(clusterW / 8));
+          const maxChars = Math.max(12, Math.floor(clusterW / 8));
           const lines = wrapCategoryText(rawName, maxChars, 2);
+          const baseLabelY = height - padBottom + 20;
 
           return (
             <g key={cId || cIdx}>
-              {/* Category Label (Multi-line, no collision or overlay) */}
+              {/* Category Label (Multi-line with absolute coordinates, no collision or overlay) */}
               <text
-                x={clusterCenterX}
-                y={height - padBottom + 18}
                 textAnchor="middle"
-                fontSize={lines.length > 1 ? "10.5" : "11.5"}
+                fontSize={lines.length > 1 ? "11" : "12"}
                 fontWeight="700"
                 fill="#141a33"
               >
@@ -154,7 +170,7 @@ export default function MonthlyExpenseCharts({
                   <tspan
                     key={lIdx}
                     x={clusterCenterX}
-                    dy={lIdx === 0 ? 0 : 13}
+                    y={baseLabelY + lIdx * 15}
                   >
                     {line}
                   </tspan>
@@ -763,12 +779,12 @@ export default function MonthlyExpenseCharts({
           const radarLines = wrapCategoryText(rawName, 13, 2);
           const align = Math.abs(Math.cos(a)) < 0.25 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end';
 
+          const baseRadarY = labelY - (radarLines.length > 1 ? 6 : 0);
+
           return (
             <g key={cat.category_id || i}>
               <line x1={cx} y1={cy} x2={spokeX} y2={spokeY} stroke="#e2e8f0" strokeWidth="1" />
               <text
-                x={labelX}
-                y={labelY - (radarLines.length > 1 ? 5 : 0)}
                 textAnchor={align}
                 fontSize="10"
                 fontWeight="700"
@@ -778,7 +794,7 @@ export default function MonthlyExpenseCharts({
                   <tspan
                     key={lIdx}
                     x={labelX}
-                    dy={lIdx === 0 ? 0 : 12}
+                    y={baseRadarY + lIdx * 12}
                   >
                     {line}
                   </tspan>

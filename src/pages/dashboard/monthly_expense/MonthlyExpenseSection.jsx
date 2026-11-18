@@ -352,13 +352,13 @@ export default function MonthlyExpenseSection({
         formatValue={formatValue}
       />
 
-      {/* 3. Main Panel (Card 22px radius, 1px border) */}
+      {/* 3. Main Panel */}
       <div
         ref={sectionRef}
         style={{
-          backgroundColor: '#ffffff',
+          backgroundColor: isFullScreen ? '#f8fafc' : '#ffffff',
           borderRadius: isFullScreen ? '0' : '22px',
-          padding: isFullScreen ? '24px 32px' : '22px 24px',
+          padding: isFullScreen ? '28px 36px' : '22px 24px',
           border: isFullScreen ? 'none' : '1px solid #e4e8f5',
           boxShadow: isFullScreen ? 'none' : '0 2px 10px rgba(20, 26, 51, 0.03)',
           display: 'flex',
@@ -401,64 +401,70 @@ export default function MonthlyExpenseSection({
           models={CHART_MODELS}
         />
 
-        {/* 3c. Chart Title, Model Description & Maximize Action */}
+        {/* 3c. Chart Title, Model Description */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '10px',
-          padding: '2px 4px'
+          padding: '2px 4px',
+          flexShrink: 0
         }}>
           <div>
-            <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#141a33', margin: 0 }}>
+            <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
               Monthly Expense by Category • {currentModelObj.name}
             </h3>
-            <p style={{ fontSize: '12px', color: '#6a7392', margin: '3px 0 0 0' }}>
+            <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
               {currentModelObj.desc}
             </p>
           </div>
 
-          {/* Maximize / Exit Fullscreen Button directly on Chart Header */}
-          <button
-            type="button"
-            onClick={toggleFullScreen}
-            title={isFullScreen ? 'Exit Full Screen (Esc)' : `Maximize ${currentModelObj.name} Chart`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              backgroundColor: isFullScreen ? '#5b5bf0' : '#ffffff',
-              border: isFullScreen ? '1px solid #5b5bf0' : '1px solid #d5dcf0',
-              color: isFullScreen ? '#ffffff' : '#5b5bf0',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: isFullScreen ? '0 4px 14px rgba(91, 91, 240, 0.35)' : '0 1px 3px rgba(20,26,51,0.05)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            <span>{isFullScreen ? 'Exit Full Screen' : 'Maximize Chart'}</span>
-          </button>
+          {isFullScreen && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 12px',
+                borderRadius: '9999px',
+                backgroundColor: '#e0e7ff',
+                color: '#4338ca',
+                fontSize: '11px',
+                fontWeight: '700',
+                border: '1px solid #c7d2fe'
+              }}
+            >
+              <span>Full Screen View</span>
+              <span style={{
+                backgroundColor: '#ffffff',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontWeight: '800',
+                color: '#4338ca'
+              }}>
+                Esc
+              </span>
+            </div>
+          )}
         </div>
 
         {/* 3d. Chart Area in soft rounded container (18px radius) */}
         <div
           style={{
-            backgroundColor: '#fafbfe',
+            backgroundColor: '#ffffff',
             borderRadius: '18px',
-            border: '1px solid #eef1fb',
-            padding: isFullScreen ? '24px 30px' : '16px 20px',
+            border: '1px solid #e2e8f0',
+            padding: isFullScreen ? '28px 36px' : '16px 20px',
             overflowX: 'auto',
-            minHeight: isFullScreen ? '480px' : '340px',
+            minHeight: isFullScreen ? '500px' : '360px',
             flex: isFullScreen ? '1 1 auto' : 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            scrollbarWidth: 'thin'
+            scrollbarWidth: 'thin',
+            boxShadow: isFullScreen ? '0 4px 16px rgba(15, 23, 42, 0.04)' : 'none'
           }}
         >
           <MonthlyExpenseCharts
