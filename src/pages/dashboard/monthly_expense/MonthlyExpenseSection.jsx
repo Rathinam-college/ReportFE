@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   BarChart3, 
   Layers, 
@@ -7,7 +7,9 @@ import {
   PieChart, 
   Compass, 
   LayoutGrid, 
-  AlignLeft 
+  AlignLeft,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
 import MonthlyExpenseKpis from './MonthlyExpenseKpis';
@@ -47,6 +49,53 @@ export default function MonthlyExpenseSection({
   const [reportingCycle, setReportingCycle] = useState('all');
   const [unitMode, setUnitMode] = useState('full'); // 'full' | 'lakhs'
   const [showTable, setShowTable] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const sectionRef = useRef(null);
+
+  // Fullscreen toggle with native browser requestFullscreen + CSS fixed fallback
+  const toggleFullScreen = () => {
+    const nextState = !isFullScreen;
+    setIsFullScreen(nextState);
+
+    if (nextState) {
+      try {
+        if (sectionRef.current?.requestFullscreen) {
+          sectionRef.current.requestFullscreen().catch(() => {});
+        }
+      } catch (err) {}
+    } else {
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } catch (err) {}
+    }
+  };
+
+  // Sync with native Escape / fullscreenchange events
+  useEffect(() => {
+    const handleFsChange = () => {
+      if (!document.fullscreenElement && isFullScreen) {
+        setIsFullScreen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isFullScreen) {
+        setIsFullScreen(false);
+        try {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+        } catch (err) {}
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullScreen]);
 
   // Reset reporting cycle if the selected cycle does not exist in current periods
   useEffect(() => {
@@ -305,17 +354,27 @@ export default function MonthlyExpenseSection({
 
       {/* 3. Main Panel (Card 22px radius, 1px border) */}
       <div
+        ref={sectionRef}
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '22px',
-          padding: '22px 24px',
-          border: '1px solid #e4e8f5',
-          boxShadow: '0 2px 10px rgba(20, 26, 51, 0.03)',
+          borderRadius: isFullScreen ? '0' : '22px',
+          padding: isFullScreen ? '24px 32px' : '22px 24px',
+          border: isFullScreen ? 'none' : '1px solid #e4e8f5',
+          boxShadow: isFullScreen ? 'none' : '0 2px 10px rgba(20, 26, 51, 0.03)',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
           width: '100%',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          position: isFullScreen ? 'fixed' : 'relative',
+          top: isFullScreen ? 0 : 'auto',
+          left: isFullScreen ? 0 : 'auto',
+          right: isFullScreen ? 0 : 'auto',
+          bottom: isFullScreen ? 0 : 'auto',
+          zIndex: isFullScreen ? 99999 : 'auto',
+          maxHeight: isFullScreen ? '100vh' : 'none',
+          height: isFullScreen ? '100vh' : 'auto',
+          overflowY: isFullScreen ? 'auto' : 'visible'
         }}
       >
         {/* 3a. Control Bar */}
@@ -331,6 +390,8 @@ export default function MonthlyExpenseSection({
           onExportCSV={handleExportCSV}
           showTable={showTable}
           setShowTable={setShowTable}
+          isFullScreen={isFullScreen}
+          onToggleFullScreen={toggleFullScreen}
         />
 
         {/* 3b. Quick-Switch Chips */}
@@ -340,14 +401,48 @@ export default function MonthlyExpenseSection({
           models={CHART_MODELS}
         />
 
-        {/* 3c. Chart Title & Model Description */}
-        <div style={{ padding: '2px 4px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#141a33', margin: 0 }}>
-            Monthly Expense by Category • {currentModelObj.name}
-          </h3>
-          <p style={{ fontSize: '12px', color: '#6a7392', margin: '3px 0 0 0' }}>
-            {currentModelObj.desc}
-          </p>
+        {/* 3c. Chart Title, Model Description & Maximize Action */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          padding: '2px 4px'
+        }}>
+          <div>
+            <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#141a33', margin: 0 }}>
+              Monthly Expense by Category • {currentModelObj.name}
+            </h3>
+            <p style={{ fontSize: '12px', color: '#6a7392', margin: '3px 0 0 0' }}>
+              {currentModelObj.desc}
+            </p>
+          </div>
+
+          {/* Maximize / Exit Fullscreen Button directly on Chart Header */}
+          <button
+            type="button"
+            onClick={toggleFullScreen}
+            title={isFullScreen ? 'Exit Full Screen (Esc)' : `Maximize ${currentModelObj.name} Chart`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              backgroundColor: isFullScreen ? '#5b5bf0' : '#ffffff',
+              border: isFullScreen ? '1px solid #5b5bf0' : '1px solid #d5dcf0',
+              color: isFullScreen ? '#ffffff' : '#5b5bf0',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: isFullScreen ? '0 4px 14px rgba(91, 91, 240, 0.35)' : '0 1px 3px rgba(20,26,51,0.05)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            <span>{isFullScreen ? 'Exit Full Screen' : 'Maximize Chart'}</span>
+          </button>
         </div>
 
         {/* 3d. Chart Area in soft rounded container (18px radius) */}
@@ -356,9 +451,10 @@ export default function MonthlyExpenseSection({
             backgroundColor: '#fafbfe',
             borderRadius: '18px',
             border: '1px solid #eef1fb',
-            padding: '16px 20px',
+            padding: isFullScreen ? '24px 30px' : '16px 20px',
             overflowX: 'auto',
-            minHeight: '340px',
+            minHeight: isFullScreen ? '480px' : '340px',
+            flex: isFullScreen ? '1 1 auto' : 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

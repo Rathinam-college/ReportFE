@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Table, ChevronDown } from 'lucide-react';
+import { Download, Table, ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
 
 export default function MonthlyExpenseControls({
   chartModel,
@@ -12,7 +12,9 @@ export default function MonthlyExpenseControls({
   setUnitMode,
   onExportCSV,
   showTable,
-  setShowTable
+  setShowTable,
+  isFullScreen = false,
+  onToggleFullScreen
 }) {
   return (
     <div
@@ -227,6 +229,33 @@ export default function MonthlyExpenseControls({
         <Table size={14} />
         <span>{showTable ? 'Hide Values Table' : 'Show Values Table'}</span>
       </button>
+
+      {/* 6. Fullscreen Maximize Button */}
+      {onToggleFullScreen && (
+        <button
+          type="button"
+          onClick={onToggleFullScreen}
+          title={isFullScreen ? 'Exit Full Screen (Esc)' : 'Maximize Visual Chart'}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: isFullScreen ? '#5b5bf0' : '#ffffff',
+            border: isFullScreen ? '1px solid #5b5bf0' : '1px solid #d5dcf0',
+            borderRadius: '9px',
+            padding: '6px 13px',
+            fontSize: '12px',
+            fontWeight: '700',
+            color: isFullScreen ? '#ffffff' : '#5b5bf0',
+            cursor: 'pointer',
+            boxShadow: isFullScreen ? '0 3px 10px rgba(91, 91, 240, 0.35)' : '0 1px 2px rgba(20,26,51,0.04)',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          {isFullScreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          <span>{isFullScreen ? 'Exit' : 'Maximize'}</span>
+        </button>
+      )}
     </div>
   );
 }
