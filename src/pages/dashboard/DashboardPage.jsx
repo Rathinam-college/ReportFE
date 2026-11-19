@@ -43,6 +43,8 @@ export default function DashboardPage({
   onOpenDataEntry,
   remarksDraft = {}
 }) {
+  const currentModule = selectedModule || 'food';
+
   const [activeChart, setActiveChart] = useState('clustered_table'); // Default: Excel-style Clustered Columns with Data Sheet
   const [activePeriod, setActivePeriod] = useState('all'); // 'all' or period id
   const [showDataTable, setShowDataTable] = useState(true);
@@ -71,8 +73,6 @@ export default function DashboardPage({
     }
     return attachmentsSummary[String(activePeriod)] || 0;
   }, [attachmentsSummary, activePeriod]);
-
-  const currentModule = selectedModule || 'food';
 
   const [internalMatrix, setInternalMatrix] = useState(null);
   const [matrixLoading, setMatrixLoading] = useState(false);
