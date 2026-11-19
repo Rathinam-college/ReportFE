@@ -842,11 +842,38 @@ export default function HostelCardSpreadsheet({
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #e2e8f0', paddingTop: '8px' }}>
               <div>
+                <span style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>Monthly Budget Limit</span>
+                <div style={{ fontSize: '10.5px', color: '#64748b' }}>Ceiling for {activePeriodLabel}</div>
+              </div>
+              <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#c2410c' }}>
+                {formatINR(metrics.total_month_limit ?? TOTAL_MONTH_LIMIT)}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
                 <span style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>Total Month Spend</span>
                 <div style={{ fontSize: '10.5px', color: '#64748b' }}>Sum of 9 Budget Heads</div>
               </div>
               <span style={{ fontSize: '14.5px', fontWeight: '900', color: '#0f172a' }}>
                 {formatINR(metrics.budget_heads_total ?? metrics.expenses_occurred ?? 0)}
+              </span>
+            </div>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              backgroundColor: ((metrics.total_month_limit ?? TOTAL_MONTH_LIMIT) - (metrics.budget_heads_total ?? 0)) >= 0 ? '#f0fdf4' : '#fef2f2', 
+              padding: '6px 10px', 
+              borderRadius: '8px', 
+              border: `1px solid ${((metrics.total_month_limit ?? TOTAL_MONTH_LIMIT) - (metrics.budget_heads_total ?? 0)) >= 0 ? '#bbf7d0' : '#fecaca'}` 
+            }}>
+              <span style={{ fontSize: '11.5px', fontWeight: '700', color: ((metrics.total_month_limit ?? TOTAL_MONTH_LIMIT) - (metrics.budget_heads_total ?? 0)) >= 0 ? '#15803d' : '#b91c1c' }}>
+                Month Budget Savings
+              </span>
+              <span style={{ fontSize: '13px', fontWeight: '800', color: ((metrics.total_month_limit ?? TOTAL_MONTH_LIMIT) - (metrics.budget_heads_total ?? 0)) >= 0 ? '#15803d' : '#b91c1c' }}>
+                {((metrics.total_month_limit ?? TOTAL_MONTH_LIMIT) - (metrics.budget_heads_total ?? 0)) >= 0 
+                  ? `+${formatINR((metrics.total_month_limit ?? TOTAL_MONTH_LIMIT) - (metrics.budget_heads_total ?? 0))}` 
+                  : `-${formatINR(Math.abs((metrics.total_month_limit ?? TOTAL_MONTH_LIMIT) - (metrics.budget_heads_total ?? 0)))}`}
               </span>
             </div>
           </div>

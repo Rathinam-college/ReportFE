@@ -15,6 +15,22 @@ export const TOTAL_SANCTIONED_BUDGET = 142010789; // ₹14,20,10,789
 export const TOTAL_MONTH_LIMIT = 17751349;       // ₹1,77,51,349
 export const TOTAL_OCT_ACTUAL = 13401116;        // ₹1,34,01,116
 
+export const ALL_BUDGET_MONTH_COLS = [
+  { key: 'sep_25_actual', label: "Sep'25", periodId: 29 },
+  { key: 'oct_26_actual', label: "Oct'26", periodId: 30 },
+  { key: 'nov_26_actual', label: "Nov'26", periodId: 31 },
+  { key: 'dec_26_actual', label: "Dec'26", periodId: 32 },
+  { key: 'jan_27_actual', label: "Jan'27", periodId: 572 },
+  { key: 'feb_27_actual', label: "Feb'27", periodId: 573 },
+  { key: 'mar_27_actual', label: "Mar'27", periodId: 574 },
+  { key: 'apr_27_actual', label: "Apr'27", periodId: 575 },
+  { key: 'may_27_actual', label: "May'27", periodId: 576 },
+  { key: 'jun_27_actual', label: "Jun'27", periodId: 577 },
+  { key: 'jul_27_actual', label: "Jul'27", periodId: 578 },
+  { key: 'aug_27_actual', label: "Aug'27", periodId: 579 },
+  { key: 'sep_27_actual', label: "Sep'27", periodId: 580 },
+];
+
 /**
  * Maps any billing period (by ID, label, or code) to the corresponding 
  * hostel_budget_tracking column name.
@@ -24,6 +40,7 @@ export const getBudgetMonthCol = (periodObj, periodId) => {
   const label = (periodObj?.period_label || '').toLowerCase();
   const code = (periodObj?.period_code || '').toLowerCase();
 
+  if (pId === 29 || code.includes('2025-09') || (label.includes('sep') && pId !== 580 && !code.includes('2026-09'))) return 'sep_25_actual';
   if (pId === 30 || label.includes('oct') || code.includes('-10')) return 'oct_26_actual';
   if (pId === 31 || label.includes('nov') || code.includes('-11')) return 'nov_26_actual';
   if (pId === 32 || label.includes('dec') || code.includes('-12')) return 'dec_26_actual';
@@ -32,5 +49,10 @@ export const getBudgetMonthCol = (periodObj, periodId) => {
   if (pId === 574 || label.includes('mar') || code.includes('-03')) return 'mar_27_actual';
   if (pId === 575 || label.includes('apr') || code.includes('-04')) return 'apr_27_actual';
   if (pId === 576 || label.includes('may') || code.includes('-05')) return 'may_27_actual';
+  if (pId === 577 || label.includes('jun') || code.includes('-06')) return 'jun_27_actual';
+  if (pId === 578 || label.includes('jul') || code.includes('-07')) return 'jul_27_actual';
+  if (pId === 579 || label.includes('aug') || code.includes('-08')) return 'aug_27_actual';
+  if (pId === 580 || label.includes('sep') || code.includes('2026-09')) return 'sep_27_actual';
+
   return 'oct_26_actual';
 };

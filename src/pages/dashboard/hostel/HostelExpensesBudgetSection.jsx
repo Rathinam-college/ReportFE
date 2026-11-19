@@ -12,19 +12,11 @@ import {
   TOTAL_SANCTIONED_BUDGET, 
   TOTAL_MONTH_LIMIT, 
   TOTAL_OCT_ACTUAL,
-  getBudgetMonthCol
+  getBudgetMonthCol,
+  ALL_BUDGET_MONTH_COLS
 } from '../../../utils/hostelBudgetConstants';
 
-const MONTH_COLS = [
-  { key: 'oct_26_actual', label: "Oct'26" },
-  { key: 'nov_26_actual', label: "Nov'26" },
-  { key: 'dec_26_actual', label: "Dec'26" },
-  { key: 'jan_27_actual', label: "Jan'27" },
-  { key: 'feb_27_actual', label: "Feb'27" },
-  { key: 'mar_27_actual', label: "Mar'27" },
-  { key: 'apr_27_actual', label: "Apr'27" },
-  { key: 'may_27_actual', label: "May'27" }
-];
+const MONTH_COLS = ALL_BUDGET_MONTH_COLS;
 
 export default function HostelExpensesBudgetSection({
   census = {},
@@ -86,6 +78,7 @@ export default function HostelExpensesBudgetSection({
         budget_head: r.budget_head,
         sanctioned_amount: num(r.sanctioned_amount, 0),
         month_limit: num(r.month_limit, 0),
+        sep_25_actual: num(r.sep_25_actual, 0),
         oct_26_actual: num(r.oct_26_actual, 0),
         nov_26_actual: num(r.nov_26_actual, 0),
         dec_26_actual: num(r.dec_26_actual, 0),
@@ -94,6 +87,10 @@ export default function HostelExpensesBudgetSection({
         mar_27_actual: num(r.mar_27_actual, 0),
         apr_27_actual: num(r.apr_27_actual, 0),
         may_27_actual: num(r.may_27_actual, 0),
+        jun_27_actual: num(r.jun_27_actual, 0),
+        jul_27_actual: num(r.jul_27_actual, 0),
+        aug_27_actual: num(r.aug_27_actual, 0),
+        sep_27_actual: num(r.sep_27_actual, 0),
       }));
     }
     return HOSTEL_BUDGET_HEADS.map((canon) => ({
@@ -101,6 +98,7 @@ export default function HostelExpensesBudgetSection({
       budget_head: canon.head,
       sanctioned_amount: canon.sanctioned,
       month_limit: canon.limit,
+      sep_25_actual: 0,
       oct_26_actual: canon.defaultOct,
       nov_26_actual: 0,
       dec_26_actual: 0,
@@ -109,6 +107,10 @@ export default function HostelExpensesBudgetSection({
       mar_27_actual: 0,
       apr_27_actual: 0,
       may_27_actual: 0,
+      jun_27_actual: 0,
+      jul_27_actual: 0,
+      aug_27_actual: 0,
+      sep_27_actual: 0,
     }));
   }, [budgetTrackingData]);
 
