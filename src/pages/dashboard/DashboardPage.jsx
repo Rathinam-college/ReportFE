@@ -56,7 +56,7 @@ export default function DashboardPage({
   const isMatrixMatchingCurrent = 
     computedMatrix?.periods && 
     computedMatrix.periods.length > 0 && 
-    (!computedMatrix.module || computedMatrix.module === currentModule);
+    computedMatrix.module === currentModule;
 
   useEffect(() => {
     if (!isMatrixMatchingCurrent) {

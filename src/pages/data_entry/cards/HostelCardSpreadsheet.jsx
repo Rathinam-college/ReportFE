@@ -1018,34 +1018,6 @@ export default function HostelCardSpreadsheet({
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   type="button"
-                  onClick={handleCopyOctDefaults}
-                  disabled={isClosed}
-                  title="Load October reference actuals into current month"
-                  style={{
-                    padding: '6px 10px',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
-                    backgroundColor: '#f1f5f9',
-                    color: '#334155',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    cursor: isClosed ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => !isClosed && (e.currentTarget.style.backgroundColor = '#e2e8f0')}
-                  onMouseLeave={(e) => !isClosed && (e.currentTarget.style.backgroundColor = '#f1f5f9')}
-                >
-                  <Copy size={13} />
-                  <span>Oct Ref</span>
-                </button>
-
-
-
-                <button
-                  type="button"
                   onClick={handleResetBudgetHeads}
                   disabled={isClosed}
                   title="Reset all 9 budget heads to 0"

@@ -103,7 +103,7 @@ export default function HostelExpensesBudgetSection({
       sanctioned_amount: canon.sanctioned,
       month_limit: canon.limit,
       sep_25_actual: 0,
-      oct_26_actual: canon.defaultOct,
+      oct_26_actual: 0,
       nov_26_actual: 0,
       dec_26_actual: 0,
       jan_27_actual: 0,

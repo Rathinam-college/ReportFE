@@ -180,18 +180,14 @@ export default function HostelSpreadsheetEntry({
       budget_heads_limit[h.key] = limitVal;
       total_month_limit += limitVal;
 
-      // Actual Spend for this month: user draft > DB table month actual > Oct default / 0
+      // Actual Spend for this month: user draft > DB table month actual > 0
       let val = null;
       if (d[h.key] !== undefined && d[h.key] !== null && d[h.key] !== '') {
         val = num(d[h.key], 0);
+      } else if (match && match[activeMonthCol] !== undefined && match[activeMonthCol] !== null) {
+        val = num(match[activeMonthCol], 0);
       } else {
-        if (match && match[activeMonthCol] !== undefined && match[activeMonthCol] !== null) {
-          val = num(match[activeMonthCol], 0);
-        } else if (activeMonthCol === 'oct_26_actual') {
-          val = h.defaultOct;
-        } else {
-          val = 0;
-        }
+        val = 0;
       }
       budget_heads_breakdown[h.key] = val;
       budget_heads_total += val;
