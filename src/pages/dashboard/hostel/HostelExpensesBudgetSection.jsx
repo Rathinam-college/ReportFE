@@ -5,8 +5,6 @@ import {
   Building, Zap, Droplets, Wrench, Users, Wallet
 } from 'lucide-react';
 import { formatINR } from '../../../utils/formatters';
-import ChartDataTable from '../charts/ChartDataTable';
-import MonthlyExpenseSection from '../monthly_expense/MonthlyExpenseSection';
 
 export default function HostelExpensesBudgetSection({
   census = {},
@@ -530,40 +528,6 @@ export default function HostelExpensesBudgetSection({
             </div>
           )}
         </div>
-      </div>
-
-      {/* 3. MONTH-BY-MONTH EXPENDITURE DATA SHEET */}
-      <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Month-by-Month Expenditure Data Sheet
-            </h3>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>
-              Side-by-side comparative ledger with category subtotals across all 13 recorded billing cycles
-            </span>
-          </div>
-        </div>
-
-        <ChartDataTable
-          categories={categories}
-          periods={periods}
-          activePeriod={activePeriod}
-          selectedModule="hostel"
-          computedMatrix={computedMatrix}
-          remarksDraft={remarksDraft}
-        />
-      </div>
-
-      {/* 4. FINANCIAL ANALYTICS & 8 CHART MODELS */}
-      <div style={{ marginTop: '8px' }}>
-        <MonthlyExpenseSection
-          computedMatrix={computedMatrix}
-          categories={categories}
-          periods={periods}
-          selectedModule="hostel"
-          onExportReport={onExportReport}
-        />
       </div>
     </section>
   );

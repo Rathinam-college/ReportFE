@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Building2, BedDouble, Users, UserCheck, ShieldCheck, ArrowRight,
-  TrendingUp, Award, CheckCircle2, AlertCircle, Info, Sparkles, Filter
+  TrendingUp, Award, CheckCircle2, AlertCircle, Info, Filter
 } from 'lucide-react';
 import { formatPeriodLabel } from '../../../utils/formatters';
 
@@ -184,7 +184,7 @@ export default function HostelCapacityOccupancySection({
               </span>
             </div>
             <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#047857' }}>
-              Managed strictly on Bed Capacity • Boys & Girls Dedicated Tracking • Shared Bed Allocations
+              Managed strictly on Bed Capacity • Boys & Girls Dedicated Tracking
             </p>
           </div>
         </div>
@@ -462,41 +462,6 @@ export default function HostelCapacityOccupancySection({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* SHARED BED ALLOCATION NOTICE & POLICY BAR */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        padding: '12px 18px',
-        borderRadius: '12px',
-        backgroundColor: '#f0fdf4',
-        border: '1px dashed #34d399',
-        fontSize: '12.5px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Sparkles size={16} color="#059669" />
-          <div>
-            <strong style={{ color: '#064e3b' }}>Shared Bed Allocation Rule:</strong>{' '}
-            <span style={{ color: '#047857' }}>
-              Vacant Girls Hostel beds ({girlsVacant} available) can be designated for Boys hostel spillover allocation if authorized by management. Original block records remain strictly separated.
-            </span>
-          </div>
-        </div>
-        <span style={{
-          fontSize: '11px',
-          fontWeight: '700',
-          color: '#047857',
-          backgroundColor: '#ffffff',
-          padding: '3px 10px',
-          borderRadius: '9999px',
-          border: '1px solid #a7f3d0'
-        }}>
-          Status: Separate Ownership Preserved
-        </span>
       </div>
 
       {/* MONTHLY STUDENT MOVEMENT ANALYTICS */}
