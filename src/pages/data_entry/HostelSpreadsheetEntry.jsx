@@ -147,14 +147,44 @@ export default function HostelSpreadsheetEntry({
     const trackingRows = computedMatrix?.hostel_budget_tracking || [];
 
     const budget_heads_breakdown = {};
+    const budget_heads_sanctioned = {};
+    const budget_heads_limit = {};
     let budget_heads_total = 0;
+    let total_sanctioned_budget = 0;
+    let total_month_limit = 0;
 
     HOSTEL_BUDGET_HEADS.forEach((h) => {
+      const match = trackingRows.find(r => r.budget_head === h.head || Number(r.s_no) === h.s_no);
+
+      // Sanctioned Amount: user draft > DB table value > constant fallback
+      let sancVal = null;
+      if (d['sanctioned_' + h.key] !== undefined && d['sanctioned_' + h.key] !== null && d['sanctioned_' + h.key] !== '') {
+        sancVal = num(d['sanctioned_' + h.key], h.sanctioned);
+      } else if (match && match.sanctioned_amount !== undefined && match.sanctioned_amount !== null && Number(match.sanctioned_amount) >= 0) {
+        sancVal = num(match.sanctioned_amount, h.sanctioned);
+      } else {
+        sancVal = h.sanctioned;
+      }
+      budget_heads_sanctioned[h.key] = sancVal;
+      total_sanctioned_budget += sancVal;
+
+      // Month Limit: user draft > DB table value > constant fallback
+      let limitVal = null;
+      if (d['limit_' + h.key] !== undefined && d['limit_' + h.key] !== null && d['limit_' + h.key] !== '') {
+        limitVal = num(d['limit_' + h.key], h.limit);
+      } else if (match && match.month_limit !== undefined && match.month_limit !== null && Number(match.month_limit) >= 0) {
+        limitVal = num(match.month_limit, h.limit);
+      } else {
+        limitVal = h.limit;
+      }
+      budget_heads_limit[h.key] = limitVal;
+      total_month_limit += limitVal;
+
+      // Actual Spend for this month: user draft > DB table month actual > Oct default / 0
       let val = null;
       if (d[h.key] !== undefined && d[h.key] !== null && d[h.key] !== '') {
         val = num(d[h.key], 0);
       } else {
-        const match = trackingRows.find(r => r.budget_head === h.head || Number(r.s_no) === h.s_no);
         if (match && match[activeMonthCol] !== undefined && match[activeMonthCol] !== null) {
           val = num(match[activeMonthCol], 0);
         } else if (activeMonthCol === 'oct_26_actual') {
@@ -170,8 +200,8 @@ export default function HostelSpreadsheetEntry({
     // Expenses occurred is driven by sum of 9 budget heads
     const expenses_occurred = budget_heads_total > 0 ? budget_heads_total : num(d.expenses_occurred, 0);
 
-    // Approved Budget
-    const approved_budget = num(d.approved_budget, TOTAL_SANCTIONED_BUDGET);
+    // Approved Budget defaults to total_sanctioned_budget if not overridden
+    const approved_budget = num(d.approved_budget, total_sanctioned_budget > 0 ? total_sanctioned_budget : TOTAL_SANCTIONED_BUDGET);
 
     // Cumulative spent: if set in draft use it; else if period 30 (Oct'26), defaults to expenses_occurred
     let cumulative_budget_spent = num(d.cumulative_budget_spent, 0);
@@ -221,6 +251,8 @@ export default function HostelSpreadsheetEntry({
       power_units, power_cost, water_purchase_cost, maintenance_expenses, expenses_occurred,
       approved_budget, cumulative_budget_spent, balance,
       budget_heads_breakdown, budget_heads_total, activeMonthCol,
+      budget_heads_sanctioned, budget_heads_limit,
+      total_sanctioned_budget, total_month_limit,
       sq_feet, per_student_cost_month, per_student_cost_day, sq_feet_per_occupant,
       normal_water_litres, normal_water_cost, normal_water_student_ltrs, normal_water_student_cost,
       power_cost_sqft, units_per_occupant, power_cost_occupant,
@@ -246,9 +278,9 @@ export default function HostelSpreadsheetEntry({
       const trackingItems = HOSTEL_BUDGET_HEADS.map(h => ({
         s_no: h.s_no,
         budget_head: h.head,
-        sanctioned_amount: h.sanctioned,
-        month_limit: h.limit,
-        [activeMonthCol]: metrics.budget_heads_breakdown[h.key] ?? 0
+        sanctioned_amount: Number(metrics.budget_heads_sanctioned?.[h.key] ?? h.sanctioned),
+        month_limit: Number(metrics.budget_heads_limit?.[h.key] ?? h.limit),
+        [activeMonthCol]: Number(metrics.budget_heads_breakdown?.[h.key] ?? 0)
       }));
 
       try {
@@ -266,6 +298,10 @@ export default function HostelSpreadsheetEntry({
         ...metrics,
         ...currData,
         ...metrics.budget_heads_breakdown,
+        budget_heads_sanctioned: metrics.budget_heads_sanctioned,
+        budget_heads_limit: metrics.budget_heads_limit,
+        total_sanctioned_budget: metrics.total_sanctioned_budget,
+        total_month_limit: metrics.total_month_limit,
         approved_budget: metrics.approved_budget,
         cumulative_budget_spent: metrics.cumulative_budget_spent,
         expenses_occurred: metrics.expenses_occurred,
@@ -1477,7 +1513,8 @@ export default function HostelSpreadsheetEntry({
 
               {HOSTEL_BUDGET_HEADS.map((head) => {
                 const headVal = metrics.budget_heads_breakdown[head.key] ?? 0;
-                const headLimit = head.limit;
+                const headSanctioned = metrics.budget_heads_sanctioned?.[head.key] ?? head.sanctioned;
+                const headLimit = metrics.budget_heads_limit?.[head.key] ?? head.limit;
                 const diff = headLimit - headVal;
                 const isUnder = diff >= 0;
 
@@ -1496,11 +1533,47 @@ export default function HostelSpreadsheetEntry({
                     <td style={{ padding: '6px 14px', fontWeight: '600', borderRight: '1px solid #e2e8f0', color: '#1e293b', fontSize: '12.5px' }}>
                       {head.head}
                     </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', borderRight: '1px solid #e2e8f0', fontWeight: '700', color: '#166534', fontSize: '12px' }} className="currency-font">
-                      {formatINR(head.sanctioned)}
+                    <td style={{ padding: '4px 6px', textAlign: 'right', borderRight: '1px solid #e2e8f0', width: '130px' }}>
+                      <input
+                        type="number"
+                        value={currData['sanctioned_' + head.key] ?? headSanctioned}
+                        onChange={(e) => handleValChange('sanctioned_' + head.key, e.target.value)}
+                        disabled={isClosed}
+                        placeholder={String(head.sanctioned)}
+                        style={{
+                          width: '100%',
+                          textAlign: 'right',
+                          padding: '4px 6px',
+                          border: '1px solid #94a3b8',
+                          borderRadius: '4px',
+                          fontWeight: '750',
+                          backgroundColor: '#ffffff',
+                          color: '#166534',
+                          fontSize: '12px'
+                        }}
+                        className="currency-font"
+                      />
                     </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', borderRight: '1px solid #e2e8f0', fontWeight: '700', color: '#c2410c', fontSize: '12px' }} className="currency-font">
-                      {formatINR(head.limit)}
+                    <td style={{ padding: '4px 6px', textAlign: 'right', borderRight: '1px solid #e2e8f0', width: '130px' }}>
+                      <input
+                        type="number"
+                        value={currData['limit_' + head.key] ?? headLimit}
+                        onChange={(e) => handleValChange('limit_' + head.key, e.target.value)}
+                        disabled={isClosed}
+                        placeholder={String(head.limit)}
+                        style={{
+                          width: '100%',
+                          textAlign: 'right',
+                          padding: '4px 6px',
+                          border: '1px solid #94a3b8',
+                          borderRadius: '4px',
+                          fontWeight: '750',
+                          backgroundColor: '#ffffff',
+                          color: '#c2410c',
+                          fontSize: '12px'
+                        }}
+                        className="currency-font"
+                      />
                     </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
                       <span 
@@ -1552,14 +1625,15 @@ export default function HostelSpreadsheetEntry({
                   Total Monthly Expenses (9 Heads Sum)
                 </td>
                 <td style={{ padding: '6px 8px', textAlign: 'right', borderRight: '1px solid #000000', fontWeight: '900', color: '#166534', fontSize: '12.5px' }} className="currency-font">
-                  {formatINR(TOTAL_SANCTIONED_BUDGET)}
+                  {formatINR(metrics.total_sanctioned_budget ?? TOTAL_SANCTIONED_BUDGET)}
                 </td>
                 <td style={{ padding: '6px 8px', textAlign: 'right', borderRight: '1px solid #000000', fontWeight: '900', color: '#c2410c', fontSize: '12.5px' }} className="currency-font">
-                  {formatINR(TOTAL_MONTH_LIMIT)}
+                  {formatINR(metrics.total_month_limit ?? TOTAL_MONTH_LIMIT)}
                 </td>
                 <td style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
                   {(() => {
-                    const totalDiff = TOTAL_MONTH_LIMIT - metrics.budget_heads_total;
+                    const totalLimit = metrics.total_month_limit ?? TOTAL_MONTH_LIMIT;
+                    const totalDiff = totalLimit - metrics.budget_heads_total;
                     const isTotalUnder = totalDiff >= 0;
                     return (
                       <span 

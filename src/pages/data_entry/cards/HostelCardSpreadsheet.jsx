@@ -141,6 +141,62 @@ export default function HostelCardSpreadsheet({
     );
   };
 
+  // Helper for Sanctioned Amount and Month Limit numeric inputs
+  const renderBudgetFieldInput = (fieldKey, defaultVal, activeVal, color = '#334155', focusBorder = '#0284c7') => {
+    const userVal = currData[fieldKey];
+    const val = userVal !== undefined && userVal !== null
+      ? userVal
+      : (activeVal !== undefined && activeVal !== null ? activeVal : (defaultVal ?? ''));
+
+    const isFocused = focusedKey === fieldKey;
+
+    return (
+      <div style={{ position: 'relative', width: '135px' }}>
+        <span
+          style={{
+            position: 'absolute',
+            left: '8px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: '11px',
+            fontWeight: '700',
+            color: '#94a3b8',
+            pointerEvents: 'none'
+          }}
+        >
+          ₹
+        </span>
+        <input
+          type="number"
+          step="any"
+          value={val}
+          placeholder={String(defaultVal || 0)}
+          disabled={isClosed}
+          onFocus={() => setFocusedKey(fieldKey)}
+          onBlur={() => setFocusedKey(null)}
+          onChange={(e) => handleValChange(fieldKey, e.target.value)}
+          style={{
+            width: '100%',
+            textAlign: 'right',
+            fontSize: '12.5px',
+            fontWeight: '750',
+            fontVariantNumeric: 'tabular-nums',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            padding: '6px 8px 6px 20px',
+            borderRadius: '8px',
+            border: isFocused ? `2px solid ${focusBorder}` : '1px solid #cbd5e1',
+            backgroundColor: isClosed ? '#f8fafc' : '#ffffff',
+            color: color,
+            outline: 'none',
+            boxSizing: 'border-box',
+            boxShadow: isFocused ? `0 0 0 3px ${focusBorder}26` : 'none',
+            transition: 'all 0.15s ease'
+          }}
+        />
+      </div>
+    );
+  };
+
   const getBudgetHeadIcon = (s_no) => {
     switch (s_no) {
       case 1: return <Home size={15} color="#0284c7" />;
@@ -164,7 +220,8 @@ export default function HostelCardSpreadsheet({
 
   const handleSetCeilingLimits = () => {
     HOSTEL_BUDGET_HEADS.forEach((h) => {
-      handleValChange(h.key, h.limit);
+      const limitVal = metrics.budget_heads_limit?.[h.key] ?? h.limit;
+      handleValChange(h.key, limitVal);
     });
   };
 
@@ -757,7 +814,7 @@ export default function HostelCardSpreadsheet({
                 Operating Budget & Balance
               </h3>
               <span style={{ fontSize: '11px', color: 'var(--text-muted, #66708f)' }}>
-                Sanctioned: {formatINR(metrics.approved_budget || TOTAL_SANCTIONED_BUDGET)}
+                Sanctioned: {formatINR(metrics.total_sanctioned_budget ?? metrics.approved_budget ?? TOTAL_SANCTIONED_BUDGET)}
               </span>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -773,7 +830,7 @@ export default function HostelCardSpreadsheet({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '12.5px', fontWeight: '600' }}>Approved Budget (₹)</span>
-              {renderNumericInput('approved_budget', '142010789')}
+              {renderNumericInput('approved_budget', String(metrics.total_sanctioned_budget || TOTAL_SANCTIONED_BUDGET))}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '12.5px', fontWeight: '600' }}>Cumulative Spent (₹)</span>
@@ -905,7 +962,7 @@ export default function HostelCardSpreadsheet({
                 Hostel Operating Budget Breakdown & Actuals ({activePeriodLabel})
               </h3>
               <p style={{ fontSize: '12px', color: 'var(--text-muted, #66708f)', margin: '4px 0 0 0' }}>
-                Sanctioned: <strong>{formatINR(TOTAL_SANCTIONED_BUDGET)}</strong> (8 Months) • Monthly Ceiling Limit: <strong style={{ color: '#c2410c' }}>{formatINR(TOTAL_MONTH_LIMIT)}</strong>
+                Sanctioned: <strong>{formatINR(metrics.total_sanctioned_budget ?? TOTAL_SANCTIONED_BUDGET)}</strong> (8 Months) • Monthly Ceiling Limit: <strong style={{ color: '#c2410c' }}>{formatINR(metrics.total_month_limit ?? TOTAL_MONTH_LIMIT)}</strong>
               </p>
             </div>
 
@@ -932,9 +989,10 @@ export default function HostelCardSpreadsheet({
               {/* Net Variance Badge */}
               {(() => {
                 const totalSpend = metrics.budget_heads_total ?? 0;
-                const netDiff = TOTAL_MONTH_LIMIT - totalSpend;
+                const totalLimit = metrics.total_month_limit ?? TOTAL_MONTH_LIMIT;
+                const netDiff = totalLimit - totalSpend;
                 const isUnder = netDiff >= 0;
-                const netPct = TOTAL_MONTH_LIMIT > 0 ? ((Math.abs(netDiff) / TOTAL_MONTH_LIMIT) * 100).toFixed(1) : '0';
+                const netPct = totalLimit > 0 ? ((Math.abs(netDiff) / totalLimit) * 100).toFixed(1) : '0';
 
                 return (
                   <div style={{ 
@@ -1063,10 +1121,12 @@ export default function HostelCardSpreadsheet({
                     ? Number(userVal)
                     : (breakdownVal !== undefined && breakdownVal !== null ? Number(breakdownVal) : 0);
 
-                  const diff = head.limit - activeVal;
+                  const headSanctioned = metrics.budget_heads_sanctioned?.[head.key] ?? head.sanctioned;
+                  const headLimit = metrics.budget_heads_limit?.[head.key] ?? head.limit;
+                  const diff = headLimit - activeVal;
                   const isUnder = diff >= 0;
-                  const pct = head.limit > 0 ? ((Math.abs(diff) / head.limit) * 100).toFixed(1) : '0';
-                  const utilRatio = head.limit > 0 ? (activeVal / head.limit) : 0;
+                  const pct = headLimit > 0 ? ((Math.abs(diff) / headLimit) * 100).toFixed(1) : '0';
+                  const utilRatio = headLimit > 0 ? (activeVal / headLimit) : 0;
                   const utilPct = (utilRatio * 100).toFixed(0);
 
                   const isEven = idx % 2 === 0;
@@ -1120,13 +1180,29 @@ export default function HostelCardSpreadsheet({
                       </td>
 
                       {/* Sanctioned */}
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', color: '#334155' }}>
-                        {formatINR(head.sanctioned)}
+                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          {renderBudgetFieldInput(
+                            'sanctioned_' + head.key,
+                            head.sanctioned,
+                            headSanctioned,
+                            '#166534',
+                            '#16a34a'
+                          )}
+                        </div>
                       </td>
 
                       {/* Month Limit */}
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '750', color: '#c2410c' }}>
-                        {formatINR(head.limit)}
+                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          {renderBudgetFieldInput(
+                            'limit_' + head.key,
+                            head.limit,
+                            headLimit,
+                            '#c2410c',
+                            '#ea580c'
+                          )}
+                        </div>
                       </td>
 
                       {/* Actual Spend Input */}
@@ -1189,10 +1265,10 @@ export default function HostelCardSpreadsheet({
                     </div>
                   </td>
                   <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '900', color: '#713f12', fontSize: '13.5px' }}>
-                    {formatINR(TOTAL_SANCTIONED_BUDGET)}
+                    {formatINR(metrics.total_sanctioned_budget ?? TOTAL_SANCTIONED_BUDGET)}
                   </td>
                   <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '900', color: '#854d0e', fontSize: '13.5px' }}>
-                    {formatINR(TOTAL_MONTH_LIMIT)}
+                    {formatINR(metrics.total_month_limit ?? TOTAL_MONTH_LIMIT)}
                   </td>
                   <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '900', color: '#0f172a', fontSize: '15.5px' }}>
                     {formatINR(metrics.budget_heads_total ?? 0)}
@@ -1200,9 +1276,10 @@ export default function HostelCardSpreadsheet({
                   <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                     {(() => {
                       const totalSpend = metrics.budget_heads_total ?? 0;
-                      const netDiff = TOTAL_MONTH_LIMIT - totalSpend;
+                      const totalLimit = metrics.total_month_limit ?? TOTAL_MONTH_LIMIT;
+                      const netDiff = totalLimit - totalSpend;
                       const isUnder = netDiff >= 0;
-                      const netPct = TOTAL_MONTH_LIMIT > 0 ? ((Math.abs(netDiff) / TOTAL_MONTH_LIMIT) * 100).toFixed(1) : '0';
+                      const netPct = totalLimit > 0 ? ((Math.abs(netDiff) / totalLimit) * 100).toFixed(1) : '0';
 
                       return (
                         <span style={{
@@ -1223,7 +1300,7 @@ export default function HostelCardSpreadsheet({
                     })()}
                   </td>
                   <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: '800', color: '#713f12', fontSize: '12px' }}>
-                    {TOTAL_MONTH_LIMIT > 0 ? `${(((metrics.budget_heads_total ?? 0) / TOTAL_MONTH_LIMIT) * 100).toFixed(1)}%` : '0%'}
+                    {(metrics.total_month_limit ?? TOTAL_MONTH_LIMIT) > 0 ? `${(((metrics.budget_heads_total ?? 0) / (metrics.total_month_limit ?? TOTAL_MONTH_LIMIT)) * 100).toFixed(1)}%` : '0%'}
                   </td>
                 </tr>
               </tfoot>
