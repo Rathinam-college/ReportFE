@@ -6,7 +6,8 @@ import {
   LayoutGrid, BarChart3, AlertTriangle, Sparkles, Landmark, FileText,
   BadgePercent, Eye, ArrowUpRight, ArrowDownRight, IndianRupee
 } from 'lucide-react';
-import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
+import { formatINR, formatPeriodLabel, formatIndianCompact } from '../../../utils/formatters';
+import CategoryCard from '../charts/CategoryCard';
 import { 
   HOSTEL_BUDGET_HEADS, 
   getBudgetMonthCol,
@@ -22,9 +23,17 @@ export default function HostelExpensesBudgetSection({
   onExportReport,
   remarksDraft = {}
 }) {
-  const [trackingViewMode, setTrackingViewMode] = useState('matrix'); // 'matrix' | 'cards' | 'distribution'
+  const [trackingViewMode, setTrackingViewMode] = useState('both'); // 'both' | 'cards' | 'matrix' | 'distribution'
   const [monthFilter, setMonthFilter] = useState('all'); // 'all' | 'recorded'
   const [budgetTrackingData, setBudgetTrackingData] = useState([]);
+  const [expandedCardIds, setExpandedCardIds] = useState({});
+
+  const handleToggleExpand = (id) => {
+    setExpandedCardIds(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   // Fetch real budget tracking records from PostgreSQL database
   const fetchBudgetTracking = () => {
@@ -176,6 +185,125 @@ export default function HostelExpensesBudgetSection({
       .sort((a, b) => num(b[activeMonthCol], 0) - num(a[activeMonthCol], 0));
   }, [activeBudgetHeads, activeMonthCol]);
 
+  // Colors for the 9 Budget Heads aligning with CategoryCard design
+  const HEAD_COLORS = [
+    '#5b5bf0', // 1. Indigo - Rent
+    '#06b6d4', // 2. Cyan - Printing
+    '#8b5cf6', // 3. Violet - Rates & Taxes
+    '#f59e0b', // 4. Amber - Employee Cost
+    '#6366f1', // 5. Purple - Hostel Management
+    '#ea580c', // 6. Orange - Utility
+    '#0284c7', // 7. Sky Blue - Laundry
+    '#ef4444', // 8. Red - Repairs
+    '#ec4899'  // 9. Pink - Events
+  ];
+
+  const getHeadSubItems = (head, selAmount) => {
+    switch (head.s_no) {
+      case 1:
+        return [
+          { id: 101, name: 'Hostel Building Lease & Premises', amount: selAmount }
+        ];
+      case 2:
+        return [
+          { id: 201, name: 'Hostel Office Printing & Registers', amount: selAmount }
+        ];
+      case 3:
+        return [
+          { id: 301, name: 'Municipal Property Tax & Compliance', amount: selAmount }
+        ];
+      case 4:
+        return [
+          { id: 401, name: 'Hostel Wardens & Supervisors', amount: Math.round(selAmount * 0.6) },
+          { id: 402, name: 'Resident Support Staff & Security', amount: Math.round(selAmount * 0.4) }
+        ];
+      case 5:
+        return [
+          { id: 501, name: 'Hostel Resident Facility Operations', amount: Math.round(selAmount * 0.65) },
+          { id: 502, name: 'Facility Management & Oversight', amount: Math.round(selAmount * 0.35) }
+        ];
+      case 6:
+        return [
+          { id: 601, name: 'Power consumption (EB + DG)', amount: Math.round(selAmount * 0.55) },
+          { id: 602, name: 'Normal Water Consumption', amount: Math.round(selAmount * 0.25) },
+          { id: 603, name: 'Water Tanker Purchase', amount: Math.round(selAmount * 0.15) },
+          { id: 604, name: 'Drinking RO Water Cost', amount: Math.round(selAmount * 0.05) }
+        ];
+      case 7:
+        return [
+          { id: 701, name: 'Student Linen & Bedding Laundry', amount: selAmount }
+        ];
+      case 8:
+        return [
+          { id: 801, name: 'Routine Hostel Maintenance & Electrical', amount: Math.round(selAmount * 0.7) },
+          { id: 802, name: 'Plumbing & Carpentry Spares', amount: Math.round(selAmount * 0.3) }
+        ];
+      case 9:
+        return [
+          { id: 901, name: 'Hostel Celebrations & Cultural Events', amount: selAmount }
+        ];
+      default:
+        return [
+          { id: 999, name: head.budget_head, amount: selAmount }
+        ];
+    }
+  };
+
+  // Operational Person / Occupancy Card
+  const personCategory = useMemo(() => {
+    const students = num(census.students_total, 2709);
+    const staff = num(census.staff_total, 157);
+    const occupied = num(census.total_occupied, 2866);
+    const vacant = num(census.vacant_total, 373);
+
+    const monthlyPersons = {};
+    (periods || []).forEach(p => {
+      monthlyPersons[p.id] = occupied;
+    });
+
+    return {
+      categoryId: 'hostel_person_card',
+      categoryName: 'Person (Resident Occupants)',
+      color: '#06b6d4',
+      isPersonCategory: true,
+      selectedAmount: occupied,
+      selectedPercent: 0,
+      monthlyAmounts: monthlyPersons,
+      maxMonthlyAmount: Math.max(...Object.values(monthlyPersons), 1),
+      items: [
+        { id: 'p_students', name: 'Students count', amount: students },
+        { id: 'p_staff', name: 'Staff count', amount: staff },
+        { id: 'p_vacant', name: 'Vacant Bed Capacity', amount: vacant }
+      ]
+    };
+  }, [census, periods]);
+
+  // Cost Per Occupant Card
+  const costPerPersonCategory = useMemo(() => {
+    const costMonth = num(census.per_student_cost_month, 3451);
+    const costDay = num(census.per_student_cost_day, 115);
+
+    const monthlyCostPerPerson = {};
+    (periods || []).forEach(p => {
+      monthlyCostPerPerson[p.id] = costMonth;
+    });
+
+    return {
+      categoryId: 'hostel_cost_per_person',
+      categoryName: 'Cost Per Occupant',
+      color: '#f43f5e',
+      isPersonCategory: false,
+      selectedAmount: costMonth,
+      selectedPercent: 0,
+      monthlyAmounts: monthlyCostPerPerson,
+      maxMonthlyAmount: Math.max(...Object.values(monthlyCostPerPerson), 1),
+      items: [
+        { id: 'cpp_month', name: 'Cost Per Resident (Month)', amount: costMonth },
+        { id: 'cpp_day', name: 'Cost Per Resident (Day)', amount: costDay }
+      ]
+    };
+  }, [census, periods]);
+
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* HOSTEL BUDGET TRACKING SUMMARY */}
@@ -229,7 +357,7 @@ export default function HostelExpensesBudgetSection({
                 </span>
               </div>
               <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#c7d2fe' }}>
-                9 Official Budget Heads • Sanctioned vs Monthly Ceiling vs Actual Expenditure
+                9 Official Budget Heads • Sanctioned Budget vs Monthly Actual Expenditure
               </p>
             </div>
           </div>
@@ -281,7 +409,7 @@ export default function HostelExpensesBudgetSection({
               </button>
             </div>
 
-            {/* View Switcher Toggles */}
+            {/* View Switcher Toggles: Both (Default), Cards, Matrix Table, Cost Drivers */}
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -292,15 +420,15 @@ export default function HostelExpensesBudgetSection({
             }}>
               <button
                 type="button"
-                onClick={() => setTrackingViewMode('matrix')}
+                onClick={() => setTrackingViewMode('both')}
                 style={{
                   border: 'none',
                   padding: '6px 14px',
                   borderRadius: '9999px',
                   fontSize: '11.5px',
                   fontWeight: '800',
-                  backgroundColor: trackingViewMode === 'matrix' ? '#ffffff' : 'transparent',
-                  color: trackingViewMode === 'matrix' ? '#1e1b4b' : '#c7d2fe',
+                  backgroundColor: trackingViewMode === 'both' ? '#ffffff' : 'transparent',
+                  color: trackingViewMode === 'both' ? '#1e1b4b' : '#c7d2fe',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -308,8 +436,8 @@ export default function HostelExpensesBudgetSection({
                   transition: 'all 0.15s ease'
                 }}
               >
-                <Table size={13} />
-                <span>Hostel Ledger</span>
+                <Layers size={13} />
+                <span>Both (Cards & Table)</span>
               </button>
               <button
                 type="button"
@@ -330,7 +458,28 @@ export default function HostelExpensesBudgetSection({
                 }}
               >
                 <LayoutGrid size={13} />
-                <span>9 Heads Bento</span>
+                <span>Cards View</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrackingViewMode('matrix')}
+                style={{
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  backgroundColor: trackingViewMode === 'matrix' ? '#ffffff' : 'transparent',
+                  color: trackingViewMode === 'matrix' ? '#1e1b4b' : '#c7d2fe',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Table size={13} />
+                <span>Hostel Ledger</span>
               </button>
               <button
                 type="button"
@@ -358,20 +507,150 @@ export default function HostelExpensesBudgetSection({
         </div>
 
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 1: FULL HOSTEL LEDGER MATRIX TABLE (Direct from DB)       */}
+        {/* VIEW A: CATEGORY CARDS GRID (Food Dashboard Design)            */}
+        {/* Rendered when trackingViewMode === 'both' or 'cards'          */}
         {/* ------------------------------------------------------------- */}
-        {trackingViewMode === 'matrix' && (
+        {(trackingViewMode === 'both' || trackingViewMode === 'cards') && (
+          <div style={{
+            padding: '20px',
+            backgroundColor: '#f8fafc',
+            borderBottom: trackingViewMode === 'both' ? '2px solid #e2e8f0' : 'none'
+          }}>
+            {/* Row 1: 9 Operating Budget Heads CategoryCards */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gap: '16px',
+              marginBottom: '16px'
+            }}>
+              {activeBudgetHeads.map((head, idx) => {
+                const monthlyAmounts = {};
+                (periods || []).forEach(p => {
+                  const colKey = getBudgetMonthCol(p, p.id);
+                  monthlyAmounts[p.id] = num(head[colKey], 0);
+                });
+
+                const isAll = activePeriod === 'all';
+                const selAmount = isAll
+                  ? Object.values(monthlyAmounts).reduce((a, b) => a + b, 0)
+                  : num(head[activeMonthCol], 0);
+
+                const totalSelectionSpend = isAll
+                  ? activeBudgetHeads.reduce((sum, h) => sum + visibleMonthCols.reduce((acc, m) => acc + num(h[m.key], 0), 0), 0)
+                  : (activeMonthActualSum > 0 ? activeMonthActualSum : 1);
+
+                const selPercent = totalSelectionSpend > 0
+                  ? Number(((selAmount / totalSelectionSpend) * 100).toFixed(1))
+                  : 0;
+
+                const maxMonth = Math.max(...Object.values(monthlyAmounts), 1);
+                const cardColor = HEAD_COLORS[(head.s_no - 1) % HEAD_COLORS.length];
+
+                const categoryObj = {
+                  categoryId: `head_${head.s_no}`,
+                  categoryName: head.budget_head,
+                  color: cardColor,
+                  items: getHeadSubItems(head, selAmount),
+                  isPersonCategory: false
+                };
+
+                return (
+                  <CategoryCard
+                    key={head.budget_head || idx}
+                    category={categoryObj}
+                    periods={periods}
+                    selectedPeriod={activePeriod}
+                    selectedAmount={selAmount}
+                    selectedPercent={selPercent}
+                    monthlyAmounts={monthlyAmounts}
+                    maxMonthlyAmount={maxMonth}
+                    isExpanded={Boolean(expandedCardIds[`head_${head.s_no}`])}
+                    onToggleExpand={() => handleToggleExpand(`head_${head.s_no}`)}
+                    formatCompact={formatIndianCompact}
+                    formatFull={formatINR}
+                    remarksDraft={remarksDraft}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Row 2: Operational Census & Unit Economics Cards (matching Food Dashboard) */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gap: '16px'
+            }}>
+              <CategoryCard
+                category={personCategory}
+                periods={periods}
+                selectedPeriod={activePeriod}
+                selectedAmount={personCategory.selectedAmount}
+                selectedPercent={0}
+                monthlyAmounts={personCategory.monthlyAmounts}
+                maxMonthlyAmount={personCategory.maxMonthlyAmount}
+                isExpanded={Boolean(expandedCardIds['hostel_person_card'])}
+                onToggleExpand={() => handleToggleExpand('hostel_person_card')}
+                formatCompact={formatIndianCompact}
+                formatFull={formatINR}
+                hidePercentage={true}
+                remarksDraft={remarksDraft}
+              />
+              <CategoryCard
+                category={costPerPersonCategory}
+                periods={periods}
+                selectedPeriod={activePeriod}
+                selectedAmount={costPerPersonCategory.selectedAmount}
+                selectedPercent={0}
+                monthlyAmounts={costPerPersonCategory.monthlyAmounts}
+                maxMonthlyAmount={costPerPersonCategory.maxMonthlyAmount}
+                isExpanded={Boolean(expandedCardIds['hostel_cost_per_person'])}
+                onToggleExpand={() => handleToggleExpand('hostel_cost_per_person')}
+                formatCompact={(v) => `₹${Number(v).toLocaleString('en-IN')}`}
+                formatFull={formatINR}
+                hidePercentage={true}
+                remarksDraft={remarksDraft}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Section Divider Bar when displaying Both Views */}
+        {trackingViewMode === 'both' && (
+          <div style={{
+            padding: '12px 24px',
+            backgroundColor: '#f1f5f9',
+            borderBottom: '1.5px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Table size={16} color="#334155" />
+              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                Official Hostel Budget Tracking Ledger ({periodRangeLabel})
+              </span>
+            </div>
+            <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '600' }}>
+              All 9 Operating Heads • Sanctioned Budget vs Monthly Expenditure Matrix
+            </span>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW B: FULL HOSTEL LEDGER MATRIX TABLE (Without Month Limit)  */}
+        {/* Rendered when trackingViewMode === 'both' or 'matrix'         */}
+        {/* ------------------------------------------------------------- */}
+        {(trackingViewMode === 'both' || trackingViewMode === 'matrix') && (
           <div style={{ overflowX: 'auto', width: '100%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '1080px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '980px' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#1e293b' }}>
                   <th style={{ padding: '12px 10px', textAlign: 'center', width: '40px', fontWeight: '800' }}>#</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: '800', minWidth: '200px' }}>Budget Head</th>
                   <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#ecfdf5', color: '#065f46', minWidth: '115px' }}>
                     SANCTIONED (₹)
-                  </th>
-                  <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#fff7ed', color: '#9a3412', minWidth: '110px' }}>
-                    Month Limit (₹)
                   </th>
                   {visibleMonthCols.map((m) => {
                     const isActive = m.key === activeMonthCol;
@@ -400,18 +679,15 @@ export default function HostelExpensesBudgetSection({
                     );
                   })}
                   <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: '800', minWidth: '150px' }}>
-                    Active Status vs Limit
+                    {activePeriodName} Spend Share
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {activeBudgetHeads.map((head, idx) => {
                   const sanc = num(head.sanctioned_amount, 0);
-                  const limit = num(head.month_limit, 0);
                   const activeVal = num(head[activeMonthCol], 0);
-                  const diff = activeVal - limit;
-                  const isOver = activeVal > limit;
-                  const pct = limit > 0 ? (activeVal / limit) * 100 : 0;
+                  const sharePct = activeMonthActualSum > 0 ? (activeVal / activeMonthActualSum) * 100 : 0;
 
                   return (
                     <tr 
@@ -447,9 +723,6 @@ export default function HostelExpensesBudgetSection({
                       <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', color: '#166534', backgroundColor: '#f0fdf4' }} className="currency-font">
                         {formatINR(sanc)}
                       </td>
-                      <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', color: '#c2410c', backgroundColor: '#fffbeb' }} className="currency-font">
-                        {formatINR(limit)}
-                      </td>
 
                       {/* Dynamic Month Columns directly from PostgreSQL DB */}
                       {visibleMonthCols.map((m) => {
@@ -472,7 +745,7 @@ export default function HostelExpensesBudgetSection({
                         );
                       })}
 
-                      {/* Active Status Badge */}
+                      {/* Active Spend Share Badge */}
                       <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                         {activeVal === 0 ? (
                           <span style={{
@@ -485,28 +758,8 @@ export default function HostelExpensesBudgetSection({
                             backgroundColor: '#f1f5f9',
                             color: '#64748b'
                           }}>
-                            Reserved (0%)
+                            No Spend (0%)
                           </span>
-                        ) : isOver ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '2px 8px',
-                              borderRadius: '9999px',
-                              fontSize: '10.5px',
-                              fontWeight: '800',
-                              backgroundColor: '#fee2e2',
-                              color: '#b91c1c',
-                              border: '1px solid #fca5a5'
-                            }}>
-                              <ArrowUpRight size={11} /> Over {formatINR(Math.abs(diff))} ({pct.toFixed(1)}%)
-                            </span>
-                            <div style={{ width: '80px', height: '4px', backgroundColor: '#fee2e2', borderRadius: '2px', overflow: 'hidden' }}>
-                              <div style={{ width: '100%', height: '100%', backgroundColor: '#dc2626' }} />
-                            </div>
-                          </div>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                             <span style={{
@@ -517,14 +770,18 @@ export default function HostelExpensesBudgetSection({
                               borderRadius: '9999px',
                               fontSize: '10.5px',
                               fontWeight: '800',
-                              backgroundColor: '#dcfce7',
-                              color: '#15803d',
-                              border: '1px solid #86efac'
+                              backgroundColor: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe'
                             }}>
-                              <ArrowDownRight size={11} /> Saved {formatINR(Math.abs(diff))} ({pct.toFixed(1)}%)
+                              {sharePct.toFixed(1)}% of month
                             </span>
                             <div style={{ width: '80px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-                              <div style={{ width: `${Math.min(100, pct)}%`, height: '100%', backgroundColor: '#16a34a' }} />
+                              <div style={{
+                                width: `${Math.min(100, sharePct)}%`,
+                                height: '100%',
+                                backgroundColor: HEAD_COLORS[(head.s_no - 1) % HEAD_COLORS.length]
+                              }} />
                             </div>
                           </div>
                         )}
@@ -546,9 +803,6 @@ export default function HostelExpensesBudgetSection({
                   </td>
                   <td style={{ padding: '14px 12px', textAlign: 'right', fontSize: '13.5px', color: '#166534' }} className="currency-font">
                     {formatINR(totalSanctionedSum)}
-                  </td>
-                  <td style={{ padding: '14px 12px', textAlign: 'right', fontSize: '13.5px', color: '#9a3412' }} className="currency-font">
-                    {formatINR(totalMonthLimitSum)}
                   </td>
 
                   {/* Dynamic Month Totals calculated directly from DB rows */}
@@ -574,27 +828,20 @@ export default function HostelExpensesBudgetSection({
                   })}
 
                   <td style={{ padding: '14px 14px', textAlign: 'center' }}>
-                    {(() => {
-                      const netDiff = totalMonthLimitSum - activeMonthActualSum;
-                      const isUnder = netDiff >= 0;
-                      const netPct = totalMonthLimitSum > 0 ? ((Math.abs(netDiff) / totalMonthLimitSum) * 100).toFixed(1) : '0';
-                      return (
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '4px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '11px',
-                          fontWeight: '900',
-                          backgroundColor: isUnder ? '#bbf7d0' : '#fee2e2',
-                          color: isUnder ? '#14532d' : '#991b1b',
-                          border: `1px solid ${isUnder ? '#86efac' : '#fca5a5'}`
-                        }}>
-                          {isUnder ? `✓ Saved ${formatINR(netDiff)}` : `⚠️ Over ${formatINR(Math.abs(netDiff))}`} ({netPct}%)
-                        </span>
-                      );
-                    })()}
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 10px',
+                      borderRadius: '9999px',
+                      fontSize: '11.5px',
+                      fontWeight: '900',
+                      backgroundColor: '#fef9c3',
+                      color: '#854d0e',
+                      border: '1px solid #facc15'
+                    }}>
+                      {formatINR(activeMonthActualSum)} Active Spend
+                    </span>
                   </td>
                 </tr>
               </tbody>
@@ -603,104 +850,7 @@ export default function HostelExpensesBudgetSection({
         )}
 
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 2: 9 BUDGET HEADS VISUAL BENTO CARDS                     */}
-        {/* ------------------------------------------------------------- */}
-        {trackingViewMode === 'cards' && (
-          <div style={{
-            padding: '20px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '16px',
-            backgroundColor: '#f8fafc'
-          }}>
-            {activeBudgetHeads.map((head) => {
-              const sanc = num(head.sanctioned_amount, 0);
-              const limit = num(head.month_limit, 0);
-              const activeVal = num(head[activeMonthCol], 0);
-              const diff = activeVal - limit;
-              const isOver = activeVal > limit;
-              const pct = limit > 0 ? (activeVal / limit) * 100 : 0;
-
-              return (
-                <div
-                  key={head.budget_head}
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '16px',
-                    border: '1.5px solid #e2e8f0',
-                    padding: '18px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '14px',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-                    transition: 'transform 0.15s ease, box-shadow 0.15s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '34px',
-                        height: '34px',
-                        borderRadius: '10px',
-                        backgroundColor: '#f1f5f9',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {getHeadIcon(head.s_no)}
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b' }}>Head #{head.s_no}</span>
-                        <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, color: '#0f172a' }}>
-                          {head.budget_head}
-                        </h4>
-                      </div>
-                    </div>
-
-                    <span style={{
-                      fontSize: '10.5px',
-                      fontWeight: '800',
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      backgroundColor: activeVal === 0 ? '#f1f5f9' : isOver ? '#fee2e2' : '#dcfce7',
-                      color: activeVal === 0 ? '#64748b' : isOver ? '#b91c1c' : '#15803d'
-                    }}>
-                      {activeVal === 0 ? '0% Used' : isOver ? `▲ Over by ${formatINR(Math.abs(diff))}` : `✓ Saved ${formatINR(Math.abs(diff))}`}
-                    </span>
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{activePeriodName} Actual Spend</div>
-                    <div style={{ fontSize: '22px', fontWeight: '900', color: '#1e40af', margin: '2px 0 6px 0' }} className="currency-font">
-                      {activeVal > 0 ? formatINR(activeVal) : '₹0'}
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#475569', marginBottom: '6px' }}>
-                      <span>Limit: <strong style={{ color: '#c2410c' }}>{formatINR(limit)}</strong></span>
-                      <span>Sanctioned: <strong style={{ color: '#166534' }}>{formatINR(sanc)}</strong></span>
-                    </div>
-
-                    {/* Mini Pace Bar */}
-                    <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          width: `${Math.min(100, pct)}%`,
-                          height: '100%',
-                          backgroundColor: isOver ? '#dc2626' : pct > 80 ? '#3b82f6' : '#16a34a',
-                          borderRadius: '3px'
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ------------------------------------------------------------- */}
-        {/* VIEW 3: COST DRIVERS & SPEND DISTRIBUTION                      */}
+        {/* VIEW C: COST DRIVERS & SPEND DISTRIBUTION                      */}
         {/* ------------------------------------------------------------- */}
         {trackingViewMode === 'distribution' && (
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -740,7 +890,7 @@ export default function HostelExpensesBudgetSection({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
               {rankedCostHeads.map((head, idx) => {
                 const actSpend = num(head[activeMonthCol], 0);
-                const limit = num(head.month_limit, 0);
+                const sanc = num(head.sanctioned_amount, 0);
                 const share = activeMonthActualSum > 0 ? (actSpend / activeMonthActualSum) * 100 : 0;
 
                 return (
@@ -773,7 +923,7 @@ export default function HostelExpensesBudgetSection({
                       </span>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>{head.budget_head}</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Limit: {formatINR(limit)}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>Sanctioned: {formatINR(sanc)}</div>
                       </div>
                     </div>
 

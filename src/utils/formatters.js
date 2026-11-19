@@ -18,6 +18,28 @@ export const formatLakhs = (val) => {
   return `₹${lk} L`;
 };
 
+export const formatIndianCompact = (val) => {
+  if (val === undefined || val === null || val === '' || isNaN(Number(val))) return '—';
+  const num = Number(val);
+  if (num === 0) return '₹0';
+  const abs = Math.abs(num);
+  const sign = num < 0 ? '-' : '';
+
+  if (abs >= 10000000) {
+    const cr = abs / 10000000;
+    return `${sign}₹${cr.toFixed(cr >= 10 ? 1 : 2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')} Cr`;
+  }
+  if (abs >= 100000) {
+    const lk = abs / 100000;
+    return `${sign}₹${lk.toFixed(lk >= 10 ? 1 : 2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')} L`;
+  }
+  if (abs >= 1000) {
+    const k = abs / 1000;
+    return `${sign}₹${k.toFixed(1).replace(/\.0$/, '')} K`;
+  }
+  return `${sign}₹${num.toLocaleString('en-IN')}`;
+};
+
 /**
  * Standardize period labels across modules (e.g. "Sep 1st to 30th" -> "Sep'25", "2026-06" -> "Jun'26")
  * Prevents text collisions on charts and cards while preserving clear monthly context.
