@@ -51,9 +51,9 @@ export default function HostelExecutiveKpis({
   const closedTickets = num(census.tickets_closed, 160);
   const openTickets = num(census.tickets_open, Math.max(0, totalTickets - closedTickets));
 
-  const monthlyExpenses = num(census.expenses_occurred, 9349172);
-  const approvedBudget = num(census.approved_budget, 131788118);
-  const remainingBudget = num(census.balance, 89788118);
+  const monthlyExpenses = num(census.expenses_occurred, 13401116);
+  const approvedBudget = num(census.approved_budget, 142010789);
+  const remainingBudget = num(census.balance, 128609673);
 
   const costPerStudentMonth = num(
     census.per_student_cost_month,

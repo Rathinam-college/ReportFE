@@ -7,7 +7,6 @@ import {
 import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
 import HostelExecutiveKpis from './HostelExecutiveKpis';
 import HostelCapacityOccupancySection from './HostelCapacityOccupancySection';
-import HostelMaintenanceSection from './HostelMaintenanceSection';
 import HostelExpensesBudgetSection from './HostelExpensesBudgetSection';
 import HostelReportsModal from './HostelReportsModal';
 
@@ -243,14 +242,7 @@ export default function HostelOperationsDashboard({
       />
 
       {/* ========================================================================= */}
-      {/* 2. SERVICE & MAINTENANCE (SECOND PRIORITY)                                */}
-      {/* ========================================================================= */}
-      <HostelMaintenanceSection
-        census={activeCensus}
-      />
-
-      {/* ========================================================================= */}
-      {/* 3. EXPENSES & BUDGET (THIRD PRIORITY)                                     */}
+      {/* 2. EXPENSES & BUDGET TRACKING                                             */}
       {/* ========================================================================= */}
       <HostelExpensesBudgetSection
         census={activeCensus}

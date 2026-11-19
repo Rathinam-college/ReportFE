@@ -3,9 +3,16 @@ import { formatINR } from '../../utils/formatters';
 import { 
   Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Home, 
   AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, BedDouble, Users, Droplets, Wrench, ShieldCheck,
-  ChevronRight, Calendar, ArrowRight, Settings
+  ChevronRight, Calendar, ArrowRight, Settings, TrendingUp, TrendingDown
 } from 'lucide-react';
 import HostelCardSpreadsheet from './cards/HostelCardSpreadsheet';
+import {
+  HOSTEL_BUDGET_HEADS,
+  TOTAL_SANCTIONED_BUDGET,
+  TOTAL_MONTH_LIMIT,
+  TOTAL_OCT_ACTUAL,
+  getBudgetMonthCol
+} from '../../utils/hostelBudgetConstants';
 
 export default function HostelSpreadsheetEntry({
   activePeriodObj,
@@ -134,11 +141,43 @@ export default function HostelSpreadsheetEntry({
     const power_cost = num(d.power_cost, 0);
     const water_purchase_cost = num(d.water_purchase_cost, 0);
     const maintenance_expenses = num(d.maintenance_expenses, 0);
-    const expenses_occurred = num(d.expenses_occurred, 0);
 
-    // 11. Budget
-    const approved_budget = num(d.approved_budget, 0);
-    const cumulative_budget_spent = num(d.cumulative_budget_spent, 0);
+    // 11. Official 9 Budget Heads Calculation for Active Month
+    const activeMonthCol = getBudgetMonthCol(activePeriodObj, editingPeriodId);
+    const trackingRows = computedMatrix?.hostel_budget_tracking || [];
+
+    const budget_heads_breakdown = {};
+    let budget_heads_total = 0;
+
+    HOSTEL_BUDGET_HEADS.forEach((h) => {
+      let val = null;
+      if (d[h.key] !== undefined && d[h.key] !== null && d[h.key] !== '') {
+        val = num(d[h.key], 0);
+      } else {
+        const match = trackingRows.find(r => r.budget_head === h.head || Number(r.s_no) === h.s_no);
+        if (match && match[activeMonthCol] !== undefined && match[activeMonthCol] !== null) {
+          val = num(match[activeMonthCol], 0);
+        } else if (activeMonthCol === 'oct_26_actual') {
+          val = h.defaultOct;
+        } else {
+          val = 0;
+        }
+      }
+      budget_heads_breakdown[h.key] = val;
+      budget_heads_total += val;
+    });
+
+    // Expenses occurred is driven by sum of 9 budget heads
+    const expenses_occurred = budget_heads_total > 0 ? budget_heads_total : num(d.expenses_occurred, 0);
+
+    // Approved Budget
+    const approved_budget = num(d.approved_budget, TOTAL_SANCTIONED_BUDGET);
+
+    // Cumulative spent: if set in draft use it; else if period 30 (Oct'26), defaults to expenses_occurred
+    let cumulative_budget_spent = num(d.cumulative_budget_spent, 0);
+    if (cumulative_budget_spent === 0 && expenses_occurred > 0) {
+      cumulative_budget_spent = expenses_occurred;
+    }
     const balance = (approved_budget > 0 || cumulative_budget_spent > 0) ? (approved_budget - cumulative_budget_spent) : 0;
 
     // 12. Area & Per Student Metrics
@@ -181,13 +220,14 @@ export default function HostelSpreadsheetEntry({
       quality_issues_received, quality_issues_closed, quality_issues_open, incidents_count,
       power_units, power_cost, water_purchase_cost, maintenance_expenses, expenses_occurred,
       approved_budget, cumulative_budget_spent, balance,
+      budget_heads_breakdown, budget_heads_total, activeMonthCol,
       sq_feet, per_student_cost_month, per_student_cost_day, sq_feet_per_occupant,
       normal_water_litres, normal_water_cost, normal_water_student_ltrs, normal_water_student_cost,
       power_cost_sqft, units_per_occupant, power_cost_occupant,
       normal_water_ltr_day, normal_water_cost_day,
       drinking_water_litres, drinking_water_cost, drinking_water_ltr_day, drinking_water_cost_day
     };
-  }, [currData]);
+  }, [currData, computedMatrix, activePeriodObj, editingPeriodId]);
 
   // Update a field in the draft
   const handleValChange = (field, val) => {
@@ -200,10 +240,36 @@ export default function HostelSpreadsheetEntry({
       setIsSaving(true);
       setLocalMessage(null);
 
-      // Merge metrics and all custom fields
+      const activeMonthCol = getBudgetMonthCol(activePeriodObj, editingPeriodId);
+
+      // 1. Sync 9 budget heads to PostgreSQL table hostel_budget_tracking
+      const trackingItems = HOSTEL_BUDGET_HEADS.map(h => ({
+        s_no: h.s_no,
+        budget_head: h.head,
+        sanctioned_amount: h.sanctioned,
+        month_limit: h.limit,
+        [activeMonthCol]: metrics.budget_heads_breakdown[h.key] ?? 0
+      }));
+
+      try {
+        await fetch('/api/hostel/budget-tracking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: trackingItems })
+        });
+      } catch (trackErr) {
+        console.warn('Hostel budget tracking API notice:', trackErr);
+      }
+
+      // 2. Save full census entry to /api/hostel-census/${editingPeriodId}
       const payload = {
         ...metrics,
-        ...currData
+        ...currData,
+        ...metrics.budget_heads_breakdown,
+        approved_budget: metrics.approved_budget,
+        cumulative_budget_spent: metrics.cumulative_budget_spent,
+        expenses_occurred: metrics.expenses_occurred,
+        balance: metrics.balance
       };
 
       const res = await fetch(`/api/hostel-census/${editingPeriodId}`, {
@@ -219,7 +285,7 @@ export default function HostelSpreadsheetEntry({
 
       setLocalMessage({
         type: 'success',
-        text: `Hostel spreadsheet data for ${activePeriodObj?.period_label || 'Active Month'} saved to PostgreSQL successfully!`
+        text: `Hostel data & budget for ${activePeriodObj?.period_label || 'Active Month'} saved to PostgreSQL successfully!`
       });
 
       if (fetchData) fetchData();
@@ -398,6 +464,7 @@ export default function HostelSpreadsheetEntry({
         parameters={parameters}
         viewMode={activeView}
         setViewMode={setActiveView}
+        computedMatrix={computedMatrix}
       />
     );
   }
@@ -1366,23 +1433,156 @@ export default function HostelSpreadsheetEntry({
                   <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #000000' }}>
                     {getParamSNo('approved_budget', '22')}
                   </td>
-                  <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
-                    {getParamName('approved_budget', 'Approved Budget')}
+                  <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid #000000', color: '#166534' }}>
+                    {getParamName('approved_budget', 'Approved Budget (Sanctioned)')}
                   </td>
-                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0' }}></td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0', fontSize: '12px', fontWeight: '700', color: '#166534', padding: '6px 12px' }}>
+                    Official 8-Month Cycle Baseline (Oct'26 – May'27)
+                  </td>
                   <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                     <input
                       type="number"
-                      value={currData.approved_budget ?? ''}
+                      value={currData.approved_budget ?? metrics.approved_budget}
                       onChange={(e) => handleValChange('approved_budget', e.target.value)}
                       disabled={isClosed}
-                      placeholder="0"
-                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #000000', borderRadius: '3px', fontWeight: '800', backgroundColor: '#fff' }}
+                      placeholder="142010789"
+                      style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #16a34a', borderRadius: '3px', fontWeight: '900', backgroundColor: '#fff', color: '#14532d' }}
                       className="currency-font"
                     />
                   </td>
                 </tr>
               )}
+
+              {/* 9 Canonical Budget Heads Breakdown Sub-Table */}
+              <tr style={{ backgroundColor: '#0f172a', color: '#ffffff', borderBottom: '2px solid #000000' }}>
+                <td style={{ textAlign: 'center', fontWeight: '800', padding: '6px 4px', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#93c5fd' }}>
+                  22.*
+                </td>
+                <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '12px', color: '#f8fafc' }}>
+                  Hostel Budget Heads ({activePeriodObj?.period_label || 'Selected Month'})
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#86efac', width: '120px' }}>
+                  Sanctioned (₹)
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#fed7aa', width: '120px' }}>
+                  Month Limit (₹)
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '700', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#93c5fd', width: '110px' }}>
+                  Variance vs Limit
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '800', fontSize: '11.5px', color: '#ffffff', width: '150px' }}>
+                  Actual Spend (₹)
+                </td>
+              </tr>
+
+              {HOSTEL_BUDGET_HEADS.map((head) => {
+                const headVal = metrics.budget_heads_breakdown[head.key] ?? 0;
+                const headLimit = head.limit;
+                const diff = headLimit - headVal;
+                const isUnder = diff >= 0;
+
+                return (
+                  <tr 
+                    key={head.key} 
+                    style={{ 
+                      borderBottom: '1px solid #cbd5e1', 
+                      backgroundColor: head.s_no % 2 === 0 ? '#f8fafc' : '#ffffff',
+                      transition: 'background-color 0.15s ease'
+                    }}
+                  >
+                    <td style={{ textAlign: 'center', fontWeight: '700', padding: '6px 4px', borderRight: '1px solid #e2e8f0', color: '#64748b', fontSize: '11.5px' }}>
+                      22.{head.s_no}
+                    </td>
+                    <td style={{ padding: '6px 14px', fontWeight: '600', borderRight: '1px solid #e2e8f0', color: '#1e293b', fontSize: '12.5px' }}>
+                      {head.head}
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', borderRight: '1px solid #e2e8f0', fontWeight: '700', color: '#166534', fontSize: '12px' }} className="currency-font">
+                      {formatINR(head.sanctioned)}
+                    </td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', borderRight: '1px solid #e2e8f0', fontWeight: '700', color: '#c2410c', fontSize: '12px' }} className="currency-font">
+                      {formatINR(head.limit)}
+                    </td>
+                    <td style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
+                      <span 
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '10.5px',
+                          fontWeight: '800',
+                          backgroundColor: isUnder ? '#dcfce7' : '#fee2e2',
+                          color: isUnder ? '#15803d' : '#b91c1c'
+                        }}
+                      >
+                        {isUnder ? `✓ Saved ${formatINR(diff)}` : `⚠ Over ${formatINR(Math.abs(diff))}`}
+                      </span>
+                    </td>
+                    <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                      <input
+                        type="number"
+                        value={currData[head.key] ?? headVal}
+                        onChange={(e) => handleValChange(head.key, e.target.value)}
+                        disabled={isClosed}
+                        placeholder="0"
+                        style={{
+                          width: '100%',
+                          textAlign: 'right',
+                          padding: '4px 8px',
+                          border: isUnder ? '1px solid #94a3b8' : '1.5px solid #ef4444',
+                          borderRadius: '4px',
+                          fontWeight: '800',
+                          backgroundColor: isUnder ? '#ffffff' : '#fff1f2',
+                          color: '#0f172a',
+                          fontSize: '12.5px'
+                        }}
+                        className="currency-font"
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* Total Monthly 9 Heads Spend Row */}
+              <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#fef08a' }}>
+                <td style={{ textAlign: 'center', fontWeight: '900', padding: '6px 4px', borderRight: '1px solid #000000', fontSize: '11px', color: '#854d0e' }}>
+                  ∑
+                </td>
+                <td style={{ padding: '6px 14px', fontWeight: '900', borderRight: '1px solid #000000', color: '#854d0e', fontSize: '13px' }}>
+                  Total Monthly Expenses (9 Heads Sum)
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', borderRight: '1px solid #000000', fontWeight: '900', color: '#166534', fontSize: '12.5px' }} className="currency-font">
+                  {formatINR(TOTAL_SANCTIONED_BUDGET)}
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', borderRight: '1px solid #000000', fontWeight: '900', color: '#c2410c', fontSize: '12.5px' }} className="currency-font">
+                  {formatINR(TOTAL_MONTH_LIMIT)}
+                </td>
+                <td style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                  {(() => {
+                    const totalDiff = TOTAL_MONTH_LIMIT - metrics.budget_heads_total;
+                    const isTotalUnder = totalDiff >= 0;
+                    return (
+                      <span 
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '3px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '11px',
+                          fontWeight: '900',
+                          backgroundColor: isTotalUnder ? '#bbf7d0' : '#fecaca',
+                          color: isTotalUnder ? '#14532d' : '#991b1b'
+                        }}
+                      >
+                        {isTotalUnder ? `✓ Under ${formatINR(totalDiff)}` : `⚠ Over ${formatINR(Math.abs(totalDiff))}`}
+                      </span>
+                    );
+                  })()}
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '900', color: '#000000', fontSize: '13.5px' }} className="currency-font">
+                  {formatINR(metrics.budget_heads_total)}
+                </td>
+              </tr>
 
               {/* Row 23: Cumulative Budget spent */}
               {isParamActive('cumulative_budget_spent') && (
@@ -1393,11 +1593,13 @@ export default function HostelSpreadsheetEntry({
                   <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {getParamName('cumulative_budget_spent', 'Cumulative Budget spent (Actual expenses) till now')}
                   </td>
-                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0' }}></td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#bbf7d0', fontSize: '11.5px', color: '#166534', padding: '6px 12px' }}>
+                    Auto-accumulated actual spend across periods
+                  </td>
                   <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                     <input
                       type="number"
-                      value={currData.cumulative_budget_spent ?? ''}
+                      value={currData.cumulative_budget_spent ?? metrics.cumulative_budget_spent}
                       onChange={(e) => handleValChange('cumulative_budget_spent', e.target.value)}
                       disabled={isClosed}
                       placeholder="0"

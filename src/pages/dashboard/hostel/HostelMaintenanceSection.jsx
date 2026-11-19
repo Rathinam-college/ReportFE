@@ -35,54 +35,6 @@ export default function HostelMaintenanceSection({
     { id: 'other', name: 'Other Issues', count: Math.max(1, ticketsReceived - Math.round(ticketsReceived * 0.96)), pct: 4, icon: HelpCircle, color: '#64748b', bg: '#f1f5f9' }
   ];
 
-  // Canonical Repeated Quality Issues from campus hostel logs
-  const repeatedIssues = [
-    {
-      id: 'REP-01',
-      issue: 'Ceiling Fan Regulator Malfunction / Speed Fluctuation',
-      category: 'Electrical',
-      location: 'Boys Block B • Rooms 204, 206, 312',
-      frequency: 3,
-      status: 'Resolved',
-      statusColor: '#16a34a',
-      statusBg: '#dcfce7',
-      lastReported: '2 days ago'
-    },
-    {
-      id: 'REP-02',
-      issue: 'Shower Valve Pressure Drop & Tap Drip',
-      category: 'Plumbing',
-      location: 'Girls Block A • 3rd Floor Restrooms',
-      frequency: 4,
-      status: qualityOpen > 0 ? 'Under Inspection' : 'Resolved',
-      statusColor: qualityOpen > 0 ? '#d97706' : '#16a34a',
-      statusBg: qualityOpen > 0 ? '#fef3c7' : '#dcfce7',
-      lastReported: 'Yesterday'
-    },
-    {
-      id: 'REP-03',
-      issue: 'Wi-Fi Signal Drop During Peak Study Hours',
-      category: 'Wi-Fi & Internet',
-      location: 'Boys Block C • East Wing Corridors',
-      frequency: 5,
-      status: 'Access Point Re-positioned',
-      statusColor: '#2563eb',
-      statusBg: '#dbeafe',
-      lastReported: '3 days ago'
-    },
-    {
-      id: 'REP-04',
-      issue: 'Study Desk Drawer Slider Jam',
-      category: 'Furniture',
-      location: 'Girls Block B • Room 118',
-      frequency: 2,
-      status: 'Replaced & Closed',
-      statusColor: '#16a34a',
-      statusBg: '#dcfce7',
-      lastReported: 'Last week'
-    }
-  ];
-
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
       {/* SECTION HEADER BAR - Amber / Orange visual identity */}
@@ -129,7 +81,7 @@ export default function HostelMaintenanceSection({
               </span>
             </div>
             <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#b45309' }}>
-              Hostel maintenance complaints, repair times, and repeated issues
+              Hostel maintenance complaints, categories, and repair turnaround times
             </p>
           </div>
         </div>
@@ -217,17 +169,6 @@ export default function HostelMaintenanceSection({
           </div>
           <div style={{ fontSize: '11px', color: '#1d4ed8' }}>About 2.4 days to fix complaints</div>
         </div>
-
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '16px', border: '1.5px solid #fed7aa', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#c2410c', textTransform: 'uppercase' }}>Repeated Complaints</span>
-            <AlertTriangle size={16} color="#ea580c" />
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: '#ea580c', margin: '6px 0 2px 0' }}>
-            {qualityReceived.toLocaleString()}
-          </div>
-          <div style={{ fontSize: '11px', color: '#c2410c' }}>Complaints reported more than once</div>
-        </div>
       </div>
 
       {/* COMPLAINT CATEGORIES DISTRIBUTION & BREAKDOWN */}
@@ -302,127 +243,6 @@ export default function HostelMaintenanceSection({
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* QUALITY ISSUES & REPEATED COMPLAINTS TRACKER */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        border: '1.5px solid #fed7aa',
-        padding: '20px 22px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '14px',
-        boxShadow: '0 2px 8px rgba(234, 88, 12, 0.03)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '7px',
-              backgroundColor: '#fff7ed',
-              color: '#ea580c',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <AlertTriangle size={16} />
-            </span>
-            <div>
-              <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#9a3412', margin: 0 }}>
-                Repeated Complaints & Issues
-              </h3>
-              <p style={{ fontSize: '12px', color: '#c2410c', margin: '2px 0 0 0' }}>
-                Rooms and areas that reported the same issue multiple times (e.g. fan issues, water leaks, Wi-Fi problems)
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{
-              fontSize: '11.5px',
-              fontWeight: '700',
-              padding: '3px 10px',
-              borderRadius: '9999px',
-              backgroundColor: '#fff7ed',
-              color: '#c2410c',
-              border: '1px solid #fed7aa'
-            }}>
-              {qualityReceived} Repeated Complaints
-            </span>
-          </div>
-        </div>
-
-        {/* Structured Table */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#fff7ed', borderBottom: '1px solid #fed7aa' }}>
-                <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Issue & Description</th>
-                <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Category</th>
-                <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Location / Room</th>
-                <th style={{ textAlign: 'center', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Times Reported</th>
-                <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Last Reported</th>
-                <th style={{ textAlign: 'right', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {repeatedIssues.map((it, idx) => (
-                <tr key={it.id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfd' }}>
-                  <td style={{ padding: '12px', fontWeight: '700', color: '#0f172a' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
-                        {it.id}
-                      </span>
-                      <span>{it.issue}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '12px', color: '#475569', fontWeight: '600' }}>
-                    {it.category}
-                  </td>
-                  <td style={{ padding: '12px', color: '#0f172a', fontWeight: '700' }}>
-                    {it.location}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      backgroundColor: '#fff7ed',
-                      color: '#c2410c',
-                      fontWeight: '800',
-                      border: '1px solid #fed7aa'
-                    }}>
-                      {it.frequency} Times
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px', color: '#64748b' }}>
-                    {it.lastReported}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'right' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                      backgroundColor: it.statusBg,
-                      color: it.statusColor,
-                      fontSize: '11px',
-                      fontWeight: '800'
-                    }}>
-                      <CheckCircle2 size={12} />
-                      {it.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </section>
