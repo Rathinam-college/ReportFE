@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import MonthlyAttachmentsModal from '../../components/attachments/MonthlyAttachmentsModal';
 import { formatINR } from '../../utils/formatters';
-import { Plus, Copy, Lock, Unlock, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Plus, Copy, Lock, Unlock, CheckCircle2, AlertTriangle, RefreshCw, Paperclip } from 'lucide-react';
 import MatrixTable from './MatrixTable';
 import AddMonthModal from './AddMonthModal';
 
@@ -101,6 +102,21 @@ export default function DataEntryPage({
   const prevPeriod = currentIdx > 0 ? periods[currentIdx - 1] : null;
   const isClosed = !!activePeriodObj?.is_closed;
 
+  const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
+  const [attachmentCount, setAttachmentCount] = useState(0);
+
+  useEffect(() => {
+    if (editingPeriodId && selectedModule) {
+      fetch(`/api/attachments/summary?module=${selectedModule}`)
+        .then(res => res.json())
+        .then(d => {
+          const count = d?.summary?.[String(editingPeriodId)] || 0;
+          setAttachmentCount(count);
+        })
+        .catch(err => console.warn('Attachment summary fetch notice:', err));
+    }
+  }, [editingPeriodId, selectedModule]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       
@@ -111,6 +127,46 @@ export default function DataEntryPage({
         alignItems: 'center',
         gap: '10px'
       }}>
+        {/* Supporting Attachments & Documents Pill Button */}
+        <button
+          type="button"
+          onClick={() => setShowAttachmentsModal(true)}
+          style={{
+            padding: '7px 16px',
+            borderRadius: '9999px',
+            backgroundColor: attachmentCount > 0 ? '#eff6ff' : '#ffffff',
+            border: `1.5px solid ${attachmentCount > 0 ? '#3b82f6' : '#cbd5e1'}`,
+            color: attachmentCount > 0 ? '#1d4ed8' : '#334155',
+            fontSize: '12.5px',
+            fontWeight: '750',
+            cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = attachmentCount > 0 ? '#dbeafe' : '#f8fafc'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = attachmentCount > 0 ? '#eff6ff' : '#ffffff'}
+          title="Upload or view bills, images, PDFs, spreadsheets, presentations, and links for this month"
+        >
+          <Paperclip size={13} color={attachmentCount > 0 ? '#2563eb' : '#64748b'} />
+          <span>Attachments & Bills</span>
+          {attachmentCount > 0 && (
+            <span
+              style={{
+                fontSize: '10.5px',
+                fontWeight: '900',
+                padding: '1px 7px',
+                borderRadius: '9999px',
+                backgroundColor: '#2563eb',
+                color: '#ffffff'
+              }}
+            >
+              {attachmentCount}
+            </span>
+          )}
+        </button>
         <button
           type="button"
           onClick={handleCloneFromPrev}

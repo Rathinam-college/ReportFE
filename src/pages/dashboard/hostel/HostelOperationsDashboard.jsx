@@ -2,13 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { 
   Building2, BedDouble, Users, Wrench, DollarSign, Download, 
   ArrowRight, FileSpreadsheet, Calendar, ChevronDown, Check,
-  Sparkles, FileText, Printer
+  Sparkles, FileText, Printer, Paperclip
 } from 'lucide-react';
 import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
 import HostelExecutiveKpis from './HostelExecutiveKpis';
 import HostelCapacityOccupancySection from './HostelCapacityOccupancySection';
 import HostelExpensesBudgetSection from './HostelExpensesBudgetSection';
 import HostelReportsModal from './HostelReportsModal';
+import MonthlyAttachmentsModal from '../../../components/attachments/MonthlyAttachmentsModal';
 
 export default function HostelOperationsDashboard({
   computedMatrix = {},
@@ -18,8 +19,11 @@ export default function HostelOperationsDashboard({
   setActivePeriod,
   onOpenDataEntry,
   handleExportReport,
-  remarksDraft = {}
+  remarksDraft = {},
+  attachmentsSummary = {},
+  onRefreshAttachments
 }) {
+  const [showHostelAttachmentsModal, setShowHostelAttachmentsModal] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const hostelCensusMap = computedMatrix?.hostel_census || {};
 

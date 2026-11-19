@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import MonthlyAttachmentsModal from '../../components/attachments/MonthlyAttachmentsModal';
 import { formatINR, formatLakhs, DASH_COLORS } from '../../utils/formatters';
 import { 
   Calendar, Layers, PieChart as PieIcon, Calculator, FileSpreadsheet, 
@@ -46,6 +47,30 @@ export default function DashboardPage({
   const [activePeriod, setActivePeriod] = useState('all'); // 'all' or period id
   const [showDataTable, setShowDataTable] = useState(true);
   const [isTableFullScreen, setIsTableFullScreen] = useState(false);
+
+  // Attachments State
+  const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
+  const [attachmentsSummary, setAttachmentsSummary] = useState({});
+
+  const fetchAttachmentsSummary = () => {
+    fetch(`/api/attachments/summary?module=${currentModule}`)
+      .then(res => res.json())
+      .then(d => {
+        if (d?.summary) setAttachmentsSummary(d.summary);
+      })
+      .catch(err => console.warn('Attachments summary notice:', err));
+  };
+
+  useEffect(() => {
+    fetchAttachmentsSummary();
+  }, [currentModule]);
+
+  const activeAttachmentCount = useMemo(() => {
+    if (activePeriod === 'all') {
+      return Object.values(attachmentsSummary).reduce((acc, c) => acc + (Number(c) || 0), 0);
+    }
+    return attachmentsSummary[String(activePeriod)] || 0;
+  }, [attachmentsSummary, activePeriod]);
 
   const currentModule = selectedModule || 'food';
 
@@ -540,6 +565,8 @@ export default function DashboardPage({
           onOpenDataEntry={onOpenDataEntry}
           handleExportReport={handleExportReport}
           remarksDraft={remarksDraft}
+          attachmentsSummary={attachmentsSummary}
+          onRefreshAttachments={fetchAttachmentsSummary}
         />
       </div>
     );
@@ -689,6 +716,7 @@ export default function DashboardPage({
           isFullScreen={isTableFullScreen}
           onToggleFullScreen={setIsTableFullScreen}
           remarksDraft={remarksDraft}
+          attachmentsSummary={attachmentsSummary}
         />
       </section>
 

@@ -10,7 +10,8 @@ import { formatPeriodLabel } from '../../../utils/formatters';
 export default function MonthPills({
   periods = [],
   selectedPeriod = 'all',
-  onSelectPeriod
+  onSelectPeriod,
+  attachmentsSummary = {}
 }) {
   return (
     <div
@@ -69,6 +70,7 @@ export default function MonthPills({
         const rawLabel = period.period_label || period.label || period.period_code || 'Month';
         const label = (rawLabel.length <= 10 && rawLabel.includes("'")) ? rawLabel : formatPeriodLabel(period);
 
+        const attCount = attachmentsSummary[String(period.id)] || 0;
         return (
           <button
             key={period.id}
@@ -76,7 +78,7 @@ export default function MonthPills({
             role="tab"
             aria-selected={isSelected}
             aria-pressed={isSelected}
-            title={period.period_label || period.period_code}
+            title={`${period.period_label || period.period_code}${attCount > 0 ? ` • ${attCount} file(s) attached` : ''}`}
             onClick={() => onSelectPeriod && onSelectPeriod(period.id)}
             style={{
               flexShrink: 0,
@@ -86,11 +88,14 @@ export default function MonthPills({
               fontWeight: isSelected ? '700' : '600',
               backgroundColor: isSelected ? 'var(--pill-active-bg, #5b5bf0)' : 'var(--bg-pill, #eceefa)',
               color: isSelected ? 'var(--pill-active-text, #ffffff)' : 'var(--text-main, #14172b)',
-              border: '1px solid transparent',
+              border: attCount > 0 && !isSelected ? '1px solid #93c5fd' : '1px solid transparent',
               cursor: 'pointer',
               boxShadow: isSelected ? '0 4px 14px rgba(91, 91, 240, 0.35)' : 'none',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              outline: 'none'
+              outline: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
             onMouseEnter={(e) => {
               if (!isSelected) {
@@ -103,7 +108,21 @@ export default function MonthPills({
               }
             }}
           >
-            {label}
+            <span>{label}</span>
+            {attCount > 0 && (
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: '800',
+                  padding: '1px 5px',
+                  borderRadius: '9999px',
+                  backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.25)' : '#2563eb',
+                  color: '#ffffff'
+                }}
+              >
+                📎 {attCount}
+              </span>
+            )}
           </button>
         );
       })}
