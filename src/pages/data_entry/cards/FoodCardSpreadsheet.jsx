@@ -1037,7 +1037,7 @@ export default function FoodCardSpreadsheet({
                 </div>
                 <div>
                   <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: 'var(--text-main, #12182b)' }}>
-                    Person & Diners Census
+                    Person
                   </h3>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted, #66708f)' }}>
                     Counts Only · Excluded from Total Expenses
