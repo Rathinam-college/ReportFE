@@ -1497,16 +1497,13 @@ export default function HostelSpreadsheetEntry({
                 <td style={{ padding: '6px 14px', fontWeight: '800', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '12px', color: '#f8fafc' }}>
                   Hostel Budget Heads ({activePeriodObj?.period_label || 'Selected Month'})
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#86efac', width: '120px' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#86efac', width: '130px' }}>
                   Sanctioned (₹)
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#fed7aa', width: '120px' }}>
-                  Month Limit (₹)
+                <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '700', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#93c5fd', width: '130px' }}>
+                  Share of Spend (%)
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '700', borderRight: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', color: '#93c5fd', width: '110px' }}>
-                  Variance vs Limit
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '800', fontSize: '11.5px', color: '#ffffff', width: '150px' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '800', fontSize: '11.5px', color: '#ffffff', width: '160px' }}>
                   Actual Spend (₹)
                 </td>
               </tr>
@@ -1554,27 +1551,6 @@ export default function HostelSpreadsheetEntry({
                         className="currency-font"
                       />
                     </td>
-                    <td style={{ padding: '4px 6px', textAlign: 'right', borderRight: '1px solid #e2e8f0', width: '130px' }}>
-                      <input
-                        type="number"
-                        value={currData['limit_' + head.key] ?? headLimit}
-                        onChange={(e) => handleValChange('limit_' + head.key, e.target.value)}
-                        disabled={isClosed}
-                        placeholder={String(head.limit)}
-                        style={{
-                          width: '100%',
-                          textAlign: 'right',
-                          padding: '4px 6px',
-                          border: '1px solid #94a3b8',
-                          borderRadius: '4px',
-                          fontWeight: '750',
-                          backgroundColor: '#ffffff',
-                          color: '#c2410c',
-                          fontSize: '12px'
-                        }}
-                        className="currency-font"
-                      />
-                    </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
                       <span 
                         style={{
@@ -1584,11 +1560,11 @@ export default function HostelSpreadsheetEntry({
                           borderRadius: '9999px',
                           fontSize: '10.5px',
                           fontWeight: '800',
-                          backgroundColor: isUnder ? '#dcfce7' : '#fee2e2',
-                          color: isUnder ? '#15803d' : '#b91c1c'
+                          backgroundColor: '#eff6ff',
+                          color: '#1d4ed8'
                         }}
                       >
-                        {isUnder ? `✓ Saved ${formatINR(diff)}` : `⚠ Over ${formatINR(Math.abs(diff))}`}
+                        {metrics.budget_heads_total > 0 ? ((headVal / metrics.budget_heads_total) * 100).toFixed(1) : '0.0'}%
                       </span>
                     </td>
                     <td style={{ padding: '4px 8px', textAlign: 'right' }}>
