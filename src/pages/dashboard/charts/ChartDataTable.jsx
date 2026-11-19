@@ -255,6 +255,42 @@ export default function ChartDataTable({
     );
   };
 
+  // Helper to identify Person count categories (distinct from currency)
+  const isPersonCountCategory = (catName = '') => {
+    const c = String(catName || '').toLowerCase().trim();
+    if (c.includes('cost')) return false;
+    return (
+      c === 'person' ||
+      c === 'persons' ||
+      c === 'total person' ||
+      c === 'total persons' ||
+      c === 'headcount' ||
+      c === 'students' ||
+      c === 'census'
+    );
+  };
+
+  const isPersonCountItem = (catName = '', itemDesc = '') => {
+    if (isPersonCountCategory(catName)) return true;
+    const i = String(itemDesc || '').toLowerCase().trim();
+    if (i.includes('cost')) return false;
+    return (
+      i.includes('student') ||
+      i.includes('staff count') ||
+      i.includes('staffs count') ||
+      i.includes('headcount') ||
+      i.includes('person count') ||
+      (i === 'others' && isPersonCountCategory(catName))
+    );
+  };
+
+  const formatPersonCount = (val) => {
+    if (val === undefined || val === null || val === '' || isNaN(Number(val))) return '0';
+    const num = Number(val);
+    if (num === 0) return '0';
+    return Math.round(num).toLocaleString('en-IN');
+  };
+
   // Compute month-by-month grand totals across all categories (excluding Person metrics)
   const monthlyGrandTotals = useMemo(() => {
     const totals = {};
@@ -854,23 +890,27 @@ export default function ChartDataTable({
                         {cat.categoryName}
                       </td>
                     </tr>
-                    {cat.items.map(it => (
-                      <tr key={it.id || it.description} style={{ borderBottom: '1px solid var(--border-card, #e6e8f2)' }}>
-                        <td style={{ padding: '6px 10px' }}></td>
-                        <td style={{ padding: '6px 10px', fontWeight: '600' }}>{it.description || it.name}</td>
-                        {periods.map(p => (
-                          <td key={p.id} style={{ padding: '6px 10px', textAlign: 'right' }}>
-                            {formatIndianCompact(it.amounts?.[p.id] ?? 0)}
+                    {cat.items.map(it => {
+                      const isItemPerson = isPersonCountItem(cat.categoryName, it.description || it.name);
+                      const fmt = isItemPerson ? formatPersonCount : formatIndianCompact;
+                      return (
+                        <tr key={it.id || it.description} style={{ borderBottom: '1px solid var(--border-card, #e6e8f2)' }}>
+                          <td style={{ padding: '6px 10px' }}></td>
+                          <td style={{ padding: '6px 10px', fontWeight: '600' }}>{it.description || it.name}</td>
+                          {periods.map(p => (
+                            <td key={p.id} style={{ padding: '6px 10px', textAlign: 'right' }}>
+                              {fmt(it.amounts?.[p.id] ?? 0)}
+                            </td>
+                          ))}
+                          <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '700' }}>
+                            {fmt(it.total || 0)}
                           </td>
-                        ))}
-                        <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '700' }}>
-                          {formatIndianCompact(it.total || 0)}
-                        </td>
-                        <td style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-muted, #6b7090)' }}>
-                          {formatIndianCompact(periods.length > 0 ? (it.total || 0) / periods.length : 0)}
-                        </td>
-                      </tr>
-                    ))}
+                          <td style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-muted, #6b7090)' }}>
+                            {fmt(periods.length > 0 ? (it.total || 0) / periods.length : 0)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </React.Fragment>
                 ))}
               </tbody>
@@ -943,11 +983,15 @@ export default function ChartDataTable({
               const catPercent = currentGrandTotal > 0 ? (catAmount / denom) * 100 : 0;
               const maxMonth = categoryMaxMonths[catId] || 1;
               const isExpanded = !!expandedCardIds[catId];
+              const isPersonCat = isPersonCountCategory(cat.categoryName);
 
               return (
                 <CategoryCard
                   key={catId || cat.categoryName}
-                  category={cat}
+                  category={{
+                    ...cat,
+                    isPersonCategory: isPersonCat
+                  }}
                   periods={periods}
                   selectedPeriod={selectedPeriod}
                   selectedAmount={catAmount}
@@ -956,8 +1000,8 @@ export default function ChartDataTable({
                   maxMonthlyAmount={maxMonth}
                   isExpanded={isExpanded}
                   onToggleExpand={handleToggleExpand}
-                  formatCompact={formatIndianCompact}
-                  formatFull={formatIndianFull}
+                  formatCompact={isPersonCat ? formatPersonCount : formatIndianCompact}
+                  formatFull={isPersonCat ? formatPersonCount : formatIndianFull}
                   hidePercentage={cat.isExcluded || displayMode === 'amount_only'}
                   remarksDraft={remarksDraft}
                 />

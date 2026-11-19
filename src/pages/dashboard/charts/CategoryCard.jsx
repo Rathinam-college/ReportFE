@@ -34,6 +34,42 @@ export default function CategoryCard({
   const items = category.items || [];
   const [hoveredBarPeriod, setHoveredBarPeriod] = useState(null);
 
+  // Identify whether this category represents Person counts (not currency)
+  const isPersonCategory = Boolean(
+    category.isPersonCategory ||
+    (categoryName && (
+      categoryName.toLowerCase() === 'person' ||
+      categoryName.toLowerCase() === 'persons' ||
+      categoryName.toLowerCase() === 'total person' ||
+      categoryName.toLowerCase() === 'total persons' ||
+      categoryName.toLowerCase() === 'headcount' ||
+      categoryName.toLowerCase() === 'students' ||
+      categoryName.toLowerCase() === 'census'
+    ) && !categoryName.toLowerCase().includes('cost'))
+  );
+
+  const isPersonItem = (itName = '') => {
+    if (isPersonCategory) return true;
+    const n = String(itName || '').toLowerCase().trim();
+    if (n.includes('cost')) return false;
+    return (
+      n.includes('student') ||
+      n.includes('staff count') ||
+      n.includes('staffs count') ||
+      n.includes('headcount') ||
+      n.includes('person count') ||
+      n === 'person' ||
+      (n === 'others' && isPersonCategory)
+    );
+  };
+
+  const formatPerson = (val) => {
+    if (val === undefined || val === null || val === '' || isNaN(Number(val))) return '0';
+    const num = Number(val);
+    if (num === 0) return '0';
+    return Math.round(num).toLocaleString('en-IN');
+  };
+
   // Collect all user remarks/comments for a given period across items in this category
   const getMonthRemarks = (pId) => {
     const list = [];
@@ -135,7 +171,7 @@ export default function CategoryCard({
 
         {/* Big Amount: Category Total for Selection */}
         <div
-          title={formatFull(selectedAmount)}
+          title={isPersonCategory ? formatPerson(selectedAmount) : formatFull(selectedAmount)}
           style={{
             fontSize: '24px',
             fontWeight: '800',
@@ -145,7 +181,9 @@ export default function CategoryCard({
             marginTop: '4px'
           }}
         >
-          {selectedAmount > 0 ? formatCompact(selectedAmount) : '—'}
+          {selectedAmount > 0 
+            ? (isPersonCategory ? formatPerson(selectedAmount) : formatCompact(selectedAmount)) 
+            : (isPersonCategory ? '0' : '—')}
         </div>
 
         {/* Monthly Trend Bars: Value on Top, Bar in Middle, Month Label Under */}
@@ -173,9 +211,10 @@ export default function CategoryCard({
             const remarkSummary = hasRemarks
               ? monthRemarks.map(m => `• ${m.itemName}: "${m.text}"`).join('\n')
               : 'No remarks recorded';
+            const formattedMonthVal = isPersonCategory ? formatPerson(mVal) : formatFull(mVal);
             const tooltipTitle = hasRemarks
-              ? `${p.period_label || p.period_code}: ${formatFull(mVal)}\n\n💬 Remarks / Comments:\n${remarkSummary}`
-              : `${p.period_label || p.period_code}: ${formatFull(mVal)}`;
+              ? `${p.period_label || p.period_code}: ${formattedMonthVal}\n\n💬 Remarks / Comments:\n${remarkSummary}`
+              : `${p.period_label || p.period_code}: ${formattedMonthVal}`;
 
             // Smart tooltip positioning so it never clips off-card
             const isFirstBar = mIdx === 0;
@@ -250,7 +289,7 @@ export default function CategoryCard({
                         {formatPeriodLabel(p) !== (p.period_label || p.period_code) ? ` (${formatPeriodLabel(p)})` : ''}
                       </span>
                       <span style={{ fontWeight: '900', color: '#38bdf8', fontVariantNumeric: 'tabular-nums', fontSize: '12px' }}>
-                        {formatFull(mVal)}
+                        {formattedMonthVal}
                       </span>
                     </div>
 
@@ -303,7 +342,7 @@ export default function CategoryCard({
                   }}
                 >
                   {hasRemarks && <span style={{ fontSize: '9px', lineHeight: 1 }} title="Has operational remarks">💬</span>}
-                  <span>{mVal > 0 ? formatCompact(mVal) : '₹0'}</span>
+                  <span>{mVal > 0 ? (isPersonCategory ? formatPerson(mVal) : formatCompact(mVal)) : (isPersonCategory ? '0' : '₹0')}</span>
                 </span>
 
                 {/* Middle Bar Container */}
@@ -411,9 +450,13 @@ export default function CategoryCard({
             }
 
             const hasItemRemarks = itemRemarks.length > 0;
+            const thisItemIsPerson = isPersonItem(it.description || it.name);
+            const formattedItemFull = thisItemIsPerson ? formatPerson(itAmount) : formatFull(itAmount);
+            const formattedItemCompact = thisItemIsPerson ? formatPerson(itAmount) : formatCompact(itAmount);
+
             const itemTooltip = hasItemRemarks
-              ? `${it.description || it.name}: ${formatFull(itAmount)}\n\n💬 Remarks: ${itemRemarks.map(r => `[${r.periodLabel}] "${r.text}"`).join('; ')}`
-              : `${it.description || it.name}: ${formatFull(itAmount)}`;
+              ? `${it.description || it.name}: ${formattedItemFull}\n\n💬 Remarks: ${itemRemarks.map(r => `[${r.periodLabel}] "${r.text}"`).join('; ')}`
+              : `${it.description || it.name}: ${formattedItemFull}`;
 
             return (
               <div key={it.cost_head_id || it.id || it.description} title={itemTooltip} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -443,7 +486,7 @@ export default function CategoryCard({
                       color: hasValue ? 'var(--text-main, #14172b)' : 'var(--text-muted, #6b7090)'
                     }}
                   >
-                    {hasValue ? formatCompact(itAmount) : '—'}
+                    {hasValue ? formattedItemCompact : (thisItemIsPerson ? '0' : '—')}
                   </span>
                 </div>
 
