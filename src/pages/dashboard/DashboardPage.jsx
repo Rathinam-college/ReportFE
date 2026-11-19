@@ -93,16 +93,16 @@ export default function DashboardPage({
       badgeBg: '#eef2ff'
     },
     hostel: {
-      title: 'Hostel Resident Operations Dashboard',
-      subtitle: `Hostel Resident Facilities overview • ${periods[0]?.period_label || "Sep'25"} – ${periods[periods.length - 1]?.period_label || "Sep'26"} (${periods.length || 13} Cycles) • FY 2025-2026 • Currency INR (₹)`,
-      badge: 'Hostel Operations',
+      title: 'Hostel Operations Dashboard',
+      subtitle: `Hostel overview • ${periods[0]?.period_label || "Sep'25"} – ${periods[periods.length - 1]?.period_label || "Sep'26"} (${periods.length || 13} Months) • FY 2025-2026 • Currency INR (₹)`,
+      badge: 'Hostel',
       badgeColor: '#059669',
       badgeBg: '#ecfdf5'
     },
     transport: {
-      title: 'Transport Fleet Operations Dashboard',
-      subtitle: `Transport Fleet & Mileage overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
-      badge: 'Transport Fleet',
+      title: 'Transport Fleet Dashboard',
+      subtitle: `Transport overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
+      badge: 'Transport',
       badgeColor: '#ea580c',
       badgeBg: '#fff7ed'
     }
@@ -724,15 +724,15 @@ export default function DashboardPage({
               3
             </span>
             <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Executive Financial Totals Summary
+              Overall Expense Summary
             </h2>
             <span style={{ fontSize: '11px', fontWeight: '800', color: '#047857', backgroundColor: '#ecfdf5', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #a7f3d0' }}>
-              Financial Spend Summary
+              Expense Summary
             </span>
           </div>
 
           <div style={{ fontSize: '12.5px', color: '#64748b' }}>
-            Cumulative spend, active cycle total, monthly normalized average & largest expense head
+            Total spent, current month, monthly average, and largest expense
           </div>
         </div>
 
@@ -756,7 +756,7 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Bed Capacity & Resident Occupancy
+                  Total Beds & Occupancy
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
                   {num(activeHostelCensus?.total_occupied, 2974).toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>/ {num(activeHostelCensus?.bed_capacity_total, 3119).toLocaleString()} Beds</span>
@@ -936,13 +936,13 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {periods.length > 0 ? `Total Expenditure • ${periods.length}-Month Spend` : 'Total Expenditure'}
+                  {periods.length > 0 ? `Total Spend • ${periods.length} Months` : 'Total Spend'}
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(grandTotal)}
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  {periods.length > 0 ? `${periods[0]?.period_label} – ${periods[periods.length - 1]?.period_label} Cumulative` : 'All cycles recorded in DB'}
+                  {periods.length > 0 ? `${periods[0]?.period_label} to ${periods[periods.length - 1]?.period_label} Total` : 'All recorded months'}
                 </div>
               </div>
 
@@ -957,13 +957,13 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Spend` : 'Current Cycle Total'}
+                  {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Spend` : 'Current Month Total'}
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(latestMonthTotal)}
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  {activePeriodObj ? (activePeriodObj.is_closed ? 'Locked cycle status' : 'Active draft cycle') : 'Current cycle'}
+                  {activePeriodObj ? (activePeriodObj.is_closed ? 'Locked month' : 'Current active month') : 'Current month'}
                 </div>
               </div>
 
@@ -978,13 +978,13 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Monthly Average Total
+                  Monthly Average
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(monthlyAvg)}
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  {periods.length > 0 ? `Normalized across ${periods.length} cycle${periods.length > 1 ? 's' : ''}` : 'Average run-rate'}
+                  {periods.length > 0 ? `Average across ${periods.length} months` : 'Monthly average'}
                 </div>
               </div>
 
@@ -999,13 +999,13 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#be185d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Largest Expense Head
+                  Highest Expense Category
                 </div>
                 <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '8px 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {largestCostHead.name}
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }} className="currency-font">
-                  {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length}-month)` : '₹0'}
+                  {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length} months)` : '₹0'}
                 </div>
               </div>
             </>

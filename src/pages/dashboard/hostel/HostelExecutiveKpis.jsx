@@ -75,7 +75,7 @@ export default function HostelExecutiveKpis({
       border: '#a7f3d0'
     },
     {
-      label: 'Total Occupied Residents',
+      label: 'Occupied Beds',
       value: totalOccupied.toLocaleString(),
       sub: `${num(census.students_total, 2959)} Students • ${num(census.staff_total, 135)} Staff`,
       icon: Users,
@@ -86,7 +86,7 @@ export default function HostelExecutiveKpis({
     {
       label: 'Total Vacant Beds',
       value: vacantBeds.toLocaleString(),
-      sub: `${num(census.vacant_boys, 0)} Boys Vacant • ${num(census.vacant_girls, 34)} Girls Vacant`,
+      sub: `${num(census.vacant_boys, 0)} Boys • ${num(census.vacant_girls, 34)} Girls free`,
       icon: UserCheck,
       color: '#0d9488',
       bg: '#f0fdfa',
@@ -95,7 +95,7 @@ export default function HostelExecutiveKpis({
     {
       label: 'Occupancy Rate',
       value: `${occupancyPct.toFixed(1)}%`,
-      sub: `Vacancy Rate: ${(100 - occupancyPct).toFixed(1)}%`,
+      sub: `Free beds: ${(100 - occupancyPct).toFixed(1)}%`,
       icon: PieChart,
       color: '#4f46e5',
       bg: '#eef2ff',
@@ -104,7 +104,7 @@ export default function HostelExecutiveKpis({
     {
       label: 'New Admissions',
       value: `+${newAdmissions.toLocaleString()}`,
-      sub: `Current cycle intakes`,
+      sub: `Joined this month`,
       icon: UserPlus,
       color: '#16a34a',
       bg: '#f0fdf4',
@@ -113,61 +113,61 @@ export default function HostelExecutiveKpis({
     {
       label: 'Students Vacated',
       value: studentsVacated.toLocaleString(),
-      sub: `Checkout / departures`,
+      sub: `Left hostel`,
       icon: UserMinus,
       color: '#ea580c',
       bg: '#fff7ed',
       border: '#fed7aa'
     },
     {
-      label: 'Total Tickets Received',
+      label: 'Maintenance Complaints',
       value: totalTickets.toLocaleString(),
-      sub: `${closedTickets.toLocaleString()} Closed (${totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 100}%)`,
+      sub: `${closedTickets.toLocaleString()} Solved (${totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 100}%)`,
       icon: Wrench,
       color: '#d97706',
       bg: '#fffbeb',
       border: '#fde68a'
     },
     {
-      label: 'Open Maintenance Tickets',
+      label: 'Pending Complaints',
       value: openTickets.toLocaleString(),
-      sub: openTickets === 0 ? 'All tickets resolved ✓' : `${openTickets} pending resolution`,
+      sub: openTickets === 0 ? 'All complaints solved ✓' : `${openTickets} yet to fix`,
       icon: ShieldAlert,
       color: openTickets > 0 ? '#dc2626' : '#059669',
       bg: openTickets > 0 ? '#fef2f2' : '#f0fdf4',
       border: openTickets > 0 ? '#fecaca' : '#bbf7d0'
     },
     {
-      label: 'Monthly Operating Expenses',
+      label: 'Total Monthly Expenses',
       value: formatINR(monthlyExpenses),
-      sub: `Data Entry Row 20 Sync`,
+      sub: `Spent this month`,
       icon: IndianRupee,
       color: '#7c3aed',
       bg: '#f5f3ff',
       border: '#ddd6fe'
     },
     {
-      label: 'Remaining Operating Budget',
+      label: 'Remaining Budget',
       value: formatINR(remainingBudget),
-      sub: `From ₹${(approvedBudget / 10000000).toFixed(1)} Cr Approved`,
+      sub: `Out of ₹${(approvedBudget / 10000000).toFixed(1)} Cr budget`,
       icon: Wallet,
       color: '#0891b2',
       bg: '#ecfeff',
       border: '#a5f3fc'
     },
     {
-      label: 'Cost / Student / Month',
+      label: 'Cost per Student (Month)',
       value: `₹${Math.round(costPerStudentMonth).toLocaleString()}`,
-      sub: `Normalized per resident student`,
+      sub: `Average cost per student`,
       icon: TrendingUp,
       color: '#6366f1',
       bg: '#eef2ff',
       border: '#c7d2fe'
     },
     {
-      label: 'Cost / Student / Day',
+      label: 'Cost per Student (Day)',
       value: `₹${costPerStudentDay.toFixed(2)}`,
-      sub: `Daily unit operational run-rate`,
+      sub: `Average cost per student per day`,
       icon: Clock,
       color: '#475569',
       bg: '#f8fafc',
@@ -189,14 +189,14 @@ export default function HostelExecutiveKpis({
             border: '1px solid #e2e8f0',
             letterSpacing: '0.04em'
           }}>
-            EXECUTIVE PULSE
+            OVERVIEW
           </span>
           <span style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
-            12 Operational & Financial Performance Indicators
+            12 Key Numbers at a Glance
           </span>
         </div>
         <div style={{ fontSize: '12px', color: '#64748b' }}>
-          Active Cycle: <strong style={{ color: '#0f172a' }}>{activePeriodLabel || 'Current Cycle'}</strong>
+          Selected Month: <strong style={{ color: '#0f172a' }}>{activePeriodLabel || 'Current Month'}</strong>
         </div>
       </div>
 

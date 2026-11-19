@@ -28,14 +28,14 @@ const MONTH_PALETTE = [
 const CATEGORY_PALETTE = ['#6c5ce7', '#ff6b9d', '#1fbf8f', '#3fb8ff', '#f5a524', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
 export const CHART_MODELS = [
-  { id: 'clustered_columns', name: 'Clustered Columns', icon: BarChart3, desc: 'Multi-month comparative bars clustered by expense category with dashed gridlines' },
-  { id: 'stacked_columns', name: 'Stacked Columns', icon: Layers, desc: 'Category contribution segments stacked per billing cycle with cycle total headers' },
-  { id: 'trend_lines', name: 'Trend Lines', icon: TrendingUp, desc: 'Trajectory progression across billing cycles for each category (requires 2+ cycles)' },
-  { id: 'stacked_area', name: 'Stacked Area', icon: Activity, desc: 'Cumulative expenditure volume layered across cycles (requires 2+ cycles)' },
-  { id: 'donut_share', name: 'Donut Share', icon: PieChart, desc: 'Proportional category breakdown of overall cycle spend with center total' },
-  { id: 'radar_profile', name: 'Radar Profile', icon: Compass, desc: 'Multi-axis cyclical balance profile normalized to peak category spend' },
-  { id: 'heatmap_grid', name: 'Heatmap Grid', icon: LayoutGrid, desc: 'Expense intensity matrix highlighting highest monthly cost heads' },
-  { id: 'ranking_bars', name: 'Ranking Bars', icon: AlignLeft, desc: 'Ranked categories sorted by total cycle expenditure with share of total' }
+  { id: 'clustered_columns', name: 'Clustered Columns', icon: BarChart3, desc: 'Compare monthly expenses side-by-side for each category' },
+  { id: 'stacked_columns', name: 'Stacked Columns', icon: Layers, desc: 'See how each category adds up to the monthly total' },
+  { id: 'trend_lines', name: 'Trend Lines', icon: TrendingUp, desc: 'Track how expenses change month by month (needs 2+ months)' },
+  { id: 'stacked_area', name: 'Stacked Area', icon: Activity, desc: 'View total spending growth across months (needs 2+ months)' },
+  { id: 'donut_share', name: 'Donut Share', icon: PieChart, desc: 'Percentage share of each category in total spending' },
+  { id: 'radar_profile', name: 'Radar Profile', icon: Compass, desc: 'Compare spending patterns across all categories' },
+  { id: 'heatmap_grid', name: 'Heatmap Grid', icon: LayoutGrid, desc: 'Color grid showing higher and lower spending months' },
+  { id: 'ranking_bars', name: 'Ranking Bars', icon: AlignLeft, desc: 'Categories ranked from highest to lowest spending' }
 ];
 
 export default function MonthlyExpenseSection({
@@ -333,12 +333,12 @@ export default function MonthlyExpenseSection({
               border: '1px solid #bfdbfe'
             }}
           >
-            Visual Distribution & Rankings
+            Charts & Rankings
           </span>
         </div>
 
         <div style={{ fontSize: '12.5px', color: '#64748b' }}>
-          Category expenditure breakdown, visual distributions & top spending cost heads
+          Monthly expenses by category with 8 interactive chart styles
         </div>
       </div>
 

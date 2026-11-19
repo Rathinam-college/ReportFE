@@ -8,9 +8,9 @@ export default function BreadcrumbHeader({
   activePeriodObj
 }) {
   const getSubLabel = (tab) => {
-    if (tab === 'food') return 'Food Operations';
-    if (tab === 'hostel') return 'Hostel Occupancy';
-    return 'Transport Fleet';
+    if (tab === 'food') return 'Food';
+    if (tab === 'hostel') return 'Hostel';
+    return 'Transport';
   };
 
   return (

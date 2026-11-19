@@ -90,7 +90,7 @@ export default function HostelOperationsDashboard({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                Hostel Resident Operations Management
+                Hostel Operations Dashboard
               </h1>
               <span style={{
                 fontSize: '11px',
@@ -101,11 +101,11 @@ export default function HostelOperationsDashboard({
                 color: '#059669',
                 border: '1px solid #a7f3d0'
               }}>
-                Enterprise Living Operations
+                Hostel Details
               </span>
             </div>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-              1. Capacity, Occupancy & Vacancy • 2. Service & Maintenance • 3. Expenses & Budget • {periods.length} Cycles Recorded (Sep'25 – Sep'26)
+              1. Beds & Occupancy • 2. Maintenance & Complaints • 3. Expenses & Budget • {periods.length} Months Recorded (Sep'25 – Sep'26)
             </p>
           </div>
         </div>

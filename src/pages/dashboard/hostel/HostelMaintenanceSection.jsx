@@ -125,11 +125,11 @@ export default function HostelMaintenanceSection({
                 padding: '2px 8px',
                 borderRadius: '9999px'
               }}>
-                Helpdesk & Quality
+                Complaints & Repairs
               </span>
             </div>
             <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#b45309' }}>
-              Hostel Facility Maintenance Tickets • Turnaround Time (TAT) • Quality & Repeated Issue Tracking
+              Hostel maintenance complaints, repair times, and repeated issues
             </p>
           </div>
         </div>
@@ -147,11 +147,11 @@ export default function HostelMaintenanceSection({
           fontWeight: '700'
         }}>
           <Wrench size={14} color="#d97706" />
-          <span>Tickets Received: <strong>{ticketsReceived.toLocaleString()}</strong></span>
+          <span>Complaints Received: <strong>{ticketsReceived.toLocaleString()}</strong></span>
           <span style={{ color: '#cbd5e1' }}>|</span>
-          <span style={{ color: '#059669' }}>Closed: <strong>{ticketsClosed.toLocaleString()}</strong></span>
+          <span style={{ color: '#059669' }}>Solved: <strong>{ticketsClosed.toLocaleString()}</strong></span>
           <span style={{ color: '#cbd5e1' }}>|</span>
-          <span>TAT: <strong>{avgTatHours}h</strong></span>
+          <span>Avg Time: <strong>{avgTatHours}h</strong></span>
         </div>
       </div>
 
@@ -163,59 +163,59 @@ export default function HostelMaintenanceSection({
       }}>
         <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '16px', border: '1.5px solid #fde68a', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase' }}>Tickets Received</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase' }}>Complaints Received</span>
             <Wrench size={16} color="#d97706" />
           </div>
           <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0' }}>
             {ticketsReceived.toLocaleString()}
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>Total monthly service requests</div>
+          <div style={{ fontSize: '11px', color: '#64748b' }}>Total complaints this month</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '16px', border: '1.5px solid #bbf7d0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase' }}>Closed Tickets</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase' }}>Solved Complaints</span>
             <CheckCircle2 size={16} color="#16a34a" />
           </div>
           <div style={{ fontSize: '24px', fontWeight: '900', color: '#16a34a', margin: '6px 0 2px 0' }}>
             {ticketsClosed.toLocaleString()}
           </div>
           <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '700' }}>
-            {ticketsReceived > 0 ? ((ticketsClosed / ticketsReceived) * 100).toFixed(1) : '100.0'}% Resolution Rate
+            {ticketsReceived > 0 ? ((ticketsClosed / ticketsReceived) * 100).toFixed(1) : '100.0'}% Solved
           </div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '16px', border: `1.5px solid ${ticketsOpen > 0 ? '#fecaca' : '#cbd5e1'}`, boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: ticketsOpen > 0 ? '#dc2626' : '#64748b', textTransform: 'uppercase' }}>Open Tickets</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: ticketsOpen > 0 ? '#dc2626' : '#64748b', textTransform: 'uppercase' }}>Open Complaints</span>
             <AlertCircle size={16} color={ticketsOpen > 0 ? '#dc2626' : '#64748b'} />
           </div>
           <div style={{ fontSize: '24px', fontWeight: '900', color: ticketsOpen > 0 ? '#dc2626' : '#0f172a', margin: '6px 0 2px 0' }}>
             {ticketsOpen.toLocaleString()}
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>Active in-progress requests</div>
+          <div style={{ fontSize: '11px', color: '#64748b' }}>Work in progress</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '16px', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Pending Tickets</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>Pending Complaints</span>
             <Clock size={16} color="#475569" />
           </div>
           <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0' }}>
             {pendingTickets.toLocaleString()}
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>Awaiting spare parts / vendor</div>
+          <div style={{ fontSize: '11px', color: '#64748b' }}>Waiting for parts or technician</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '16px', border: '1.5px solid #bfdbfe', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', textTransform: 'uppercase' }}>Average Resolution Time</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', textTransform: 'uppercase' }}>Average Repair Time</span>
             <Clock size={16} color="#2563eb" />
           </div>
           <div style={{ fontSize: '24px', fontWeight: '900', color: '#1e40af', margin: '6px 0 2px 0' }}>
             {avgTatHours} <span style={{ fontSize: '14px', fontWeight: '600' }}>hours</span>
           </div>
-          <div style={{ fontSize: '11px', color: '#1d4ed8' }}>~2.4 days average turnaround</div>
+          <div style={{ fontSize: '11px', color: '#1d4ed8' }}>About 2.4 days to fix complaints</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '16px', border: '1.5px solid #fed7aa', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
@@ -226,7 +226,7 @@ export default function HostelMaintenanceSection({
           <div style={{ fontSize: '24px', fontWeight: '900', color: '#ea580c', margin: '6px 0 2px 0' }}>
             {qualityReceived.toLocaleString()}
           </div>
-          <div style={{ fontSize: '11px', color: '#c2410c' }}>Recurring maintenance issues</div>
+          <div style={{ fontSize: '11px', color: '#c2410c' }}>Complaints reported more than once</div>
         </div>
       </div>
 
@@ -243,14 +243,14 @@ export default function HostelMaintenanceSection({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Complaint Categories Breakdown
+              Complaints by Category
             </h3>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-              Ticket distribution across primary facility heads: Electrical, Plumbing, Wi-Fi, Civil, Furniture & Other
+              Complaints by type: Electrical, Plumbing, Wi-Fi, Civil, Furniture & Other
             </p>
           </div>
           <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '600' }}>
-            Total Tickets: <strong>{ticketsReceived.toLocaleString()}</strong>
+            Total Complaints: <strong>{ticketsReceived.toLocaleString()}</strong>
           </span>
         </div>
 
@@ -332,10 +332,10 @@ export default function HostelMaintenanceSection({
             </span>
             <div>
               <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#9a3412', margin: 0 }}>
-                Quality Issues & Repeated Complaints
+                Repeated Complaints & Issues
               </h3>
               <p style={{ fontSize: '12px', color: '#c2410c', margin: '2px 0 0 0' }}>
-                Automated detection of recurring complaints from the same room/block (e.g. repeated fan issues, water leaks, Wi-Fi drops)
+                Rooms and areas that reported the same issue multiple times (e.g. fan issues, water leaks, Wi-Fi problems)
               </p>
             </div>
           </div>
@@ -350,7 +350,7 @@ export default function HostelMaintenanceSection({
               color: '#c2410c',
               border: '1px solid #fed7aa'
             }}>
-              {qualityReceived} Repeated Issues Tracked
+              {qualityReceived} Repeated Complaints
             </span>
           </div>
         </div>
@@ -360,10 +360,10 @@ export default function HostelMaintenanceSection({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#fff7ed', borderBottom: '1px solid #fed7aa' }}>
-                <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>ID & Complaint Detail</th>
+                <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Issue & Description</th>
                 <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Category</th>
-                <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Location / Block / Room</th>
-                <th style={{ textAlign: 'center', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Frequency</th>
+                <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Location / Room</th>
+                <th style={{ textAlign: 'center', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Times Reported</th>
                 <th style={{ textAlign: 'left', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Last Reported</th>
                 <th style={{ textAlign: 'right', padding: '10px 12px', color: '#9a3412', fontWeight: '800' }}>Status</th>
               </tr>
@@ -397,7 +397,7 @@ export default function HostelMaintenanceSection({
                       fontWeight: '800',
                       border: '1px solid #fed7aa'
                     }}>
-                      {it.frequency}x Repeated
+                      {it.frequency} Times
                     </span>
                   </td>
                   <td style={{ padding: '12px', color: '#64748b' }}>

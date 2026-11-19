@@ -14,10 +14,10 @@ export default function ModulesGrid({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-          Campus Operations Modules
+          Campus Modules
         </h3>
         <span style={{ fontSize: '12px', color: '#64748b' }}>
-          Click any module to filter dashboard analytics exclusively
+          Click any module to view its dashboard
         </span>
       </div>
 
@@ -130,7 +130,7 @@ export default function ModulesGrid({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#059669' }} />
-                <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>Hostel Resident Facilities</span>
+                <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>Hostel</span>
               </div>
               <span style={{
                 fontSize: '11px',
@@ -215,7 +215,7 @@ export default function ModulesGrid({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#2563eb' }} />
-                <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>Transport Fleet & Logistics</span>
+                <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>Transport</span>
               </div>
               <span style={{
                 fontSize: '11px',

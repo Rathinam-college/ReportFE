@@ -126,11 +126,11 @@ export default function HostelExpensesBudgetSection({
                 padding: '2px 8px',
                 borderRadius: '9999px'
               }}>
-                Financial Management
+                Budget & Expenses
               </span>
             </div>
             <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6d28d9' }}>
-              Integrated Budget vs Actual • 4 Expandable Major Categories (Rent, Utilities, Repair & Maintenance, Management) • Multi-Cycle Data Sheet
+              Budget vs Actual Spend • 4 Main Categories (Rent, Utilities, Repairs, Staff & Operations)
             </p>
           </div>
         </div>
@@ -148,11 +148,11 @@ export default function HostelExpensesBudgetSection({
           fontWeight: '700'
         }}>
           <Wallet size={14} color="#7c3aed" />
-          <span>Expenses: <strong>{formatINR(monthlyExpenseOccurred)}</strong></span>
+          <span>Spent: <strong>{formatINR(monthlyExpenseOccurred)}</strong></span>
           <span style={{ color: '#cbd5e1' }}>|</span>
-          <span style={{ color: '#059669' }}>Balance: <strong>{formatINR(remainingBudgetFY)}</strong></span>
+          <span style={{ color: '#059669' }}>Remaining: <strong>{formatINR(remainingBudgetFY)}</strong></span>
           <span style={{ color: '#cbd5e1' }}>|</span>
-          <span>Utilized: <strong>{budgetUtilizationPctFY.toFixed(1)}%</strong></span>
+          <span>Used: <strong>{budgetUtilizationPctFY.toFixed(1)}%</strong></span>
         </div>
       </div>
 
@@ -170,10 +170,10 @@ export default function HostelExpensesBudgetSection({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Budget Management & Variance Analysis
+              Budget vs Actual Expenses
             </h3>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
-              Formula: Remaining Budget = Approved Budget ({formatINR(activeApproved)}) - Actual Expenses ({formatINR(activeActual)})
+              Calculation: Remaining Budget = Approved Budget ({formatINR(activeApproved)}) - Total Spent ({formatINR(activeActual)})
             </p>
           </div>
 
@@ -201,7 +201,7 @@ export default function HostelExpensesBudgetSection({
                 transition: 'all 0.15s ease'
               }}
             >
-              Active Month Focus
+              Current Month
             </button>
             <button
               type="button"
@@ -218,7 +218,7 @@ export default function HostelExpensesBudgetSection({
                 transition: 'all 0.15s ease'
               }}
             >
-              Full Financial Year (FY 2025-26)
+              Full Year (FY 2025-26)
             </button>
           </div>
         </div>
@@ -236,7 +236,7 @@ export default function HostelExpensesBudgetSection({
             <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px 0' }}>
               {formatINR(activeApproved)}
             </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>Sanctioned allocation</div>
+            <div style={{ fontSize: '11px', color: '#64748b' }}>Approved budget</div>
           </div>
 
           <div style={{ backgroundColor: '#f5f3ff', borderRadius: '12px', padding: '14px', border: '1px solid #ddd6fe' }}>
@@ -246,7 +246,7 @@ export default function HostelExpensesBudgetSection({
             <div style={{ fontSize: '20px', fontWeight: '900', color: '#4c1d95', margin: '4px 0 2px 0' }}>
               {formatINR(activeActual)}
             </div>
-            <div style={{ fontSize: '11px', color: '#6d28d9' }}>Operating spend occurred</div>
+            <div style={{ fontSize: '11px', color: '#6d28d9' }}>Total spent this month</div>
           </div>
 
           <div style={{ backgroundColor: '#f0fdf4', borderRadius: '12px', padding: '14px', border: '1px solid #bbf7d0' }}>
@@ -257,19 +257,19 @@ export default function HostelExpensesBudgetSection({
               {formatINR(activeRemaining)}
             </div>
             <div style={{ fontSize: '11px', color: '#15803d' }}>
-              {activeRemaining >= 0 ? 'Surplus / Available balance' : 'Budget deficit'}
+              {activeRemaining >= 0 ? 'Money left in budget' : 'Budget deficit'}
             </div>
           </div>
 
           <div style={{ backgroundColor: '#eff6ff', borderRadius: '12px', padding: '14px', border: '1px solid #bfdbfe' }}>
             <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', textTransform: 'uppercase' }}>
-              Budget Utilization
+              Budget Used
             </div>
             <div style={{ fontSize: '20px', fontWeight: '900', color: '#2563eb', margin: '4px 0 2px 0' }}>
               {activeUtilization.toFixed(1)}%
             </div>
             <div style={{ fontSize: '11px', color: '#1d4ed8' }}>
-              {budgetScope === 'monthly' ? 'of monthly sanctioned' : 'of annual FY budget'}
+              {budgetScope === 'monthly' ? 'of monthly approved budget' : 'of full year budget'}
             </div>
           </div>
         </div>
@@ -277,7 +277,7 @@ export default function HostelExpensesBudgetSection({
         {/* Progress Bar */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', marginBottom: '6px' }}>
-            <span style={{ color: '#475569', fontWeight: '700' }}>Budget Burn-rate Track:</span>
+            <span style={{ color: '#475569', fontWeight: '700' }}>Budget Spending:</span>
             <span style={{ color: '#0f172a', fontWeight: '800' }}>
               {formatINR(activeActual)} spent of {formatINR(activeApproved)} ({activeUtilization.toFixed(1)}%)
             </span>
@@ -299,7 +299,7 @@ export default function HostelExpensesBudgetSection({
       {/* 2. THE 4 EXPANDABLE MAJOR CATEGORIES ACCORDION */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div style={{ fontSize: '13px', fontWeight: '800', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          4 Major Operating Expense Heads & Subcategories
+          4 Expense Categories (Click to view details)
         </div>
 
         {/* CATEGORY A: RENT */}
@@ -321,8 +321,8 @@ export default function HostelExpensesBudgetSection({
                 <Building size={16} />
               </div>
               <div>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>A. Rent & Building Leases</strong>
-                <div style={{ fontSize: '11.5px', color: '#64748b' }}>Monthly Rent • Approved Rent Budget • Actual Lease Payments</div>
+                <strong style={{ fontSize: '14px', color: '#0f172a' }}>A. Rent</strong>
+                <div style={{ fontSize: '11.5px', color: '#64748b' }}>Monthly rent paid vs approved budget</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -333,7 +333,7 @@ export default function HostelExpensesBudgetSection({
           {expandedCategories.rent && (
             <div style={{ padding: '16px 20px', borderTop: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Monthly Rent Paid</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Rent Paid</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(rentActual)}</div>
               </div>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
@@ -341,7 +341,7 @@ export default function HostelExpensesBudgetSection({
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(rentBudget)}</div>
               </div>
               <div style={{ backgroundColor: '#f0fdf4', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#16a34a' }}>Variance / Savings</div>
+                <div style={{ fontSize: '11px', color: '#16a34a' }}>Savings / Difference</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#16a34a' }}>+{formatINR(rentBudget - rentActual)}</div>
               </div>
             </div>
@@ -367,8 +367,8 @@ export default function HostelExpensesBudgetSection({
                 <Zap size={16} />
               </div>
               <div>
-                <strong style={{ fontSize: '14px', color: '#1e3a8a' }}>B. Utilities (Power & Water Supply)</strong>
-                <div style={{ fontSize: '11.5px', color: '#2563eb' }}>Electricity (EB + DG) • Normal Water Consumption • Drinking RO Water • Tanker Purchase</div>
+                <strong style={{ fontSize: '14px', color: '#1e3a8a' }}>B. Utilities (Electricity & Water)</strong>
+                <div style={{ fontSize: '11.5px', color: '#2563eb' }}>Electricity bills, regular water, drinking RO water, and water tankers</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -382,23 +382,23 @@ export default function HostelExpensesBudgetSection({
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: '#ea580c', marginBottom: '8px' }}>
                   <Zap size={14} />
-                  <span>Electricity Subcategory</span>
+                  <span>Electricity</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
                   <div style={{ backgroundColor: '#fff7ed', padding: '10px 14px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-                    <div style={{ fontSize: '11px', color: '#9a3412' }}>Power Cost (EB + DG)</div>
+                    <div style={{ fontSize: '11px', color: '#9a3412' }}>Electricity Cost (EB + DG)</div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#c2410c' }}>{formatINR(powerCost)}</div>
                   </div>
                   <div style={{ backgroundColor: '#fff7ed', padding: '10px 14px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-                    <div style={{ fontSize: '11px', color: '#9a3412' }}>Units Consumed (kWh)</div>
+                    <div style={{ fontSize: '11px', color: '#9a3412' }}>Units Used (kWh)</div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#c2410c' }}>{powerUnits.toLocaleString()} kWh</div>
                   </div>
                   <div style={{ backgroundColor: '#fff7ed', padding: '10px 14px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-                    <div style={{ fontSize: '11px', color: '#9a3412' }}>Power Cost / Occupant</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#c2410c' }}>₹{Math.round(powerCostPerOccupant)}/occ</div>
+                    <div style={{ fontSize: '11px', color: '#9a3412' }}>Electricity Cost per Student</div>
+                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#c2410c' }}>₹{Math.round(powerCostPerOccupant)}/student</div>
                   </div>
                   <div style={{ backgroundColor: '#fff7ed', padding: '10px 14px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-                    <div style={{ fontSize: '11px', color: '#9a3412' }}>Power Cost / Sq Ft</div>
+                    <div style={{ fontSize: '11px', color: '#9a3412' }}>Electricity Cost per Sq Ft</div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#c2410c' }}>₹{powerCostPerSqft.toFixed(2)}/sq.ft</div>
                   </div>
                 </div>
@@ -408,23 +408,23 @@ export default function HostelExpensesBudgetSection({
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: '#0284c7', marginBottom: '8px' }}>
                   <Droplets size={14} />
-                  <span>Water Supply & RO Subcategory</span>
+                  <span>Water Supply & Drinking Water</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
                   <div style={{ backgroundColor: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                    <div style={{ fontSize: '11px', color: '#0369a1' }}>Normal Water Consumption</div>
+                    <div style={{ fontSize: '11px', color: '#0369a1' }}>Regular Water Used</div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#0284c7' }}>{(normalWaterLitres / 100000).toFixed(2)} L Ltrs • {formatINR(normalWaterCost)}</div>
                   </div>
                   <div style={{ backgroundColor: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                    <div style={{ fontSize: '11px', color: '#0369a1' }}>Drinking RO Water</div>
+                    <div style={{ fontSize: '11px', color: '#0369a1' }}>RO Drinking Water</div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#0284c7' }}>{drinkingWaterLitres.toLocaleString()} L • {formatINR(drinkingWaterCost)}</div>
                   </div>
                   <div style={{ backgroundColor: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                    <div style={{ fontSize: '11px', color: '#0369a1' }}>Water Tanker Purchase</div>
+                    <div style={{ fontSize: '11px', color: '#0369a1' }}>Water Tanker Cost</div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#0284c7' }}>{formatINR(waterPurchaseCost)}</div>
                   </div>
                   <div style={{ backgroundColor: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                    <div style={{ fontSize: '11px', color: '#0369a1' }}>Litres / Student / Day</div>
+                    <div style={{ fontSize: '11px', color: '#0369a1' }}>Litres per Student per Day</div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#0284c7' }}>{normalWaterLtrDay.toFixed(1)} L/day</div>
                   </div>
                 </div>
@@ -452,8 +452,8 @@ export default function HostelExpensesBudgetSection({
                 <Wrench size={16} />
               </div>
               <div>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>C. Repair & Maintenance</strong>
-                <div style={{ fontSize: '11.5px', color: '#64748b' }}>Routine Maintenance • Electrical Spare Parts • Fan & Light Replacement • Plumbing Materials</div>
+                <strong style={{ fontSize: '14px', color: '#0f172a' }}>C. Repairs & Maintenance</strong>
+                <div style={{ fontSize: '11.5px', color: '#64748b' }}>Daily repairs, electrical parts, fan/light replacement, and plumbing items</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -464,19 +464,19 @@ export default function HostelExpensesBudgetSection({
           {expandedCategories.repair && (
             <div style={{ padding: '16px 20px', borderTop: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Routine Maintenance</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Regular Maintenance</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(routineMaint)}</div>
               </div>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Electrical Spare Parts</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Electrical Parts</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(electricalSpares)}</div>
               </div>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Fan & Light Replacement</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Fan & Light Replacements</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(fanLightRepl)}</div>
               </div>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Plumbing Materials</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Plumbing Parts</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(plumbingMaterials)}</div>
               </div>
             </div>
@@ -502,8 +502,8 @@ export default function HostelExpensesBudgetSection({
                 <Users size={16} />
               </div>
               <div>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>D. Hostel Management & Employee Cost</strong>
-                <div style={{ fontSize: '11.5px', color: '#64748b' }}>Hostel Resident Facility Operations • Employee Expenses • Other Operational Expenses</div>
+                <strong style={{ fontSize: '14px', color: '#0f172a' }}>D. Staff & Operations Cost</strong>
+                <div style={{ fontSize: '11.5px', color: '#64748b' }}>Staff salaries, hostel operations, and daily running expenses</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -514,15 +514,15 @@ export default function HostelExpensesBudgetSection({
           {expandedCategories.management && (
             <div style={{ padding: '16px 20px', borderTop: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Employee Expenses</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Staff Salaries & Pay</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(employeeExp)}</div>
               </div>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Resident Facility Operations</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Hostel Operations</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(residentOps)}</div>
               </div>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Other Operational Expenses</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Other Running Expenses</div>
                 <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{formatINR(otherOps)}</div>
               </div>
             </div>

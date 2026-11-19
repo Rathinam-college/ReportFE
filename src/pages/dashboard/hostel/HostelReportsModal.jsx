@@ -156,10 +156,10 @@ export default function HostelReportsModal({
             </div>
             <div>
               <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                Hostel Operations Detailed Reports
+                Hostel Reports
               </h3>
               <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                Dedicated operational, maintenance, utilities and financial audit statements
+                Download and print occupancy, maintenance, utilities, and financial reports
               </p>
             </div>
           </div>

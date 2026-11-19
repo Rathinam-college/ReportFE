@@ -180,11 +180,11 @@ export default function HostelCapacityOccupancySection({
                 padding: '2px 8px',
                 borderRadius: '9999px'
               }}>
-                Primary Priority
+                Beds & Occupancy
               </span>
             </div>
             <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#047857' }}>
-              Managed strictly on Bed Capacity • Boys & Girls Dedicated Tracking
+              Bed capacity and resident details for Boys and Girls
             </p>
           </div>
         </div>
@@ -202,9 +202,9 @@ export default function HostelCapacityOccupancySection({
           fontWeight: '700'
         }}>
           <BedDouble size={14} color="#059669" />
-          <span>Active Capacity: <strong>{totalBedCap.toLocaleString()} Beds</strong></span>
+          <span>Total Beds: <strong>{totalBedCap.toLocaleString()}</strong></span>
           <span style={{ color: '#cbd5e1' }}>|</span>
-          <span style={{ color: '#047857' }}>Occupancy: <strong>{totalOccPct}%</strong></span>
+          <span style={{ color: '#047857' }}>Occupied: <strong>{totalOccPct}%</strong></span>
         </div>
       </div>
 
@@ -243,7 +243,7 @@ export default function HostelCapacityOccupancySection({
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#1e3a8a', margin: 0 }}>
                   Boys Hostel
                 </h3>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Independent Bed Capacity Block</span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>Boys Hostel Beds</span>
               </div>
             </div>
             <span style={{
@@ -254,14 +254,14 @@ export default function HostelCapacityOccupancySection({
               backgroundColor: '#dbeafe',
               color: '#1d4ed8'
             }}>
-              {boysOccPct}% Occ
+              {boysOccPct}% Occupied
             </span>
           </div>
 
           {/* Top 3 Core Metrics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center' }}>
             <div style={{ backgroundColor: '#f8fafc', padding: '10px 6px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Bed Capacity</div>
+              <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Total Beds</div>
               <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>{boysBedCap.toLocaleString()}</div>
             </div>
             <div style={{ backgroundColor: '#eff6ff', padding: '10px 6px', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
@@ -279,11 +279,11 @@ export default function HostelCapacityOccupancySection({
           {/* Detailed Resident Breakdowns */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
-              <span style={{ color: '#475569', fontWeight: '600' }}>Student Residents:</span>
+              <span style={{ color: '#475569', fontWeight: '600' }}>Students:</span>
               <strong style={{ color: '#0f172a' }}>{boysStudents.toLocaleString()}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#ffffff' }}>
-              <span style={{ color: '#475569', fontWeight: '600' }}>Staff Residents:</span>
+              <span style={{ color: '#475569', fontWeight: '600' }}>Staff:</span>
               <strong style={{ color: '#0f172a' }}>{boysStaff.toLocaleString()}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
@@ -291,7 +291,7 @@ export default function HostelCapacityOccupancySection({
               <strong style={{ color: '#0f172a' }}>{boysCollege.toLocaleString()}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#ffffff' }}>
-              <span style={{ color: '#475569', fontWeight: '600' }}>School & Sports Students:</span>
+              <span style={{ color: '#475569', fontWeight: '600' }}>School & Sports:</span>
               <strong style={{ color: '#0f172a' }}>{(boysSchool + boysSports).toLocaleString()}</strong>
             </div>
           </div>
@@ -326,7 +326,7 @@ export default function HostelCapacityOccupancySection({
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#831843', margin: 0 }}>
                   Girls Hostel
                 </h3>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Independent Bed Capacity Block</span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>Girls Hostel Beds</span>
               </div>
             </div>
             <span style={{
@@ -337,14 +337,14 @@ export default function HostelCapacityOccupancySection({
               backgroundColor: '#fce7f3',
               color: '#be185d'
             }}>
-              {girlsOccPct}% Occ
+              {girlsOccPct}% Occupied
             </span>
           </div>
 
           {/* Top 3 Core Metrics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center' }}>
             <div style={{ backgroundColor: '#f8fafc', padding: '10px 6px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Bed Capacity</div>
+              <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Total Beds</div>
               <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>{girlsBedCap.toLocaleString()}</div>
             </div>
             <div style={{ backgroundColor: '#fdf2f8', padding: '10px 6px', borderRadius: '10px', border: '1px solid #fbcfe8' }}>
@@ -360,11 +360,11 @@ export default function HostelCapacityOccupancySection({
           {/* Detailed Resident Breakdowns */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
-              <span style={{ color: '#475569', fontWeight: '600' }}>Student Residents:</span>
+              <span style={{ color: '#475569', fontWeight: '600' }}>Students:</span>
               <strong style={{ color: '#0f172a' }}>{girlsStudents.toLocaleString()}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#ffffff' }}>
-              <span style={{ color: '#475569', fontWeight: '600' }}>Staff Residents:</span>
+              <span style={{ color: '#475569', fontWeight: '600' }}>Staff:</span>
               <strong style={{ color: '#0f172a' }}>{girlsStaff.toLocaleString()}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
@@ -372,7 +372,7 @@ export default function HostelCapacityOccupancySection({
               <strong style={{ color: '#0f172a' }}>{girlsCollege.toLocaleString()}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#ffffff' }}>
-              <span style={{ color: '#475569', fontWeight: '600' }}>School & Sports Students:</span>
+              <span style={{ color: '#475569', fontWeight: '600' }}>School & Sports:</span>
               <strong style={{ color: '#0f172a' }}>{(girlsSchool + girlsSports).toLocaleString()}</strong>
             </div>
           </div>
@@ -407,7 +407,7 @@ export default function HostelCapacityOccupancySection({
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#064e3b', margin: 0 }}>
                   Combined Overview
                 </h3>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Total Campus Living Capacity</span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>All Beds (Boys & Girls)</span>
               </div>
             </div>
             <span style={{
@@ -418,14 +418,14 @@ export default function HostelCapacityOccupancySection({
               backgroundColor: '#d1fae5',
               color: '#047857'
             }}>
-              {totalOccPct}% Overall
+              {totalOccPct}% Occupied
             </span>
           </div>
 
           {/* Top 3 Core Metrics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center' }}>
             <div style={{ backgroundColor: '#f8fafc', padding: '10px 6px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Total Capacity</div>
+              <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Total Beds</div>
               <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>{totalBedCap.toLocaleString()}</div>
             </div>
             <div style={{ backgroundColor: '#ecfdf5', padding: '10px 6px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
@@ -441,7 +441,7 @@ export default function HostelCapacityOccupancySection({
           {/* Capacity Progress Bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', marginBottom: '5px' }}>
-              <span style={{ color: '#475569', fontWeight: '600' }}>Capacity Utilization:</span>
+              <span style={{ color: '#475569', fontWeight: '600' }}>Beds Occupied:</span>
               <strong style={{ color: '#047857' }}>{totalOccupied.toLocaleString()} of {totalBedCap.toLocaleString()} Beds ({totalOccPct}%)</strong>
             </div>
             <div style={{ width: '100%', height: '10px', backgroundColor: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden', display: 'flex' }}>
@@ -478,10 +478,10 @@ export default function HostelCapacityOccupancySection({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Monthly Student Movement Analytics
+              Monthly Student Movement
             </h3>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
-              Formula: Current Residents = Previous Month ({filteredMovement.previous.toLocaleString()}) + New Admissions (+{filteredMovement.admissions.toLocaleString()}) - Vacated (-{filteredMovement.vacated.toLocaleString()})
+              Calculation: Current Students = Last Month ({filteredMovement.previous.toLocaleString()}) + Joined (+{filteredMovement.admissions.toLocaleString()}) - Left (-{filteredMovement.vacated.toLocaleString()})
             </p>
           </div>
 
@@ -531,34 +531,34 @@ export default function HostelCapacityOccupancySection({
           <div style={{ backgroundColor: '#f8fafc', borderRadius: '12px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Previous Month</div>
             <div style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginTop: '3px' }}>{filteredMovement.previous.toLocaleString()}</div>
-            <div style={{ fontSize: '10px', color: '#94a3b8' }}>Baseline cohort</div>
+            <div style={{ fontSize: '10px', color: '#94a3b8' }}>Students last month</div>
           </div>
           <div style={{ backgroundColor: '#f0fdf4', borderRadius: '12px', padding: '12px 14px', border: '1px solid #bbf7d0' }}>
             <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase' }}>New Admissions</div>
             <div style={{ fontSize: '18px', fontWeight: '800', color: '#16a34a', marginTop: '3px' }}>+{filteredMovement.admissions.toLocaleString()}</div>
-            <div style={{ fontSize: '10px', color: '#15803d' }}>New intake students</div>
+            <div style={{ fontSize: '10px', color: '#15803d' }}>Students joined</div>
           </div>
           <div style={{ backgroundColor: '#fff7ed', borderRadius: '12px', padding: '12px 14px', border: '1px solid #fed7aa' }}>
-            <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#c2410c', textTransform: 'uppercase' }}>Students Vacated</div>
+            <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#c2410c', textTransform: 'uppercase' }}>Students Left</div>
             <div style={{ fontSize: '18px', fontWeight: '800', color: '#ea580c', marginTop: '3px' }}>-{filteredMovement.vacated.toLocaleString()}</div>
-            <div style={{ fontSize: '10px', color: '#c2410c' }}>Checkouts recorded</div>
+            <div style={{ fontSize: '10px', color: '#c2410c' }}>Students who left</div>
           </div>
           <div style={{ backgroundColor: '#ecfdf5', borderRadius: '12px', padding: '12px 14px', border: '1.5px solid #10b981' }}>
             <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase' }}>Current Residents</div>
             <div style={{ fontSize: '18px', fontWeight: '900', color: '#064e3b', marginTop: '3px' }}>{filteredMovement.current.toLocaleString()}</div>
-            <div style={{ fontSize: '10px', color: '#047857' }}>Active in campus beds</div>
+            <div style={{ fontSize: '10px', color: '#047857' }}>Students staying now</div>
           </div>
           <div style={{ backgroundColor: '#eff6ff', borderRadius: '12px', padding: '12px 14px', border: '1px solid #bfdbfe' }}>
             <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#1d4ed8', textTransform: 'uppercase' }}>Net Student Growth</div>
             <div style={{ fontSize: '18px', fontWeight: '800', color: '#2563eb', marginTop: '3px' }}>
               {filteredMovement.growth >= 0 ? `+${filteredMovement.growth.toLocaleString()}` : filteredMovement.growth.toLocaleString()}
             </div>
-            <div style={{ fontSize: '10px', color: '#1d4ed8' }}>Admissions - Vacated</div>
+            <div style={{ fontSize: '10px', color: '#1d4ed8' }}>Joined minus left</div>
           </div>
           <div style={{ backgroundColor: '#f0fdfa', borderRadius: '12px', padding: '12px 14px', border: '1px solid #99f6e4' }}>
             <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f766e', textTransform: 'uppercase' }}>Available Beds</div>
             <div style={{ fontSize: '18px', fontWeight: '800', color: '#0d9488', marginTop: '3px' }}>{filteredMovement.available.toLocaleString()}</div>
-            <div style={{ fontSize: '10px', color: '#0f766e' }}>Capacity headroom</div>
+            <div style={{ fontSize: '10px', color: '#0f766e' }}>Free beds available</div>
           </div>
         </div>
 
@@ -566,10 +566,10 @@ export default function HostelCapacityOccupancySection({
         <div style={{ marginTop: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#334155' }}>
-              Monthly Occupancy Trajectory Across All Cycles (Sep'25 – Sep'26)
+              Monthly Occupancy Trend (Sep'25 – Sep'26)
             </span>
             <span style={{ fontSize: '11px', color: '#64748b' }}>
-              Peak Occupancy: <strong style={{ color: '#047857' }}>95.5% (Sep'26)</strong> • Average: <strong>88.4%</strong>
+              Highest: <strong style={{ color: '#047857' }}>95.5% (Sep'26)</strong> • Average: <strong>88.4%</strong>
             </span>
           </div>
 

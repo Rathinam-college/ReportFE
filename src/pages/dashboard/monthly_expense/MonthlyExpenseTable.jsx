@@ -24,10 +24,10 @@ export default function MonthlyExpenseTable({
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
         <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#141a33', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Monthly Expense Values Sheet
+          Monthly Expense Details
         </h4>
         <span style={{ fontSize: '11px', color: '#6a7392', fontWeight: '600' }}>
-          Scroll horizontally for all categories
+          Scroll sideways to view all categories
         </span>
       </div>
 
@@ -65,7 +65,7 @@ export default function MonthlyExpenseTable({
                   boxShadow: '1px 0 0 #e2e8f0'
                 }}
               >
-                Billing period / cycle
+                Month / Period
               </th>
               {categories.map((cat) => (
                 <th

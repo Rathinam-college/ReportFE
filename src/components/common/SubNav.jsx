@@ -16,8 +16,8 @@ export default function SubNav({
 
   const modules = [
     { id: 'food', label: 'Food', icon: Utensils },
-    { id: 'hostel', label: 'Hostel Occupancy', icon: Home },
-    { id: 'transport', label: 'Transport Fleet', icon: Bus }
+    { id: 'hostel', label: 'Hostel', icon: Home },
+    { id: 'transport', label: 'Transport', icon: Bus }
   ];
 
   const currentSub = activeTab === 'dashboard' 

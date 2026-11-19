@@ -46,7 +46,7 @@ export default function MonthlyExpenseControls({
           }}
         >
           <Calendar size={11} color="#6366f1" />
-          REPORTING CYCLE
+          SELECT MONTH
         </span>
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <select
@@ -100,7 +100,7 @@ export default function MonthlyExpenseControls({
           }}
         >
           <Coins size={11} color="#6366f1" />
-          VALUE FORMAT
+          FORMAT
         </span>
         <div
           style={{
