@@ -22,12 +22,12 @@ export default function HostelCapacityOccupancySection({
   };
 
   // --- 1. BOYS HOSTEL METRICS ---
-  const boysBedCap = num(census.bed_capacity_boys, 2223);
-  const boysStudents = num(census.students_boys, 2160);
-  const boysStaff = num(census.staff_boys, 72);
+  const boysBedCap = num(census.bed_capacity_boys, 0);
+  const boysStudents = num(census.students_boys, 0);
+  const boysStaff = num(census.staff_boys, 0);
   const boysOccupied = num(census.total_occupied_boys, boysStudents + boysStaff);
   const boysVacant = boysBedCap > 0 ? (boysBedCap - boysOccupied) : num(census.vacant_boys, 0);
-  const boysOccPct = boysBedCap > 0 ? ((boysOccupied / boysBedCap) * 100).toFixed(1) : '100.0';
+  const boysOccPct = boysBedCap > 0 ? ((boysOccupied / boysBedCap) * 100).toFixed(1) : (boysOccupied > 0 ? '100.0' : '0.0');
   const boysVacPct = boysBedCap > 0 ? ((boysVacant / boysBedCap) * 100).toFixed(1) : '0.0';
 
   // Sub-breakdowns for Boys
@@ -36,13 +36,13 @@ export default function HostelCapacityOccupancySection({
   const boysSports = num(census.vacant_sports_boys, 0);
 
   // --- 2. GIRLS HOSTEL METRICS ---
-  const girlsBedCap = num(census.bed_capacity_girls, 896);
-  const girlsStudents = num(census.students_girls, 803);
-  const girlsStaff = num(census.staff_girls, 59);
+  const girlsBedCap = num(census.bed_capacity_girls, 0);
+  const girlsStudents = num(census.students_girls, 0);
+  const girlsStaff = num(census.staff_girls, 0);
   const girlsOccupied = num(census.total_occupied_girls, girlsStudents + girlsStaff);
-  const girlsVacant = girlsBedCap > 0 ? (girlsBedCap - girlsOccupied) : num(census.vacant_girls, 34);
-  const girlsOccPct = girlsBedCap > 0 ? ((girlsOccupied / girlsBedCap) * 100).toFixed(1) : '96.2';
-  const girlsVacPct = girlsBedCap > 0 ? ((girlsVacant / girlsBedCap) * 100).toFixed(1) : '3.8';
+  const girlsVacant = girlsBedCap > 0 ? (girlsBedCap - girlsOccupied) : num(census.vacant_girls, 0);
+  const girlsOccPct = girlsBedCap > 0 ? ((girlsOccupied / girlsBedCap) * 100).toFixed(1) : (girlsOccupied > 0 ? '100.0' : '0.0');
+  const girlsVacPct = girlsBedCap > 0 ? ((girlsVacant / girlsBedCap) * 100).toFixed(1) : '0.0';
 
   // Sub-breakdowns for Girls
   const girlsCollege = Math.max(0, girlsStudents - num(census.vacant_school_girls, 0) - num(census.vacant_sports_girls, 0));
@@ -52,9 +52,9 @@ export default function HostelCapacityOccupancySection({
   // --- 3. COMBINED OVERVIEW METRICS ---
   const totalBedCap = num(census.bed_capacity_total, boysBedCap + girlsBedCap);
   const totalOccupied = num(census.total_occupied, boysOccupied + girlsOccupied);
-  const totalVacant = num(census.vacant_total, totalBedCap - totalOccupied);
-  const totalOccPct = totalBedCap > 0 ? ((totalOccupied / totalBedCap) * 100).toFixed(1) : num(census.occupied_pct, 95.1);
-  const totalVacPct = totalBedCap > 0 ? ((totalVacant / totalBedCap) * 100).toFixed(1) : num(census.vacant_pct, 4.9);
+  const totalVacant = num(census.vacant_total, Math.max(0, totalBedCap - totalOccupied));
+  const totalOccPct = totalBedCap > 0 ? ((totalOccupied / totalBedCap) * 100).toFixed(1) : (totalOccupied > 0 ? '100.0' : '0.0');
+  const totalVacPct = totalBedCap > 0 ? ((totalVacant / totalBedCap) * 100).toFixed(1) : '0.0';
 
   // --- 4. SHARED BED ALLOCATION ANALYSIS ---
   // When boys hostel has negative vacancy or high occupancy, girls vacant beds can be authorized for flex sharing
@@ -63,11 +63,13 @@ export default function HostelCapacityOccupancySection({
 
   // --- 5. MONTHLY STUDENT MOVEMENT CALCULATIONS ---
   // Formula: Current Residents = Previous Month Residents + New Admissions - Students Vacated
-  const prevMonthStudents = num(prevCensus.students_total, boysStudents + girlsStudents - 116);
-  const currentMonthStudents = boysStudents + girlsStudents;
+  const prevMonthStudents = num(prevCensus.students_total, 0);
+  const currentMonthStudents = boysStudents + girlsStudents || num(census.students_total, 0);
   const vacatedStudents = num(census.students_vacated, 0);
   
-  const calculatedAdmissions = Math.max(0, currentMonthStudents - prevMonthStudents + vacatedStudents);
+  const calculatedAdmissions = prevMonthStudents > 0 
+    ? Math.max(0, currentMonthStudents - prevMonthStudents + vacatedStudents) 
+    : 0;
   const netGrowth = calculatedAdmissions - vacatedStudents;
   const availableBeds = Math.max(0, totalBedCap - totalOccupied);
 
@@ -79,23 +81,23 @@ export default function HostelCapacityOccupancySection({
 
     if (movementFilter === 'boys') {
       cur = boysStudents;
-      prev = num(prevCensus.students_boys, boysStudents - 85);
-      vac = Math.round(vacatedStudents * 0.7);
+      prev = num(prevCensus.students_boys, 0);
+      vac = Math.round(vacatedStudents * (totalOccupied > 0 ? (boysOccupied / totalOccupied) : 0.7));
     } else if (movementFilter === 'girls') {
       cur = girlsStudents;
-      prev = num(prevCensus.students_girls, girlsStudents - 31);
-      vac = Math.round(vacatedStudents * 0.3);
+      prev = num(prevCensus.students_girls, 0);
+      vac = Math.round(vacatedStudents * (totalOccupied > 0 ? (girlsOccupied / totalOccupied) : 0.3));
     } else if (movementFilter === 'school') {
       cur = boysSchool + girlsSchool;
-      prev = cur;
+      prev = num(prevCensus.vacant_school_boys, 0) + num(prevCensus.vacant_school_girls, 0);
       vac = 0;
     } else if (movementFilter === 'college') {
       cur = boysCollege + girlsCollege;
-      prev = Math.max(0, cur - 116);
+      prev = num(prevCensus.students_total, 0);
       vac = vacatedStudents;
     } else if (movementFilter === 'sports') {
       cur = boysSports + girlsSports;
-      prev = cur;
+      prev = num(prevCensus.vacant_sports_boys, 0) + num(prevCensus.vacant_sports_girls, 0);
       vac = 0;
     } else if (movementFilter === 'staff') {
       cur = boysStaff + girlsStaff;
@@ -103,7 +105,7 @@ export default function HostelCapacityOccupancySection({
       vac = 0;
     }
 
-    const adm = Math.max(0, cur - prev + vac);
+    const adm = prev > 0 ? Math.max(0, cur - prev + vac) : 0;
     const grw = adm - vac;
 
     return {
@@ -114,17 +116,17 @@ export default function HostelCapacityOccupancySection({
       growth: grw,
       available: availableBeds
     };
-  }, [movementFilter, currentMonthStudents, prevMonthStudents, vacatedStudents, boysStudents, girlsStudents, boysSchool, girlsSchool, boysCollege, girlsCollege, boysSports, girlsSports, boysStaff, girlsStaff, prevCensus, availableBeds]);
+  }, [movementFilter, currentMonthStudents, prevMonthStudents, vacatedStudents, boysStudents, girlsStudents, boysSchool, girlsSchool, boysCollege, girlsCollege, boysSports, girlsSports, boysStaff, girlsStaff, prevCensus, availableBeds, totalOccupied, boysOccupied, girlsOccupied]);
 
   // --- 6. HISTORICAL OCCUPANCY TRENDS FOR CHART ---
   const trendData = useMemo(() => {
     return periods.map((p) => {
       const c = allCensusMap[String(p.id)] || {};
-      const cap = num(c.bed_capacity_total, 3253);
-      const occ = num(c.total_occupied, 3094);
-      const pct = cap > 0 ? (occ / cap) * 100 : 95;
-      const bOcc = num(c.total_occupied_boys, 2232);
-      const gOcc = num(c.total_occupied_girls, 862);
+      const cap = num(c.bed_capacity_total, num(c.bed_capacity_boys, 0) + num(c.bed_capacity_girls, 0));
+      const occ = num(c.total_occupied, num(c.students_total, 0) + num(c.staff_total, 0));
+      const pct = cap > 0 ? (occ / cap) * 100 : (occ > 0 ? 100 : 0);
+      const bOcc = num(c.total_occupied_boys, num(c.students_boys, 0) + num(c.staff_boys, 0));
+      const gOcc = num(c.total_occupied_girls, num(c.students_girls, 0) + num(c.staff_girls, 0));
       return {
         id: p.id,
         label: formatPeriodLabel(p),

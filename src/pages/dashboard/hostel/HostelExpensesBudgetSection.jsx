@@ -11,8 +11,20 @@ import {
   HOSTEL_BUDGET_HEADS, 
   TOTAL_SANCTIONED_BUDGET, 
   TOTAL_MONTH_LIMIT, 
-  TOTAL_OCT_ACTUAL 
+  TOTAL_OCT_ACTUAL,
+  getBudgetMonthCol
 } from '../../../utils/hostelBudgetConstants';
+
+const MONTH_COLS = [
+  { key: 'oct_26_actual', label: "Oct'26" },
+  { key: 'nov_26_actual', label: "Nov'26" },
+  { key: 'dec_26_actual', label: "Dec'26" },
+  { key: 'jan_27_actual', label: "Jan'27" },
+  { key: 'feb_27_actual', label: "Feb'27" },
+  { key: 'mar_27_actual', label: "Mar'27" },
+  { key: 'apr_27_actual', label: "Apr'27" },
+  { key: 'may_27_actual', label: "May'27" }
+];
 
 export default function HostelExpensesBudgetSection({
   census = {},
@@ -27,34 +39,23 @@ export default function HostelExpensesBudgetSection({
   const [trackingViewMode, setTrackingViewMode] = useState('matrix'); // 'matrix' | 'cards' | 'distribution'
   const [budgetTrackingData, setBudgetTrackingData] = useState([]);
 
+  // Fetch real budget tracking records from PostgreSQL database
+  const fetchBudgetTracking = () => {
+    fetch('/api/hostel/budget-tracking')
+      .then(res => res.json())
+      .then(d => {
+        if (d?.items && d.items.length > 0) {
+          setBudgetTrackingData(d.items);
+        }
+      })
+      .catch(err => console.warn('Hostel budget tracking load notice:', err));
+  };
+
   useEffect(() => {
     if (computedMatrix?.hostel_budget_tracking && computedMatrix.hostel_budget_tracking.length > 0) {
       setBudgetTrackingData(computedMatrix.hostel_budget_tracking);
     } else {
-      fetch('/api/hostel/budget-tracking')
-        .then(res => res.json())
-        .then(d => {
-          if (d?.items && d.items.length > 0) {
-            setBudgetTrackingData(d.items);
-          } else {
-            setBudgetTrackingData(HOSTEL_BUDGET_HEADS.map(h => ({
-              s_no: h.s_no,
-              budget_head: h.head,
-              sanctioned_amount: h.sanctioned,
-              month_limit: h.limit,
-              oct_26_actual: h.defaultOct
-            })));
-          }
-        })
-        .catch(() => {
-          setBudgetTrackingData(HOSTEL_BUDGET_HEADS.map(h => ({
-            s_no: h.s_no,
-            budget_head: h.head,
-            sanctioned_amount: h.sanctioned,
-            month_limit: h.limit,
-            oct_26_actual: h.defaultOct
-          })));
-        });
+      fetchBudgetTracking();
     }
   }, [computedMatrix]);
 
@@ -64,51 +65,84 @@ export default function HostelExpensesBudgetSection({
     return isNaN(n) ? fb : n;
   };
 
-  // Merge canonical definitions with database records
+  // Identify currently selected active month
+  const activePeriodObj = useMemo(() => {
+    return periods.find(p => String(p.id) === String(activePeriod)) || periods[0] || {};
+  }, [periods, activePeriod]);
+
+  const activeMonthCol = useMemo(() => {
+    return getBudgetMonthCol(activePeriodObj, activePeriod);
+  }, [activePeriodObj, activePeriod]);
+
+  const activePeriodName = useMemo(() => {
+    return activePeriodObj?.period_label || activePeriodObj?.period_code || "Oct'26";
+  }, [activePeriodObj]);
+
+  // Connect 9 heads directly to DB rows
   const activeBudgetHeads = useMemo(() => {
-    return HOSTEL_BUDGET_HEADS.map((canon) => {
-      const match = budgetTrackingData.find(
-        r => r.budget_head === canon.head || Number(r.s_no) === canon.s_no
-      );
-      return {
-        s_no: canon.s_no,
-        budget_head: canon.head,
-        sanctioned_amount: match ? num(match.sanctioned_amount, canon.sanctioned) : canon.sanctioned,
-        month_limit: match ? num(match.month_limit, canon.limit) : canon.limit,
-        oct_26_actual: match ? num(match.oct_26_actual, canon.defaultOct) : canon.defaultOct,
-        nov_26_actual: match ? num(match.nov_26_actual, 0) : 0,
-        dec_26_actual: match ? num(match.dec_26_actual, 0) : 0,
-        jan_27_actual: match ? num(match.jan_27_actual, 0) : 0,
-        feb_27_actual: match ? num(match.feb_27_actual, 0) : 0,
-        mar_27_actual: match ? num(match.mar_27_actual, 0) : 0,
-        apr_27_actual: match ? num(match.apr_27_actual, 0) : 0,
-        may_27_actual: match ? num(match.may_27_actual, 0) : 0,
-      };
-    });
+    if (budgetTrackingData && budgetTrackingData.length > 0) {
+      return budgetTrackingData.map((r, idx) => ({
+        s_no: Number(r.s_no || idx + 1),
+        budget_head: r.budget_head,
+        sanctioned_amount: num(r.sanctioned_amount, 0),
+        month_limit: num(r.month_limit, 0),
+        oct_26_actual: num(r.oct_26_actual, 0),
+        nov_26_actual: num(r.nov_26_actual, 0),
+        dec_26_actual: num(r.dec_26_actual, 0),
+        jan_27_actual: num(r.jan_27_actual, 0),
+        feb_27_actual: num(r.feb_27_actual, 0),
+        mar_27_actual: num(r.mar_27_actual, 0),
+        apr_27_actual: num(r.apr_27_actual, 0),
+        may_27_actual: num(r.may_27_actual, 0),
+      }));
+    }
+    return HOSTEL_BUDGET_HEADS.map((canon) => ({
+      s_no: canon.s_no,
+      budget_head: canon.head,
+      sanctioned_amount: canon.sanctioned,
+      month_limit: canon.limit,
+      oct_26_actual: canon.defaultOct,
+      nov_26_actual: 0,
+      dec_26_actual: 0,
+      jan_27_actual: 0,
+      feb_27_actual: 0,
+      mar_27_actual: 0,
+      apr_27_actual: 0,
+      may_27_actual: 0,
+    }));
   }, [budgetTrackingData]);
 
-  // Executive Budget Baseline (Official 8-Month Cycle Oct'26 – May'27)
-  const approvedBudgetFY = num(census.approved_budget, TOTAL_SANCTIONED_BUDGET);
-  const actualCumulativeSpent = num(census.cumulative_budget_spent, TOTAL_OCT_ACTUAL);
-  const remainingBudgetFY = num(census.balance, approvedBudgetFY - actualCumulativeSpent);
-  const budgetUtilizationPctFY = approvedBudgetFY > 0 ? (actualCumulativeSpent / approvedBudgetFY) * 100 : 9.44;
+  // Totals for the 9 Heads from DB
+  const totalSanctionedSum = useMemo(() => {
+    return activeBudgetHeads.reduce((acc, h) => acc + num(h.sanctioned_amount, 0), 0);
+  }, [activeBudgetHeads]);
 
-  // Monthly Calculations
-  const monthlyExpenseOccurred = num(census.expenses_occurred, TOTAL_OCT_ACTUAL);
-  const approvedMonthlyBudget = Math.round(approvedBudgetFY / 8) || TOTAL_MONTH_LIMIT;
-  const remainingMonthlyBudget = approvedMonthlyBudget - monthlyExpenseOccurred;
-  const monthlyUtilizationPct = approvedMonthlyBudget > 0 ? (monthlyExpenseOccurred / approvedMonthlyBudget) * 100 : 75.5;
+  const totalMonthLimitSum = useMemo(() => {
+    return activeBudgetHeads.reduce((acc, h) => acc + num(h.month_limit, 0), 0);
+  }, [activeBudgetHeads]);
+
+  const activeMonthActualSum = useMemo(() => {
+    return activeBudgetHeads.reduce((acc, h) => acc + num(h[activeMonthCol], 0), 0);
+  }, [activeBudgetHeads, activeMonthCol]);
+
+  // Executive Budget Baseline (Connected directly to DB census + tracking)
+  const approvedBudgetFY = num(census.approved_budget, totalSanctionedSum || TOTAL_SANCTIONED_BUDGET);
+  const actualCumulativeSpent = num(census.cumulative_budget_spent, activeMonthActualSum);
+  const remainingBudgetFY = (approvedBudgetFY > 0 || actualCumulativeSpent > 0)
+    ? Math.max(0, approvedBudgetFY - actualCumulativeSpent)
+    : 0;
+  const budgetUtilizationPctFY = approvedBudgetFY > 0 ? (actualCumulativeSpent / approvedBudgetFY) * 100 : 0;
+
+  // Monthly Calculations for Active Month
+  const monthlyExpenseOccurred = num(census.expenses_occurred, activeMonthActualSum);
+  const approvedMonthlyBudget = totalMonthLimitSum > 0 ? totalMonthLimitSum : (approvedBudgetFY > 0 ? Math.round(approvedBudgetFY / 8) : 0);
+  const remainingMonthlyBudget = approvedMonthlyBudget > 0 ? Math.max(0, approvedMonthlyBudget - monthlyExpenseOccurred) : 0;
+  const monthlyUtilizationPct = approvedMonthlyBudget > 0 ? (monthlyExpenseOccurred / approvedMonthlyBudget) * 100 : 0;
 
   const activeApproved = budgetScope === 'monthly' ? approvedMonthlyBudget : approvedBudgetFY;
   const activeActual = budgetScope === 'monthly' ? monthlyExpenseOccurred : actualCumulativeSpent;
   const activeRemaining = budgetScope === 'monthly' ? remainingMonthlyBudget : remainingBudgetFY;
   const activeUtilization = budgetScope === 'monthly' ? monthlyUtilizationPct : budgetUtilizationPctFY;
-
-  // Totals for the 9 Heads
-  const totalSanctionedSum = activeBudgetHeads.reduce((acc, h) => acc + num(h.sanctioned_amount, 0), 0);
-  const totalMonthLimitSum = activeBudgetHeads.reduce((acc, h) => acc + num(h.month_limit, 0), 0);
-  const totalOctActualSum = activeBudgetHeads.reduce((acc, h) => acc + num(h.oct_26_actual, 0), 0);
-  const totalOctDiff = totalOctActualSum - totalMonthLimitSum;
 
   // Helper icons for each budget head
   const getHeadIcon = (sNo) => {
@@ -126,12 +160,12 @@ export default function HostelExpensesBudgetSection({
     }
   };
 
-  // Ranked cost heads for distribution view
+  // Ranked cost heads for distribution view (ranked by active month spend from DB)
   const rankedCostHeads = useMemo(() => {
     return [...activeBudgetHeads]
-      .filter(h => num(h.oct_26_actual, 0) > 0)
-      .sort((a, b) => num(b.oct_26_actual, 0) - num(a.oct_26_actual, 0));
-  }, [activeBudgetHeads]);
+      .filter(h => num(h[activeMonthCol], 0) > 0)
+      .sort((a, b) => num(b[activeMonthCol], 0) - num(a[activeMonthCol], 0));
+  }, [activeBudgetHeads, activeMonthCol]);
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
@@ -522,30 +556,50 @@ export default function HostelExpensesBudgetSection({
         </div>
 
         {/* ------------------------------------------------------------- */}
-        {/* VIEW 1: FULL 8-MONTH LEDGER MATRIX TABLE                       */}
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 1: FULL 8-MONTH LEDGER MATRIX TABLE (Direct from DB)      */}
         {/* ------------------------------------------------------------- */}
         {trackingViewMode === 'matrix' && (
           <div style={{ overflowX: 'auto', width: '100%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', minWidth: '980px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '1080px' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#1e293b' }}>
-                  <th style={{ padding: '12px 10px', textAlign: 'center', width: '45px', fontWeight: '800' }}>#</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '800', minWidth: '220px' }}>Budget Head</th>
-                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', backgroundColor: '#ecfdf5', color: '#065f46', minWidth: '130px' }}>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', width: '40px', fontWeight: '800' }}>#</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: '800', minWidth: '200px' }}>Budget Head</th>
+                  <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#ecfdf5', color: '#065f46', minWidth: '115px' }}>
                     SANCTIONED (₹)
                   </th>
-                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', backgroundColor: '#fff7ed', color: '#9a3412', minWidth: '125px' }}>
+                  <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#fff7ed', color: '#9a3412', minWidth: '110px' }}>
                     Month Limit (₹)
                   </th>
-                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', backgroundColor: '#eff6ff', color: '#1e40af', minWidth: '125px' }}>
-                    Oct'26 Actual (₹)
-                  </th>
-                  <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '700', color: '#64748b' }}>Nov'26</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '700', color: '#64748b' }}>Dec'26</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '700', color: '#64748b' }}>Jan'27</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '700', color: '#64748b' }}>Feb – May'27</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '800', minWidth: '150px' }}>
-                    Pace & Limit Status
+                  {MONTH_COLS.map((m) => {
+                    const isActive = m.key === activeMonthCol;
+                    return (
+                      <th
+                        key={m.key}
+                        style={{
+                          padding: '10px 10px',
+                          textAlign: 'right',
+                          fontWeight: isActive ? '900' : '700',
+                          backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                          color: isActive ? '#1d4ed8' : '#475569',
+                          minWidth: '92px',
+                          borderBottom: isActive ? '3px solid #3b82f6' : 'none'
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <span>{m.label}</span>
+                          {isActive && (
+                            <span style={{ fontSize: '9px', fontWeight: '900', backgroundColor: '#3b82f6', color: '#ffffff', padding: '1px 5px', borderRadius: '4px', marginTop: '2px' }}>
+                              ACTIVE
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
+                  <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: '800', minWidth: '150px' }}>
+                    Active Status vs Limit
                   </th>
                 </tr>
               </thead>
@@ -553,10 +607,10 @@ export default function HostelExpensesBudgetSection({
                 {activeBudgetHeads.map((head, idx) => {
                   const sanc = num(head.sanctioned_amount, 0);
                   const limit = num(head.month_limit, 0);
-                  const oct = num(head.oct_26_actual, 0);
-                  const diff = oct - limit;
-                  const isOver = oct > limit;
-                  const pct = limit > 0 ? (oct / limit) * 100 : 0;
+                  const activeVal = num(head[activeMonthCol], 0);
+                  const diff = activeVal - limit;
+                  const isOver = activeVal > limit;
+                  const pct = limit > 0 ? (activeVal / limit) * 100 : 0;
 
                   return (
                     <tr 
@@ -570,7 +624,7 @@ export default function HostelExpensesBudgetSection({
                       <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#94a3b8' }}>
                         {head.s_no}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '12px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
                           <div style={{
                             width: '28px',
@@ -584,34 +638,42 @@ export default function HostelExpensesBudgetSection({
                           }}>
                             {getHeadIcon(head.s_no)}
                           </div>
-                          <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '13px' }}>
+                          <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '12.5px' }}>
                             {head.budget_head}
                           </span>
                         </div>
                       </td>
-                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#166534', backgroundColor: '#f0fdf4' }} className="currency-font">
+                      <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', color: '#166534', backgroundColor: '#f0fdf4' }} className="currency-font">
                         {formatINR(sanc)}
                       </td>
-                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#c2410c', backgroundColor: '#fffbeb' }} className="currency-font">
+                      <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', color: '#c2410c', backgroundColor: '#fffbeb' }} className="currency-font">
                         {formatINR(limit)}
                       </td>
-                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '900', color: '#1e40af', backgroundColor: '#eff6ff' }} className="currency-font">
-                        {oct > 0 ? formatINR(oct) : '₹0'}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'right', color: '#94a3b8' }}>
-                        {num(head.nov_26_actual, 0) > 0 ? formatINR(head.nov_26_actual) : '—'}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'right', color: '#94a3b8' }}>
-                        {num(head.dec_26_actual, 0) > 0 ? formatINR(head.dec_26_actual) : '—'}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'right', color: '#94a3b8' }}>
-                        {num(head.jan_27_actual, 0) > 0 ? formatINR(head.jan_27_actual) : '—'}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'right', color: '#94a3b8' }}>
-                        —
-                      </td>
-                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                        {oct === 0 ? (
+
+                      {/* 8 Dynamic Month Columns directly from PostgreSQL DB */}
+                      {MONTH_COLS.map((m) => {
+                        const mVal = num(head[m.key], 0);
+                        const isActive = m.key === activeMonthCol;
+                        return (
+                          <td
+                            key={m.key}
+                            style={{
+                              padding: '12px 10px',
+                              textAlign: 'right',
+                              fontWeight: isActive ? '900' : '650',
+                              backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                              color: mVal > 0 ? (isActive ? '#1e40af' : '#1e293b') : '#94a3b8'
+                            }}
+                            className="currency-font"
+                          >
+                            {mVal > 0 ? formatINR(mVal) : '—'}
+                          </td>
+                        );
+                      })}
+
+                      {/* Active Status Badge */}
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        {activeVal === 0 ? (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -638,7 +700,7 @@ export default function HostelExpensesBudgetSection({
                               color: '#b91c1c',
                               border: '1px solid #fca5a5'
                             }}>
-                              <ArrowUpRight size={11} /> Over by {formatINR(Math.abs(diff))} ({pct.toFixed(1)}%)
+                              <ArrowUpRight size={11} /> Over {formatINR(Math.abs(diff))} ({pct.toFixed(1)}%)
                             </span>
                             <div style={{ width: '80px', height: '4px', backgroundColor: '#fee2e2', borderRadius: '2px', overflow: 'hidden' }}>
                               <div style={{ width: '100%', height: '100%', backgroundColor: '#dc2626' }} />
@@ -678,37 +740,60 @@ export default function HostelExpensesBudgetSection({
                   color: '#713f12'
                 }}>
                   <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '13px' }}>∑</td>
-                  <td style={{ padding: '14px 16px', fontSize: '13.5px', textTransform: 'uppercase' }}>
+                  <td style={{ padding: '14px 14px', fontSize: '13px', textTransform: 'uppercase' }}>
                     Total Budget Tracking (9 Heads)
                   </td>
-                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '14.5px', color: '#166534' }} className="currency-font">
+                  <td style={{ padding: '14px 12px', textAlign: 'right', fontSize: '13.5px', color: '#166534' }} className="currency-font">
                     {formatINR(totalSanctionedSum)}
                   </td>
-                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '14.5px', color: '#9a3412' }} className="currency-font">
+                  <td style={{ padding: '14px 12px', textAlign: 'right', fontSize: '13.5px', color: '#9a3412' }} className="currency-font">
                     {formatINR(totalMonthLimitSum)}
                   </td>
-                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '14.5px', color: '#1e40af' }} className="currency-font">
-                    {formatINR(totalOctActualSum)}
-                  </td>
-                  <td style={{ padding: '14px 10px', textAlign: 'right', color: '#854d0e' }}>—</td>
-                  <td style={{ padding: '14px 10px', textAlign: 'right', color: '#854d0e' }}>—</td>
-                  <td style={{ padding: '14px 10px', textAlign: 'right', color: '#854d0e' }}>—</td>
-                  <td style={{ padding: '14px 10px', textAlign: 'right', color: '#854d0e' }}>—</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 12px',
-                      borderRadius: '9999px',
-                      fontSize: '11.5px',
-                      fontWeight: '900',
-                      backgroundColor: '#bbf7d0',
-                      color: '#14532d',
-                      border: '1px solid #86efac'
-                    }}>
-                      ✓ Saved {formatINR(Math.abs(totalOctDiff))} (75.5% utilized)
-                    </span>
+
+                  {/* 8 Dynamic Month Totals calculated directly from DB rows */}
+                  {MONTH_COLS.map((m) => {
+                    const mSum = activeBudgetHeads.reduce((acc, h) => acc + num(h[m.key], 0), 0);
+                    const isActive = m.key === activeMonthCol;
+                    return (
+                      <td
+                        key={m.key}
+                        style={{
+                          padding: '14px 10px',
+                          textAlign: 'right',
+                          fontSize: '13px',
+                          fontWeight: '900',
+                          backgroundColor: isActive ? '#fef9c3' : 'transparent',
+                          color: mSum > 0 ? (isActive ? '#0f172a' : '#1e293b') : '#a16207'
+                        }}
+                        className="currency-font"
+                      >
+                        {mSum > 0 ? formatINR(mSum) : '—'}
+                      </td>
+                    );
+                  })}
+
+                  <td style={{ padding: '14px 14px', textAlign: 'center' }}>
+                    {(() => {
+                      const netDiff = totalMonthLimitSum - activeMonthActualSum;
+                      const isUnder = netDiff >= 0;
+                      const netPct = totalMonthLimitSum > 0 ? ((Math.abs(netDiff) / totalMonthLimitSum) * 100).toFixed(1) : '0';
+                      return (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '11px',
+                          fontWeight: '900',
+                          backgroundColor: isUnder ? '#bbf7d0' : '#fee2e2',
+                          color: isUnder ? '#14532d' : '#991b1b',
+                          border: `1px solid ${isUnder ? '#86efac' : '#fca5a5'}`
+                        }}>
+                          {isUnder ? `✓ Saved ${formatINR(netDiff)}` : `⚠️ Over ${formatINR(Math.abs(netDiff))}`} ({netPct}%)
+                        </span>
+                      );
+                    })()}
                   </td>
                 </tr>
               </tbody>
@@ -730,10 +815,10 @@ export default function HostelExpensesBudgetSection({
             {activeBudgetHeads.map((head) => {
               const sanc = num(head.sanctioned_amount, 0);
               const limit = num(head.month_limit, 0);
-              const oct = num(head.oct_26_actual, 0);
-              const diff = oct - limit;
-              const isOver = oct > limit;
-              const pct = limit > 0 ? (oct / limit) * 100 : 0;
+              const activeVal = num(head[activeMonthCol], 0);
+              const diff = activeVal - limit;
+              const isOver = activeVal > limit;
+              const pct = limit > 0 ? (activeVal / limit) * 100 : 0;
 
               return (
                 <div
@@ -777,17 +862,17 @@ export default function HostelExpensesBudgetSection({
                       fontWeight: '800',
                       padding: '2px 8px',
                       borderRadius: '9999px',
-                      backgroundColor: oct === 0 ? '#f1f5f9' : isOver ? '#fee2e2' : '#dcfce7',
-                      color: oct === 0 ? '#64748b' : isOver ? '#b91c1c' : '#15803d'
+                      backgroundColor: activeVal === 0 ? '#f1f5f9' : isOver ? '#fee2e2' : '#dcfce7',
+                      color: activeVal === 0 ? '#64748b' : isOver ? '#b91c1c' : '#15803d'
                     }}>
-                      {oct === 0 ? '0% Used' : isOver ? `▲ Over by ${formatINR(Math.abs(diff))}` : `✓ Saved ${formatINR(Math.abs(diff))}`}
+                      {activeVal === 0 ? '0% Used' : isOver ? `▲ Over by ${formatINR(Math.abs(diff))}` : `✓ Saved ${formatINR(Math.abs(diff))}`}
                     </span>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Oct'26 Actual Spend</div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{activePeriodName} Actual Spend</div>
                     <div style={{ fontSize: '22px', fontWeight: '900', color: '#1e40af', margin: '2px 0 6px 0' }} className="currency-font">
-                      {oct > 0 ? formatINR(oct) : '₹0'}
+                      {activeVal > 0 ? formatINR(activeVal) : '₹0'}
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#475569', marginBottom: '6px' }}>
@@ -820,25 +905,25 @@ export default function HostelExpensesBudgetSection({
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>
-                Hostel Spend Distribution (Oct'26 Active Heads)
+                Hostel Spend Distribution ({activePeriodName} Active Heads)
               </h4>
               <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                Proportional breakdown of total monthly expenditure across active operational heads
+                Proportional breakdown of total monthly expenditure across active operational heads directly from DB
               </p>
             </div>
 
             {/* Stacked Visual Bar */}
             <div style={{ width: '100%', height: '22px', borderRadius: '8px', overflow: 'hidden', display: 'flex', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)' }}>
               {rankedCostHeads.map((head, idx) => {
-                const oct = num(head.oct_26_actual, 0);
-                const share = totalOctActualSum > 0 ? (oct / totalOctActualSum) * 100 : 0;
+                const actSpend = num(head[activeMonthCol], 0);
+                const share = activeMonthActualSum > 0 ? (actSpend / activeMonthActualSum) * 100 : 0;
                 const colors = ['#2563eb', '#4338ca', '#0284c7', '#d97706', '#dc2626', '#ea580c'];
                 const bg = colors[idx % colors.length];
 
                 return (
                   <div
                     key={head.budget_head}
-                    title={`${head.budget_head}: ${share.toFixed(1)}% (${formatINR(oct)})`}
+                    title={`${head.budget_head}: ${share.toFixed(1)}% (${formatINR(actSpend)})`}
                     style={{
                       width: `${share}%`,
                       height: '100%',
@@ -853,9 +938,9 @@ export default function HostelExpensesBudgetSection({
             {/* Ranked List Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
               {rankedCostHeads.map((head, idx) => {
-                const oct = num(head.oct_26_actual, 0);
+                const actSpend = num(head[activeMonthCol], 0);
                 const limit = num(head.month_limit, 0);
-                const share = totalOctActualSum > 0 ? (oct / totalOctActualSum) * 100 : 0;
+                const share = activeMonthActualSum > 0 ? (actSpend / activeMonthActualSum) * 100 : 0;
 
                 return (
                   <div
@@ -892,8 +977,12 @@ export default function HostelExpensesBudgetSection({
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e40af' }}>{formatINR(oct)}</div>
-                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#4338ca' }}>{share.toFixed(1)}% Share</div>
+                      <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e40af' }}>
+                        {formatINR(actSpend)}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#059669', fontWeight: '700' }}>
+                        {share.toFixed(1)}% of total
+                      </div>
                     </div>
                   </div>
                 );

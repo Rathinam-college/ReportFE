@@ -32,43 +32,43 @@ export default function HostelExecutiveKpis({
     return isNaN(n) ? fb : n;
   };
 
-  // Calculations
-  const bedCapacity = num(census.bed_capacity_total, 3253);
-  const totalOccupied = num(census.total_occupied, 3094);
+  // Calculations directly from PostgreSQL database census
+  const bedCapacity = num(census.bed_capacity_total, num(census.bed_capacity_boys, 0) + num(census.bed_capacity_girls, 0));
+  const totalOccupied = num(census.total_occupied, num(census.students_total, 0) + num(census.staff_total, 0));
   const vacantBeds = num(census.vacant_total, Math.max(0, bedCapacity - totalOccupied));
-  const occupancyPct = bedCapacity > 0 ? (totalOccupied / bedCapacity) * 100 : num(census.occupied_pct, 95.1);
+  const occupancyPct = bedCapacity > 0 ? (totalOccupied / bedCapacity) * 100 : num(census.occupied_pct, 0);
 
-  const prevResidents = num(prevCensus.students_total, num(census.students_total, 2959) - 116);
-  const currentStudents = num(census.students_total, 2959);
+  const prevResidents = num(prevCensus.students_total, 0);
+  const currentStudents = num(census.students_total, 0);
   const studentsVacated = num(census.students_vacated, 0);
   
   // Current Residents = Previous + New Admissions - Vacated
-  // => New Admissions = Current - Previous + Vacated
-  const rawAdmissions = currentStudents - prevResidents + studentsVacated;
-  const newAdmissions = rawAdmissions >= 0 ? rawAdmissions : Math.max(0, currentStudents - prevResidents);
+  // => New Admissions = Current - Previous + Vacated (only if previous month exists)
+  const rawAdmissions = prevResidents > 0 ? (currentStudents - prevResidents + studentsVacated) : 0;
+  const newAdmissions = Math.max(0, rawAdmissions);
 
-  const totalTickets = num(census.tickets_received, 160);
-  const closedTickets = num(census.tickets_closed, 160);
+  const totalTickets = num(census.tickets_received, 0);
+  const closedTickets = num(census.tickets_closed, 0);
   const openTickets = num(census.tickets_open, Math.max(0, totalTickets - closedTickets));
 
-  const monthlyExpenses = num(census.expenses_occurred, 13401116);
-  const approvedBudget = num(census.approved_budget, 142010789);
-  const remainingBudget = num(census.balance, 128609673);
+  const monthlyExpenses = num(census.expenses_occurred, 0);
+  const approvedBudget = num(census.approved_budget, 0);
+  const remainingBudget = num(census.balance, approvedBudget > 0 ? Math.max(0, approvedBudget - num(census.cumulative_budget_spent, monthlyExpenses)) : 0);
 
   const costPerStudentMonth = num(
     census.per_student_cost_month,
-    currentStudents > 0 ? monthlyExpenses / currentStudents : 3159.57
+    currentStudents > 0 ? monthlyExpenses / currentStudents : 0
   );
   const costPerStudentDay = num(
     census.per_student_cost_day,
-    currentStudents > 0 ? monthlyExpenses / (currentStudents * 30) : 105.32
+    currentStudents > 0 ? monthlyExpenses / (currentStudents * 30) : 0
   );
 
   const kpis = [
     {
       label: 'Total Bed Capacity',
-      value: bedCapacity.toLocaleString(),
-      sub: `${num(census.bed_capacity_boys, 2223)} Boys • ${num(census.bed_capacity_girls, 896)} Girls`,
+      value: bedCapacity > 0 ? bedCapacity.toLocaleString() : '—',
+      sub: `${num(census.bed_capacity_boys, 0)} Boys • ${num(census.bed_capacity_girls, 0)} Girls`,
       icon: BedDouble,
       color: '#059669',
       bg: '#ecfdf5',
@@ -76,8 +76,8 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Occupied Beds',
-      value: totalOccupied.toLocaleString(),
-      sub: `${num(census.students_total, 2959)} Students • ${num(census.staff_total, 135)} Staff`,
+      value: totalOccupied > 0 ? totalOccupied.toLocaleString() : '—',
+      sub: `${num(census.students_total, 0)} Students • ${num(census.staff_total, 0)} Staff`,
       icon: Users,
       color: '#2563eb',
       bg: '#eff6ff',
@@ -86,7 +86,7 @@ export default function HostelExecutiveKpis({
     {
       label: 'Total Vacant Beds',
       value: vacantBeds.toLocaleString(),
-      sub: `${num(census.vacant_boys, 0)} Boys • ${num(census.vacant_girls, 34)} Girls free`,
+      sub: `${num(census.vacant_boys, 0)} Boys • ${num(census.vacant_girls, 0)} Girls free`,
       icon: UserCheck,
       color: '#0d9488',
       bg: '#f0fdfa',
@@ -94,8 +94,8 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Occupancy Rate',
-      value: `${occupancyPct.toFixed(1)}%`,
-      sub: `Free beds: ${(100 - occupancyPct).toFixed(1)}%`,
+      value: bedCapacity > 0 ? `${occupancyPct.toFixed(1)}%` : '—',
+      sub: bedCapacity > 0 ? `Free beds: ${(100 - occupancyPct).toFixed(1)}%` : 'No capacity logged',
       icon: PieChart,
       color: '#4f46e5',
       bg: '#eef2ff',
@@ -103,8 +103,8 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'New Admissions',
-      value: `+${newAdmissions.toLocaleString()}`,
-      sub: `Joined this month`,
+      value: prevResidents > 0 ? `+${newAdmissions.toLocaleString()}` : '—',
+      sub: prevResidents > 0 ? `Joined this month` : 'Baseline period',
       icon: UserPlus,
       color: '#16a34a',
       bg: '#f0fdf4',
@@ -139,7 +139,7 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Total Monthly Expenses',
-      value: formatINR(monthlyExpenses),
+      value: monthlyExpenses > 0 ? formatINR(monthlyExpenses) : '—',
       sub: `Spent this month`,
       icon: IndianRupee,
       color: '#7c3aed',
@@ -148,8 +148,8 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Remaining Budget',
-      value: formatINR(remainingBudget),
-      sub: `Out of ₹${(approvedBudget / 10000000).toFixed(1)} Cr budget`,
+      value: approvedBudget > 0 ? formatINR(remainingBudget) : '—',
+      sub: approvedBudget > 0 ? `Out of ${formatINR(approvedBudget)} budget` : 'Budget not set',
       icon: Wallet,
       color: '#0891b2',
       bg: '#ecfeff',
@@ -157,7 +157,7 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Cost per Student (Month)',
-      value: `₹${Math.round(costPerStudentMonth).toLocaleString()}`,
+      value: costPerStudentMonth > 0 ? `₹${Math.round(costPerStudentMonth).toLocaleString()}` : '—',
       sub: `Average cost per student`,
       icon: TrendingUp,
       color: '#6366f1',
@@ -166,7 +166,7 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Cost per Student (Day)',
-      value: `₹${costPerStudentDay.toFixed(2)}`,
+      value: costPerStudentDay > 0 ? `₹${costPerStudentDay.toFixed(2)}` : '—',
       sub: `Average cost per student per day`,
       icon: Clock,
       color: '#475569',

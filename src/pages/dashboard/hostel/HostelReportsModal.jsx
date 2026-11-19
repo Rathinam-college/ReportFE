@@ -37,19 +37,30 @@ export default function HostelReportsModal({
         headers = ['"Period"', '"Boys Cap"', '"Boys Occ"', '"Boys Vac"', '"Girls Cap"', '"Girls Occ"', '"Girls Vac"', '"Total Cap"', '"Total Occ"', '"Total Vac"', '"Occ %"', '"Staff"'];
         rows = activePeriods.map(p => {
           const c = allCensusMap[String(p.id)] || {};
+          const bCap = num(c.bed_capacity_boys, 0);
+          const gCap = num(c.bed_capacity_girls, 0);
+          const tCap = num(c.bed_capacity_total, bCap + gCap);
+          const bOcc = num(c.total_occupied_boys, num(c.students_boys, 0) + num(c.staff_boys, 0));
+          const gOcc = num(c.total_occupied_girls, num(c.students_girls, 0) + num(c.staff_girls, 0));
+          const tOcc = num(c.total_occupied, bOcc + gOcc);
+          const bVac = num(c.vacant_boys, Math.max(0, bCap - bOcc));
+          const gVac = num(c.vacant_girls, Math.max(0, gCap - gOcc));
+          const tVac = num(c.vacant_total, Math.max(0, tCap - tOcc));
+          const occPct = tCap > 0 ? ((tOcc / tCap) * 100).toFixed(1) : num(c.occupied_pct, 0).toFixed(1);
+
           return [
             `"${p.period_label || p.period_code}"`,
-            num(c.bed_capacity_boys, 2223),
-            num(c.total_occupied_boys, 2232),
-            num(c.vacant_boys, 0),
-            num(c.bed_capacity_girls, 896),
-            num(c.total_occupied_girls, 862),
-            num(c.vacant_girls, 34),
-            num(c.bed_capacity_total, 3253),
-            num(c.total_occupied, 3094),
-            num(c.vacant_total, 159),
-            `"${num(c.occupied_pct, 95.1).toFixed(1)}%"`,
-            num(c.staff_total, 135)
+            bCap,
+            bOcc,
+            bVac,
+            gCap,
+            gOcc,
+            gVac,
+            tCap,
+            tOcc,
+            tVac,
+            `"${occPct}%"`,
+            num(c.staff_total, 0)
           ];
         });
       } else if (reportType === 'maintenance') {
@@ -58,12 +69,12 @@ export default function HostelReportsModal({
           const c = allCensusMap[String(p.id)] || {};
           return [
             `"${p.period_label || p.period_code}"`,
-            num(c.tickets_received, 160),
-            num(c.tickets_closed, 160),
+            num(c.tickets_received, 0),
+            num(c.tickets_closed, 0),
             num(c.tickets_open, 0),
-            num(c.tat_hours, 58.4),
-            num(c.quality_issues_received, 4),
-            num(c.quality_issues_closed, 4),
+            num(c.tat_hours, 0),
+            num(c.quality_issues_received, 0),
+            num(c.quality_issues_closed, 0),
             num(c.incidents_count, 0)
           ];
         });
@@ -73,26 +84,29 @@ export default function HostelReportsModal({
           const c = allCensusMap[String(p.id)] || {};
           return [
             `"${p.period_label || p.period_code}"`,
-            num(c.power_units, 90366),
-            num(c.power_cost, 1286531),
-            Math.round(num(c.power_cost_occupant, 415.81)),
-            num(c.normal_water_litres, 8879000),
-            num(c.normal_water_cost, 887900),
-            num(c.drinking_water_cost, 21750),
-            num(c.water_purchase_cost, 230000)
+            num(c.power_units, 0),
+            num(c.power_cost, 0),
+            Math.round(num(c.power_cost_occupant, 0)),
+            num(c.normal_water_litres, 0),
+            num(c.normal_water_cost, 0),
+            num(c.drinking_water_cost, 0),
+            num(c.water_purchase_cost, 0)
           ];
         });
       } else {
         headers = ['"Period"', '"Approved Budget (₹)"', '"Actual Expenses (₹)"', '"Remaining Balance (₹)"', '"Per Student Cost/Mo (₹)"', '"Per Student Cost/Day (₹)"'];
         rows = activePeriods.map(p => {
           const c = allCensusMap[String(p.id)] || {};
+          const appBudget = num(c.approved_budget, 0);
+          const exp = num(c.expenses_occurred, 0);
+          const bal = num(c.balance, appBudget > 0 ? appBudget - num(c.cumulative_budget_spent, exp) : 0);
           return [
             `"${p.period_label || p.period_code}"`,
-            num(c.approved_budget, 131788118),
-            num(c.expenses_occurred, 9349172),
-            num(c.balance, 89788118),
-            num(c.per_student_cost_month, 3159.57),
-            num(c.per_student_cost_day, 105.32)
+            appBudget,
+            exp,
+            bal,
+            num(c.per_student_cost_month, 0).toFixed(2),
+            num(c.per_student_cost_day, 0).toFixed(2)
           ];
         });
       }
@@ -319,15 +333,24 @@ export default function HostelReportsModal({
               <tbody>
                 {activePeriods.map((p, idx) => {
                   const c = allCensusMap[String(p.id)] || {};
+                  const bCap = num(c.bed_capacity_boys, 0);
+                  const gCap = num(c.bed_capacity_girls, 0);
+                  const tCap = num(c.bed_capacity_total, bCap + gCap);
+                  const bOcc = num(c.total_occupied_boys, num(c.students_boys, 0) + num(c.staff_boys, 0));
+                  const gOcc = num(c.total_occupied_girls, num(c.students_girls, 0) + num(c.staff_girls, 0));
+                  const tOcc = num(c.total_occupied, bOcc + gOcc);
+                  const tVac = num(c.vacant_total, Math.max(0, tCap - tOcc));
+                  const occPct = tCap > 0 ? ((tOcc / tCap) * 100).toFixed(1) : (tOcc > 0 ? '100.0' : '0.0');
+
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfd' }}>
                       <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0f172a' }}>{p.period_label || p.period_code}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{num(c.bed_capacity_boys, 2223)} / {num(c.total_occupied_boys, 2232)}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{num(c.bed_capacity_girls, 896)} / {num(c.total_occupied_girls, 862)}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800' }}>{num(c.bed_capacity_total, 3253).toLocaleString()}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#047857' }}>{num(c.total_occupied, 3094).toLocaleString()}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#ea580c', fontWeight: '700' }}>{num(c.vacant_total, 159).toLocaleString()}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>{num(c.occupied_pct, 95.1).toFixed(1)}%</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{bCap} / {bOcc}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{gCap} / {gOcc}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800' }}>{tCap.toLocaleString()}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#047857' }}>{tOcc.toLocaleString()}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#ea580c', fontWeight: '700' }}>{tVac.toLocaleString()}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>{occPct}%</td>
                     </tr>
                   );
                 })}
@@ -354,11 +377,11 @@ export default function HostelReportsModal({
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfd' }}>
                       <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0f172a' }}>{p.period_label || p.period_code}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800' }}>{num(c.tickets_received, 160)}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#16a34a', fontWeight: '700' }}>{num(c.tickets_closed, 160)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800' }}>{num(c.tickets_received, 0)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center', color: '#16a34a', fontWeight: '700' }}>{num(c.tickets_closed, 0)}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'center', color: num(c.tickets_open, 0) > 0 ? '#dc2626' : '#64748b' }}>{num(c.tickets_open, 0)}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{num(c.tat_hours, 58.4)}h</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{num(c.quality_issues_received, 4)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{num(c.tat_hours, 0)}h</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{num(c.quality_issues_received, 0)}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right' }}>{num(c.incidents_count, 0)}</td>
                     </tr>
                   );
@@ -383,15 +406,15 @@ export default function HostelReportsModal({
               <tbody>
                 {activePeriods.map((p, idx) => {
                   const c = allCensusMap[String(p.id)] || {};
-                  const pCost = num(c.power_cost, 1286531);
-                  const wCost = num(c.normal_water_cost, 887900);
-                  const roCost = num(c.drinking_water_cost, 21750);
-                  const tCost = num(c.water_purchase_cost, 230000);
+                  const pCost = num(c.power_cost, 0);
+                  const wCost = num(c.normal_water_cost, 0);
+                  const roCost = num(c.drinking_water_cost, 0);
+                  const tCost = num(c.water_purchase_cost, 0);
                   const uTotal = pCost + wCost + roCost + tCost;
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfd' }}>
                       <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0f172a' }}>{p.period_label || p.period_code}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{num(c.power_units, 90366).toLocaleString()}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>{num(c.power_units, 0).toLocaleString()}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(pCost)}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(wCost)}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(roCost)}</td>
@@ -419,14 +442,20 @@ export default function HostelReportsModal({
               <tbody>
                 {activePeriods.map((p, idx) => {
                   const c = allCensusMap[String(p.id)] || {};
+                  const appBudget = num(c.approved_budget, 0);
+                  const exp = num(c.expenses_occurred, 0);
+                  const bal = num(c.balance, appBudget > 0 ? Math.max(0, appBudget - num(c.cumulative_budget_spent, exp)) : 0);
+                  const pCostMo = num(c.per_student_cost_month, 0);
+                  const pCostDay = num(c.per_student_cost_day, 0);
+
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfd' }}>
                       <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0f172a' }}>{p.period_label || p.period_code}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(num(c.approved_budget, 131788118))}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#6d28d9' }}>{formatINR(num(c.expenses_occurred, 9349172))}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#16a34a' }}>{formatINR(num(c.balance, 89788118))}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>₹{Math.round(num(c.per_student_cost_month, 3159)).toLocaleString()}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>₹{num(c.per_student_cost_day, 105.32).toFixed(2)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{appBudget > 0 ? formatINR(appBudget) : '—'}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#6d28d9' }}>{exp > 0 ? formatINR(exp) : '—'}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#16a34a' }}>{appBudget > 0 ? formatINR(bal) : '—'}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{pCostMo > 0 ? `₹${Math.round(pCostMo).toLocaleString()}` : '—'}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{pCostDay > 0 ? `₹${pCostDay.toFixed(2)}` : '—'}</td>
                     </tr>
                   );
                 })}
