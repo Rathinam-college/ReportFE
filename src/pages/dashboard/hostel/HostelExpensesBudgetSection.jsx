@@ -6,14 +6,12 @@ import {
   LayoutGrid, BarChart3, AlertTriangle, Sparkles, Landmark, FileText,
   BadgePercent, Eye, ArrowUpRight, ArrowDownRight, IndianRupee
 } from 'lucide-react';
-import { formatINR } from '../../../utils/formatters';
+import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
 import { 
   HOSTEL_BUDGET_HEADS, 
   getBudgetMonthCol,
   ALL_BUDGET_MONTH_COLS
 } from '../../../utils/hostelBudgetConstants';
-
-const MONTH_COLS = ALL_BUDGET_MONTH_COLS;
 
 export default function HostelExpensesBudgetSection({
   census = {},
@@ -25,6 +23,7 @@ export default function HostelExpensesBudgetSection({
   remarksDraft = {}
 }) {
   const [trackingViewMode, setTrackingViewMode] = useState('matrix'); // 'matrix' | 'cards' | 'distribution'
+  const [monthFilter, setMonthFilter] = useState('all'); // 'all' | 'recorded'
   const [budgetTrackingData, setBudgetTrackingData] = useState([]);
 
   // Fetch real budget tracking records from PostgreSQL database
@@ -63,7 +62,7 @@ export default function HostelExpensesBudgetSection({
   }, [activePeriodObj, activePeriod]);
 
   const activePeriodName = useMemo(() => {
-    return activePeriodObj?.period_label || activePeriodObj?.period_code || "Oct'26";
+    return activePeriodObj ? formatPeriodLabel(activePeriodObj) : (activePeriodObj?.period_label || activePeriodObj?.period_code || "Oct'25");
   }, [activePeriodObj]);
 
   // Connect 9 heads directly to DB rows
@@ -122,6 +121,37 @@ export default function HostelExpensesBudgetSection({
   const activeMonthActualSum = useMemo(() => {
     return activeBudgetHeads.reduce((acc, h) => acc + num(h[activeMonthCol], 0), 0);
   }, [activeBudgetHeads, activeMonthCol]);
+
+  // Dynamically derive columns from hostel periods passed from live DB
+  const allHostelMonthCols = useMemo(() => {
+    if (periods && periods.length > 0) {
+      return periods.map(p => ({
+        key: getBudgetMonthCol(p, p.id),
+        label: formatPeriodLabel(p),
+        periodId: p.id
+      }));
+    }
+    return ALL_BUDGET_MONTH_COLS;
+  }, [periods]);
+
+  // Filter columns: if monthFilter === 'recorded', show only columns that have data or are currently active
+  const visibleMonthCols = useMemo(() => {
+    if (monthFilter === 'recorded') {
+      return allHostelMonthCols.filter(m => {
+        const isCurrentActive = m.key === activeMonthCol;
+        const hasSpend = activeBudgetHeads.some(h => num(h[m.key], 0) > 0);
+        return isCurrentActive || hasSpend;
+      });
+    }
+    return allHostelMonthCols;
+  }, [allHostelMonthCols, monthFilter, activeMonthCol, activeBudgetHeads]);
+
+  const periodRangeLabel = useMemo(() => {
+    if (visibleMonthCols && visibleMonthCols.length > 0) {
+      return `${visibleMonthCols[0].label} – ${visibleMonthCols[visibleMonthCols.length - 1].label}`;
+    }
+    return "Sep'25 – Sep'26";
+  }, [visibleMonthCols]);
 
   // Helper icons for each budget head
   const getHeadIcon = (sNo) => {
@@ -195,7 +225,7 @@ export default function HostelExpensesBudgetSection({
                   padding: '2px 10px',
                   borderRadius: '9999px'
                 }}>
-                  Oct'26 – May'27
+                  {periodRangeLabel} ({visibleMonthCols.length} Months)
                 </span>
               </div>
               <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#c7d2fe' }}>
@@ -204,84 +234,131 @@ export default function HostelExpensesBudgetSection({
             </div>
           </div>
 
-          {/* Interactive View Switcher Toggles */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.25)',
-            borderRadius: '9999px',
-            padding: '3px',
-            border: '1px solid rgba(255, 255, 255, 0.15)'
-          }}>
-            <button
-              type="button"
-              onClick={() => setTrackingViewMode('matrix')}
-              style={{
-                border: 'none',
-                padding: '6px 14px',
-                borderRadius: '9999px',
-                fontSize: '11.5px',
-                fontWeight: '800',
-                backgroundColor: trackingViewMode === 'matrix' ? '#ffffff' : 'transparent',
-                color: trackingViewMode === 'matrix' ? '#1e1b4b' : '#c7d2fe',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Table size={13} />
-              <span>8-Month Ledger</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTrackingViewMode('cards')}
-              style={{
-                border: 'none',
-                padding: '6px 14px',
-                borderRadius: '9999px',
-                fontSize: '11.5px',
-                fontWeight: '800',
-                backgroundColor: trackingViewMode === 'cards' ? '#ffffff' : 'transparent',
-                color: trackingViewMode === 'cards' ? '#1e1b4b' : '#c7d2fe',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <LayoutGrid size={13} />
-              <span>9 Heads Bento</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTrackingViewMode('distribution')}
-              style={{
-                border: 'none',
-                padding: '6px 14px',
-                borderRadius: '9999px',
-                fontSize: '11.5px',
-                fontWeight: '800',
-                backgroundColor: trackingViewMode === 'distribution' ? '#ffffff' : 'transparent',
-                color: trackingViewMode === 'distribution' ? '#1e1b4b' : '#c7d2fe',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <BarChart3 size={13} />
-              <span>Cost Drivers</span>
-            </button>
+          {/* Interactive Month Filter & View Switcher Toggles */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Filter: All Months vs Recorded Spend */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.25)',
+              borderRadius: '9999px',
+              padding: '3px',
+              border: '1px solid rgba(255, 255, 255, 0.15)'
+            }}>
+              <button
+                type="button"
+                onClick={() => setMonthFilter('all')}
+                style={{
+                  border: 'none',
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  fontSize: '11px',
+                  fontWeight: monthFilter === 'all' ? '800' : '600',
+                  backgroundColor: monthFilter === 'all' ? '#ffffff' : 'transparent',
+                  color: monthFilter === 'all' ? '#1e1b4b' : '#c7d2fe',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                All Months ({allHostelMonthCols.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMonthFilter('recorded')}
+                style={{
+                  border: 'none',
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  fontSize: '11px',
+                  fontWeight: monthFilter === 'recorded' ? '800' : '600',
+                  backgroundColor: monthFilter === 'recorded' ? '#ffffff' : 'transparent',
+                  color: monthFilter === 'recorded' ? '#1e1b4b' : '#c7d2fe',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Active & Recorded Only
+              </button>
+            </div>
+
+            {/* View Switcher Toggles */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.25)',
+              borderRadius: '9999px',
+              padding: '3px',
+              border: '1px solid rgba(255, 255, 255, 0.15)'
+            }}>
+              <button
+                type="button"
+                onClick={() => setTrackingViewMode('matrix')}
+                style={{
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  backgroundColor: trackingViewMode === 'matrix' ? '#ffffff' : 'transparent',
+                  color: trackingViewMode === 'matrix' ? '#1e1b4b' : '#c7d2fe',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Table size={13} />
+                <span>Hostel Ledger</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrackingViewMode('cards')}
+                style={{
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  backgroundColor: trackingViewMode === 'cards' ? '#ffffff' : 'transparent',
+                  color: trackingViewMode === 'cards' ? '#1e1b4b' : '#c7d2fe',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <LayoutGrid size={13} />
+                <span>9 Heads Bento</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrackingViewMode('distribution')}
+                style={{
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  backgroundColor: trackingViewMode === 'distribution' ? '#ffffff' : 'transparent',
+                  color: trackingViewMode === 'distribution' ? '#1e1b4b' : '#c7d2fe',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <BarChart3 size={13} />
+                <span>Cost Drivers</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* ------------------------------------------------------------- */}
-        {/* ------------------------------------------------------------- */}
-        {/* VIEW 1: FULL 8-MONTH LEDGER MATRIX TABLE (Direct from DB)      */}
+        {/* VIEW 1: FULL HOSTEL LEDGER MATRIX TABLE (Direct from DB)       */}
         {/* ------------------------------------------------------------- */}
         {trackingViewMode === 'matrix' && (
           <div style={{ overflowX: 'auto', width: '100%' }}>
@@ -296,7 +373,7 @@ export default function HostelExpensesBudgetSection({
                   <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#fff7ed', color: '#9a3412', minWidth: '110px' }}>
                     Month Limit (₹)
                   </th>
-                  {MONTH_COLS.map((m) => {
+                  {visibleMonthCols.map((m) => {
                     const isActive = m.key === activeMonthCol;
                     return (
                       <th
@@ -374,8 +451,8 @@ export default function HostelExpensesBudgetSection({
                         {formatINR(limit)}
                       </td>
 
-                      {/* 8 Dynamic Month Columns directly from PostgreSQL DB */}
-                      {MONTH_COLS.map((m) => {
+                      {/* Dynamic Month Columns directly from PostgreSQL DB */}
+                      {visibleMonthCols.map((m) => {
                         const mVal = num(head[m.key], 0);
                         const isActive = m.key === activeMonthCol;
                         return (
@@ -474,8 +551,8 @@ export default function HostelExpensesBudgetSection({
                     {formatINR(totalMonthLimitSum)}
                   </td>
 
-                  {/* 8 Dynamic Month Totals calculated directly from DB rows */}
-                  {MONTH_COLS.map((m) => {
+                  {/* Dynamic Month Totals calculated directly from DB rows */}
+                  {visibleMonthCols.map((m) => {
                     const mSum = activeBudgetHeads.reduce((acc, h) => acc + num(h[m.key], 0), 0);
                     const isActive = m.key === activeMonthCol;
                     return (
