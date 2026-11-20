@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronUp, Table, Check, Layers, AlertCircle, TrendingUp, Calculator
 } from 'lucide-react';
 import { TRANSPORT_BRANCHES } from '../data_entry/TransportSpreadsheetEntry';
+import TransportVehicleExpensesTable from '../data_entry/TransportVehicleExpensesTable';
 
 export default function TransportDashboardCensusView({
   computedMatrix,
@@ -13,6 +14,7 @@ export default function TransportDashboardCensusView({
 }) {
   const [activeBranch, setActiveBranch] = useState('all');
   const [showLedgerTable, setShowLedgerTable] = useState(true);
+  const [showVehiclesTable, setShowVehiclesTable] = useState(true);
 
   const currentPeriodIdStr = activePeriodObj ? String(activePeriodObj.id) : null;
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[0];
@@ -337,6 +339,28 @@ export default function TransportDashboardCensusView({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
+            onClick={() => setShowVehiclesTable(!showVehiclesTable)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '6px',
+              backgroundColor: showVehiclesTable ? '#0284c7' : 'rgba(255, 255, 255, 0.18)',
+              border: '1px solid rgba(255, 255, 255, 0.35)',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: showVehiclesTable ? '0 2px 6px rgba(0,0,0,0.2)' : 'none'
+            }}
+          >
+            <Bus size={14} />
+            <span>{showVehiclesTable ? 'Hide Vehicle Wise Expenses' : 'Show Vehicle Wise Expenses'}</span>
+            {showVehiclesTable ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          <button
+            type="button"
             onClick={() => setShowLedgerTable(!showLedgerTable)}
             style={{
               padding: '6px 14px',
@@ -635,6 +659,16 @@ export default function TransportDashboardCensusView({
           </div>
         </div>
       </div>
+
+      {/* VEHICLE-WISE FLEET EXPENSES & MILEAGE TABLE (MATCHING COLLEGE CAB EXPENSES IMAGE) */}
+      {showVehiclesTable && (
+        <div style={{ padding: '20px 22px', backgroundColor: '#f8fafc', borderBottom: '1.5px solid #fed7aa' }}>
+          <TransportVehicleExpensesTable
+            initialPeriodId={activePeriodObj?.id}
+            initialBranch={activeBranch}
+          />
+        </div>
+      )}
 
       {/* 4. MONTH-BY-MONTH TRANSPORT FLEET LEDGER TABLE */}
       {showLedgerTable && (

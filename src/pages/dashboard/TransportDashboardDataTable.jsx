@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { TRANSPORT_BRANCHES, CANONICAL_TRANSPORT_PARAMETERS } from '../data_entry/TransportSpreadsheetEntry';
 import TransportFleetCard from './charts/TransportFleetCard';
+import TransportVehicleExpensesTable from '../data_entry/TransportVehicleExpensesTable';
 
 export default function TransportDashboardDataTable({
   periods: propPeriods = [],
@@ -258,6 +259,27 @@ export default function TransportDashboardDataTable({
               <Table size={12} />
               <span>Ledger Table</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('vehicles')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 9px',
+                borderRadius: '4px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'vehicles' ? '#00a2e8' : 'transparent',
+                color: viewMode === 'vehicles' ? '#ffffff' : '#7c2d12',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Bus size={12} />
+              <span>Vehicle Wise Expenses</span>
+            </button>
           </div>
 
           {/* Branch Pills */}
@@ -329,7 +351,7 @@ export default function TransportDashboardDataTable({
         </div>
       </div>
 
-      {/* 2. THE MULTI-MONTH TABLE OR CARDS VIEW */}
+      {/* 2. THE MULTI-MONTH TABLE, CARDS VIEW, OR VEHICLE EXPENSES LEDGER */}
       {viewMode === 'cards' ? (
         <div style={{
           padding: '20px',
@@ -346,6 +368,19 @@ export default function TransportDashboardDataTable({
             transportCensusByBranch={computedMatrix?.transport_census_by_branch || localMatrix?.transport_census_by_branch}
             periods={periods}
             selectedPeriod={activePeriod}
+          />
+        </div>
+      ) : viewMode === 'vehicles' ? (
+        <div style={{
+          padding: '20px',
+          backgroundColor: '#f8fafc',
+          maxHeight: isFullScreen ? 'calc(100vh - 65px)' : '750px',
+          overflowY: 'auto',
+          boxSizing: 'border-box'
+        }}>
+          <TransportVehicleExpensesTable
+            initialPeriodId={activePeriod !== 'all' ? Number(activePeriod) : null}
+            initialBranch={activeBranch}
           />
         </div>
       ) : (

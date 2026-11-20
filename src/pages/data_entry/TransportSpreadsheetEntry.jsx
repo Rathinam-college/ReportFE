@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { formatINR } from '../../utils/formatters';
+import TransportVehicleExpensesTable from './TransportVehicleExpensesTable';
 import { 
   Save, RefreshCw, CheckCircle2, Zap, Bus, 
   AlertCircle, Check, Copy, Settings,
@@ -1162,6 +1163,23 @@ export default function TransportSpreadsheetEntry({
           >
             📊 Multi-Month Comparison Grid
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveView('vehicles')}
+            style={{
+              padding: '5px 16px',
+              borderRadius: '9999px',
+              fontSize: '12px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: activeView === 'vehicles' ? '#00a2e8' : 'transparent',
+              color: activeView === 'vehicles' ? '#ffffff' : '#6e768e',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🚌 Vehicle Ledger ({activePeriodObj?.period_label})
+          </button>
           {activeView === 'sheet' && (
             <button
               type="button"
@@ -1249,8 +1267,16 @@ export default function TransportSpreadsheetEntry({
         </div>
       )}
 
-      {/* 4. EXACT EXCEL SPREADSHEET TABLE MATCHING MOCKUP IMAGE */}
-      {activeView === 'sheet' ? (
+      {/* 4. EXACT EXCEL SPREADSHEET TABLE OR VEHICLE LEDGER */}
+      {activeView === 'vehicles' ? (
+        <div style={{ padding: '20px 16px', backgroundColor: '#f8fafc' }}>
+          <TransportVehicleExpensesTable
+            initialPeriodId={editingPeriodId}
+            initialBranch={activeBranch}
+            onSyncCensus={fetchData}
+          />
+        </div>
+      ) : activeView === 'sheet' ? (
         <div style={{
           overflowX: 'auto',
           width: '100%',

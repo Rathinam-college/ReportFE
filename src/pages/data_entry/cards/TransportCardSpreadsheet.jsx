@@ -368,6 +368,27 @@ export default function TransportCardSpreadsheet({
               <Table size={12} />
               <span>Grid</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('vehicles')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 12px',
+                borderRadius: '9999px',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: viewMode === 'vehicles' ? '#0aa0e8' : 'transparent',
+                color: viewMode === 'vehicles' ? '#ffffff' : 'var(--text-muted, #66708f)',
+                fontSize: '11.5px',
+                fontWeight: viewMode === 'vehicles' ? '800' : '500',
+                boxShadow: viewMode === 'vehicles' ? '0 2px 6px rgba(10, 160, 232, 0.25)' : 'none'
+              }}
+            >
+              <Bus size={12} />
+              <span>Vehicle Ledger</span>
+            </button>
           </div>
         )}
       </div>
