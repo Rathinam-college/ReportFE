@@ -1,13 +1,13 @@
 import React from 'react';
 import { 
   BedDouble, Users, UserCheck, ShieldAlert, Wrench, 
-  Clock, IndianRupee, PieChart, TrendingUp, UserPlus, UserMinus, Wallet
+  Clock, IndianRupee, PieChart, TrendingUp, UserPlus, UserMinus
 } from 'lucide-react';
 import { formatINR } from '../../../utils/formatters';
 
 /**
  * HostelExecutiveKpis
- * Renders the 12 Executive KPI Summary cards requested by management:
+ * Renders the Executive KPI Summary cards requested by management:
  * 1. Total Bed Capacity
  * 2. Total Occupied Residents
  * 3. Total Vacant Beds
@@ -60,21 +60,6 @@ export default function HostelExecutiveKpis({
 
   // Monthly Expenses: prefer live budget tracking actuals if positive, else census.expenses_occurred
   const monthlyExpenses = trackingActualSpend > 0 ? trackingActualSpend : num(census.expenses_occurred, 0);
-
-  // Total Sanctioned Budget calculated directly from the Table's Total (Hostel Budget Tracking 9 heads)
-  const tableTotalSanctioned = (budgetTrackingData && budgetTrackingData.length > 0)
-    ? budgetTrackingData.reduce((acc, h) => acc + num(h.sanctioned_amount, 0), 0)
-    : 0;
-
-  // Approved Budget: ALWAYS matches the table's total (or census.approved_budget, fallback to 185449618)
-  const approvedBudget = tableTotalSanctioned > 0 
-    ? tableTotalSanctioned 
-    : num(census.approved_budget, 185449618);
-
-  // For the selected month, Remaining Budget is strictly: Total Budget - The Sum of Expenses
-  const remainingBudget = approvedBudget > 0 
-    ? Math.max(0, approvedBudget - monthlyExpenses) 
-    : 0;
 
   const costPerStudentMonth = num(
     census.per_student_cost_month,
@@ -168,15 +153,6 @@ export default function HostelExecutiveKpis({
       border: '#ddd6fe'
     },
     {
-      label: 'Remaining Budget',
-      value: approvedBudget > 0 ? formatINR(remainingBudget) : '—',
-      sub: approvedBudget > 0 ? `${formatINR(approvedBudget)} budget − ${formatINR(monthlyExpenses)} spent` : 'Budget not set',
-      icon: Wallet,
-      color: '#0891b2',
-      bg: '#ecfeff',
-      border: '#a5f3fc'
-    },
-    {
       label: 'Cost per Student (Month)',
       value: costPerStudentMonth > 0 ? `₹${Math.round(costPerStudentMonth).toLocaleString()}` : '—',
       sub: `Average cost per student`,
@@ -213,7 +189,7 @@ export default function HostelExecutiveKpis({
             OVERVIEW
           </span>
           <span style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
-            12 Key Numbers at a Glance
+            {kpis.length} Key Numbers at a Glance
           </span>
         </div>
         <div style={{ fontSize: '12px', color: '#64748b' }}>
