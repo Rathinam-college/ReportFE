@@ -15,13 +15,13 @@ export default function HostelMaintenanceSection({
     return isNaN(n) ? fb : n;
   };
 
-  const ticketsReceived = num(census.tickets_received, 160);
-  const ticketsClosed = num(census.tickets_closed, 160);
+  const ticketsReceived = num(census.tickets_received, 0);
+  const ticketsClosed = num(census.tickets_closed, 0);
   const ticketsOpen = num(census.tickets_open, Math.max(0, ticketsReceived - ticketsClosed));
   const pendingTickets = ticketsOpen;
-  const avgTatHours = num(census.tat_hours, 58.4);
-  const qualityReceived = num(census.quality_issues_received, 4);
-  const qualityClosed = num(census.quality_issues_closed, 4);
+  const avgTatHours = num(census.tat_hours, 0);
+  const qualityReceived = num(census.quality_issues_received, 0);
+  const qualityClosed = num(census.quality_issues_closed, 0);
   const qualityOpen = num(census.quality_issues_open, Math.max(0, qualityReceived - qualityClosed));
   const incidentsCount = num(census.incidents_count, 0);
 
@@ -32,7 +32,7 @@ export default function HostelMaintenanceSection({
     { id: 'wifi', name: 'Wi-Fi & Internet', count: Math.round(ticketsReceived * 0.16), pct: 16, icon: Wifi, color: '#6366f1', bg: '#e0e7ff' },
     { id: 'civil', name: 'Civil Maintenance', count: Math.round(ticketsReceived * 0.10), pct: 10, icon: Hammer, color: '#d97706', bg: '#fef3c7' },
     { id: 'furniture', name: 'Furniture & Fixtures', count: Math.round(ticketsReceived * 0.06), pct: 6, icon: Armchair, color: '#8b5cf6', bg: '#ede9fe' },
-    { id: 'other', name: 'Other Issues', count: Math.max(1, ticketsReceived - Math.round(ticketsReceived * 0.96)), pct: 4, icon: HelpCircle, color: '#64748b', bg: '#f1f5f9' }
+    { id: 'other', name: 'Other Issues', count: ticketsReceived > 0 ? Math.max(0, ticketsReceived - Math.round(ticketsReceived * 0.96)) : 0, pct: 4, icon: HelpCircle, color: '#64748b', bg: '#f1f5f9' }
   ];
 
   return (

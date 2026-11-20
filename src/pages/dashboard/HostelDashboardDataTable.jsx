@@ -55,16 +55,35 @@ export default function HostelDashboardDataTable({
   // Selected Period for the Excel Template View
   const [selectedPeriodId, setSelectedPeriodId] = useState(() => {
     if (activePeriod && activePeriod !== 'all') return String(activePeriod);
-    return periods.length > 0 ? String(periods[0].id) : '29';
+    if (periods.length > 0) {
+      const withExpenses = periods.find(p => {
+        const c = hostelCensusMap[String(p.id)];
+        return c && Number(c.expenses_occurred || 0) > 0;
+      });
+      if (withExpenses) return String(withExpenses.id);
+      const oct = periods.find(p => String(p.id) === '30' || (p.period_label || '').toLowerCase().includes('oct'));
+      if (oct) return String(oct.id);
+      return String(periods[0].id);
+    }
+    return '30';
   });
 
   useEffect(() => {
     if (activePeriod && activePeriod !== 'all') {
       setSelectedPeriodId(String(activePeriod));
     } else if (periods.length > 0 && (!selectedPeriodId || selectedPeriodId === 'all')) {
-      setSelectedPeriodId(String(periods[0].id));
+      const withExpenses = periods.find(p => {
+        const c = hostelCensusMap[String(p.id)];
+        return c && Number(c.expenses_occurred || 0) > 0;
+      });
+      if (withExpenses) {
+        setSelectedPeriodId(String(withExpenses.id));
+      } else {
+        const oct = periods.find(p => String(p.id) === '30' || (p.period_label || '').toLowerCase().includes('oct'));
+        setSelectedPeriodId(oct ? String(oct.id) : String(periods[0].id));
+      }
     }
-  }, [activePeriod, periods]);
+  }, [activePeriod, periods, hostelCensusMap]);
 
   const activePeriodObj = useMemo(() => {
     return periods.find(p => String(p.id) === String(selectedPeriodId)) || periods[0] || { id: 29, period_label: "Sep'25 (Sep 1st to 30th)" };
@@ -162,92 +181,31 @@ export default function HostelDashboardDataTable({
     return `${n.toFixed(1)}%`;
   };
 
-  // Canonical default values for Sep'25 matching user's Excel spreadsheet image 100%
-  const canonicalSepFallback = {
-    bed_capacity_boys: 2223,
-    bed_capacity_girls: 896,
-    bed_capacity_total: 3119,
-    students_boys: 2075,
-    students_girls: 768,
-    students_total: 2843,
-    staff_boys: 72,
-    staff_girls: 59,
-    staff_total: 131,
-    total_occupied_boys: 2147,
-    total_occupied_girls: 827,
-    total_occupied: 2974,
-    vacant_boys: 76,
-    vacant_girls: 69,
-    vacant_total: 145,
-    vacant_college_boys: -41,
-    vacant_college_girls: 69,
-    vacant_college: 28,
-    vacant_sports_boys: 0,
-    vacant_sports_girls: 0,
-    vacant_sports_total: 0,
-    vacant_school_boys: 0,
-    vacant_school_girls: 0,
-    vacant_school_total: 0,
-    occupied_pct_boys: 96.6,
-    occupied_pct_girls: 92.3,
-    occupied_pct: 95.4,
-    vacant_pct_boys: 0.0,
-    vacant_pct_girls: 7.7,
-    vacant_pct: 4.6,
-    students_vacated: 86,
-    tickets_received: 176,
-    tickets_closed: 176,
-    tickets_open: 0,
-    total_hours_close: 0,
-    tat_hours: 62.29,
-    quality_issues_received: 5,
-    quality_issues_closed: 3,
-    quality_issues_open: 2,
-    incidents_count: 0,
-    power_units: 108201,
-    power_cost: 1325151,
-    water_purchase_cost: 248765,
-    maintenance_expenses: 119394,
-    expenses_occurred: 9349172,
-    approved_budget: 131788118,
-    cumulative_budget_spent: 34527814,
-    balance: 97260304,
-    sq_feet: 231701,
-    per_student_cost_month: 3288,
-    per_student_cost_day: 110,
-    sq_feet_per_occupant: 81,
-    normal_water_litres: 0,
-    normal_water_cost: 88,
-    normal_water_student_ltrs: 0,
-    normal_water_student_cost: 88
-  };
-
-  // Get active data for the currently selected period (combining DB live values with canonical fallback)
+  // Get active data for the currently selected period (combining DB live values dynamically)
   const currentPeriodCensus = useMemo(() => {
     const raw = hostelCensusMap[String(selectedPeriodId)] || {};
-    const isSep = activePeriodObj?.period_label?.toLowerCase().includes('sep') || String(selectedPeriodId) === '29';
 
-    // Helper: take raw DB value if present and non-zero/non-empty; fallback to canonical if Sep
-    const getVal = (key, fallbackVal) => {
+    // Helper: take raw DB value if present and non-zero/non-empty; fallback to calculated or 0
+    const getVal = (key, fallbackVal = 0) => {
       const v = raw[key];
       if (v !== undefined && v !== null && v !== '') {
         const n = Number(v);
         if (!isNaN(n)) return n;
         return v;
       }
-      return isSep ? fallbackVal : 0;
+      return fallbackVal;
     };
 
-    const bed_capacity_boys = getVal('bed_capacity_boys', canonicalSepFallback.bed_capacity_boys);
-    const bed_capacity_girls = getVal('bed_capacity_girls', canonicalSepFallback.bed_capacity_girls);
+    const bed_capacity_boys = getVal('bed_capacity_boys', 0);
+    const bed_capacity_girls = getVal('bed_capacity_girls', 0);
     const bed_capacity_total = getVal('bed_capacity_total', bed_capacity_boys + bed_capacity_girls);
 
-    const students_boys = getVal('students_boys', canonicalSepFallback.students_boys);
-    const students_girls = getVal('students_girls', canonicalSepFallback.students_girls);
+    const students_boys = getVal('students_boys', 0);
+    const students_girls = getVal('students_girls', 0);
     const students_total = getVal('students_total', students_boys + students_girls);
 
-    const staff_boys = getVal('staff_boys', canonicalSepFallback.staff_boys);
-    const staff_girls = getVal('staff_girls', canonicalSepFallback.staff_girls);
+    const staff_boys = getVal('staff_boys', 0);
+    const staff_girls = getVal('staff_girls', 0);
     const staff_total = getVal('staff_total', staff_boys + staff_girls);
 
     const total_occupied_boys = getVal('total_occupied_boys', students_boys + staff_boys);
@@ -255,11 +213,11 @@ export default function HostelDashboardDataTable({
     const total_occupied = getVal('total_occupied', total_occupied_boys + total_occupied_girls);
 
     const vacant_boys = getVal('vacant_boys', bed_capacity_boys > total_occupied_boys ? bed_capacity_boys - total_occupied_boys : 0);
-    const vacant_girls = getVal('vacant_girls', bed_capacity_girls > total_occupied_girls ? bed_capacity_girls - total_occupied_girls : 69);
-    const vacant_total = getVal('vacant_total', bed_capacity_total > total_occupied ? bed_capacity_total - total_occupied : 69);
+    const vacant_girls = getVal('vacant_girls', bed_capacity_girls > total_occupied_girls ? bed_capacity_girls - total_occupied_girls : 0);
+    const vacant_total = getVal('vacant_total', bed_capacity_total > total_occupied ? bed_capacity_total - total_occupied : 0);
 
-    const vacant_college_boys = getVal('vacant_college_boys', canonicalSepFallback.vacant_college_boys);
-    const vacant_college_girls = getVal('vacant_college_girls', canonicalSepFallback.vacant_college_girls);
+    const vacant_college_boys = getVal('vacant_college_boys', 0);
+    const vacant_college_girls = getVal('vacant_college_girls', 0);
     const vacant_college = getVal('vacant_college', vacant_college_boys + vacant_college_girls);
 
     const vacant_sports_boys = getVal('vacant_sports_boys', 0);
@@ -270,46 +228,46 @@ export default function HostelDashboardDataTable({
     const vacant_school_girls = getVal('vacant_school_girls', 0);
     const vacant_school_total = getVal('vacant_school_total', 0);
 
-    const occupied_pct_boys = bed_capacity_boys > 0 ? ((total_occupied_boys / bed_capacity_boys) * 100).toFixed(1) : '96.6';
-    const occupied_pct_girls = bed_capacity_girls > 0 ? ((total_occupied_girls / bed_capacity_girls) * 100).toFixed(1) : '92.0';
-    const occupied_pct = bed_capacity_total > 0 ? ((total_occupied / bed_capacity_total) * 100).toFixed(1) : '95.0';
+    const occupied_pct_boys = bed_capacity_boys > 0 ? ((total_occupied_boys / bed_capacity_boys) * 100).toFixed(1) : '0.0';
+    const occupied_pct_girls = bed_capacity_girls > 0 ? ((total_occupied_girls / bed_capacity_girls) * 100).toFixed(1) : '0.0';
+    const occupied_pct = bed_capacity_total > 0 ? ((total_occupied / bed_capacity_total) * 100).toFixed(1) : '0.0';
 
     const vacant_pct_boys = bed_capacity_boys > 0 ? ((vacant_boys / bed_capacity_boys) * 100).toFixed(1) : '0.0';
-    const vacant_pct_girls = bed_capacity_girls > 0 ? ((vacant_girls / bed_capacity_girls) * 100).toFixed(1) : '8.0';
-    const vacant_pct = bed_capacity_total > 0 ? ((vacant_total / bed_capacity_total) * 100).toFixed(1) : '2.0';
+    const vacant_pct_girls = bed_capacity_girls > 0 ? ((vacant_girls / bed_capacity_girls) * 100).toFixed(1) : '0.0';
+    const vacant_pct = bed_capacity_total > 0 ? ((vacant_total / bed_capacity_total) * 100).toFixed(1) : '0.0';
 
-    const students_vacated = getVal('students_vacated', canonicalSepFallback.students_vacated);
+    const students_vacated = getVal('students_vacated', 0);
 
-    const tickets_received = getVal('tickets_received', canonicalSepFallback.tickets_received);
-    const tickets_closed = getVal('tickets_closed', canonicalSepFallback.tickets_closed);
+    const tickets_received = getVal('tickets_received', 0);
+    const tickets_closed = getVal('tickets_closed', 0);
     const tickets_open = getVal('tickets_open', Math.max(0, tickets_received - tickets_closed));
-    const total_hours_close = getVal('total_hours_close', canonicalSepFallback.total_hours_close);
-    const tat_hours = getVal('tat_hours', canonicalSepFallback.tat_hours);
+    const total_hours_close = getVal('total_hours_close', 0);
+    const tat_hours = getVal('tat_hours', 0);
 
-    const quality_issues_received = getVal('quality_issues_received', canonicalSepFallback.quality_issues_received);
-    const quality_issues_closed = getVal('quality_issues_closed', canonicalSepFallback.quality_issues_closed);
+    const quality_issues_received = getVal('quality_issues_received', 0);
+    const quality_issues_closed = getVal('quality_issues_closed', 0);
     const quality_issues_open = getVal('quality_issues_open', Math.max(0, quality_issues_received - quality_issues_closed));
-    const incidents_count = getVal('incidents_count', canonicalSepFallback.incidents_count);
+    const incidents_count = getVal('incidents_count', 0);
 
-    const power_units = getVal('power_units', canonicalSepFallback.power_units);
-    const power_cost = getVal('power_cost', canonicalSepFallback.power_cost);
-    const water_purchase_cost = getVal('water_purchase_cost', canonicalSepFallback.water_purchase_cost);
-    const maintenance_expenses = getVal('maintenance_expenses', canonicalSepFallback.maintenance_expenses);
-    const expenses_occurred = getVal('expenses_occurred', canonicalSepFallback.expenses_occurred);
+    const power_units = getVal('power_units', 0);
+    const power_cost = getVal('power_cost', 0);
+    const water_purchase_cost = getVal('water_purchase_cost', 0);
+    const maintenance_expenses = getVal('maintenance_expenses', 0);
+    const expenses_occurred = getVal('expenses_occurred', 0);
 
-    const approved_budget = getVal('approved_budget', canonicalSepFallback.approved_budget);
-    const cumulative_budget_spent = getVal('cumulative_budget_spent', canonicalSepFallback.cumulative_budget_spent);
-    const balance = getVal('balance', approved_budget > 0 ? approved_budget - cumulative_budget_spent : canonicalSepFallback.balance);
+    const approved_budget = getVal('approved_budget', 0);
+    const cumulative_budget_spent = getVal('cumulative_budget_spent', 0);
+    const balance = getVal('balance', approved_budget > 0 ? approved_budget - cumulative_budget_spent : 0);
 
-    const sq_feet = getVal('sq_feet', canonicalSepFallback.sq_feet);
-    const per_student_cost_month = getVal('per_student_cost_month', students_total > 0 ? Math.round(expenses_occurred / students_total) : canonicalSepFallback.per_student_cost_month);
-    const per_student_cost_day = getVal('per_student_cost_day', per_student_cost_month > 0 ? Math.round(per_student_cost_month / 30) : canonicalSepFallback.per_student_cost_day);
-    const sq_feet_per_occupant = getVal('sq_feet_per_occupant', total_occupied > 0 ? Math.round(sq_feet / total_occupied) : canonicalSepFallback.sq_feet_per_occupant);
+    const sq_feet = getVal('sq_feet', 0);
+    const per_student_cost_month = getVal('per_student_cost_month', students_total > 0 ? Math.round(expenses_occurred / students_total) : 0);
+    const per_student_cost_day = getVal('per_student_cost_day', per_student_cost_month > 0 ? Math.round(per_student_cost_month / 30) : 0);
+    const sq_feet_per_occupant = getVal('sq_feet_per_occupant', total_occupied > 0 ? Math.round(sq_feet / total_occupied) : 0);
 
     const normal_water_litres = getVal('normal_water_litres', 0);
     const normal_water_cost = getVal('normal_water_cost', 0);
     const normal_water_student_ltrs = getVal('normal_water_student_ltrs', 0);
-    const normal_water_student_cost = getVal('normal_water_student_cost', canonicalSepFallback.normal_water_student_cost || 88);
+    const normal_water_student_cost = getVal('normal_water_student_cost', 0);
 
     const power_cost_sqft = sq_feet > 0 ? (power_cost / sq_feet).toFixed(1) : '0.0';
     const units_per_occupant = total_occupied > 0 ? (power_units / total_occupied).toFixed(1) : '0.0';
@@ -1842,8 +1800,7 @@ export default function HostelDashboardDataTable({
                       const pStr = String(p.id);
                       const d = hostelCensusMap[pStr] || {};
                       const rawV = d[row.key];
-                      const isSep = p.period_label.toLowerCase().includes('sep') || pStr === '29';
-                      const val = (rawV !== undefined && rawV !== null && rawV !== '') ? rawV : (isSep ? canonicalSepFallback[row.key] : 0);
+                      const val = (rawV !== undefined && rawV !== null && rawV !== '') ? rawV : 0;
                       
                       let display = '—';
                       if (row.format === 'currency') display = fmtCost(val);

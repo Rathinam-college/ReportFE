@@ -2,13 +2,16 @@ import React, { useState, useMemo } from 'react';
 import { 
   Building2, BedDouble, Users, Wrench, DollarSign, Download, 
   ArrowRight, FileSpreadsheet, Calendar, ChevronDown, Check,
-  Sparkles, FileText, Printer, Paperclip
+  Sparkles, FileText, Printer, Paperclip, LayoutDashboard, Table, Layers
 } from 'lucide-react';
 import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
 import HostelExecutiveKpis from './HostelExecutiveKpis';
 import HostelCapacityOccupancySection from './HostelCapacityOccupancySection';
+import HostelMaintenanceSection from './HostelMaintenanceSection';
 import HostelExpensesBudgetSection from './HostelExpensesBudgetSection';
 import HostelReportsModal from './HostelReportsModal';
+import HostelDashboardCensusView from '../HostelDashboardCensusView';
+import HostelDashboardDataTable from '../HostelDashboardDataTable';
 import MonthlyAttachmentsModal from '../../../components/attachments/MonthlyAttachmentsModal';
 
 export default function HostelOperationsDashboard({
@@ -25,6 +28,7 @@ export default function HostelOperationsDashboard({
 }) {
   const [showHostelAttachmentsModal, setShowHostelAttachmentsModal] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
+  const [activeMainView, setActiveMainView] = useState('executive'); // 'executive' | 'census_ledger' | 'spreadsheet_matrix' | 'all'
   const hostelCensusMap = computedMatrix?.hostel_census || {};
 
   // Active Period identification
@@ -235,37 +239,120 @@ export default function HostelOperationsDashboard({
         </div>
       </div>
 
-      {/* TOP: 12 EXECUTIVE SUMMARY KPI CARDS */}
-      <HostelExecutiveKpis
-        census={activeCensus}
-        prevCensus={prevCensus}
-        activePeriodLabel={activePeriodObj?.period_label}
-      />
+      {/* VIEW SWITCHER TAB BAR */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        backgroundColor: '#ffffff',
+        padding: '10px 14px',
+        borderRadius: '16px',
+        border: '1.5px solid #e2e8f0',
+        boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {[
+            { id: 'executive', label: 'Executive Overview', icon: LayoutDashboard, desc: 'Bento Cards & KPIs' },
+            { id: 'census_ledger', label: 'Census & Analytics Ledger', icon: Table, desc: '38-Parameter Multi-Month Grid' },
+            { id: 'spreadsheet_matrix', label: 'Master Spreadsheet & Matrix', icon: FileSpreadsheet, desc: 'Excel Matrix Data Sheet' },
+            { id: 'all', label: 'All Views', icon: Layers, desc: 'Complete Stack' }
+          ].map(tab => {
+            const isActive = activeMainView === tab.id;
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveMainView(tab.id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '9px 16px',
+                  borderRadius: '12px',
+                  border: isActive ? '1.5px solid #059669' : '1px solid #e2e8f0',
+                  backgroundColor: isActive ? '#ecfdf5' : '#f8fafc',
+                  color: isActive ? '#065f46' : '#64748b',
+                  fontSize: '13px',
+                  fontWeight: isActive ? '800' : '650',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: isActive ? '0 2px 8px rgba(5, 150, 105, 0.12)' : 'none'
+                }}
+              >
+                <TabIcon size={16} color={isActive ? '#059669' : '#64748b'} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      {/* ========================================================================= */}
-      {/* 1. CAPACITY, OCCUPANCY & VACANCY (PRIMARY PRIORITY - TOP POSITION)       */}
-      {/* ========================================================================= */}
-      <HostelCapacityOccupancySection
-        census={activeCensus}
-        prevCensus={prevCensus}
-        allCensusMap={hostelCensusMap}
-        periods={periods}
-        activePeriodId={currentPeriodId}
-        onPeriodSelect={(pid) => setActivePeriod && setActivePeriod(String(pid))}
-      />
+        <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '600', paddingRight: '8px' }}>
+          Viewing Period: <strong style={{ color: '#059669', fontWeight: '800' }}>{formatPeriodLabel(activePeriodObj)}</strong>
+        </div>
+      </div>
 
-      {/* ========================================================================= */}
-      {/* 2. EXPENSES & BUDGET TRACKING                                             */}
-      {/* ========================================================================= */}
-      <HostelExpensesBudgetSection
-        census={activeCensus}
-        computedMatrix={computedMatrix}
-        categories={categories}
-        periods={periods}
-        activePeriod={activePeriod === 'all' ? currentPeriodId : activePeriod}
-        onExportReport={handleExportReport}
-        remarksDraft={remarksDraft}
-      />
+      {/* EXECUTIVE OVERVIEW (BENTO KPI CARDS + 3 CORE SECTIONS) */}
+      {(activeMainView === 'executive' || activeMainView === 'all') && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+          {/* TOP: 12 EXECUTIVE SUMMARY KPI CARDS */}
+          <HostelExecutiveKpis
+            census={activeCensus}
+            prevCensus={prevCensus}
+            activePeriodLabel={activePeriodObj?.period_label}
+          />
+
+          {/* 1. CAPACITY, OCCUPANCY & VACANCY (PRIMARY PRIORITY) */}
+          <HostelCapacityOccupancySection
+            census={activeCensus}
+            prevCensus={prevCensus}
+            allCensusMap={hostelCensusMap}
+            periods={periods}
+            activePeriodId={currentPeriodId}
+            onPeriodSelect={(pid) => setActivePeriod && setActivePeriod(String(pid))}
+          />
+
+          {/* 2. MAINTENANCE, QUALITY COMPLAINTS & UTILITIES */}
+          <HostelMaintenanceSection
+            census={activeCensus}
+          />
+
+          {/* 3. EXPENSES & BUDGET TRACKING */}
+          <HostelExpensesBudgetSection
+            census={activeCensus}
+            computedMatrix={computedMatrix}
+            categories={categories}
+            periods={periods}
+            activePeriod={activePeriod === 'all' ? currentPeriodId : activePeriod}
+            onExportReport={handleExportReport}
+            remarksDraft={remarksDraft}
+          />
+        </div>
+      )}
+
+      {/* CENSUS & ANALYTICS LEDGER */}
+      {(activeMainView === 'census_ledger' || activeMainView === 'all') && (
+        <div style={{ width: '100%', marginTop: activeMainView === 'all' ? '20px' : 0 }}>
+          <HostelDashboardCensusView
+            computedMatrix={computedMatrix}
+            activePeriodObj={activePeriodObj}
+            periods={periods}
+          />
+        </div>
+      )}
+
+      {/* MASTER SPREADSHEET & MATRIX */}
+      {(activeMainView === 'spreadsheet_matrix' || activeMainView === 'all') && (
+        <div style={{ width: '100%', marginTop: activeMainView === 'all' ? '20px' : 0 }}>
+          <HostelDashboardDataTable
+            periods={periods}
+            activePeriod={currentPeriodId}
+            computedMatrix={computedMatrix}
+          />
+        </div>
+      )}
 
       {/* DETAILED REPORTS MODAL */}
       <HostelReportsModal
