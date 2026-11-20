@@ -24,9 +24,13 @@ import { formatINR } from '../../../utils/formatters';
 export default function HostelExecutiveKpis({
   census = {},
   prevCensus = {},
+  allCensusMap = {},
+  periods = [],
+  isAllMonths = false,
   activePeriodLabel = '',
   budgetTrackingData = [],
-  activeMonthCol = 'oct_26_actual'
+  activeMonthCol = 'oct_26_actual',
+  allMonthsTotalSpend = 0
 }) {
   const num = (v, fb = 0) => {
     if (v === undefined || v === null || v === '') return fb;
@@ -49,9 +53,16 @@ export default function HostelExecutiveKpis({
   const rawAdmissions = prevResidents > 0 ? (currentStudents - prevResidents + studentsVacated) : 0;
   const newAdmissions = Math.max(0, rawAdmissions);
 
-  const totalTickets = num(census.tickets_received, 0);
-  const closedTickets = num(census.tickets_closed, 0);
-  const openTickets = num(census.tickets_open, Math.max(0, totalTickets - closedTickets));
+  // When isAllMonths, aggregate census metrics across all periods
+  const allMonthsCensusList = Object.values(allCensusMap || {});
+  const totalStudentsVacatedAll = allMonthsCensusList.reduce((acc, c) => acc + num(c.students_vacated, 0), 0);
+  const totalTicketsRecAll = allMonthsCensusList.reduce((acc, c) => acc + num(c.tickets_received, 0), 0);
+  const totalTicketsClsAll = allMonthsCensusList.reduce((acc, c) => acc + num(c.tickets_closed, 0), 0);
+
+  const displayVacated = isAllMonths && totalStudentsVacatedAll > 0 ? totalStudentsVacatedAll : studentsVacated;
+  const displayTicketsRec = isAllMonths && totalTicketsRecAll > 0 ? totalTicketsRecAll : num(census.tickets_received, 0);
+  const displayTicketsCls = isAllMonths && totalTicketsClsAll > 0 ? totalTicketsClsAll : num(census.tickets_closed, 0);
+  const displayOpenTickets = Math.max(0, displayTicketsRec - displayTicketsCls);
 
   // If budget tracking data is provided, calculate the actual spend for the active month across the 9 heads
   const trackingActualSpend = (budgetTrackingData && budgetTrackingData.length > 0 && activeMonthCol)
@@ -59,15 +70,20 @@ export default function HostelExecutiveKpis({
     : 0;
 
   // Monthly Expenses: prefer live budget tracking actuals if positive, else census.expenses_occurred
-  const monthlyExpenses = trackingActualSpend > 0 ? trackingActualSpend : num(census.expenses_occurred, 0);
+  const singleMonthExpenses = trackingActualSpend > 0 ? trackingActualSpend : num(census.expenses_occurred, 0);
+
+  // When All Months is selected, display total cumulative spend across all recorded months
+  const displayExpenses = isAllMonths
+    ? (allMonthsTotalSpend > 0 ? allMonthsTotalSpend : singleMonthExpenses)
+    : singleMonthExpenses;
 
   const costPerStudentMonth = num(
     census.per_student_cost_month,
-    currentStudents > 0 ? monthlyExpenses / currentStudents : 0
+    currentStudents > 0 ? singleMonthExpenses / currentStudents : 0
   );
   const costPerStudentDay = num(
     census.per_student_cost_day,
-    currentStudents > 0 ? monthlyExpenses / (currentStudents * 30) : 0
+    currentStudents > 0 ? singleMonthExpenses / (currentStudents * 30) : 0
   );
 
   const kpis = [
@@ -83,7 +99,9 @@ export default function HostelExecutiveKpis({
     {
       label: 'Occupied Beds',
       value: totalOccupied > 0 ? totalOccupied.toLocaleString() : '—',
-      sub: `${num(census.students_total, 0)} Students • ${num(census.staff_total, 0)} Staff`,
+      sub: isAllMonths 
+        ? `${totalOccupied.toLocaleString()} Latest • ${num(census.students_total, 0)} Students • ${num(census.staff_total, 0)} Staff`
+        : `${num(census.students_total, 0)} Students • ${num(census.staff_total, 0)} Staff`,
       icon: Users,
       color: '#2563eb',
       bg: '#eff6ff',
@@ -118,8 +136,8 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Students Vacated',
-      value: studentsVacated.toLocaleString(),
-      sub: `Left hostel`,
+      value: displayVacated.toLocaleString(),
+      sub: isAllMonths ? `Total vacated across all months` : `Left hostel`,
       icon: UserMinus,
       color: '#ea580c',
       bg: '#fff7ed',
@@ -127,8 +145,8 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Maintenance Complaints',
-      value: totalTickets.toLocaleString(),
-      sub: `${closedTickets.toLocaleString()} Solved (${totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 100}%)`,
+      value: displayTicketsRec.toLocaleString(),
+      sub: `${displayTicketsCls.toLocaleString()} Solved (${displayTicketsRec > 0 ? Math.round((displayTicketsCls / displayTicketsRec) * 100) : 100}%)`,
       icon: Wrench,
       color: '#d97706',
       bg: '#fffbeb',
@@ -136,17 +154,19 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Pending Complaints',
-      value: openTickets.toLocaleString(),
-      sub: openTickets === 0 ? 'All complaints solved ✓' : `${openTickets} yet to fix`,
+      value: displayOpenTickets.toLocaleString(),
+      sub: displayOpenTickets === 0 ? 'All complaints solved ✓' : `${displayOpenTickets} yet to fix`,
       icon: ShieldAlert,
-      color: openTickets > 0 ? '#dc2626' : '#059669',
-      bg: openTickets > 0 ? '#fef2f2' : '#f0fdf4',
-      border: openTickets > 0 ? '#fecaca' : '#bbf7d0'
+      color: displayOpenTickets > 0 ? '#dc2626' : '#059669',
+      bg: displayOpenTickets > 0 ? '#fef2f2' : '#f0fdf4',
+      border: displayOpenTickets > 0 ? '#fecaca' : '#bbf7d0'
     },
     {
-      label: 'Total Monthly Expenses',
-      value: monthlyExpenses > 0 ? formatINR(monthlyExpenses) : '—',
-      sub: monthlyExpenses > 0 ? `Total sum of 9 operating heads` : 'No expenses recorded',
+      label: isAllMonths ? 'Total Expenses (All Months)' : 'Total Monthly Expenses',
+      value: displayExpenses > 0 ? formatINR(displayExpenses) : '—',
+      sub: isAllMonths 
+        ? `Total cumulative sum across all ${periods.length || 13} recorded months` 
+        : (displayExpenses > 0 ? `Total sum of 9 operating heads` : 'No expenses recorded'),
       icon: IndianRupee,
       color: '#7c3aed',
       bg: '#f5f3ff',
@@ -193,7 +213,7 @@ export default function HostelExecutiveKpis({
           </span>
         </div>
         <div style={{ fontSize: '12px', color: '#64748b' }}>
-          Selected Month: <strong style={{ color: '#0f172a' }}>{activePeriodLabel || 'Current Month'}</strong>
+          Selected Period: <strong style={{ color: '#0f172a' }}>{activePeriodLabel || (isAllMonths ? 'All Months (Cumulative Total)' : 'Current Month')}</strong>
         </div>
       </div>
 

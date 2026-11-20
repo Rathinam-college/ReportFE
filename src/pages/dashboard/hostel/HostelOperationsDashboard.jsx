@@ -45,8 +45,11 @@ export default function HostelOperationsDashboard({
     }
   }, [computedMatrix?.hostel_budget_tracking]);
 
-  // Active Period identification
-  const currentPeriodId = useMemo(() => {
+  // Whether "All Months" is active
+  const isAllMonths = activePeriod === 'all';
+
+  // Effective period for single-month snapshot metrics (defaults to recorded month with live expenses e.g. Oct'26)
+  const effectivePeriodId = useMemo(() => {
     if (activePeriod && activePeriod !== 'all') {
       return String(activePeriod);
     }
@@ -67,27 +70,55 @@ export default function HostelOperationsDashboard({
   }, [activePeriod, periods, hostelCensusMap]);
 
   const activePeriodObj = useMemo(() => {
-    return periods.find(p => String(p.id) === currentPeriodId) || periods[0] || {};
-  }, [periods, currentPeriodId]);
+    return periods.find(p => String(p.id) === effectivePeriodId) || periods[0] || {};
+  }, [periods, effectivePeriodId]);
 
   const activeMonthCol = useMemo(() => {
-    return getBudgetMonthCol(activePeriodObj, currentPeriodId);
-  }, [activePeriodObj, currentPeriodId]);
+    return getBudgetMonthCol(activePeriodObj, effectivePeriodId);
+  }, [activePeriodObj, effectivePeriodId]);
 
-  // Census data for active period
+  // Census data for active period / snapshot
   const activeCensus = useMemo(() => {
-    return hostelCensusMap[currentPeriodId] || (periods.length > 0 && hostelCensusMap[String(periods[0].id)]) || {};
-  }, [hostelCensusMap, currentPeriodId, periods]);
+    return hostelCensusMap[effectivePeriodId] || (periods.length > 0 && hostelCensusMap[String(periods[0].id)]) || {};
+  }, [hostelCensusMap, effectivePeriodId, periods]);
 
   // Previous month census for delta and movement calculations
   const prevCensus = useMemo(() => {
-    const activeIdx = periods.findIndex(p => String(p.id) === currentPeriodId);
+    const activeIdx = periods.findIndex(p => String(p.id) === effectivePeriodId);
     if (activeIdx > 0) {
       const prevId = String(periods[activeIdx - 1].id);
       return hostelCensusMap[prevId] || {};
     }
     return {};
-  }, [periods, currentPeriodId, hostelCensusMap]);
+  }, [periods, effectivePeriodId, hostelCensusMap]);
+
+  // Grand total spend across all recorded months from PostgreSQL DB
+  const allMonthsTotalSpend = useMemo(() => {
+    // 1. Sum actual month columns across budget tracking data if available
+    let budgetTrackingSum = 0;
+    if (budgetTrackingData && budgetTrackingData.length > 0) {
+      budgetTrackingData.forEach(h => {
+        Object.keys(h).forEach(k => {
+          if (k.endsWith('_actual')) {
+            budgetTrackingSum += Number(h[k] || 0);
+          }
+        });
+      });
+    }
+
+    // 2. Sum across all recorded months in census entries
+    let censusSum = 0;
+    if (hostelCensusMap && Object.keys(hostelCensusMap).length > 0) {
+      Object.values(hostelCensusMap).forEach(c => {
+        censusSum += Number(c?.expenses_occurred || 0);
+      });
+    }
+
+    // 3. Computed matrix grand total
+    const matrixTotal = Number(computedMatrix?.grand_total?.total || 0);
+
+    return Math.max(budgetTrackingSum, censusSum, matrixTotal);
+  }, [budgetTrackingData, hostelCensusMap, computedMatrix]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
@@ -150,11 +181,11 @@ export default function HostelOperationsDashboard({
           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
             <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#059669', pointerEvents: 'none' }} />
             <select
-              value={currentPeriodId}
+              value={activePeriod || 'all'}
               onChange={(e) => setActivePeriod && setActivePeriod(e.target.value)}
               style={{
                 backgroundColor: '#f8fafc',
-                border: '1px solid #cbd5e1',
+                border: '1.5px solid #cbd5e1',
                 borderRadius: '10px',
                 padding: '8px 30px 8px 30px',
                 fontSize: '12.5px',
@@ -166,6 +197,9 @@ export default function HostelOperationsDashboard({
                 boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)'
               }}
             >
+              <option value="all">
+                All Months (Total Cumulative)
+              </option>
               {periods.map(p => (
                 <option key={p.id} value={String(p.id)}>
                   {formatPeriodLabel(p)} • {p.period_label || p.period_code}
@@ -308,7 +342,9 @@ export default function HostelOperationsDashboard({
         </div>
 
         <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '600', paddingRight: '8px' }}>
-          Viewing Period: <strong style={{ color: '#059669', fontWeight: '800' }}>{formatPeriodLabel(activePeriodObj)}</strong>
+          Viewing Period: <strong style={{ color: '#059669', fontWeight: '800' }}>
+            {isAllMonths ? `All Months (${periods.length} Months Total)` : formatPeriodLabel(activePeriodObj)}
+          </strong>
         </div>
       </div>
 
@@ -319,9 +355,13 @@ export default function HostelOperationsDashboard({
           <HostelExecutiveKpis
             census={activeCensus}
             prevCensus={prevCensus}
-            activePeriodLabel={activePeriodObj?.period_label}
+            allCensusMap={hostelCensusMap}
+            periods={periods}
+            isAllMonths={isAllMonths}
+            activePeriodLabel={isAllMonths ? 'All Months (Cumulative Total)' : activePeriodObj?.period_label}
             budgetTrackingData={budgetTrackingData}
             activeMonthCol={activeMonthCol}
+            allMonthsTotalSpend={allMonthsTotalSpend}
           />
 
           {/* 1. CAPACITY, OCCUPANCY & VACANCY (PRIMARY PRIORITY) */}
@@ -330,7 +370,7 @@ export default function HostelOperationsDashboard({
             prevCensus={prevCensus}
             allCensusMap={hostelCensusMap}
             periods={periods}
-            activePeriodId={currentPeriodId}
+            activePeriodId={isAllMonths ? 'all' : effectivePeriodId}
             onPeriodSelect={(pid) => setActivePeriod && setActivePeriod(String(pid))}
           />
 
@@ -340,7 +380,7 @@ export default function HostelOperationsDashboard({
             computedMatrix={computedMatrix}
             categories={categories}
             periods={periods}
-            activePeriod={activePeriod === 'all' ? currentPeriodId : activePeriod}
+            activePeriod={activePeriod}
             onExportReport={handleExportReport}
             remarksDraft={remarksDraft}
           />
@@ -354,6 +394,7 @@ export default function HostelOperationsDashboard({
             computedMatrix={computedMatrix}
             activePeriodObj={activePeriodObj}
             periods={periods}
+            activePeriod={activePeriod}
           />
         </div>
       )}
@@ -363,7 +404,7 @@ export default function HostelOperationsDashboard({
         <div style={{ width: '100%', marginTop: activeMainView === 'all' ? '20px' : 0 }}>
           <HostelDashboardDataTable
             periods={periods}
-            activePeriod={currentPeriodId}
+            activePeriod={activePeriod}
             computedMatrix={computedMatrix}
           />
         </div>

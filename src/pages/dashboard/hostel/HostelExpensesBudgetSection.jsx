@@ -84,8 +84,9 @@ export default function HostelExpensesBudgetSection({
   }, [activePeriodObj, activePeriod]);
 
   const activePeriodName = useMemo(() => {
+    if (activePeriod === 'all') return 'All Months (Cumulative)';
     return activePeriodObj ? formatPeriodLabel(activePeriodObj) : (activePeriodObj?.period_label || activePeriodObj?.period_code || "Oct'25");
-  }, [activePeriodObj]);
+  }, [activePeriod, activePeriodObj]);
 
   // Connect 9 heads directly to DB rows
   const activeBudgetHeads = useMemo(() => {
@@ -167,6 +168,12 @@ export default function HostelExpensesBudgetSection({
     }
     return allHostelMonthCols;
   }, [allHostelMonthCols, monthFilter, activeMonthCol, activeBudgetHeads]);
+
+  const allMonthsActualSum = useMemo(() => {
+    return activeBudgetHeads.reduce((acc, h) => {
+      return acc + (visibleMonthCols || []).reduce((mAcc, m) => mAcc + num(h[m.key], 0), 0);
+    }, 0);
+  }, [activeBudgetHeads, visibleMonthCols]);
 
   const periodRangeLabel = useMemo(() => {
     if (visibleMonthCols && visibleMonthCols.length > 0) {
@@ -557,7 +564,7 @@ export default function HostelExpensesBudgetSection({
                   : num(head[activeMonthCol], 0);
 
                 const totalSelectionSpend = isAll
-                  ? activeBudgetHeads.reduce((sum, h) => sum + visibleMonthCols.reduce((acc, m) => acc + num(h[m.key], 0), 0), 0)
+                  ? (allMonthsActualSum > 0 ? allMonthsActualSum : 1)
                   : (activeMonthActualSum > 0 ? activeMonthActualSum : 1);
 
                 const selPercent = totalSelectionSpend > 0
@@ -674,7 +681,7 @@ export default function HostelExpensesBudgetSection({
                     SANCTIONED (₹)
                   </th>
                   {visibleMonthCols.map((m) => {
-                    const isActive = m.key === activeMonthCol;
+                    const isActive = activePeriod !== 'all' && m.key === activeMonthCol;
                     return (
                       <th
                         key={m.key}
@@ -699,8 +706,16 @@ export default function HostelExpensesBudgetSection({
                       </th>
                     );
                   })}
-                  <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: '800', minWidth: '150px' }}>
-                    {activePeriodName} Spend Share
+                  <th style={{
+                    padding: '12px 14px',
+                    textAlign: 'center',
+                    fontWeight: '800',
+                    minWidth: '150px',
+                    backgroundColor: activePeriod === 'all' ? '#eff6ff' : 'transparent',
+                    color: activePeriod === 'all' ? '#1d4ed8' : '#1e293b',
+                    borderBottom: activePeriod === 'all' ? '3px solid #3b82f6' : 'none'
+                  }}>
+                    {activePeriod === 'all' ? 'All Months Cumulative Spend' : `${activePeriodName} Spend Share`}
                   </th>
                 </tr>
               </thead>
@@ -748,7 +763,7 @@ export default function HostelExpensesBudgetSection({
                       {/* Dynamic Month Columns directly from PostgreSQL DB */}
                       {visibleMonthCols.map((m) => {
                         const mVal = num(head[m.key], 0);
-                        const isActive = m.key === activeMonthCol;
+                        const isActive = activePeriod !== 'all' && m.key === activeMonthCol;
                         return (
                           <td
                             key={m.key}
@@ -766,45 +781,79 @@ export default function HostelExpensesBudgetSection({
                         );
                       })}
 
-                      {/* Active Spend Share Badge */}
-                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                        {activeVal === 0 ? (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            padding: '3px 9px',
-                            borderRadius: '9999px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            backgroundColor: '#f1f5f9',
-                            color: '#64748b'
-                          }}>
-                            No Spend (0%)
-                          </span>
+                      {/* Active Spend Share or All Months Cumulative Spend */}
+                      <td style={{
+                        padding: '10px 14px',
+                        textAlign: 'center',
+                        backgroundColor: activePeriod === 'all' ? '#f0f7ff' : 'transparent'
+                      }}>
+                        {activePeriod === 'all' ? (
+                          (() => {
+                            const totalHeadSpend = visibleMonthCols.reduce((acc, m) => acc + num(head[m.key], 0), 0);
+                            const headSharePct = allMonthsActualSum > 0 ? (totalHeadSpend / allMonthsActualSum) * 100 : 0;
+                            
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                                <span style={{ fontWeight: '800', color: totalHeadSpend > 0 ? '#1e40af' : '#64748b', fontSize: '12.5px' }} className="currency-font">
+                                  {totalHeadSpend > 0 ? formatINR(totalHeadSpend) : '—'}
+                                </span>
+                                {totalHeadSpend > 0 && (
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    padding: '1px 7px',
+                                    borderRadius: '9999px',
+                                    fontSize: '10px',
+                                    fontWeight: '800',
+                                    backgroundColor: '#eff6ff',
+                                    color: '#1d4ed8',
+                                    border: '1px solid #bfdbfe'
+                                  }}>
+                                    {headSharePct.toFixed(1)}% of total
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()
                         ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                          activeVal === 0 ? (
                             <span style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
-                              padding: '2px 8px',
+                              padding: '3px 9px',
                               borderRadius: '9999px',
-                              fontSize: '10.5px',
-                              fontWeight: '800',
-                              backgroundColor: '#eff6ff',
-                              color: '#1d4ed8',
-                              border: '1px solid #bfdbfe'
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              backgroundColor: '#f1f5f9',
+                              color: '#64748b'
                             }}>
-                              {sharePct.toFixed(1)}% of month
+                              No Spend (0%)
                             </span>
-                            <div style={{ width: '80px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-                              <div style={{
-                                width: `${Math.min(100, sharePct)}%`,
-                                height: '100%',
-                                backgroundColor: HEAD_COLORS[(head.s_no - 1) % HEAD_COLORS.length]
-                              }} />
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                fontSize: '10.5px',
+                                fontWeight: '800',
+                                backgroundColor: '#eff6ff',
+                                color: '#1d4ed8',
+                                border: '1px solid #bfdbfe'
+                              }}>
+                                {sharePct.toFixed(1)}% of month
+                              </span>
+                              <div style={{ width: '80px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+                                <div style={{
+                                  width: `${Math.min(100, sharePct)}%`,
+                                  height: '100%',
+                                  backgroundColor: HEAD_COLORS[(head.s_no - 1) % HEAD_COLORS.length]
+                                }} />
+                              </div>
                             </div>
-                          </div>
+                          )
                         )}
                       </td>
                     </tr>
@@ -829,7 +878,7 @@ export default function HostelExpensesBudgetSection({
                   {/* Dynamic Month Totals calculated directly from DB rows */}
                   {visibleMonthCols.map((m) => {
                     const mSum = activeBudgetHeads.reduce((acc, h) => acc + num(h[m.key], 0), 0);
-                    const isActive = m.key === activeMonthCol;
+                    const isActive = activePeriod !== 'all' && m.key === activeMonthCol;
                     return (
                       <td
                         key={m.key}
@@ -848,21 +897,43 @@ export default function HostelExpensesBudgetSection({
                     );
                   })}
 
-                  <td style={{ padding: '14px 14px', textAlign: 'center' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 10px',
-                      borderRadius: '9999px',
-                      fontSize: '11.5px',
-                      fontWeight: '900',
-                      backgroundColor: '#fef9c3',
-                      color: '#854d0e',
-                      border: '1px solid #facc15'
-                    }}>
-                      {formatINR(activeMonthActualSum)} Active Spend
-                    </span>
+                  <td style={{
+                    padding: '14px 14px',
+                    textAlign: 'center',
+                    backgroundColor: activePeriod === 'all' ? '#fef9c3' : 'transparent'
+                  }}>
+                    {activePeriod === 'all' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '900', color: '#166534' }} className="currency-font">
+                          {formatINR(allMonthsActualSum)}
+                        </span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: '800',
+                          color: '#854d0e',
+                          backgroundColor: '#fef08a',
+                          padding: '1px 6px',
+                          borderRadius: '4px'
+                        }}>
+                          100% (Cumulative)
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 10px',
+                        borderRadius: '9999px',
+                        fontSize: '11.5px',
+                        fontWeight: '900',
+                        backgroundColor: '#fef9c3',
+                        color: '#854d0e',
+                        border: '1px solid #facc15'
+                      }}>
+                        {formatINR(activeMonthActualSum)} Active Spend
+                      </span>
+                    )}
                   </td>
                 </tr>
               </tbody>
