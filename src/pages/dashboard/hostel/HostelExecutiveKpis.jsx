@@ -24,7 +24,9 @@ import { formatINR } from '../../../utils/formatters';
 export default function HostelExecutiveKpis({
   census = {},
   prevCensus = {},
-  activePeriodLabel = ''
+  activePeriodLabel = '',
+  budgetTrackingData = [],
+  activeMonthCol = 'oct_26_actual'
 }) {
   const num = (v, fb = 0) => {
     if (v === undefined || v === null || v === '') return fb;
@@ -51,9 +53,25 @@ export default function HostelExecutiveKpis({
   const closedTickets = num(census.tickets_closed, 0);
   const openTickets = num(census.tickets_open, Math.max(0, totalTickets - closedTickets));
 
-  const monthlyExpenses = num(census.expenses_occurred, 0);
-  const approvedBudget = num(census.approved_budget, 0);
-  const remainingBudget = num(census.balance, approvedBudget > 0 ? Math.max(0, approvedBudget - num(census.cumulative_budget_spent, monthlyExpenses)) : 0);
+  // If budget tracking data is provided, calculate the actual spend for the active month across the 9 heads
+  const trackingActualSpend = (budgetTrackingData && budgetTrackingData.length > 0 && activeMonthCol)
+    ? budgetTrackingData.reduce((acc, h) => acc + num(h[activeMonthCol], 0), 0)
+    : 0;
+
+  // Monthly Expenses: prefer live budget tracking actuals if positive, else census.expenses_occurred
+  const monthlyExpenses = trackingActualSpend > 0 ? trackingActualSpend : num(census.expenses_occurred, 0);
+
+  // Approved Budget: prefer census.approved_budget, else default canonical 142010789
+  const approvedBudget = num(census.approved_budget, 142010789);
+
+  // Cumulative spent: ensure it reflects at least monthlyExpenses
+  const rawCumSpent = num(census.cumulative_budget_spent, 0);
+  const cumulativeSpent = rawCumSpent >= monthlyExpenses ? rawCumSpent : monthlyExpenses;
+
+  // Remaining budget: MUST ALWAYS mathematically equal (approvedBudget - cumulativeSpent)
+  const remainingBudget = approvedBudget > 0 
+    ? Math.max(0, approvedBudget - cumulativeSpent) 
+    : 0;
 
   const costPerStudentMonth = num(
     census.per_student_cost_month,

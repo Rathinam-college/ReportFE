@@ -128,8 +128,9 @@ export default function HostelDashboardCensusView({
 
   const appBudget = num(activeCensus.approved_budget, 142010789);
   const monthlyExpenses = num(activeCensus.expenses_occurred, 0);
-  const spentBudget = num(activeCensus.cumulative_budget_spent, monthlyExpenses);
-  const balBudget = num(activeCensus.balance, appBudget > 0 ? Math.max(0, appBudget - spentBudget) : 0);
+  const rawSpent = num(activeCensus.cumulative_budget_spent, 0);
+  const spentBudget = rawSpent >= monthlyExpenses ? rawSpent : monthlyExpenses;
+  const balBudget = appBudget > 0 ? Math.max(0, appBudget - spentBudget) : 0;
   const perStudentCost = num(activeCensus.per_student_cost_month, studentsTotal > 0 ? Math.round(monthlyExpenses / studentsTotal) : 0);
   const perStudentCostDay = num(activeCensus.per_student_cost_day, perStudentCost > 0 ? Math.round(perStudentCost / 30) : 0);
 
@@ -184,8 +185,18 @@ export default function HostelDashboardCensusView({
     // Financial Budget & Spend
     { sNo: '25', name: 'Approved Operating Budget', key: 'approved_budget', type: 'currency', section: 'budget', calc: c => formatINR(num(c.approved_budget, 142010789)) },
     { sNo: '26', name: 'Expenses Occurred (Monthly Actuals)', key: 'expenses_occurred', type: 'currency', section: 'budget', highlight: true, calc: c => formatINR(num(c.expenses_occurred, 0)) },
-    { sNo: '27', name: 'Cumulative Budget Spent', key: 'cumulative_budget_spent', type: 'currency', section: 'budget', calc: c => formatINR(num(c.cumulative_budget_spent, num(c.expenses_occurred, 0))) },
-    { sNo: '28', name: 'Balance Budget Remaining', key: 'balance', type: 'currency', section: 'budget', highlight: true, calc: c => formatINR(num(c.balance, Math.max(0, num(c.approved_budget, 142010789) - num(c.cumulative_budget_spent, num(c.expenses_occurred, 0))))) },
+    { sNo: '27', name: 'Cumulative Budget Spent', key: 'cumulative_budget_spent', type: 'currency', section: 'budget', calc: c => {
+      const mo = num(c.expenses_occurred, 0);
+      const cs = num(c.cumulative_budget_spent, 0);
+      return formatINR(cs >= mo ? cs : mo);
+    }},
+    { sNo: '28', name: 'Balance Budget Remaining', key: 'balance', type: 'currency', section: 'budget', highlight: true, calc: c => {
+      const ab = num(c.approved_budget, 142010789);
+      const mo = num(c.expenses_occurred, 0);
+      const cs = num(c.cumulative_budget_spent, 0);
+      const effCs = cs >= mo ? cs : mo;
+      return formatINR(ab > 0 ? Math.max(0, ab - effCs) : 0);
+    }},
     { sNo: '29', name: 'Per Student Cost per Month / Day', key: 'per_student_cost', type: 'text', section: 'budget', calc: c => `₹${Math.round(num(c.per_student_cost_month, 0)).toLocaleString()}/mo • ₹${Math.round(num(c.per_student_cost_day, 0))}/day` }
   ];
 

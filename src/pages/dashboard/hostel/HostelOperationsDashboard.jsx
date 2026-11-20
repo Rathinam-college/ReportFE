@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Building2, BedDouble, Users, Wrench, DollarSign, Download, 
   ArrowRight, FileSpreadsheet, Calendar, ChevronDown, Check,
   Sparkles, FileText, Printer, Paperclip, LayoutDashboard, Table, Layers
 } from 'lucide-react';
 import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
+import { getBudgetMonthCol } from '../../../utils/hostelBudgetConstants';
 import HostelExecutiveKpis from './HostelExecutiveKpis';
 import HostelCapacityOccupancySection from './HostelCapacityOccupancySection';
 import HostelExpensesBudgetSection from './HostelExpensesBudgetSection';
@@ -28,7 +29,21 @@ export default function HostelOperationsDashboard({
   const [showHostelAttachmentsModal, setShowHostelAttachmentsModal] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const [activeMainView, setActiveMainView] = useState('executive'); // 'executive' | 'census_ledger' | 'spreadsheet_matrix' | 'all'
+  const [budgetTrackingData, setBudgetTrackingData] = useState([]);
   const hostelCensusMap = computedMatrix?.hostel_census || {};
+
+  useEffect(() => {
+    if (computedMatrix?.hostel_budget_tracking && computedMatrix.hostel_budget_tracking.length > 0) {
+      setBudgetTrackingData(computedMatrix.hostel_budget_tracking);
+    } else {
+      fetch('/api/hostel/budget-tracking')
+        .then(res => res.json())
+        .then(d => {
+          if (d?.items) setBudgetTrackingData(d.items);
+        })
+        .catch(err => console.warn('Budget tracking notice:', err));
+    }
+  }, [computedMatrix?.hostel_budget_tracking]);
 
   // Active Period identification
   const currentPeriodId = useMemo(() => {
@@ -54,6 +69,10 @@ export default function HostelOperationsDashboard({
   const activePeriodObj = useMemo(() => {
     return periods.find(p => String(p.id) === currentPeriodId) || periods[0] || {};
   }, [periods, currentPeriodId]);
+
+  const activeMonthCol = useMemo(() => {
+    return getBudgetMonthCol(activePeriodObj, currentPeriodId);
+  }, [activePeriodObj, currentPeriodId]);
 
   // Census data for active period
   const activeCensus = useMemo(() => {
@@ -301,6 +320,8 @@ export default function HostelOperationsDashboard({
             census={activeCensus}
             prevCensus={prevCensus}
             activePeriodLabel={activePeriodObj?.period_label}
+            budgetTrackingData={budgetTrackingData}
+            activeMonthCol={activeMonthCol}
           />
 
           {/* 1. CAPACITY, OCCUPANCY & VACANCY (PRIMARY PRIORITY) */}
