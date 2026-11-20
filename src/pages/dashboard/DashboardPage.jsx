@@ -29,6 +29,7 @@ import HostelDashboardDataTable from './HostelDashboardDataTable';
 import TransportDashboardDataTable from './TransportDashboardDataTable';
 import MonthlyExpenseSection from './monthly_expense/MonthlyExpenseSection';
 import HostelOperationsDashboard from './hostel/HostelOperationsDashboard';
+import TransportOperationsDashboard from './transport/TransportOperationsDashboard';
 
 export default function DashboardPage({
   selectedModule = 'food',
@@ -567,6 +568,23 @@ export default function DashboardPage({
           remarksDraft={remarksDraft}
           attachmentsSummary={attachmentsSummary}
           onRefreshAttachments={fetchAttachmentsSummary}
+        />
+      </div>
+    );
+  }
+
+  // Dedicated Enterprise Transport Operations & Fleet Management Dashboard
+  if (currentModule === 'transport') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
+        <TransportOperationsDashboard
+          computedMatrix={effectiveMatrix}
+          periods={periods}
+          categories={categories}
+          activePeriod={activePeriod}
+          setActivePeriod={setActivePeriod}
+          onOpenDataEntry={onOpenDataEntry}
+          handleExportReport={handleExportReport}
         />
       </div>
     );
