@@ -16,19 +16,37 @@ export const TRANSPORT_BRANCH_LIST = [
 
 export default function TransportVehicleExpensesTable({
   initialPeriodId = null,
+  periodId = null,
   initialBranch = 'Common',
+  branch = 'Common',
+  onPeriodChange = null,
+  onBranchChange = null,
+  embedded = false,
   readOnly = false,
   onSyncCensus = null
 }) {
   const [periods, setPeriods] = useState([]);
-  const [selectedPeriodId, setSelectedPeriodId] = useState(initialPeriodId);
-  const [selectedBranch, setSelectedBranch] = useState(initialBranch);
+  const [selectedPeriodId, setSelectedPeriodId] = useState(periodId || initialPeriodId);
+  const [selectedBranch, setSelectedBranch] = useState(branch || initialBranch);
   const [vehicles, setVehicles] = useState([]);
   const [branchSummaries, setBranchSummaries] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Synchronize with parent props whenever they update
+  useEffect(() => {
+    if (periodId && periodId !== selectedPeriodId) {
+      setSelectedPeriodId(periodId);
+    }
+  }, [periodId]);
+
+  useEffect(() => {
+    if (branch && branch !== selectedBranch) {
+      setSelectedBranch(branch);
+    }
+  }, [branch]);
 
   // 1. Fetch available transport periods
   useEffect(() => {
@@ -42,6 +60,7 @@ export default function TransportVehicleExpensesTable({
             const oct = data.periods.find(p => p.period_code === '2026-10' || (p.period_label && p.period_label.toLowerCase().includes('oct')));
             const defaultP = oct || data.periods[data.periods.length - 1];
             setSelectedPeriodId(defaultP.id);
+            if (onPeriodChange) onPeriodChange(defaultP.id);
           }
         }
       })
@@ -403,31 +422,58 @@ export default function TransportVehicleExpensesTable({
 
         {/* Action Controls in Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Month Selector Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 8px', borderRadius: '6px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#ffffff' }}>Month:</span>
-            <select
-              value={selectedPeriodId || ''}
-              onChange={(e) => setSelectedPeriodId(Number(e.target.value))}
+          {/* Quick Search */}
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="🔍 Search vehicle..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                backgroundColor: '#ffffff',
-                color: '#0f172a',
+                padding: '5px 10px',
+                fontSize: '11.5px',
+                borderRadius: '6px',
                 border: 'none',
-                borderRadius: '4px',
-                padding: '4px 8px',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                outline: 'none'
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                color: '#0f172a',
+                width: '150px',
+                outline: 'none',
+                fontWeight: '600'
               }}
-            >
-              {periods.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.period_label} ({p.period_code})
-                </option>
-              ))}
-            </select>
+            />
           </div>
+
+          {/* Standalone Month Selector Dropdown (Hidden when embedded in Data Entry page) */}
+          {!embedded && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 8px', borderRadius: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#ffffff' }}>Month:</span>
+              <select
+                value={selectedPeriodId || ''}
+                onChange={(e) => {
+                  const pid = Number(e.target.value);
+                  setSelectedPeriodId(pid);
+                  if (onPeriodChange) onPeriodChange(pid);
+                }}
+                style={{
+                  backgroundColor: '#ffffff',
+                  color: '#0f172a',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                {periods.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.period_label} ({p.period_code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {!readOnly && selectedBranch !== 'all' && (
             <button
@@ -504,85 +550,72 @@ export default function TransportVehicleExpensesTable({
         </div>
       </div>
 
-      {/* 2. BRANCH SELECTOR PILLS BAR */}
-      <div style={{
-        backgroundColor: '#f8fafc',
-        padding: '10px 16px',
-        borderBottom: '1px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '10px'
-      }}>
-        {/* Branch Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginRight: '4px' }}>
-            Fleets / Branches:
-          </span>
-          {TRANSPORT_BRANCH_LIST.map(b => {
-            const isSel = selectedBranch === b.id;
-            const bSummary = branchSummaries[b.id] || {};
-            const bCount = bSummary.bus_count !== undefined ? bSummary.bus_count : (b.id === selectedBranch ? vehicles.length : null);
+      {/* 2. STANDALONE BRANCH SELECTOR PILLS BAR (Hidden when embedded to eliminate duplicate branch bars) */}
+      {!embedded && (
+        <div style={{
+          backgroundColor: '#f8fafc',
+          padding: '10px 16px',
+          borderBottom: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          {/* Branch Tabs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginRight: '4px' }}>
+              Fleets / Branches:
+            </span>
+            {TRANSPORT_BRANCH_LIST.map(b => {
+              const isSel = selectedBranch === b.id;
+              const bSummary = branchSummaries[b.id] || {};
+              const bCount = bSummary.bus_count !== undefined ? bSummary.bus_count : (b.id === selectedBranch ? vehicles.length : null);
 
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => setSelectedBranch(b.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: isSel ? '800' : '600',
-                  border: isSel ? `2px solid ${b.badgeColor}` : '1px solid #cbd5e1',
-                  backgroundColor: isSel ? b.badgeBg : '#ffffff',
-                  color: isSel ? b.badgeColor : '#475569',
-                  cursor: 'pointer',
-                  boxShadow: isSel ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <span>{b.icon}</span>
-                <span>{b.label}</span>
-                {bCount !== null && (
-                  <span style={{
-                    backgroundColor: isSel ? b.badgeColor : '#e2e8f0',
-                    color: isSel ? '#ffffff' : '#475569',
-                    fontSize: '10.5px',
-                    fontWeight: '800',
-                    padding: '1px 6px',
-                    borderRadius: '10px'
-                  }}>
-                    {bCount} {bCount === 1 ? 'Bus' : 'Buses'}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedBranch(b.id);
+                    if (onBranchChange) onBranchChange(b.id);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: isSel ? '800' : '600',
+                    border: isSel ? `2px solid ${b.badgeColor}` : '1px solid #cbd5e1',
+                    backgroundColor: isSel ? b.badgeBg : '#ffffff',
+                    color: isSel ? b.badgeColor : '#475569',
+                    cursor: 'pointer',
+                    boxShadow: isSel ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span>{b.icon}</span>
+                  <span>{b.label}</span>
+                  {bCount !== null && (
+                    <span style={{
+                      backgroundColor: isSel ? b.badgeColor : '#e2e8f0',
+                      color: isSel ? '#ffffff' : '#475569',
+                      fontSize: '10.5px',
+                      fontWeight: '800',
+                      padding: '1px 6px',
+                      borderRadius: '10px'
+                    }}>
+                      {bCount} {bCount === 1 ? 'Bus' : 'Buses'}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-
-        {/* Quick Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <input
-            type="text"
-            placeholder="Search vehicle no, make..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              padding: '4px 10px',
-              fontSize: '11.5px',
-              borderRadius: '4px',
-              border: '1px solid #cbd5e1',
-              width: '180px',
-              outline: 'none'
-            }}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Status Alert Banner */}
       {statusMessage && (

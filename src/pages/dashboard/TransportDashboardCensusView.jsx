@@ -664,8 +664,9 @@ export default function TransportDashboardCensusView({
       {showVehiclesTable && (
         <div style={{ padding: '20px 22px', backgroundColor: '#f8fafc', borderBottom: '1.5px solid #fed7aa' }}>
           <TransportVehicleExpensesTable
-            initialPeriodId={activePeriodObj?.id}
-            initialBranch={activeBranch}
+            periodId={activePeriodObj?.id}
+            branch={activeBranch}
+            embedded={true}
           />
         </div>
       )}

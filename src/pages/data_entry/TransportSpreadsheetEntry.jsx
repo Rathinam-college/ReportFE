@@ -889,7 +889,7 @@ export default function TransportSpreadsheetEntry({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#ffffff', letterSpacing: '-0.01em' }}>
-                Transport Operations & Fleet Master Spreadsheet
+                {activeView === 'vehicles' ? 'College Cab Vehicle Wise Fleet Expenses Ledger' : 'Transport Operations & Fleet Master Spreadsheet'}
               </h2>
               <span style={{
                 fontSize: '11px',
@@ -899,40 +899,45 @@ export default function TransportSpreadsheetEntry({
                 borderRadius: '9999px',
                 color: '#ffffff'
               }}>
-                Excel Sheet Model
+                {activeView === 'vehicles' ? 'Cab Fleet Ledger' : 'Excel Sheet Model'}
               </span>
             </div>
             <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#e0f2fe' }}>
-              Exact multi-parameter spreadsheet layout • Multi-Branch (RPS, KPM, Common, University, Consolidated) • Live Real-time Formulas • Synced with Master Data
+              {activeView === 'vehicles' 
+                ? `Vehicle-by-Vehicle Expenses, Diesel Consumption, KM Run & Mileage Tracking • ${activeBranchObj.label} (${activePeriodObj?.period_label || "OCT'26"})`
+                : 'Exact multi-parameter spreadsheet layout • Multi-Branch (RPS, KPM, Common, University, Consolidated) • Live Real-time Formulas • Synced with Master Data'
+              }
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Copy Previous Month */}
-          <button
-            type="button"
-            onClick={handleCopyFromPreviousMonth}
-            disabled={activeBranch === 'all' || isClosed}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 13px',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(255, 255, 255, 0.18)',
-              border: '1px solid rgba(255, 255, 255, 0.35)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: (activeBranch === 'all' || isClosed) ? 'not-allowed' : 'pointer',
-              opacity: (activeBranch === 'all' || isClosed) ? 0.6 : 1
-            }}
-            title="Copy all parameter values from previous month into active month"
-          >
-            <Copy size={13} /> Copy Previous Month
-          </button>
+          {/* Copy Previous Month - hidden in vehicle ledger view */}
+          {activeView !== 'vehicles' && (
+            <button
+              type="button"
+              onClick={handleCopyFromPreviousMonth}
+              disabled={activeBranch === 'all' || isClosed}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 13px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                border: '1px solid rgba(255, 255, 255, 0.35)',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: (activeBranch === 'all' || isClosed) ? 'not-allowed' : 'pointer',
+                opacity: (activeBranch === 'all' || isClosed) ? 0.6 : 1
+              }}
+              title="Copy all parameter values from previous month into active month"
+            >
+              <Copy size={13} /> Copy Previous Month
+            </button>
+          )}
 
           {/* Refresh */}
           <button
@@ -945,12 +950,10 @@ export default function TransportSpreadsheetEntry({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 13px',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(255, 255, 255, 0.18)',
               border: '1px solid rgba(255, 255, 255, 0.35)',
               borderRadius: '9999px',
               padding: '7px 16px',
+              backgroundColor: 'rgba(255, 255, 255, 0.18)',
               color: '#ffffff',
               fontSize: '12px',
               fontWeight: '700',
@@ -960,42 +963,44 @@ export default function TransportSpreadsheetEntry({
             <RefreshCw size={13} /> Refresh
           </button>
 
-          {/* Master Save Button */}
-          <button
-            type="button"
-            onClick={handleSaveActiveBranch}
-            disabled={isSaving || isClosed || activeBranch === 'all'}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 22px',
-              borderRadius: '9999px',
-              background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '13px',
-              fontWeight: '800',
-              cursor: (isSaving || isClosed || activeBranch === 'all') ? 'not-allowed' : 'pointer',
-              opacity: (isSaving || isClosed || activeBranch === 'all') ? 0.6 : 1,
-              boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            {isSaving ? (
-              <>
-                <RefreshCw size={14} className="spin-animate" />
-                <span>Saving {activeBranchObj.label}...</span>
-              </>
-            ) : (
-              <>
-                <Save size={14} />
-                <span>
-                  {activeBranch === 'all' ? 'Consolidated (Auto-Calculated)' : `Save ${activeBranchObj.label}`}
-                </span>
-              </>
-            )}
-          </button>
+          {/* Master Save Button - only for parameter sheet, vehicle ledger has its own Save Vehicle Ledger button */}
+          {activeView !== 'vehicles' && (
+            <button
+              type="button"
+              onClick={handleSaveActiveBranch}
+              disabled={isSaving || isClosed || activeBranch === 'all'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 22px',
+                borderRadius: '9999px',
+                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: '800',
+                cursor: (isSaving || isClosed || activeBranch === 'all') ? 'not-allowed' : 'pointer',
+                opacity: (isSaving || isClosed || activeBranch === 'all') ? 0.6 : 1,
+                boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {isSaving ? (
+                <>
+                  <RefreshCw size={14} className="spin-animate" />
+                  <span>Saving {activeBranchObj.label}...</span>
+                </>
+              ) : (
+                <>
+                  <Save size={14} />
+                  <span>
+                    {activeBranch === 'all' ? 'Consolidated (Auto-Calculated)' : `Save ${activeBranchObj.label}`}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1271,8 +1276,11 @@ export default function TransportSpreadsheetEntry({
       {activeView === 'vehicles' ? (
         <div style={{ padding: '20px 16px', backgroundColor: '#f8fafc' }}>
           <TransportVehicleExpensesTable
-            initialPeriodId={editingPeriodId}
-            initialBranch={activeBranch}
+            periodId={editingPeriodId}
+            branch={activeBranch}
+            embedded={true}
+            onBranchChange={setActiveBranch}
+            onPeriodChange={setEditingPeriodId}
             onSyncCensus={fetchData}
           />
         </div>

@@ -379,8 +379,9 @@ export default function TransportDashboardDataTable({
           boxSizing: 'border-box'
         }}>
           <TransportVehicleExpensesTable
-            initialPeriodId={activePeriod !== 'all' ? Number(activePeriod) : null}
-            initialBranch={activeBranch}
+            periodId={activePeriod !== 'all' ? Number(activePeriod) : null}
+            branch={activeBranch}
+            embedded={true}
           />
         </div>
       ) : (
