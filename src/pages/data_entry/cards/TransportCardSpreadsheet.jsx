@@ -320,53 +320,34 @@ export default function TransportCardSpreadsheet({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              backgroundColor: 'var(--bg-pill, #e9eefb)',
-              padding: '2px',
+              backgroundColor: '#ffffff',
+              padding: '3px',
               borderRadius: '9999px',
-              border: '1px solid var(--border-card, #e3e8f3)'
+              border: '1.5px solid #cbd5e1',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
             }}
           >
-            <button
-              type="button"
-              onClick={() => setViewMode('cards')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '5px 12px',
-                borderRadius: '9999px',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: viewMode === 'cards' ? '#0aa0e8' : 'transparent',
-                color: viewMode === 'cards' ? '#ffffff' : 'var(--text-muted, #66708f)',
-                fontSize: '11.5px',
-                fontWeight: viewMode === 'cards' ? '800' : '500',
-                boxShadow: viewMode === 'cards' ? '0 2px 6px rgba(10, 160, 232, 0.25)' : 'none'
-              }}
-            >
-              <LayoutGrid size={12} />
-              <span>Cards</span>
-            </button>
             <button
               type="button"
               onClick={() => setViewMode('sheet')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '5px 12px',
+                gap: '6px',
+                padding: '6px 16px',
                 borderRadius: '9999px',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: viewMode === 'sheet' ? '#0aa0e8' : 'transparent',
-                color: viewMode === 'sheet' ? '#ffffff' : 'var(--text-muted, #66708f)',
-                fontSize: '11.5px',
-                fontWeight: viewMode === 'sheet' ? '800' : '500',
-                boxShadow: viewMode === 'sheet' ? '0 2px 6px rgba(10, 160, 232, 0.25)' : 'none'
+                backgroundColor: viewMode !== 'vehicles' ? '#0284c7' : 'transparent',
+                color: viewMode !== 'vehicles' ? '#ffffff' : '#64748b',
+                fontSize: '12px',
+                fontWeight: viewMode !== 'vehicles' ? '800' : '600',
+                boxShadow: viewMode !== 'vehicles' ? '0 2px 8px rgba(2, 132, 199, 0.35)' : 'none',
+                transition: 'all 0.15s ease'
               }}
             >
-              <Table size={12} />
-              <span>Grid</span>
+              <span>📄</span>
+              <span>Page 1 Entry (Master Spreadsheet)</span>
             </button>
             <button
               type="button"
@@ -374,20 +355,21 @@ export default function TransportCardSpreadsheet({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '5px 12px',
+                gap: '6px',
+                padding: '6px 16px',
                 borderRadius: '9999px',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: viewMode === 'vehicles' ? '#0aa0e8' : 'transparent',
-                color: viewMode === 'vehicles' ? '#ffffff' : 'var(--text-muted, #66708f)',
-                fontSize: '11.5px',
-                fontWeight: viewMode === 'vehicles' ? '800' : '500',
-                boxShadow: viewMode === 'vehicles' ? '0 2px 6px rgba(10, 160, 232, 0.25)' : 'none'
+                backgroundColor: viewMode === 'vehicles' ? '#00a2e8' : 'transparent',
+                color: viewMode === 'vehicles' ? '#ffffff' : '#64748b',
+                fontSize: '12px',
+                fontWeight: viewMode === 'vehicles' ? '800' : '600',
+                boxShadow: viewMode === 'vehicles' ? '0 2px 8px rgba(0, 162, 232, 0.35)' : 'none',
+                transition: 'all 0.15s ease'
               }}
             >
-              <Bus size={12} />
-              <span>Vehicle Ledger</span>
+              <span>🚌</span>
+              <span>Page 2 Entry (Vehicle Wise Ledger)</span>
             </button>
           </div>
         )}

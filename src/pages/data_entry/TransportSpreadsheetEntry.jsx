@@ -190,7 +190,7 @@ export default function TransportSpreadsheetEntry({
   handleToggleLock
 }) {
   const [activeBranch, setActiveBranch] = useState('RPS');
-  const [activeView, setActiveView] = useState('cards'); // 'cards' (card-based dashboard), 'sheet' (Exact single-month spreadsheet) or 'multi_month'
+  const [activeView, setActiveView] = useState('sheet'); // 'sheet' (Page 1 Entry: Master Spreadsheet) or 'vehicles' (Page 2 Entry: Vehicle Wise Ledger)
   const [showFormulaDetails, setShowFormulaDetails] = useState(false);
   const [parameters, setParameters] = useState(CANONICAL_TRANSPORT_PARAMETERS);
   const [loadingParams, setLoadingParams] = useState(true);
@@ -1115,95 +1115,144 @@ export default function TransportSpreadsheetEntry({
           })}
         </div>
 
-        {/* View Mode Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '3px', borderRadius: '9999px', border: '1px solid #edf0f8' }}>
-          <button
-            type="button"
-            onClick={() => setActiveView('cards')}
-            style={{
-              padding: '5px 16px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeView === 'cards' ? '#0aa0e8' : 'transparent',
-              color: activeView === 'cards' ? '#ffffff' : '#6e768e',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            🗂️ Cards View
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView('sheet')}
-            style={{
-              padding: '5px 16px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeView === 'sheet' ? '#6c56db' : 'transparent',
-              color: activeView === 'sheet' ? '#ffffff' : '#6e768e',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            📄 Excel Spreadsheet ({activePeriodObj?.period_label})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView('multi_month')}
-            style={{
-              padding: '5px 16px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeView === 'multi_month' ? '#6c56db' : 'transparent',
-              color: activeView === 'multi_month' ? '#ffffff' : '#6e768e',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            📊 Multi-Month Comparison Grid
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView('vehicles')}
-            style={{
-              padding: '5px 16px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeView === 'vehicles' ? '#00a2e8' : 'transparent',
-              color: activeView === 'vehicles' ? '#ffffff' : '#6e768e',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            🚌 Vehicle Ledger ({activePeriodObj?.period_label})
-          </button>
-          {activeView === 'sheet' && (
+        {/* Page 1 vs Page 2 Entry Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          {/* Main Primary Page Switcher */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: '#ffffff',
+            padding: '3px',
+            borderRadius: '9999px',
+            border: '1.5px solid #cbd5e1',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+          }}>
+            {/* Page 1 Entry */}
             <button
               type="button"
-              onClick={() => setShowFormulaDetails(prev => !prev)}
+              onClick={() => setActiveView(activeView === 'cards' ? 'cards' : (activeView === 'multi_month' ? 'multi_month' : 'sheet'))}
               style={{
-                padding: '5px 12px',
-                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 18px',
+                borderRadius: '9999px',
                 fontSize: '12px',
-                fontWeight: '700',
+                fontWeight: activeView !== 'vehicles' ? '800' : '600',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: showFormulaDetails ? '#0284c7' : 'transparent',
-                color: showFormulaDetails ? '#ffffff' : '#64748b',
+                backgroundColor: activeView !== 'vehicles' ? '#0284c7' : 'transparent',
+                color: activeView !== 'vehicles' ? '#ffffff' : '#64748b',
+                boxShadow: activeView !== 'vehicles' ? '0 2px 8px rgba(2, 132, 199, 0.35)' : 'none',
                 transition: 'all 0.15s ease'
               }}
-              title="Toggle Formula & Definition column"
             >
-              📐 {showFormulaDetails ? 'Hide Formulas' : 'Show Formulas'}
+              <span>📄</span>
+              <span>Page 1 Entry (Master Spreadsheet)</span>
             </button>
+
+            {/* Page 2 Entry */}
+            <button
+              type="button"
+              onClick={() => setActiveView('vehicles')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 18px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: activeView === 'vehicles' ? '800' : '600',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: activeView === 'vehicles' ? '#00a2e8' : 'transparent',
+                color: activeView === 'vehicles' ? '#ffffff' : '#64748b',
+                boxShadow: activeView === 'vehicles' ? '0 2px 8px rgba(0, 162, 232, 0.35)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>🚌</span>
+              <span>Page 2 Entry (Vehicle Wise Ledger)</span>
+            </button>
+          </div>
+
+          {/* Sub-format toggles for Page 1 */}
+          {activeView !== 'vehicles' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', backgroundColor: '#e2e8f0', padding: '2px', borderRadius: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setActiveView('sheet')}
+                title="Single month spreadsheet layout"
+                style={{
+                  padding: '4px 9px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: activeView === 'sheet' ? '#ffffff' : 'transparent',
+                  color: activeView === 'sheet' ? '#0f172a' : '#64748b',
+                  boxShadow: activeView === 'sheet' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                Sheet
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('multi_month')}
+                title="Multi-month comparison grid"
+                style={{
+                  padding: '4px 9px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: activeView === 'multi_month' ? '#ffffff' : 'transparent',
+                  color: activeView === 'multi_month' ? '#0f172a' : '#64748b',
+                  boxShadow: activeView === 'multi_month' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('cards')}
+                title="Card-based dashboard view"
+                style={{
+                  padding: '4px 9px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: activeView === 'cards' ? '#ffffff' : 'transparent',
+                  color: activeView === 'cards' ? '#0f172a' : '#64748b',
+                  boxShadow: activeView === 'cards' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                Cards
+              </button>
+              {activeView === 'sheet' && (
+                <button
+                  type="button"
+                  onClick={() => setShowFormulaDetails(prev => !prev)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: showFormulaDetails ? '#0284c7' : 'transparent',
+                    color: showFormulaDetails ? '#ffffff' : '#64748b'
+                  }}
+                  title="Toggle Formula & Definition column"
+                >
+                  📐 {showFormulaDetails ? 'Hide fx' : 'Show fx'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
