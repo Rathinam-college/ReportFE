@@ -27,6 +27,7 @@ export default function CategoryCard({
   formatCompact = (v) => String(v),
   formatFull = (v) => String(v),
   hidePercentage = false,
+  hideDetails = false,
   remarksDraft = {}
 }) {
   const color = category.color || '#5b5bf0';
@@ -390,153 +391,155 @@ export default function CategoryCard({
         </div>
       </div>
 
-      {/* Line Items View - Always Open */}
-      <div
-        style={{
-          marginTop: '14px',
-          paddingTop: '14px',
-          borderTop: '1px dashed var(--border-card, #e6e8f2)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        }}
-      >
-        {items.length === 0 ? (
-          <div style={{ fontSize: '12px', color: 'var(--text-muted, #6b7090)', fontStyle: 'italic' }}>
-            No individual line items
-          </div>
-        ) : (
-          items.map((it) => {
-            let itAmount = 0;
-            if (selectedPeriod === 'all') {
-              itAmount = Number(it.total || 0);
-            } else {
-              itAmount = Number(it.amounts?.[selectedPeriod] ?? it.amounts?.[String(selectedPeriod)] ?? 0);
-            }
+      {/* Line Items View - Hidden if hideDetails is true or category.hideDetails is true */}
+      {!hideDetails && !category.hideDetails && (
+        <div
+          style={{
+            marginTop: '14px',
+            paddingTop: '14px',
+            borderTop: '1px dashed var(--border-card, #e6e8f2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+        >
+          {items.length === 0 ? (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted, #6b7090)', fontStyle: 'italic' }}>
+              No individual line items
+            </div>
+          ) : (
+            items.map((it) => {
+              let itAmount = 0;
+              if (selectedPeriod === 'all') {
+                itAmount = Number(it.total || 0);
+              } else {
+                itAmount = Number(it.amounts?.[selectedPeriod] ?? it.amounts?.[String(selectedPeriod)] ?? 0);
+              }
 
-            const safeCategoryTotal = selectedAmount > 0 ? selectedAmount : 1;
-            const itemSharePct = selectedAmount > 0 ? Math.min(100, Math.max(0, (itAmount / safeCategoryTotal) * 100)) : 0;
-            const hasValue = itAmount > 0;
+              const safeCategoryTotal = selectedAmount > 0 ? selectedAmount : 1;
+              const itemSharePct = selectedAmount > 0 ? Math.min(100, Math.max(0, (itAmount / safeCategoryTotal) * 100)) : 0;
+              const hasValue = itAmount > 0;
 
-            // Collect remarks for this line item
-            const itemRemarks = [];
-            const chId = it.cost_head_id || it.id;
-            if (selectedPeriod === 'all') {
-              periods.forEach((p) => {
-                const pid = p.id;
-                const rText = remarksDraft?.[chId]?.[pid] ??
-                              remarksDraft?.[chId]?.[String(pid)] ??
-                              it.remarks?.[pid] ??
-                              it.remarks?.[String(pid)];
+              // Collect remarks for this line item
+              const itemRemarks = [];
+              const chId = it.cost_head_id || it.id;
+              if (selectedPeriod === 'all') {
+                periods.forEach((p) => {
+                  const pid = p.id;
+                  const rText = remarksDraft?.[chId]?.[pid] ??
+                                remarksDraft?.[chId]?.[String(pid)] ??
+                                it.remarks?.[pid] ??
+                                it.remarks?.[String(pid)];
+                  if (rText && typeof rText === 'string' && rText.trim() && !rText.startsWith('Entry via Operational Matrix') && !rText.startsWith('Cloned from') && !rText.startsWith('Re-cloned')) {
+                    itemRemarks.push({
+                      periodLabel: p.period_label || p.period_code || pid,
+                      text: rText.trim()
+                    });
+                  }
+                });
+              } else {
+                const rText = remarksDraft?.[chId]?.[selectedPeriod] ??
+                              remarksDraft?.[chId]?.[String(selectedPeriod)] ??
+                              it.remarks?.[selectedPeriod] ??
+                              it.remarks?.[String(selectedPeriod)];
                 if (rText && typeof rText === 'string' && rText.trim() && !rText.startsWith('Entry via Operational Matrix') && !rText.startsWith('Cloned from') && !rText.startsWith('Re-cloned')) {
+                  const pObj = periods.find(p => String(p.id) === String(selectedPeriod));
                   itemRemarks.push({
-                    periodLabel: p.period_label || p.period_code || pid,
+                    periodLabel: pObj?.period_label || pObj?.period_code || selectedPeriod,
                     text: rText.trim()
                   });
                 }
-              });
-            } else {
-              const rText = remarksDraft?.[chId]?.[selectedPeriod] ??
-                            remarksDraft?.[chId]?.[String(selectedPeriod)] ??
-                            it.remarks?.[selectedPeriod] ??
-                            it.remarks?.[String(selectedPeriod)];
-              if (rText && typeof rText === 'string' && rText.trim() && !rText.startsWith('Entry via Operational Matrix') && !rText.startsWith('Cloned from') && !rText.startsWith('Re-cloned')) {
-                const pObj = periods.find(p => String(p.id) === String(selectedPeriod));
-                itemRemarks.push({
-                  periodLabel: pObj?.period_label || pObj?.period_code || selectedPeriod,
-                  text: rText.trim()
-                });
               }
-            }
 
-            const hasItemRemarks = itemRemarks.length > 0;
-            const thisItemIsPerson = isPersonItem(it.description || it.name);
-            const formattedItemFull = thisItemIsPerson ? formatPerson(itAmount) : formatFull(itAmount);
-            const formattedItemCompact = thisItemIsPerson ? formatPerson(itAmount) : formatCompact(itAmount);
+              const hasItemRemarks = itemRemarks.length > 0;
+              const thisItemIsPerson = isPersonItem(it.description || it.name);
+              const formattedItemFull = thisItemIsPerson ? formatPerson(itAmount) : formatFull(itAmount);
+              const formattedItemCompact = thisItemIsPerson ? formatPerson(itAmount) : formatCompact(itAmount);
 
-            const itemTooltip = hasItemRemarks
-              ? `${it.description || it.name}: ${formattedItemFull}\n\n💬 Remarks: ${itemRemarks.map(r => `[${r.periodLabel}] "${r.text}"`).join('; ')}`
-              : `${it.description || it.name}: ${formattedItemFull}`;
+              const itemTooltip = hasItemRemarks
+                ? `${it.description || it.name}: ${formattedItemFull}\n\n💬 Remarks: ${itemRemarks.map(r => `[${r.periodLabel}] "${r.text}"`).join('; ')}`
+                : `${it.description || it.name}: ${formattedItemFull}`;
 
-            return (
-              <div key={it.cost_head_id || it.id || it.description} title={itemTooltip} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: '12.5px'
-                }}>
-                  <span style={{
-                    color: 'var(--text-main, #14172b)',
-                    fontWeight: '500',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    maxWidth: '65%',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    {hasItemRemarks && <span style={{ fontSize: '10px' }} title="Has remark">💬</span>}
-                    <span>{it.description || it.name}</span>
-                  </span>
-                  <span
-                    style={{
-                      fontWeight: '700',
-                      color: hasValue ? 'var(--text-main, #14172b)' : 'var(--text-muted, #6b7090)'
-                    }}
-                  >
-                    {hasValue ? formattedItemCompact : (thisItemIsPerson ? '0' : '—')}
-                  </span>
-                </div>
-
-                {/* Thin 7px Progress Bar */}
-                <div
-                  style={{
-                    width: '100%',
-                    height: '7px',
-                    borderRadius: '9999px',
-                    backgroundColor: 'var(--bg-pill, #eceefa)',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <div
-                    title={`${it.description}: ${itemSharePct.toFixed(1)}% of ${categoryName}`}
-                    style={{
-                      width: hasValue ? `${itemSharePct}%` : '0%',
-                      height: '100%',
-                      borderRadius: '9999px',
-                      backgroundColor: color,
-                      transition: 'width 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                  />
-                </div>
-
-                {/* Inline Remark Pill if Present */}
-                {hasItemRemarks && (
+              return (
+                <div key={it.cost_head_id || it.id || it.description} title={itemTooltip} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    fontSize: '11px',
-                    color: '#92400e',
-                    backgroundColor: '#fffbeb',
-                    border: '1px solid #fde68a',
-                    borderRadius: '5px',
-                    padding: '2px 8px',
-                    marginTop: '2px'
+                    justifyContent: 'space-between',
+                    fontSize: '12.5px'
                   }}>
-                    <span style={{ fontSize: '9px' }}>💬</span>
-                    <span style={{ fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {itemRemarks.map(r => `${r.periodLabel ? `${r.periodLabel}: ` : ''}"${r.text}"`).join(' • ')}
+                    <span style={{
+                      color: 'var(--text-main, #14172b)',
+                      fontWeight: '500',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '65%',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      {hasItemRemarks && <span style={{ fontSize: '10px' }} title="Has remark">💬</span>}
+                      <span>{it.description || it.name}</span>
+                    </span>
+                    <span
+                      style={{
+                        fontWeight: '700',
+                        color: hasValue ? 'var(--text-main, #14172b)' : 'var(--text-muted, #6b7090)'
+                      }}
+                    >
+                      {hasValue ? formattedItemCompact : (thisItemIsPerson ? '0' : '—')}
                     </span>
                   </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+
+                  {/* Thin 7px Progress Bar */}
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '7px',
+                      borderRadius: '9999px',
+                      backgroundColor: 'var(--bg-pill, #eceefa)',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div
+                      title={`${it.description}: ${itemSharePct.toFixed(1)}% of ${categoryName}`}
+                      style={{
+                        width: hasValue ? `${itemSharePct}%` : '0%',
+                        height: '100%',
+                        borderRadius: '9999px',
+                        backgroundColor: color,
+                        transition: 'width 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
+                      }}
+                    />
+                  </div>
+
+                  {/* Inline Remark Pill if Present */}
+                  {hasItemRemarks && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '11px',
+                      color: '#92400e',
+                      backgroundColor: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      borderRadius: '5px',
+                      padding: '2px 8px',
+                      marginTop: '2px'
+                    }}>
+                      <span style={{ fontSize: '9px' }}>💬</span>
+                      <span style={{ fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {itemRemarks.map(r => `${r.periodLabel ? `${r.periodLabel}: ` : ''}"${r.text}"`).join(' • ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }

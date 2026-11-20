@@ -218,57 +218,6 @@ export default function HostelExpensesBudgetSection({
     '#ec4899'  // 9. Pink - Events
   ];
 
-  const getHeadSubItems = (head, selAmount) => {
-    switch (head.s_no) {
-      case 1:
-        return [
-          { id: 101, name: 'Hostel Building Lease & Premises', amount: selAmount }
-        ];
-      case 2:
-        return [
-          { id: 201, name: 'Hostel Office Printing & Registers', amount: selAmount }
-        ];
-      case 3:
-        return [
-          { id: 301, name: 'Municipal Property Tax & Compliance', amount: selAmount }
-        ];
-      case 4:
-        return [
-          { id: 401, name: 'Hostel Wardens & Supervisors', amount: Math.round(selAmount * 0.6) },
-          { id: 402, name: 'Resident Support Staff & Security', amount: Math.round(selAmount * 0.4) }
-        ];
-      case 5:
-        return [
-          { id: 501, name: 'Hostel Resident Facility Operations', amount: Math.round(selAmount * 0.65) },
-          { id: 502, name: 'Facility Management & Oversight', amount: Math.round(selAmount * 0.35) }
-        ];
-      case 6:
-        return [
-          { id: 601, name: 'Power consumption (EB + DG)', amount: Math.round(selAmount * 0.55) },
-          { id: 602, name: 'Normal Water Consumption', amount: Math.round(selAmount * 0.25) },
-          { id: 603, name: 'Water Tanker Purchase', amount: Math.round(selAmount * 0.15) },
-          { id: 604, name: 'Drinking RO Water Cost', amount: Math.round(selAmount * 0.05) }
-        ];
-      case 7:
-        return [
-          { id: 701, name: 'Student Linen & Bedding Laundry', amount: selAmount }
-        ];
-      case 8:
-        return [
-          { id: 801, name: 'Routine Hostel Maintenance & Electrical', amount: Math.round(selAmount * 0.7) },
-          { id: 802, name: 'Plumbing & Carpentry Spares', amount: Math.round(selAmount * 0.3) }
-        ];
-      case 9:
-        return [
-          { id: 901, name: 'Hostel Celebrations & Cultural Events', amount: selAmount }
-        ];
-      default:
-        return [
-          { id: 999, name: head.budget_head, amount: selAmount }
-        ];
-    }
-  };
-
   // Operational Person / Occupancy Card
   const personCategory = useMemo(() => {
     const students = num(census.students_total, 2709);
@@ -578,7 +527,8 @@ export default function HostelExpensesBudgetSection({
                   categoryId: `head_${head.s_no}`,
                   categoryName: head.budget_head,
                   color: cardColor,
-                  items: getHeadSubItems(head, selAmount),
+                  items: [],
+                  hideDetails: true,
                   isPersonCategory: false
                 };
 
@@ -592,10 +542,11 @@ export default function HostelExpensesBudgetSection({
                     selectedPercent={selPercent}
                     monthlyAmounts={monthlyAmounts}
                     maxMonthlyAmount={maxMonth}
-                    isExpanded={Boolean(expandedCardIds[`head_${head.s_no}`])}
-                    onToggleExpand={() => handleToggleExpand(`head_${head.s_no}`)}
+                    isExpanded={false}
+                    onToggleExpand={() => {}}
                     formatCompact={formatIndianCompact}
                     formatFull={formatINR}
+                    hideDetails={true}
                     remarksDraft={remarksDraft}
                   />
                 );
@@ -609,33 +560,35 @@ export default function HostelExpensesBudgetSection({
               gap: '16px'
             }}>
               <CategoryCard
-                category={personCategory}
+                category={{ ...personCategory, hideDetails: true }}
                 periods={cardPeriods}
                 selectedPeriod={activePeriod}
                 selectedAmount={personCategory.selectedAmount}
                 selectedPercent={0}
                 monthlyAmounts={personCategory.monthlyAmounts}
                 maxMonthlyAmount={personCategory.maxMonthlyAmount}
-                isExpanded={Boolean(expandedCardIds['hostel_person_card'])}
-                onToggleExpand={() => handleToggleExpand('hostel_person_card')}
+                isExpanded={false}
+                onToggleExpand={() => {}}
                 formatCompact={formatIndianCompact}
                 formatFull={formatINR}
                 hidePercentage={true}
+                hideDetails={true}
                 remarksDraft={remarksDraft}
               />
               <CategoryCard
-                category={costPerPersonCategory}
+                category={{ ...costPerPersonCategory, hideDetails: true }}
                 periods={cardPeriods}
                 selectedPeriod={activePeriod}
                 selectedAmount={costPerPersonCategory.selectedAmount}
                 selectedPercent={0}
                 monthlyAmounts={costPerPersonCategory.monthlyAmounts}
                 maxMonthlyAmount={costPerPersonCategory.maxMonthlyAmount}
-                isExpanded={Boolean(expandedCardIds['hostel_cost_per_person'])}
-                onToggleExpand={() => handleToggleExpand('hostel_cost_per_person')}
+                isExpanded={false}
+                onToggleExpand={() => {}}
                 formatCompact={(v) => `₹${Number(v).toLocaleString('en-IN')}`}
                 formatFull={formatINR}
                 hidePercentage={true}
+                hideDetails={true}
                 remarksDraft={remarksDraft}
               />
             </div>
