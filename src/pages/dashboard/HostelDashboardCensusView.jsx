@@ -126,7 +126,11 @@ export default function HostelDashboardCensusView({
   const normalWaterLtrDay = totalOcc > 0 ? (normalWaterLtrs / totalOcc / 30) : num(activeCensus.normal_water_ltr_day, 0);
   const drinkingWaterLtrDay = totalOcc > 0 ? (drinkingWaterLtrs / totalOcc / 30) : num(activeCensus.drinking_water_ltr_day, 0);
 
-  const appBudget = num(activeCensus.approved_budget, 142010789);
+  const tableTotalSanctioned = (budgetTrackingData && budgetTrackingData.length > 0)
+    ? budgetTrackingData.reduce((acc, h) => acc + num(h.sanctioned_amount, 0), 0)
+    : 0;
+
+  const appBudget = tableTotalSanctioned > 0 ? tableTotalSanctioned : num(activeCensus.approved_budget, 185449618);
   const monthlyExpenses = num(activeCensus.expenses_occurred, 0);
   const rawSpent = num(activeCensus.cumulative_budget_spent, 0);
   const spentBudget = rawSpent >= monthlyExpenses ? rawSpent : monthlyExpenses;
@@ -183,7 +187,7 @@ export default function HostelDashboardCensusView({
     { sNo: '24', name: 'Water Purchase Tanker Expenses', key: 'water_purchase_cost', type: 'currency', section: 'water', calc: c => formatINR(num(c.water_purchase_cost, 0)) },
 
     // Financial Budget & Spend
-    { sNo: '25', name: 'Approved Operating Budget', key: 'approved_budget', type: 'currency', section: 'budget', calc: c => formatINR(num(c.approved_budget, 142010789)) },
+    { sNo: '25', name: 'Approved Operating Budget', key: 'approved_budget', type: 'currency', section: 'budget', calc: c => formatINR(tableTotalSanctioned > 0 ? tableTotalSanctioned : num(c.approved_budget, 185449618)) },
     { sNo: '26', name: 'Expenses Occurred (Monthly Actuals)', key: 'expenses_occurred', type: 'currency', section: 'budget', highlight: true, calc: c => formatINR(num(c.expenses_occurred, 0)) },
     { sNo: '27', name: 'Cumulative Budget Spent', key: 'cumulative_budget_spent', type: 'currency', section: 'budget', calc: c => {
       const mo = num(c.expenses_occurred, 0);
@@ -191,7 +195,7 @@ export default function HostelDashboardCensusView({
       return formatINR(cs >= mo ? cs : mo);
     }},
     { sNo: '28', name: 'Balance Budget Remaining', key: 'balance', type: 'currency', section: 'budget', highlight: true, calc: c => {
-      const ab = num(c.approved_budget, 142010789);
+      const ab = tableTotalSanctioned > 0 ? tableTotalSanctioned : num(c.approved_budget, 185449618);
       const mo = num(c.expenses_occurred, 0);
       const cs = num(c.cumulative_budget_spent, 0);
       const effCs = cs >= mo ? cs : mo;

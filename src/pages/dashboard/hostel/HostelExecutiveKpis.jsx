@@ -61,8 +61,15 @@ export default function HostelExecutiveKpis({
   // Monthly Expenses: prefer live budget tracking actuals if positive, else census.expenses_occurred
   const monthlyExpenses = trackingActualSpend > 0 ? trackingActualSpend : num(census.expenses_occurred, 0);
 
-  // Approved Budget: prefer census.approved_budget, else default canonical 142010789
-  const approvedBudget = num(census.approved_budget, 142010789);
+  // Total Sanctioned Budget calculated directly from the Table's Total (Hostel Budget Tracking 9 heads)
+  const tableTotalSanctioned = (budgetTrackingData && budgetTrackingData.length > 0)
+    ? budgetTrackingData.reduce((acc, h) => acc + num(h.sanctioned_amount, 0), 0)
+    : 0;
+
+  // Approved Budget: ALWAYS matches the table's total (or census.approved_budget, fallback to 185449618)
+  const approvedBudget = tableTotalSanctioned > 0 
+    ? tableTotalSanctioned 
+    : num(census.approved_budget, 185449618);
 
   // For the selected month, Remaining Budget is strictly: Total Budget - The Sum of Expenses
   const remainingBudget = approvedBudget > 0 

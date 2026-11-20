@@ -255,7 +255,7 @@ export default function HostelDashboardDataTable({
     const maintenance_expenses = getVal('maintenance_expenses', 0);
     const expenses_occurred = getVal('expenses_occurred', 0);
 
-    const approved_budget = getVal('approved_budget', 142010789);
+    const approved_budget = getVal('approved_budget', 185449618);
     const raw_cum = getVal('cumulative_budget_spent', 0);
     const cumulative_budget_spent = raw_cum >= expenses_occurred ? raw_cum : expenses_occurred;
     const balance = approved_budget > 0 ? Math.max(0, approved_budget - cumulative_budget_spent) : getVal('balance', 0);
