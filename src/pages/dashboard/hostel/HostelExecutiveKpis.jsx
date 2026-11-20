@@ -64,13 +64,9 @@ export default function HostelExecutiveKpis({
   // Approved Budget: prefer census.approved_budget, else default canonical 142010789
   const approvedBudget = num(census.approved_budget, 142010789);
 
-  // Cumulative spent: ensure it reflects at least monthlyExpenses
-  const rawCumSpent = num(census.cumulative_budget_spent, 0);
-  const cumulativeSpent = rawCumSpent >= monthlyExpenses ? rawCumSpent : monthlyExpenses;
-
-  // Remaining budget: MUST ALWAYS mathematically equal (approvedBudget - cumulativeSpent)
+  // For the selected month, Remaining Budget is strictly: Total Budget - The Sum of Expenses
   const remainingBudget = approvedBudget > 0 
-    ? Math.max(0, approvedBudget - cumulativeSpent) 
+    ? Math.max(0, approvedBudget - monthlyExpenses) 
     : 0;
 
   const costPerStudentMonth = num(
@@ -158,7 +154,7 @@ export default function HostelExecutiveKpis({
     {
       label: 'Total Monthly Expenses',
       value: monthlyExpenses > 0 ? formatINR(monthlyExpenses) : '—',
-      sub: `Spent this month`,
+      sub: monthlyExpenses > 0 ? `Total sum of 9 operating heads` : 'No expenses recorded',
       icon: IndianRupee,
       color: '#7c3aed',
       bg: '#f5f3ff',
@@ -167,7 +163,7 @@ export default function HostelExecutiveKpis({
     {
       label: 'Remaining Budget',
       value: approvedBudget > 0 ? formatINR(remainingBudget) : '—',
-      sub: approvedBudget > 0 ? `Out of ${formatINR(approvedBudget)} budget` : 'Budget not set',
+      sub: approvedBudget > 0 ? `${formatINR(approvedBudget)} budget − ${formatINR(monthlyExpenses)} spent` : 'Budget not set',
       icon: Wallet,
       color: '#0891b2',
       bg: '#ecfeff',
