@@ -7,7 +7,6 @@ import {
 import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
 import HostelExecutiveKpis from './HostelExecutiveKpis';
 import HostelCapacityOccupancySection from './HostelCapacityOccupancySection';
-import HostelMaintenanceSection from './HostelMaintenanceSection';
 import HostelExpensesBudgetSection from './HostelExpensesBudgetSection';
 import HostelReportsModal from './HostelReportsModal';
 import HostelDashboardCensusView from '../HostelDashboardCensusView';
@@ -121,7 +120,7 @@ export default function HostelOperationsDashboard({
               </span>
             </div>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-              1. Beds & Occupancy • 2. Maintenance & Complaints • 3. Expenses & Budget • {periods.length} Months Recorded (Sep'25 – Sep'26)
+              1. Beds & Occupancy • 2. Expenses & Budget Tracking • {periods.length} Months Recorded (Sep'25 – Sep'26)
             </p>
           </div>
         </div>
@@ -314,12 +313,7 @@ export default function HostelOperationsDashboard({
             onPeriodSelect={(pid) => setActivePeriod && setActivePeriod(String(pid))}
           />
 
-          {/* 2. MAINTENANCE, QUALITY COMPLAINTS & UTILITIES */}
-          <HostelMaintenanceSection
-            census={activeCensus}
-          />
-
-          {/* 3. EXPENSES & BUDGET TRACKING */}
+          {/* 2. EXPENSES & BUDGET TRACKING */}
           <HostelExpensesBudgetSection
             census={activeCensus}
             computedMatrix={computedMatrix}
