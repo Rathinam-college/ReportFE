@@ -141,14 +141,13 @@ export default function TransportVehicleExpensesTable({
       alert("Please select a specific branch (RPS, KPM, University, or Common) to add a new bus.");
       return;
     }
-    const newBusNo = `TN99 ${selectedBranch.slice(0, 1).toUpperCase()} ${Math.floor(1000 + Math.random() * 9000)}`;
     const newRow = {
       id: `temp-${Date.now()}`,
       period_id: selectedPeriodId,
       branch: selectedBranch,
-      vehicle_no: newBusNo,
-      make: 'ASHOK LEYLAND',
-      model: 'Oct-22',
+      vehicle_no: '',
+      make: '',
+      model: '',
       fuel_expenses: 0,
       fc_cost: 0,
       statutory_cost: 0,
@@ -165,7 +164,7 @@ export default function TransportVehicleExpensesTable({
     setVehicles(prev => [...prev, newRow]);
     setStatusMessage({
       type: 'info',
-      text: `Added new bus ${newBusNo}. Don't forget to click "Save Vehicle Ledger".`
+      text: 'Added new vehicle row. Enter registration and expenses, then click "Save Ledger".'
     });
   };
 
