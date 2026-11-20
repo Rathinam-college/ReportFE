@@ -32,12 +32,21 @@ export default function HostelOperationsDashboard({
     if (activePeriod && activePeriod !== 'all') {
       return String(activePeriod);
     }
-    // Default to the first or latest recorded period
+    // Default to the recorded period with live expenses or period 30 (Oct)
     if (periods.length > 0) {
+      const withExpenses = periods.find(p => {
+        const c = hostelCensusMap[String(p.id)];
+        return c && Number(c.expenses_occurred || 0) > 0;
+      });
+      if (withExpenses) return String(withExpenses.id);
+
+      const oct = periods.find(p => String(p.id) === '30' || (p.period_label || '').toLowerCase().includes('oct'));
+      if (oct) return String(oct.id);
+
       return String(periods[0].id);
     }
-    return '29';
-  }, [activePeriod, periods]);
+    return '30';
+  }, [activePeriod, periods, hostelCensusMap]);
 
   const activePeriodObj = useMemo(() => {
     return periods.find(p => String(p.id) === currentPeriodId) || periods[0] || {};
@@ -253,7 +262,7 @@ export default function HostelOperationsDashboard({
         computedMatrix={computedMatrix}
         categories={categories}
         periods={periods}
-        activePeriod={activePeriod}
+        activePeriod={activePeriod === 'all' ? currentPeriodId : activePeriod}
         onExportReport={handleExportReport}
         remarksDraft={remarksDraft}
       />

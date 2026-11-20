@@ -48,12 +48,14 @@ export default function HostelExpensesBudgetSection({
   };
 
   useEffect(() => {
+    fetchBudgetTracking();
+  }, []);
+
+  useEffect(() => {
     if (computedMatrix?.hostel_budget_tracking && computedMatrix.hostel_budget_tracking.length > 0) {
       setBudgetTrackingData(computedMatrix.hostel_budget_tracking);
-    } else {
-      fetchBudgetTracking();
     }
-  }, [computedMatrix]);
+  }, [computedMatrix?.hostel_budget_tracking]);
 
   const num = (v, fb = 0) => {
     if (v === undefined || v === null || v === '') return fb;
@@ -63,8 +65,19 @@ export default function HostelExpensesBudgetSection({
 
   // Identify currently selected active month
   const activePeriodObj = useMemo(() => {
-    return periods.find(p => String(p.id) === String(activePeriod)) || periods[0] || {};
-  }, [periods, activePeriod]);
+    if (activePeriod && activePeriod !== 'all') {
+      return periods.find(p => String(p.id) === String(activePeriod)) || periods[0] || {};
+    }
+    // Default to the period that has actual recorded spend (e.g. Period 30 Oct'26)
+    const withSpend = periods.find(p => {
+      const col = getBudgetMonthCol(p, p.id);
+      return (budgetTrackingData || []).some(h => num(h[col], 0) > 0);
+    });
+    if (withSpend) return withSpend;
+
+    const oct = periods.find(p => String(p.id) === '30' || (p.period_label || '').toLowerCase().includes('oct'));
+    return oct || periods[0] || {};
+  }, [periods, activePeriod, budgetTrackingData]);
 
   const activeMonthCol = useMemo(() => {
     return getBudgetMonthCol(activePeriodObj, activePeriod);
@@ -303,6 +316,14 @@ export default function HostelExpensesBudgetSection({
       ]
     };
   }, [census, periods]);
+
+  // Filtered periods for category sparkline bars aligning with monthFilter
+  const cardPeriods = useMemo(() => {
+    if (monthFilter === 'recorded') {
+      return (periods || []).filter(p => visibleMonthCols.some(v => v.periodId === p.id));
+    }
+    return periods || [];
+  }, [monthFilter, periods, visibleMonthCols]);
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
@@ -558,7 +579,7 @@ export default function HostelExpensesBudgetSection({
                   <CategoryCard
                     key={head.budget_head || idx}
                     category={categoryObj}
-                    periods={periods}
+                    periods={cardPeriods}
                     selectedPeriod={activePeriod}
                     selectedAmount={selAmount}
                     selectedPercent={selPercent}
@@ -582,7 +603,7 @@ export default function HostelExpensesBudgetSection({
             }}>
               <CategoryCard
                 category={personCategory}
-                periods={periods}
+                periods={cardPeriods}
                 selectedPeriod={activePeriod}
                 selectedAmount={personCategory.selectedAmount}
                 selectedPercent={0}
@@ -597,7 +618,7 @@ export default function HostelExpensesBudgetSection({
               />
               <CategoryCard
                 category={costPerPersonCategory}
-                periods={periods}
+                periods={cardPeriods}
                 selectedPeriod={activePeriod}
                 selectedAmount={costPerPersonCategory.selectedAmount}
                 selectedPercent={0}
