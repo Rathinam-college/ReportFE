@@ -10,6 +10,8 @@ import FoodSpreadsheetEntry from './FoodSpreadsheetEntry';
 
 export default function MatrixTable({
   selectedModule = 'food',
+  selectedBranch,
+  onBranchChange,
   computedMatrix,
   editingPeriodId,
   setEditingPeriodId,
@@ -155,6 +157,8 @@ export default function MatrixTable({
           computedMatrix={computedMatrix}
           editingPeriodId={editingPeriodId}
           setEditingPeriodId={setEditingPeriodId}
+          selectedBranch={selectedBranch}
+          onBranchChange={onBranchChange}
           matrixDraft={matrixDraft}
           remarksDraft={remarksDraft}
           transportCensusDraft={transportCensusDraft}

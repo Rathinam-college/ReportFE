@@ -7,6 +7,8 @@ import AddMonthModal from './AddMonthModal';
 
 export default function DataEntryPage({
   selectedModule = 'food',
+  selectedBranch,
+  onBranchChange,
   computedMatrix,
   editingPeriodId,
   setEditingPeriodId,
@@ -241,6 +243,8 @@ export default function DataEntryPage({
       <div style={{ width: '100%', minWidth: 0 }}>
         <MatrixTable
           selectedModule={selectedModule}
+          selectedBranch={selectedBranch}
+          onBranchChange={onBranchChange}
           computedMatrix={computedMatrix}
           editingPeriodId={editingPeriodId}
           setEditingPeriodId={setEditingPeriodId}

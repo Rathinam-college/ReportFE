@@ -576,7 +576,10 @@ export default function DashboardPage({
           categories={categories}
           activePeriod={activePeriod}
           setActivePeriod={setActivePeriod}
-          onOpenDataEntry={onOpenDataEntry}
+          onOpenDataEntry={() => {
+            const targetPeriodId = activePeriod !== 'all' ? Number(activePeriod) : null;
+            onOpenDataEntry?.('hostel', targetPeriodId);
+          }}
           handleExportReport={handleExportReport}
           remarksDraft={remarksDraft}
           attachmentsSummary={attachmentsSummary}
@@ -596,7 +599,10 @@ export default function DashboardPage({
           categories={categories}
           activePeriod={activePeriod}
           setActivePeriod={setActivePeriod}
-          onOpenDataEntry={onOpenDataEntry}
+          onOpenDataEntry={(targetPeriodId, targetBranch) => {
+            const pId = targetPeriodId || (activePeriod !== 'all' ? Number(activePeriod) : null);
+            onOpenDataEntry?.('transport', pId, targetBranch);
+          }}
           handleExportReport={handleExportReport}
         />
       </div>
@@ -711,7 +717,10 @@ export default function DashboardPage({
             {onOpenDataEntry && (
               <button
                 type="button"
-                onClick={onOpenDataEntry}
+                onClick={() => {
+                  const targetPeriodId = activePeriod !== 'all' ? Number(activePeriod) : null;
+                  onOpenDataEntry('food', targetPeriodId);
+                }}
                 style={{
                   padding: '8px 18px',
                   borderRadius: '9999px',

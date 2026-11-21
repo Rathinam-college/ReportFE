@@ -183,13 +183,15 @@ export default function TransportSpreadsheetEntry({
   computedMatrix,
   editingPeriodId,
   setEditingPeriodId,
+  selectedBranch,
+  onBranchChange,
   transportCensusDraft = {},
   handleTransportCensusChange,
   fetchData,
   handleCloneFromPrev,
   handleToggleLock
 }) {
-  const [activeBranch, setActiveBranch] = useState('RPS');
+  const [activeBranch, setActiveBranchState] = useState(selectedBranch || 'RPS');
   const [activeView, setActiveView] = useState('sheet'); // 'sheet' (Page 1 Entry: Master Spreadsheet) or 'vehicles' (Page 2 Entry: Vehicle Wise Ledger)
   const [showFormulaDetails, setShowFormulaDetails] = useState(false);
   const [parameters, setParameters] = useState(CANONICAL_TRANSPORT_PARAMETERS);
@@ -203,17 +205,26 @@ export default function TransportSpreadsheetEntry({
   const isClosed = !!activePeriodObj?.is_closed;
   const periods = computedMatrix?.periods || [];
   const currPeriodIdStr = String(editingPeriodId);
-  const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[1] || TRANSPORT_BRANCHES[0];
+  const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES.find(b => b.id === 'RPS') || TRANSPORT_BRANCHES[1] || TRANSPORT_BRANCHES[0];
 
-  // Default to Sep 1st to 30th (period 29) if available and not yet selected
+  // Synchronize branch from parent prop if provided
+  useEffect(() => {
+    if (selectedBranch && selectedBranch !== activeBranch) {
+      setActiveBranchState(selectedBranch);
+    }
+  }, [selectedBranch]);
+
+  const setActiveBranch = (b) => {
+    setActiveBranchState(b);
+    if (onBranchChange) onBranchChange(b);
+  };
+
+  // Ensure editingPeriodId belongs to transport periods, otherwise fallback to latest
   useEffect(() => {
     if (setEditingPeriodId && periods.length > 0) {
-      const sepPeriod = periods.find(p => p.period_label && (p.period_label.toLowerCase().includes('sep') || p.period_label.toLowerCase().includes('sept')))
-        || periods.find(p => p.period_code && (p.period_code.endsWith('-09') || p.period_code.includes('09')))
-        || periods.find(p => p.id === 30 || p.id === 29)
-        || periods[0];
-      if (sepPeriod && (!editingPeriodId || editingPeriodId === 12 || editingPeriodId === 27 || editingPeriodId === 28)) {
-        setEditingPeriodId(sepPeriod.id);
+      const exists = periods.some(p => p.id === editingPeriodId);
+      if (!exists) {
+        setEditingPeriodId(periods[periods.length - 1].id);
       }
     }
   }, [periods, editingPeriodId, setEditingPeriodId]);
@@ -1019,7 +1030,7 @@ export default function TransportSpreadsheetEntry({
           <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             🏫 Fleet Branch:
           </span>
-          {TRANSPORT_BRANCHES.map(br => {
+          {TRANSPORT_BRANCHES.filter(br => br.id !== 'all').map(br => {
             const isSel = activeBranch === br.id;
             return (
               <button
@@ -1116,7 +1127,7 @@ export default function TransportSpreadsheetEntry({
         </div>
 
         {/* Page 1 vs Page 2 Entry Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Main Primary Page Switcher */}
           <div style={{
             display: 'flex',
@@ -1130,7 +1141,7 @@ export default function TransportSpreadsheetEntry({
             {/* Page 1 Entry */}
             <button
               type="button"
-              onClick={() => setActiveView(activeView === 'cards' ? 'cards' : (activeView === 'multi_month' ? 'multi_month' : 'sheet'))}
+              onClick={() => setActiveView('sheet')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1176,83 +1187,30 @@ export default function TransportSpreadsheetEntry({
             </button>
           </div>
 
-          {/* Sub-format toggles for Page 1 */}
+          {/* Formula Details Toggle for Page 1 */}
           {activeView !== 'vehicles' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', backgroundColor: '#e2e8f0', padding: '2px', borderRadius: '6px' }}>
-              <button
-                type="button"
-                onClick={() => setActiveView('sheet')}
-                title="Single month spreadsheet layout"
-                style={{
-                  padding: '4px 9px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: activeView === 'sheet' ? '#ffffff' : 'transparent',
-                  color: activeView === 'sheet' ? '#0f172a' : '#64748b',
-                  boxShadow: activeView === 'sheet' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                }}
-              >
-                Sheet
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveView('multi_month')}
-                title="Multi-month comparison grid"
-                style={{
-                  padding: '4px 9px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: activeView === 'multi_month' ? '#ffffff' : 'transparent',
-                  color: activeView === 'multi_month' ? '#0f172a' : '#64748b',
-                  boxShadow: activeView === 'multi_month' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                }}
-              >
-                Grid
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveView('cards')}
-                title="Card-based dashboard view"
-                style={{
-                  padding: '4px 9px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: activeView === 'cards' ? '#ffffff' : 'transparent',
-                  color: activeView === 'cards' ? '#0f172a' : '#64748b',
-                  boxShadow: activeView === 'cards' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                }}
-              >
-                Cards
-              </button>
-              {activeView === 'sheet' && (
-                <button
-                  type="button"
-                  onClick={() => setShowFormulaDetails(prev => !prev)}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    border: 'none',
-                    cursor: 'pointer',
-                    backgroundColor: showFormulaDetails ? '#0284c7' : 'transparent',
-                    color: showFormulaDetails ? '#ffffff' : '#64748b'
-                  }}
-                  title="Toggle Formula & Definition column"
-                >
-                  📐 {showFormulaDetails ? 'Hide fx' : 'Show fx'}
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowFormulaDetails(prev => !prev)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '9999px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                border: '1.5px solid #cbd5e1',
+                cursor: 'pointer',
+                backgroundColor: showFormulaDetails ? '#0284c7' : '#ffffff',
+                color: showFormulaDetails ? '#ffffff' : '#475569',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: showFormulaDetails ? '0 2px 6px rgba(2, 132, 199, 0.25)' : 'none'
+              }}
+              title="Toggle Formula & Definition column"
+            >
+              <Calculator size={12} />
+              <span>{showFormulaDetails ? 'Hide fx Formulas' : 'Show fx Formulas'}</span>
+            </button>
           )}
         </div>
       </div>
@@ -1333,7 +1291,7 @@ export default function TransportSpreadsheetEntry({
             onSyncCensus={fetchData}
           />
         </div>
-      ) : activeView === 'sheet' ? (
+      ) : (
         <div style={{
           overflowX: 'auto',
           width: '100%',
@@ -1387,7 +1345,7 @@ export default function TransportSpreadsheetEntry({
                   borderRight: showFormulaDetails ? '1px solid #000000' : 'none',
                   borderBottom: '2px solid #000000'
                 }}>
-                  {activePeriodObj?.period_label || 'Sep 1st to 30th'}
+                  {activePeriodObj?.period_label || periods.find(p => String(p.id) === currPeriodIdStr)?.period_label || "Oct'26"}
                 </th>
                 {showFormulaDetails && (
                   <th style={{
@@ -1560,7 +1518,8 @@ export default function TransportSpreadsheetEntry({
             </tbody>
           </table>
         </div>
-      ) : (
+      )}
+      {false && (
         /* 5. MULTI-MONTH COMPARISON GRID */
         <div style={{
           overflowX: 'auto',

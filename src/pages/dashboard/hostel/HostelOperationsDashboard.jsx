@@ -282,7 +282,10 @@ export default function HostelOperationsDashboard({
             {onOpenDataEntry && (
               <button
                 type="button"
-                onClick={onOpenDataEntry}
+                onClick={() => {
+                  const targetPeriodId = activePeriod !== 'all' ? Number(activePeriod) : null;
+                  onOpenDataEntry(targetPeriodId);
+                }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

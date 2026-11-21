@@ -532,7 +532,11 @@ export default function TransportOperationsDashboard({
             {onOpenDataEntry && (
               <button
                 type="button"
-                onClick={onOpenDataEntry}
+                onClick={() => {
+                  const targetPeriodId = activePeriod !== 'all' ? Number(activePeriod) : null;
+                  const targetBranch = activeBranch !== 'all' ? activeBranch : 'RPS';
+                  onOpenDataEntry(targetPeriodId, targetBranch);
+                }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

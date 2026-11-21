@@ -101,6 +101,7 @@ export default function App() {
 
   // Matrix-Style Data Entry State
   const [editingPeriodId, setEditingPeriodId] = useState(5); // Default Oct'26 (id: 5)
+  const [selectedTransportBranch, setSelectedTransportBranch] = useState('RPS');
   const [matrixDraft, setMatrixDraft] = useState({}); // { [costHeadId]: { [periodId]: value } }
   const [remarksDraft, setRemarksDraft] = useState({}); // { [costHeadId]: { [periodId]: remark } }
   const [censusDraft, setCensusDraft] = useState({
@@ -1115,6 +1116,9 @@ export default function App() {
       await fetchData();
       if (resJson && resJson.period && resJson.period.id) {
         setEditingPeriodId(resJson.period.id);
+        if (activeMod === 'transport' && newMonthForm.branch && newMonthForm.branch !== 'all') {
+          setSelectedTransportBranch(newMonthForm.branch);
+        }
       }
     } catch (err) {
       alert(err.message || 'Error creating period');
@@ -1730,8 +1734,11 @@ export default function App() {
             setCompareBasePeriod={setCompareBasePeriod}
             compareTargetPeriod={compareTargetPeriod}
             setCompareTargetPeriod={setCompareTargetPeriod}
-            onOpenDataEntry={() => {
-              setDataEntrySubTab(dashboardSubTab || 'food');
+            onOpenDataEntry={(mod, periodId, branch) => {
+              if (mod) setDataEntrySubTab(mod);
+              else setDataEntrySubTab(dashboardSubTab || 'food');
+              if (periodId) setEditingPeriodId(periodId);
+              if (branch) setSelectedTransportBranch(branch);
               setActiveTab('data_entry');
               window.location.hash = 'data_entry';
             }}
@@ -1742,6 +1749,8 @@ export default function App() {
         {activeTab === 'data_entry' && (
           <DataEntryPage
             selectedModule={dataEntrySubTab}
+            selectedBranch={selectedTransportBranch}
+            onBranchChange={setSelectedTransportBranch}
             computedMatrix={computedMatrix}
             editingPeriodId={editingPeriodId}
             setEditingPeriodId={setEditingPeriodId}
