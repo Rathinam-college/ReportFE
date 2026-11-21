@@ -4,7 +4,7 @@ import {
   ArrowRight, FileSpreadsheet, Calendar, ChevronDown, Check,
   Sparkles, FileText, Printer, Paperclip, LayoutDashboard, Table, Layers
 } from 'lucide-react';
-import { formatINR, formatPeriodLabel } from '../../../utils/formatters';
+import { formatINR, formatPeriodLabel, formatIndianCompact } from '../../../utils/formatters';
 import { getBudgetMonthCol } from '../../../utils/hostelBudgetConstants';
 import HostelExecutiveKpis from './HostelExecutiveKpis';
 import HostelCapacityOccupancySection from './HostelCapacityOccupancySection';
@@ -123,171 +123,325 @@ export default function HostelOperationsDashboard({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
       
-      {/* TOP HEADER & CONTROLS */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '20px',
-        border: '1.5px solid #e2e8f0',
-        padding: '20px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px',
-        boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)'
-      }}>
-        {/* Left Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            width: '46px',
-            height: '46px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-            flexShrink: 0
-          }}>
-            <Building2 size={26} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                Hostel Operations Dashboard
-              </h1>
-              <span style={{
-                fontSize: '11px',
-                fontWeight: '800',
-                padding: '3px 10px',
-                borderRadius: '9999px',
-                backgroundColor: '#ecfdf5',
-                color: '#059669',
-                border: '1px solid #a7f3d0'
-              }}>
-                Hostel Details
-              </span>
-            </div>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-              1. Beds & Occupancy • 2. Expenses & Budget Tracking • {periods.length} Months Recorded (Sep'25 – Sep'26)
-            </p>
-          </div>
-        </div>
-
-        {/* Right Actions & Period Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Cycle Dropdown */}
-          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#059669', pointerEvents: 'none' }} />
-            <select
-              value={activePeriod || 'all'}
-              onChange={(e) => setActivePeriod && setActivePeriod(e.target.value)}
-              style={{
-                backgroundColor: '#f8fafc',
-                border: '1.5px solid #cbd5e1',
-                borderRadius: '10px',
-                padding: '8px 30px 8px 30px',
-                fontSize: '12.5px',
-                fontWeight: '700',
-                color: '#0f172a',
-                outline: 'none',
-                cursor: 'pointer',
-                appearance: 'none',
-                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)'
-              }}
-            >
-              <option value="all">
-                All Months (Total Cumulative)
-              </option>
-              {periods.map(p => (
-                <option key={p.id} value={String(p.id)}>
-                  {formatPeriodLabel(p)} • {p.period_label || p.period_code}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} style={{ position: 'absolute', right: '10px', color: '#64748b', pointerEvents: 'none' }} />
-          </div>
-
-          {/* Detailed Reports Modal Button */}
-          <button
-            type="button"
-            onClick={() => setReportsModalOpen(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 18px',
-              borderRadius: '9999px',
-              backgroundColor: '#ffffff',
-              border: '1.5px solid #059669',
+      {/* ========================================================================= */}
+      {/* UNIFIED STICKY DASHBOARD HEADER & FILTER BAR (PINS TO TOP ON SCROLL)     */}
+      {/* Keeps "Hostel Operations Dashboard" + Badges + Month Filter Pills at Top */}
+      {/* ========================================================================= */}
+      <div 
+        className="sticky-dashboard-master-header"
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 80,
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          border: '1.5px solid #e2e8f0',
+          padding: '12px 20px',
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          marginBottom: '4px'
+        }}
+      >
+        {/* Tier 1: Hostel Title, Badge, Subtitle & Action Buttons (Always visible at top) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          {/* Module Title, Icon & Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              backgroundColor: '#ecfdf5',
               color: '#059669',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(5, 150, 105, 0.08)',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ecfdf5'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
-          >
-            <FileText size={15} color="#059669" />
-            <span>Hostel Reports</span>
-          </button>
-
-          {/* Download Official Audit Report Button */}
-          <button
-            type="button"
-            onClick={handleExportReport}
-            style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '9px 18px',
-              borderRadius: '9999px',
-              backgroundColor: '#059669',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#047857'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-          >
-            <Download size={14} />
-            <span>Download Report</span>
-          </button>
+              justifyContent: 'center',
+              fontSize: '18px',
+              boxShadow: '0 2px 6px rgba(5, 150, 105, 0.15)',
+              flexShrink: 0
+            }}>
+              🏢
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h1 style={{
+                  fontSize: '20px',
+                  fontWeight: '800',
+                  color: '#0f172a',
+                  margin: 0,
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1.2
+                }}>
+                  Hostel Operations Dashboard
+                </h1>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '2px 10px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#ecfdf5',
+                  color: '#059669',
+                  border: '1px solid #a7f3d0'
+                }}>
+                  Hostel
+                </span>
+              </div>
+              <p style={{
+                fontSize: '12px',
+                color: '#64748b',
+                margin: '2px 0 0 0',
+                fontWeight: '500'
+              }}>
+                1. Beds & Occupancy • 2. Expenses & Budget Tracking • {periods.length} Months Recorded (Sep'25 – Sep'26)
+              </p>
+            </div>
+          </div>
 
-          {/* Open Data Entry Button */}
-          {onOpenDataEntry && (
+          {/* Action Buttons (Reports, Download Report, Open Data Entry) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Detailed Reports Modal Button */}
             <button
               type="button"
-              onClick={onOpenDataEntry}
+              onClick={() => setReportsModalOpen(true)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '9px 20px',
+                padding: '8px 16px',
                 borderRadius: '9999px',
-                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
-                color: '#ffffff',
-                border: 'none',
-                fontSize: '12.5px',
-                fontWeight: '800',
+                backgroundColor: '#ffffff',
+                border: '1.5px solid #059669',
+                color: '#059669',
+                fontSize: '12px',
+                fontWeight: '700',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
-                transition: 'all 0.18s ease'
+                boxShadow: '0 1px 3px rgba(5, 150, 105, 0.08)',
+                transition: 'all 0.15s ease'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ecfdf5'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
             >
-              <span>Open Data Entry</span>
-              <ArrowRight size={14} />
+              <FileText size={13} color="#059669" />
+              <span>Hostel Reports</span>
             </button>
-          )}
+
+            {/* Download Official Audit Report Button */}
+            <button
+              type="button"
+              onClick={handleExportReport}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 18px',
+                borderRadius: '9999px',
+                backgroundColor: '#059669',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 3px 12px rgba(5, 150, 105, 0.25)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#047857'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+            >
+              <Download size={13} />
+              <span>Download Report</span>
+            </button>
+
+            {/* Open Data Entry Button */}
+            {onOpenDataEntry && (
+              <button
+                type="button"
+                onClick={onOpenDataEntry}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 18px',
+                  borderRadius: '9999px',
+                  background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: '0 3px 12px rgba(255, 96, 136, 0.3)',
+                  transition: 'all 0.18s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <span>Open Data Entry</span>
+                <ArrowRight size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tier 2: Month Filter Pills & Viewing Indicator */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          paddingTop: '8px',
+          borderTop: '1px solid #edf0f8'
+        }}>
+          {/* Left: Filter label and month pills */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            flexWrap: 'wrap',
+            maxWidth: 'calc(100% - 300px)'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11.5px',
+              fontWeight: '800',
+              color: '#475569',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginRight: '2px',
+              flexShrink: 0
+            }}>
+              <Calendar size={14} color="#059669" />
+              <span>Filter Month:</span>
+            </div>
+
+            {/* All Months Pill */}
+            <button
+              type="button"
+              onClick={() => setActivePeriod && setActivePeriod('all')}
+              style={{
+                padding: '5px 14px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: isAllMonths ? '800' : '650',
+                border: isAllMonths ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
+                backgroundColor: isAllMonths ? '#059669' : '#ffffff',
+                color: isAllMonths ? '#ffffff' : '#475569',
+                cursor: 'pointer',
+                boxShadow: isAllMonths ? '0 2px 8px rgba(5, 150, 105, 0.3)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+                flexShrink: 0
+              }}
+            >
+              <span>All months</span>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '800',
+                padding: '1px 5px',
+                borderRadius: '10px',
+                backgroundColor: isAllMonths ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                color: isAllMonths ? '#ffffff' : '#64748b'
+              }}>
+                {periods.length}
+              </span>
+            </button>
+
+            {/* Individual Month Pills */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              maxWidth: '100%',
+              paddingBottom: '2px'
+            }}>
+              {periods.map(p => {
+                const isSel = !isAllMonths && String(p.id) === String(activePeriod);
+                const pCensus = hostelCensusMap[String(p.id)];
+                const pExp = Number(pCensus?.expenses_occurred || 0);
+                const pMatrixAmt = Number(computedMatrix?.grand_total?.amounts?.[p.id] ?? computedMatrix?.grand_total?.amounts?.[String(p.id)] ?? 0);
+                const pAmt = pExp > 0 ? pExp : pMatrixAmt;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setActivePeriod && setActivePeriod(String(p.id))}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '9999px',
+                      fontSize: '12px',
+                      fontWeight: isSel ? '800' : '650',
+                      border: isSel ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
+                      backgroundColor: isSel ? '#059669' : '#ffffff',
+                      color: isSel ? '#ffffff' : '#475569',
+                      cursor: 'pointer',
+                      boxShadow: isSel ? '0 2px 8px rgba(5, 150, 105, 0.3)' : 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <span>{p.period_label || p.period_code}</span>
+                    {pAmt > 0 && (
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        padding: '1px 5px',
+                        borderRadius: '10px',
+                        backgroundColor: isSel ? 'rgba(255,255,255,0.25)' : '#f8fafc',
+                        color: isSel ? '#ffffff' : '#64748b'
+                      }}>
+                        {formatIndianCompact(pAmt)}
+                      </span>
+                    )}
+                    {isSel && <Check size={11} strokeWidth={3} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right: Active Viewing Indicator */}
+          <div style={{
+            fontSize: '12px',
+            color: '#64748b',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            flexShrink: 0
+          }}>
+            <span>Viewing:</span>
+            <strong style={{
+              color: '#0f172a',
+              fontWeight: '800',
+              padding: '3px 10px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
+            }}>
+              {isAllMonths
+                ? `All Months (${periods.length} Cycles • ${formatINR(allMonthsTotalSpend)})`
+                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(Number(activeCensus?.expenses_occurred || 0) || Number(computedMatrix?.grand_total?.amounts?.[activePeriod] ?? computedMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0))})`
+              }
+            </strong>
+          </div>
         </div>
       </div>
 
