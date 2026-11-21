@@ -21,12 +21,25 @@ export default function TransportOperationsDashboard({
   onOpenDataEntry,
   handleExportReport
 }) {
-  const [activeBranch, setActiveBranch] = useState('all');
+  const [activeBranch, setActiveBranch] = useState('Common');
   const [activeMainView, setActiveMainView] = useState('executive'); // 'executive' | 'vehicles' | 'parameters' | 'all'
   const [localMatrix, setLocalMatrix] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchParamTerm, setSearchParamTerm] = useState('');
   const [vehicleStats, setVehicleStats] = useState(null);
+
+  // Disallow consolidated 'all' branch and 'all' period in transport
+  useEffect(() => {
+    if (activeBranch === 'all') {
+      setActiveBranch('Common');
+    }
+  }, [activeBranch]);
+
+  useEffect(() => {
+    if (activePeriod === 'all' && periods.length > 0 && setActivePeriod) {
+      setActivePeriod(String(periods[periods.length - 1].id));
+    }
+  }, [activePeriod, periods, setActivePeriod]);
 
   // Self-healing live fetch from API if computedMatrix not yet populated for transport
   const fetchLiveMatrix = async () => {
@@ -241,105 +254,13 @@ export default function TransportOperationsDashboard({
     };
   };
 
-  // Metrics across all months if "all" is selected, else single month
+  // Single-month metrics strictly for the currently selected fleet branch
   const metrics = useMemo(() => {
-    if (isAllMonths && periods.length > 0) {
-      let sumActKms = 0;
-      let sumAppKms = 0;
-      let sumAddKms = 0;
-      let sumFuel = 0;
-      let sumFc = 0;
-      let sumStat = 0;
-      let sumRep = 0;
-      let sumOth = 0;
-      let sumEmp = 0;
-      let sumDiesel = 0;
-      let sumDemand = 0;
-      let sumPaid = 0;
-      let maxAppBud = 0;
-      let sumSpentBud = 0;
-      let sumPass = 0;
-      let sumTkR = 0;
-      let sumTkC = 0;
+    return getBranchMetrics(activeBranch, activePeriodIdStr || String(periods[periods.length - 1]?.id || '1026'));
+  }, [activeBranch, activePeriodIdStr, periods, effectiveMatrix]);
 
-      periods.forEach(p => {
-        const bm = getBranchMetrics(activeBranch, String(p.id));
-        sumActKms += bm.actual_kms;
-        sumAppKms += bm.approved_kms;
-        sumAddKms += bm.additional_kms;
-        sumFuel += bm.fuel_expenses;
-        sumFc += bm.fc_cost;
-        sumStat += bm.statutory_cost;
-        sumRep += bm.repair_maintenance_cost;
-        sumOth += bm.other_cost;
-        sumEmp += bm.employee_cost;
-        sumDiesel += bm.diesel_litres;
-        sumDemand += bm.fee_demand;
-        sumPaid += bm.fee_collected;
-        if (bm.approved_budget > maxAppBud) maxAppBud = bm.approved_budget;
-        sumSpentBud += bm.cumulative_budget_spent;
-        sumPass = Math.max(sumPass, bm.passengers_count);
-        sumTkR += bm.service_tickets_raised;
-        sumTkC += bm.service_tickets_closed;
-      });
-
-      const totalExp = sumFuel + sumFc + sumStat + sumRep + sumOth + sumEmp;
-      const bCount = activeBranch === 'all' ? 58 : (activeBranch === 'Common' ? 18 : (activeBranch === 'RPS' ? 19 : (activeBranch === 'University' ? 16 : 5)));
-
-      return {
-        vehicles_count: `${bCount} Buses`,
-        bus_count_num: bCount,
-        passengers_count: sumPass,
-        approved_kms: sumAppKms,
-        actual_kms: sumActKms,
-        additional_kms: sumAddKms,
-        fuel_expenses: sumFuel,
-        fc_cost: sumFc,
-        statutory_cost: sumStat,
-        repair_maintenance_cost: sumRep,
-        other_cost: sumOth,
-        employee_cost: sumEmp,
-        total_expenses: totalExp,
-        fee_demand: sumDemand,
-        fee_collected: sumPaid,
-        fee_unpaid: Math.max(0, sumDemand - sumPaid),
-        approved_budget: maxAppBud || (activeBranch === 'all' ? 32500000 : (branchBudgetMap[activeBranch] || 8500000)),
-        cumulative_budget_spent: sumSpentBud || totalExp,
-        balance: (maxAppBud || (activeBranch === 'all' ? 32500000 : (branchBudgetMap[activeBranch] || 8500000))) - (sumSpentBud || totalExp),
-        diesel_litres: sumDiesel,
-        service_tickets_raised: sumTkR,
-        service_tickets_closed: sumTkC,
-        service_tickets_open: Math.max(0, sumTkR - sumTkC),
-        fuel_cost_per_km: sumActKms > 0 ? (sumFuel / sumActKms).toFixed(2) : '0.00',
-        avg_mileage: sumDiesel > 0 ? (sumActKms / sumDiesel).toFixed(2) : '0.00'
-      };
-    }
-
-    return getBranchMetrics(activeBranch, activePeriodIdStr || '1026');
-  }, [activeBranch, isAllMonths, activePeriodIdStr, periods, effectiveMatrix]);
-
-  // Effective metrics for a branch taking into account "All months" filter
+  // Effective metrics for a branch taking into account currently selected month
   const getBranchEffectiveMetrics = (branchId) => {
-    if (isAllMonths) {
-      let sumActKms = 0;
-      let sumDiesel = 0;
-      let sumFuel = 0;
-      let sumExp = 0;
-      periods.forEach(p => {
-        const m = getBranchMetrics(branchId, String(p.id));
-        sumActKms += m.actual_kms;
-        sumDiesel += m.diesel_litres;
-        sumFuel += m.fuel_expenses;
-        sumExp += m.total_expenses;
-      });
-      return {
-        actual_kms: sumActKms,
-        diesel_litres: sumDiesel,
-        fuel_expenses: sumFuel,
-        total_expenses: sumExp,
-        avg_mileage: sumDiesel > 0 ? (sumActKms / sumDiesel).toFixed(2) : '0.00'
-      };
-    }
     return getBranchMetrics(branchId, activePeriodIdStr || String(periods[periods.length - 1]?.id || '1026'));
   };
 
@@ -586,9 +507,9 @@ export default function TransportOperationsDashboard({
             }}>
               🏫 Institutional Fleets:
             </span>
-            {TRANSPORT_BRANCHES.map(br => {
+            {TRANSPORT_BRANCHES.filter(br => br.id !== 'all').map(br => {
               const isSel = activeBranch === br.id;
-              const countBadge = br.id === 'all' ? '58 Buses' : (br.id === 'Common' ? '18 Buses' : (br.id === 'RPS' ? '19 Buses' : (br.id === 'University' ? '16 Buses' : '5 Buses')));
+              const countBadge = br.id === 'Common' ? '18 Buses' : (br.id === 'RPS' ? '19 Buses' : (br.id === 'University' ? '16 Buses' : '5 Buses'));
 
               return (
                 <button
@@ -672,42 +593,9 @@ export default function TransportOperationsDashboard({
               <span>Filter Month:</span>
             </div>
 
-            {/* All Months Pill */}
-            <button
-              type="button"
-              onClick={() => setActivePeriod && setActivePeriod('all')}
-              style={{
-                padding: '4px 13px',
-                borderRadius: '9999px',
-                fontSize: '11.5px',
-                fontWeight: isAllMonths ? '800' : '650',
-                border: isAllMonths ? '1.5px solid #0284c7' : '1.5px solid #cbd5e1',
-                backgroundColor: isAllMonths ? '#0284c7' : '#ffffff',
-                color: isAllMonths ? '#ffffff' : '#475569',
-                cursor: 'pointer',
-                boxShadow: isAllMonths ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <span>All months</span>
-              <span style={{
-                fontSize: '10px',
-                fontWeight: '800',
-                padding: '1px 5px',
-                borderRadius: '10px',
-                backgroundColor: isAllMonths ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
-                color: isAllMonths ? '#ffffff' : '#64748b'
-              }}>
-                {periods.length}
-              </span>
-            </button>
-
             {/* Individual Month Pills */}
             {periods.map(p => {
-              const isSel = !isAllMonths && String(p.id) === String(activePeriod);
+              const isSel = String(p.id) === String(activePeriod);
               const pBm = getBranchMetrics(activeBranch, String(p.id));
               const pTotal = pBm?.total_expenses || 0;
               return (
@@ -768,10 +656,7 @@ export default function TransportOperationsDashboard({
               borderRadius: '8px',
               border: '1px solid #e2e8f0'
             }}>
-              {isAllMonths
-                ? `All Months (${periods.length} Cycles • ${formatINR(metrics.total_expenses)})`
-                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(metrics.total_expenses)})`
-              }
+              {`${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(metrics.total_expenses)}) • ${activeBranchObj.label}`}
             </strong>
           </div>
         </div>
@@ -831,8 +716,8 @@ export default function TransportOperationsDashboard({
 
         {/* Viewing Period Indicator */}
         <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '600', paddingRight: '8px' }}>
-          Viewing Period: <strong style={{ color: '#0284c7', fontWeight: '800' }}>
-            {isAllMonths ? `All Months (${periods.length} Months Total)` : formatPeriodLabel(activePeriodObj)}
+          Viewing: <strong style={{ color: '#0284c7', fontWeight: '800' }}>
+            {formatPeriodLabel(activePeriodObj)} • {activeBranchObj.label}
           </strong>
         </div>
       </div>
@@ -1372,9 +1257,7 @@ export default function TransportOperationsDashboard({
                   {num(metrics.passengers_count).toLocaleString()} Passengers • {num(metrics.actual_kms).toLocaleString()} Total KMs
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                  {activeBranch === 'all' 
-                    ? 'Common (18) • RPS (19) • University (16) • KPM (5)' 
-                    : `Dedicated ${activeBranchObj.label} Fleet (${activeBranchObj.id})`}
+                  Dedicated {activeBranchObj.label} Fleet ({activeBranchObj.id})
                 </div>
               </div>
 
@@ -1392,7 +1275,7 @@ export default function TransportOperationsDashboard({
                 gap: '8px'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {isAllMonths ? 'All-Months Total Spend' : `${activePeriodObj?.period_label || 'Focus Month'} Spend`}
+                  {activePeriodObj?.period_label || 'Focus Month'} Spend
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0', letterSpacing: '-0.02em' }}>
                   {formatINR(metrics.total_expenses)}
@@ -1401,7 +1284,7 @@ export default function TransportOperationsDashboard({
                   Fuel: {formatINR(metrics.fuel_expenses)} • Repair: {formatINR(metrics.repair_maintenance_cost)}
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                  Avg Monthly Spend: {formatINR(metrics.total_expenses / (periods.length || 1))}
+                  Monthly Spend: {activeBranchObj.label} ({activePeriodObj?.period_label})
                 </div>
               </div>
 

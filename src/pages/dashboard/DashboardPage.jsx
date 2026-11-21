@@ -597,7 +597,7 @@ export default function DashboardPage({
           computedMatrix={effectiveMatrix}
           periods={periods}
           categories={categories}
-          activePeriod={activePeriod}
+          activePeriod={activePeriod === 'all' && periods.length > 0 ? String(periods[periods.length - 1].id) : activePeriod}
           setActivePeriod={setActivePeriod}
           onOpenDataEntry={(targetPeriodId, targetBranch) => {
             const pId = targetPeriodId || (activePeriod !== 'all' ? Number(activePeriod) : null);

@@ -284,7 +284,7 @@ export default function TransportDashboardDataTable({
 
           {/* Branch Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '2px 4px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-            {TRANSPORT_BRANCHES.map(b => {
+            {TRANSPORT_BRANCHES.filter(b => b.id !== 'all').map(b => {
               const isSel = b.id === activeBranch;
               return (
                 <button
