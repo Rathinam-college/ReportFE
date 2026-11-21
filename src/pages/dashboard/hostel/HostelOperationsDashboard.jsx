@@ -221,14 +221,6 @@ export default function HostelOperationsDashboard({
                   Hostel
                 </span>
               </div>
-              <p style={{
-                fontSize: '12px',
-                color: '#64748b',
-                margin: '2px 0 0 0',
-                fontWeight: '500'
-              }}>
-                1. Beds & Occupancy • 2. Expenses & Budget Tracking • {effectivePeriods.length} Months Recorded (Sep'25 – Sep'26)
-              </p>
             </div>
           </div>
 

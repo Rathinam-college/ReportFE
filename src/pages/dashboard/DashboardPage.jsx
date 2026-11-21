@@ -678,14 +678,6 @@ export default function DashboardPage({
                   {currentMeta.badge}
                 </span>
               </div>
-              <p style={{
-                fontSize: '12px',
-                color: '#6e768e',
-                margin: '2px 0 0 0',
-                fontWeight: '500'
-              }}>
-                {currentMeta.subtitle}
-              </p>
             </div>
           </div>
 
