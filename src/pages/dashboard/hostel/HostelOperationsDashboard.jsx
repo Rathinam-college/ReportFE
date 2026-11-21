@@ -30,11 +30,37 @@ export default function HostelOperationsDashboard({
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const [activeMainView, setActiveMainView] = useState('executive'); // 'executive' | 'census_ledger' | 'spreadsheet_matrix' | 'all'
   const [budgetTrackingData, setBudgetTrackingData] = useState([]);
-  const hostelCensusMap = computedMatrix?.hostel_census || {};
+  const [localHostelMatrix, setLocalHostelMatrix] = useState(null);
+
+  // Self-healing check to ensure Hostel matrix and its 13 periods are always loaded
+  useEffect(() => {
+    const isHostel = computedMatrix?.module === 'hostel' && (computedMatrix?.periods?.length || 0) >= 10;
+    if (!isHostel) {
+      fetch('/api/matrix?module=hostel')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.periods && data.periods.length > 0) {
+            data.module = 'hostel';
+            setLocalHostelMatrix(data);
+          }
+        })
+        .catch(err => console.warn('[HostelDashboard] Matrix fetch notice:', err));
+    }
+  }, [computedMatrix]);
+
+  const effectiveMatrix = (computedMatrix?.module === 'hostel' && (computedMatrix?.periods?.length || 0) >= 10)
+    ? computedMatrix
+    : (localHostelMatrix || computedMatrix || {});
+
+  const effectivePeriods = (effectiveMatrix?.periods && effectiveMatrix.periods.length > 0)
+    ? effectiveMatrix.periods
+    : periods;
+
+  const hostelCensusMap = effectiveMatrix?.hostel_census || computedMatrix?.hostel_census || {};
 
   useEffect(() => {
-    if (computedMatrix?.hostel_budget_tracking && computedMatrix.hostel_budget_tracking.length > 0) {
-      setBudgetTrackingData(computedMatrix.hostel_budget_tracking);
+    if (effectiveMatrix?.hostel_budget_tracking && effectiveMatrix.hostel_budget_tracking.length > 0) {
+      setBudgetTrackingData(effectiveMatrix.hostel_budget_tracking);
     } else {
       fetch('/api/hostel/budget-tracking')
         .then(res => res.json())
@@ -43,7 +69,7 @@ export default function HostelOperationsDashboard({
         })
         .catch(err => console.warn('Budget tracking notice:', err));
     }
-  }, [computedMatrix?.hostel_budget_tracking]);
+  }, [effectiveMatrix?.hostel_budget_tracking]);
 
   // Whether "All Months" is active
   const isAllMonths = activePeriod === 'all';
@@ -54,24 +80,24 @@ export default function HostelOperationsDashboard({
       return String(activePeriod);
     }
     // Default to the recorded period with live expenses or period 30 (Oct)
-    if (periods.length > 0) {
-      const withExpenses = periods.find(p => {
+    if (effectivePeriods.length > 0) {
+      const withExpenses = effectivePeriods.find(p => {
         const c = hostelCensusMap[String(p.id)];
         return c && Number(c.expenses_occurred || 0) > 0;
       });
       if (withExpenses) return String(withExpenses.id);
 
-      const oct = periods.find(p => String(p.id) === '30' || (p.period_label || '').toLowerCase().includes('oct'));
+      const oct = effectivePeriods.find(p => String(p.id) === '30' || (p.period_label || '').toLowerCase().includes('oct'));
       if (oct) return String(oct.id);
 
-      return String(periods[0].id);
+      return String(effectivePeriods[0].id);
     }
     return '30';
-  }, [activePeriod, periods, hostelCensusMap]);
+  }, [activePeriod, effectivePeriods, hostelCensusMap]);
 
   const activePeriodObj = useMemo(() => {
-    return periods.find(p => String(p.id) === effectivePeriodId) || periods[0] || {};
-  }, [periods, effectivePeriodId]);
+    return effectivePeriods.find(p => String(p.id) === effectivePeriodId) || effectivePeriods[0] || {};
+  }, [effectivePeriods, effectivePeriodId]);
 
   const activeMonthCol = useMemo(() => {
     return getBudgetMonthCol(activePeriodObj, effectivePeriodId);
@@ -79,18 +105,18 @@ export default function HostelOperationsDashboard({
 
   // Census data for active period / snapshot
   const activeCensus = useMemo(() => {
-    return hostelCensusMap[effectivePeriodId] || (periods.length > 0 && hostelCensusMap[String(periods[0].id)]) || {};
-  }, [hostelCensusMap, effectivePeriodId, periods]);
+    return hostelCensusMap[effectivePeriodId] || (effectivePeriods.length > 0 && hostelCensusMap[String(effectivePeriods[0].id)]) || {};
+  }, [hostelCensusMap, effectivePeriodId, effectivePeriods]);
 
   // Previous month census for delta and movement calculations
   const prevCensus = useMemo(() => {
-    const activeIdx = periods.findIndex(p => String(p.id) === effectivePeriodId);
+    const activeIdx = effectivePeriods.findIndex(p => String(p.id) === effectivePeriodId);
     if (activeIdx > 0) {
-      const prevId = String(periods[activeIdx - 1].id);
+      const prevId = String(effectivePeriods[activeIdx - 1].id);
       return hostelCensusMap[prevId] || {};
     }
     return {};
-  }, [periods, effectivePeriodId, hostelCensusMap]);
+  }, [effectivePeriods, effectivePeriodId, hostelCensusMap]);
 
   // Grand total spend across all recorded months from PostgreSQL DB
   const allMonthsTotalSpend = useMemo(() => {
@@ -201,7 +227,7 @@ export default function HostelOperationsDashboard({
                 margin: '2px 0 0 0',
                 fontWeight: '500'
               }}>
-                1. Beds & Occupancy • 2. Expenses & Budget Tracking • {periods.length} Months Recorded (Sep'25 – Sep'26)
+                1. Beds & Occupancy • 2. Expenses & Budget Tracking • {effectivePeriods.length} Months Recorded (Sep'25 – Sep'26)
               </p>
             </div>
           </div>
@@ -354,7 +380,7 @@ export default function HostelOperationsDashboard({
                 backgroundColor: isAllMonths ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
                 color: isAllMonths ? '#ffffff' : '#64748b'
               }}>
-                {periods.length}
+                {effectivePeriods.length}
               </span>
             </button>
 
@@ -368,11 +394,11 @@ export default function HostelOperationsDashboard({
               maxWidth: '100%',
               paddingBottom: '2px'
             }}>
-              {periods.map(p => {
+              {effectivePeriods.map(p => {
                 const isSel = !isAllMonths && String(p.id) === String(activePeriod);
                 const pCensus = hostelCensusMap[String(p.id)];
                 const pExp = Number(pCensus?.expenses_occurred || 0);
-                const pMatrixAmt = Number(computedMatrix?.grand_total?.amounts?.[p.id] ?? computedMatrix?.grand_total?.amounts?.[String(p.id)] ?? 0);
+                const pMatrixAmt = Number(effectiveMatrix?.grand_total?.amounts?.[p.id] ?? effectiveMatrix?.grand_total?.amounts?.[String(p.id)] ?? 0);
                 const pAmt = pExp > 0 ? pExp : pMatrixAmt;
                 return (
                   <button
@@ -437,8 +463,8 @@ export default function HostelOperationsDashboard({
               border: '1px solid #e2e8f0'
             }}>
               {isAllMonths
-                ? `All Months (${periods.length} Cycles • ${formatINR(allMonthsTotalSpend)})`
-                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(Number(activeCensus?.expenses_occurred || 0) || Number(computedMatrix?.grand_total?.amounts?.[activePeriod] ?? computedMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0))})`
+                ? `All Months (${effectivePeriods.length} Cycles • ${formatINR(allMonthsTotalSpend)})`
+                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(Number(activeCensus?.expenses_occurred || 0) || Number(effectiveMatrix?.grand_total?.amounts?.[activePeriod] ?? effectiveMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0))})`
               }
             </strong>
           </div>
@@ -497,7 +523,7 @@ export default function HostelOperationsDashboard({
 
         <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '600', paddingRight: '8px' }}>
           Viewing Period: <strong style={{ color: '#059669', fontWeight: '800' }}>
-            {isAllMonths ? `All Months (${periods.length} Months Total)` : formatPeriodLabel(activePeriodObj)}
+            {isAllMonths ? `All Months (${effectivePeriods.length} Months Total)` : formatPeriodLabel(activePeriodObj)}
           </strong>
         </div>
       </div>
@@ -510,7 +536,7 @@ export default function HostelOperationsDashboard({
             census={activeCensus}
             prevCensus={prevCensus}
             allCensusMap={hostelCensusMap}
-            periods={periods}
+            periods={effectivePeriods}
             isAllMonths={isAllMonths}
             activePeriodLabel={isAllMonths ? 'All Months (Cumulative Total)' : activePeriodObj?.period_label}
             budgetTrackingData={budgetTrackingData}
@@ -523,7 +549,7 @@ export default function HostelOperationsDashboard({
             census={activeCensus}
             prevCensus={prevCensus}
             allCensusMap={hostelCensusMap}
-            periods={periods}
+            periods={effectivePeriods}
             activePeriodId={isAllMonths ? 'all' : effectivePeriodId}
             onPeriodSelect={(pid) => setActivePeriod && setActivePeriod(String(pid))}
           />
@@ -531,9 +557,9 @@ export default function HostelOperationsDashboard({
           {/* 2. EXPENSES & BUDGET TRACKING */}
           <HostelExpensesBudgetSection
             census={activeCensus}
-            computedMatrix={computedMatrix}
+            computedMatrix={effectiveMatrix}
             categories={categories}
-            periods={periods}
+            periods={effectivePeriods}
             activePeriod={activePeriod}
             onExportReport={handleExportReport}
             remarksDraft={remarksDraft}
@@ -545,9 +571,9 @@ export default function HostelOperationsDashboard({
       {(activeMainView === 'census_ledger' || activeMainView === 'all') && (
         <div style={{ width: '100%', marginTop: activeMainView === 'all' ? '20px' : 0 }}>
           <HostelDashboardCensusView
-            computedMatrix={computedMatrix}
+            computedMatrix={effectiveMatrix}
             activePeriodObj={activePeriodObj}
-            periods={periods}
+            periods={effectivePeriods}
             activePeriod={activePeriod}
           />
         </div>
@@ -557,9 +583,9 @@ export default function HostelOperationsDashboard({
       {(activeMainView === 'spreadsheet_matrix' || activeMainView === 'all') && (
         <div style={{ width: '100%', marginTop: activeMainView === 'all' ? '20px' : 0 }}>
           <HostelDashboardDataTable
-            periods={periods}
+            periods={effectivePeriods}
             activePeriod={activePeriod}
-            computedMatrix={computedMatrix}
+            computedMatrix={effectiveMatrix}
           />
         </div>
       )}

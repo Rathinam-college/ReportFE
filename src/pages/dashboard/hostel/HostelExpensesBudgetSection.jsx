@@ -218,60 +218,125 @@ export default function HostelExpensesBudgetSection({
     '#ec4899'  // 9. Pink - Events
   ];
 
+  // All Census Map for month-by-month live breakdown from PostgreSQL DB
+  const allHostelCensusMap = useMemo(() => {
+    return computedMatrix?.hostel_census || {};
+  }, [computedMatrix]);
+
   // Operational Person / Occupancy Card
   const personCategory = useMemo(() => {
-    const students = num(census.students_total, 2709);
-    const staff = num(census.staff_total, 157);
-    const occupied = num(census.total_occupied, 2866);
-    const vacant = num(census.vacant_total, 373);
+    const isAll = activePeriod === 'all';
+    const selCensus = !isAll
+      ? (allHostelCensusMap[String(activePeriod)] || allHostelCensusMap[activePeriod] || census || {})
+      : census;
 
     const monthlyPersons = {};
+    let totalOccupantsSum = 0;
+    let totalStudentsSum = 0;
+    let totalStaffSum = 0;
+    let totalVacantSum = 0;
+    let countWithData = 0;
+
     (periods || []).forEach(p => {
-      monthlyPersons[p.id] = occupied;
+      const c = allHostelCensusMap[String(p.id)] || allHostelCensusMap[p.id] || {};
+      const occ = num(c.total_occupied, 0);
+      monthlyPersons[p.id] = occ;
+
+      if (occ > 0) {
+        totalOccupantsSum += occ;
+        totalStudentsSum += num(c.students_total, 0);
+        totalStaffSum += num(c.staff_total, 0);
+        totalVacantSum += num(c.vacant_total, 0);
+        countWithData += 1;
+      }
     });
+
+    const avgOccupants = countWithData > 0 ? Math.round(totalOccupantsSum / countWithData) : 0;
+    const avgStudents = countWithData > 0 ? Math.round(totalStudentsSum / countWithData) : 0;
+    const avgStaff = countWithData > 0 ? Math.round(totalStaffSum / countWithData) : 0;
+    const avgVacant = countWithData > 0 ? Math.round(totalVacantSum / countWithData) : 0;
+
+    // For single month: that month's occupied count.
+    // For 'all': total cumulative occupants across cycles
+    const selectedAmount = isAll
+      ? totalOccupantsSum
+      : num(selCensus?.total_occupied, 0);
+
+    const students = isAll ? totalStudentsSum : num(selCensus?.students_total, 0);
+    const staff = isAll ? totalStaffSum : num(selCensus?.staff_total, 0);
+    const vacant = isAll ? totalVacantSum : num(selCensus?.vacant_total, 0);
+
+    const maxMonth = Math.max(...Object.values(monthlyPersons), 1);
 
     return {
       categoryId: 'hostel_person_card',
       categoryName: 'Person (Resident Occupants)',
       color: '#06b6d4',
       isPersonCategory: true,
-      selectedAmount: occupied,
+      selectedAmount: selectedAmount,
       selectedPercent: 0,
       monthlyAmounts: monthlyPersons,
-      maxMonthlyAmount: Math.max(...Object.values(monthlyPersons), 1),
+      maxMonthlyAmount: maxMonth,
       items: [
-        { id: 'p_students', name: 'Students count', amount: students },
-        { id: 'p_staff', name: 'Staff count', amount: staff },
-        { id: 'p_vacant', name: 'Vacant Bed Capacity', amount: vacant }
+        { id: 'p_students', name: isAll ? 'Total Students (Cumulative)' : 'Students count', amount: students },
+        { id: 'p_staff', name: isAll ? 'Total Staff (Cumulative)' : 'Staff count', amount: staff },
+        { id: 'p_vacant', name: isAll ? 'Total Vacant Beds' : 'Vacant Bed Capacity', amount: vacant },
+        ...(isAll ? [{ id: 'p_avg', name: 'Monthly Average Occupancy', amount: avgOccupants }] : [])
       ]
     };
-  }, [census, periods]);
+  }, [census, periods, activePeriod, allHostelCensusMap]);
 
   // Cost Per Occupant Card
   const costPerPersonCategory = useMemo(() => {
-    const costMonth = num(census.per_student_cost_month, 3451);
-    const costDay = num(census.per_student_cost_day, 115);
+    const isAll = activePeriod === 'all';
+    const selCensus = !isAll
+      ? (allHostelCensusMap[String(activePeriod)] || allHostelCensusMap[activePeriod] || census || {})
+      : census;
 
     const monthlyCostPerPerson = {};
+    let sumCostMonth = 0;
+    let sumCostDay = 0;
+    let countWithCost = 0;
+
     (periods || []).forEach(p => {
+      const c = allHostelCensusMap[String(p.id)] || allHostelCensusMap[p.id] || {};
+      const costMonth = num(c.per_student_cost_month, 0);
       monthlyCostPerPerson[p.id] = costMonth;
+
+      if (costMonth > 0) {
+        sumCostMonth += costMonth;
+        sumCostDay += num(c.per_student_cost_day, 0);
+        countWithCost += 1;
+      }
     });
+
+    const avgCostMonth = countWithCost > 0 ? (sumCostMonth / countWithCost) : 0;
+    const avgCostDay = countWithCost > 0 ? (sumCostDay / countWithCost) : 0;
+
+    const selectedAmount = isAll
+      ? (avgCostMonth > 0 ? avgCostMonth : num(selCensus?.per_student_cost_month, 0))
+      : num(selCensus?.per_student_cost_month, 0);
+
+    const costMonth = isAll ? avgCostMonth : num(selCensus?.per_student_cost_month, 0);
+    const costDay = isAll ? avgCostDay : num(selCensus?.per_student_cost_day, 0);
+
+    const maxMonth = Math.max(...Object.values(monthlyCostPerPerson), 1);
 
     return {
       categoryId: 'hostel_cost_per_person',
       categoryName: 'Cost Per Occupant',
       color: '#f43f5e',
       isPersonCategory: false,
-      selectedAmount: costMonth,
+      selectedAmount: Math.round(selectedAmount * 100) / 100,
       selectedPercent: 0,
       monthlyAmounts: monthlyCostPerPerson,
-      maxMonthlyAmount: Math.max(...Object.values(monthlyCostPerPerson), 1),
+      maxMonthlyAmount: maxMonth,
       items: [
-        { id: 'cpp_month', name: 'Cost Per Resident (Month)', amount: costMonth },
-        { id: 'cpp_day', name: 'Cost Per Resident (Day)', amount: costDay }
+        { id: 'cpp_month', name: isAll ? 'Avg Cost Per Resident (Month)' : 'Cost Per Resident (Month)', amount: Math.round(costMonth * 100) / 100 },
+        { id: 'cpp_day', name: isAll ? 'Avg Cost Per Resident (Day)' : 'Cost Per Resident (Day)', amount: Math.round(costDay * 100) / 100 }
       ]
     };
-  }, [census, periods]);
+  }, [census, periods, activePeriod, allHostelCensusMap]);
 
   // Filtered periods for category sparkline bars aligning with monthFilter
   const cardPeriods = useMemo(() => {
