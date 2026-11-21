@@ -90,6 +90,14 @@ export default function TransportOperationsDashboard({
     return isNaN(n) ? fb : n;
   };
 
+  // Branch budget map for fallback / defaults
+  const branchBudgetMap = {
+    Common: 3800000,
+    RPS: 8500000,
+    KPM: 6200000,
+    University: 14000000
+  };
+
   // Helper to compute metrics for a branch and period
   const getBranchMetrics = (branchId, pStr) => {
     if (branchId === 'all') {
@@ -192,7 +200,7 @@ export default function TransportOperationsDashboard({
     const diesel = num(m.diesel_litres, 0);
     const demand = num(m.fee_demand, 0);
     const paid = num(m.fee_collected, 0);
-    const appBud = num(m.approved_budget, 0);
+    const appBud = num(m.approved_budget, 0) || branchBudgetMap[branchId] || 8500000;
     const spentBud = num(m.cumulative_budget_spent, 0);
     const tkRaised = num(m.service_tickets_raised, 0);
     const tkClosed = num(m.service_tickets_closed, 0);
@@ -295,9 +303,9 @@ export default function TransportOperationsDashboard({
         fee_demand: sumDemand,
         fee_collected: sumPaid,
         fee_unpaid: Math.max(0, sumDemand - sumPaid),
-        approved_budget: maxAppBud || 37730138,
+        approved_budget: maxAppBud || (activeBranch === 'all' ? 32500000 : (branchBudgetMap[activeBranch] || 8500000)),
         cumulative_budget_spent: sumSpentBud || totalExp,
-        balance: (maxAppBud || 37730138) - (sumSpentBud || totalExp),
+        balance: (maxAppBud || (activeBranch === 'all' ? 32500000 : (branchBudgetMap[activeBranch] || 8500000))) - (sumSpentBud || totalExp),
         diesel_litres: sumDiesel,
         service_tickets_raised: sumTkR,
         service_tickets_closed: sumTkC,
@@ -309,6 +317,31 @@ export default function TransportOperationsDashboard({
 
     return getBranchMetrics(activeBranch, activePeriodIdStr || '1026');
   }, [activeBranch, isAllMonths, activePeriodIdStr, periods, effectiveMatrix]);
+
+  // Effective metrics for a branch taking into account "All months" filter
+  const getBranchEffectiveMetrics = (branchId) => {
+    if (isAllMonths) {
+      let sumActKms = 0;
+      let sumDiesel = 0;
+      let sumFuel = 0;
+      let sumExp = 0;
+      periods.forEach(p => {
+        const m = getBranchMetrics(branchId, String(p.id));
+        sumActKms += m.actual_kms;
+        sumDiesel += m.diesel_litres;
+        sumFuel += m.fuel_expenses;
+        sumExp += m.total_expenses;
+      });
+      return {
+        actual_kms: sumActKms,
+        diesel_litres: sumDiesel,
+        fuel_expenses: sumFuel,
+        total_expenses: sumExp,
+        avg_mileage: sumDiesel > 0 ? (sumActKms / sumDiesel).toFixed(2) : '0.00'
+      };
+    }
+    return getBranchMetrics(branchId, activePeriodIdStr || String(periods[periods.length - 1]?.id || '1026'));
+  };
 
   // Helper to extract parameter value for a specific branch and period
   const getParamVal = (branchId, periodIdStr, paramKey) => {
@@ -439,14 +472,6 @@ export default function TransportOperationsDashboard({
                   {activeBranchObj.icon} {activeBranchObj.label} ({metrics.vehicles_count})
                 </span>
               </div>
-              <p style={{
-                fontSize: '12px',
-                color: '#64748b',
-                margin: '2px 0 0 0',
-                fontWeight: '500'
-              }}>
-                1. Month-by-Month Expenditure • 2. Fleet Expense by Category • 3. Financial & Fleet Summary • {periods.length} Months Recorded (Jun'26 – Oct'26)
-              </p>
             </div>
           </div>
 
@@ -1199,7 +1224,7 @@ export default function TransportOperationsDashboard({
                 { id: 'University', label: 'University Fleet', icon: '🎓', count: 16, color: '#dc2626', bg: '#fee2e2' },
                 { id: 'KPM', label: 'KPM Branch', icon: '🏫', count: 5, color: '#059669', bg: '#d1fae5' }
               ].map(b => {
-                const bMetrics = getBranchMetrics(b.id, activePeriodIdStr || '1026');
+                const bMetrics = getBranchEffectiveMetrics(b.id);
                 const isCurrent = activeBranch === b.id;
 
                 return (
@@ -1343,7 +1368,9 @@ export default function TransportOperationsDashboard({
                   {num(metrics.passengers_count).toLocaleString()} Passengers • {num(metrics.actual_kms).toLocaleString()} Total KMs
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                  Common (18) • RPS (19) • University (16) • KPM (5)
+                  {activeBranch === 'all' 
+                    ? 'Common (18) • RPS (19) • University (16) • KPM (5)' 
+                    : `Dedicated ${activeBranchObj.label} Fleet (${activeBranchObj.id})`}
                 </div>
               </div>
 
