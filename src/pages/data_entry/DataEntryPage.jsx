@@ -276,7 +276,7 @@ export default function DataEntryPage({
         setNewMonthForm={setNewMonthForm}
         handleStartDateChange={handleStartDateChange}
         handleAddNewMonth={handleAddNewMonth}
-        moduleName={dataEntrySubTab === 'food' ? 'Food' : dataEntrySubTab === 'hostel' ? 'Hostel' : 'Transport'}
+        moduleName={selectedModule === 'food' ? 'Food' : selectedModule === 'hostel' ? 'Hostel' : 'Transport'}
       />
 
     </div>
