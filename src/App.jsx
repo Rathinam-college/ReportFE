@@ -1039,12 +1039,15 @@ export default function App() {
     const monthShort = monthNames[nextMonth - 1] || 'Month';
     const yrShort = String(nextYear).slice(-2);
 
+    const activeMod = activeTab === 'data_entry' ? dataEntrySubTab : masterDataSubTab;
     setNewMonthForm({
       start_date: startDateStr,
       end_date: endDateStr,
       period_label: `${monthShort}'${yrShort}`,
       period_code: `${nextYear}-${String(nextMonth).padStart(2, '0')}`,
-      clone_from_prev: false
+      clone_from_prev: false,
+      module: activeMod,
+      branch: 'all'
     });
     setShowAddMonthModal(true);
   };
@@ -1090,6 +1093,7 @@ export default function App() {
         start_date: newMonthForm.start_date,
         end_date: newMonthForm.end_date,
         module: activeMod,
+        branch: newMonthForm.branch || 'all',
         clone_from_period_id: null // Explicitly null: Do NOT clone values on month creation
       };
 
@@ -1104,7 +1108,10 @@ export default function App() {
       }
       const resJson = await res.json();
       setShowAddMonthModal(false);
-      setEntryMessage({ type: 'success', text: `New Billing Month "${newMonthForm.period_label}" created! Values start blank (₹0.00). Ready for manual entry.` });
+      const fleetInfo = (activeMod === 'transport' && newMonthForm.branch && newMonthForm.branch !== 'all')
+        ? ` (${newMonthForm.branch} Fleet)`
+        : (activeMod === 'transport' ? ' (All Fleets)' : '');
+      setEntryMessage({ type: 'success', text: `New Billing Month "${newMonthForm.period_label}"${fleetInfo} created! Ready for manual entry.` });
       await fetchData();
       if (resJson && resJson.period && resJson.period.id) {
         setEditingPeriodId(resJson.period.id);
