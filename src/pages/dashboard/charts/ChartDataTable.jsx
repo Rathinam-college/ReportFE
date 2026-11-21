@@ -78,7 +78,8 @@ export default function ChartDataTable({
   isFullScreen: propIsFullScreen,
   onToggleFullScreen: propOnToggleFullScreen,
   remarksDraft = {},
-  onSelectPeriod = null
+  onSelectPeriod = null,
+  showMonthPills = false
 }) {
   // 1. Controls state
   const [searchTerm, setSearchTerm] = useState('');
@@ -608,10 +609,10 @@ export default function ChartDataTable({
             margin: '3px 0 0 0'
           }}>
             {selectedModule === 'hostel'
-              ? 'Tap a month to filter hostel expenses · tap a card to see line items'
+              ? 'Tap a card to inspect hostel line items & breakdown'
               : selectedModule === 'transport'
-              ? 'Tap a month to filter transport expenses · tap a card to see line items'
-              : 'Tap a month to filter · tap a card to see line items'}
+              ? 'Tap a card to inspect transport line items & breakdown'
+              : 'Tap a card to inspect line items & breakdown'}
           </p>
         </div>
 
@@ -927,12 +928,14 @@ export default function ChartDataTable({
         )
       ) : (
         <>
-          {/* 2. MONTH PILLS (HORIZONTAL SCROLL) */}
-          <MonthPills
-            periods={periods}
-            selectedPeriod={selectedPeriod}
-            onSelectPeriod={handleSelectPeriod}
-          />
+          {/* 2. MONTH PILLS (HIDDEN: ONLY THE NEW STICKY TOP FILTER BAR IS USED) */}
+          {showMonthPills && (
+            <MonthPills
+              periods={periods}
+              selectedPeriod={selectedPeriod}
+              onSelectPeriod={handleSelectPeriod}
+            />
+          )}
 
           {/* 3. HERO SUMMARY CARD */}
           <HeroSummary
