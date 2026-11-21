@@ -77,7 +77,8 @@ export default function ChartDataTable({
   computedMatrix,
   isFullScreen: propIsFullScreen,
   onToggleFullScreen: propOnToggleFullScreen,
-  remarksDraft = {}
+  remarksDraft = {},
+  onSelectPeriod = null
 }) {
   // 1. Controls state
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,6 +97,13 @@ export default function ChartDataTable({
       setSelectedPeriod(activePeriod);
     }
   }, [activePeriod]);
+
+  const handleSelectPeriod = (pId) => {
+    setSelectedPeriod(pId);
+    if (onSelectPeriod) {
+      onSelectPeriod(String(pId));
+    }
+  };
 
   // Reset selectedPeriod when module or periods change if the selected period does not exist
   useEffect(() => {
@@ -923,7 +931,7 @@ export default function ChartDataTable({
           <MonthPills
             periods={periods}
             selectedPeriod={selectedPeriod}
-            onSelectPeriod={(pId) => setSelectedPeriod(pId)}
+            onSelectPeriod={handleSelectPeriod}
           />
 
           {/* 3. HERO SUMMARY CARD */}

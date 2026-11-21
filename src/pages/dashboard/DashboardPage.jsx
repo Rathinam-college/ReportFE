@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import MonthlyAttachmentsModal from '../../components/attachments/MonthlyAttachmentsModal';
-import { formatINR, formatLakhs, DASH_COLORS } from '../../utils/formatters';
+import { formatINR, formatLakhs, formatIndianCompact, DASH_COLORS } from '../../utils/formatters';
 import { 
   Calendar, Layers, PieChart as PieIcon, Calculator, FileSpreadsheet, 
   TrendingUp, Hash, Users, ArrowRight, Table, BarChart3, CheckCircle2,
-  Maximize2, Minimize2, Download 
+  Maximize2, Minimize2, Download, Check 
 } from 'lucide-react';
 
 // 12 Chart Components & Master Selector
@@ -200,6 +200,19 @@ export default function DashboardPage({
   const monthlyAvg = periods.length > 0
     ? (effectiveMatrix?.grand_total?.total ?? 0) / periods.length
     : 0;
+
+  // Calculate Previous Period for single-month delta comparison
+  const prevPeriodObj = useMemo(() => {
+    if (activePeriod === 'all') return null;
+    const idx = periods.findIndex(p => String(p.id) === String(activePeriod));
+    return idx > 0 ? periods[idx - 1] : null;
+  }, [periods, activePeriod]);
+
+  const prevPeriodTotal = useMemo(() => {
+    if (!prevPeriodObj) return 0;
+    return effectiveMatrix?.grand_total?.amounts?.[prevPeriodObj.id] ?? 
+           effectiveMatrix?.grand_total?.amounts?.[String(prevPeriodObj.id)] ?? 0;
+  }, [effectiveMatrix, prevPeriodObj]);
 
   // Find largest cost head dynamically from active module's actual line items (excluding Person, Total Person, Cost Per Person)
   const isNonExpenseMetric = (catName = '', itemDesc = '') => {
@@ -690,6 +703,191 @@ export default function DashboardPage({
       </div>
 
       {/* ========================================================================= */}
+      {/* STICKY TOP MONTH FILTER BAR (FIXED ON SCROLL & CONTROLS ENTIRE PAGE)      */}
+      {/* ========================================================================= */}
+      <div 
+        className="sticky-month-filter-bar"
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 80,
+          backgroundColor: 'rgba(255, 255, 255, 0.96)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderRadius: '16px',
+          border: '1.5px solid #e2e8f0',
+          padding: '10px 18px',
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}
+      >
+        {/* Left: Filter label and month pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '12px',
+            fontWeight: '800',
+            color: '#475569',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            marginRight: '4px'
+          }}>
+            <Calendar size={15} color="#6c56db" />
+            <span>Filter Month:</span>
+          </div>
+
+          {/* All Months Pill */}
+          <button
+            type="button"
+            onClick={() => setActivePeriod('all')}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '9999px',
+              fontSize: '12.5px',
+              fontWeight: activePeriod === 'all' ? '800' : '650',
+              border: activePeriod === 'all' ? '1.5px solid #6c56db' : '1.5px solid #cbd5e1',
+              backgroundColor: activePeriod === 'all' ? '#6c56db' : '#ffffff',
+              color: activePeriod === 'all' ? '#ffffff' : '#475569',
+              cursor: 'pointer',
+              boxShadow: activePeriod === 'all' ? '0 2px 10px rgba(108, 86, 219, 0.35)' : 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>All months</span>
+            <span style={{
+              fontSize: '10.5px',
+              fontWeight: '800',
+              padding: '1px 6px',
+              borderRadius: '10px',
+              backgroundColor: activePeriod === 'all' ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+              color: activePeriod === 'all' ? '#ffffff' : '#64748b'
+            }}>
+              {periods.length}
+            </span>
+          </button>
+
+          {/* Individual Month Pills */}
+          {periods.map(p => {
+            const isSel = String(p.id) === String(activePeriod);
+            const pMonthTotal = effectiveMatrix?.grand_total?.amounts?.[p.id] ?? effectiveMatrix?.grand_total?.amounts?.[String(p.id)] ?? 0;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setActivePeriod(String(p.id))}
+                style={{
+                  padding: '6px 15px',
+                  borderRadius: '9999px',
+                  fontSize: '12.5px',
+                  fontWeight: isSel ? '800' : '650',
+                  border: isSel ? '1.5px solid #6c56db' : '1.5px solid #cbd5e1',
+                  backgroundColor: isSel ? '#6c56db' : '#ffffff',
+                  color: isSel ? '#ffffff' : '#475569',
+                  cursor: 'pointer',
+                  boxShadow: isSel ? '0 2px 10px rgba(108, 86, 219, 0.35)' : 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>{p.period_label || p.period_code}</span>
+                {pMonthTotal > 0 && (
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '700',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    backgroundColor: isSel ? 'rgba(255,255,255,0.25)' : '#f8fafc',
+                    color: isSel ? '#ffffff' : '#64748b'
+                  }}>
+                    {formatIndianCompact(pMonthTotal)}
+                  </span>
+                )}
+                {isSel && <Check size={12} strokeWidth={3} />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right: Active period indicator & quick scroll-friendly action pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{
+            fontSize: '12.5px',
+            color: '#64748b',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span>Viewing:</span>
+            <strong style={{ color: '#0f172a', fontWeight: '800' }}>
+              {activePeriod === 'all'
+                ? `All Months (${periods.length} Cycles • ${formatINR(effectiveMatrix?.grand_total?.total || 0)})`
+                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(grandTotal)})`
+              }
+            </strong>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportReport}
+            title="Download report"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '6px 13px',
+              borderRadius: '9999px',
+              backgroundColor: '#f1f5f9',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              fontSize: '11.5px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            <Download size={12} />
+            <span>Report</span>
+          </button>
+
+          {onOpenDataEntry && (
+            <button
+              type="button"
+              onClick={onOpenDataEntry}
+              title="Open Data Entry"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '6px 14px',
+                borderRadius: '9999px',
+                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+                color: '#ffffff',
+                border: 'none',
+                fontSize: '11.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(255, 75, 114, 0.3)'
+              }}
+            >
+              <span>Data Entry</span>
+              <ArrowRight size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
       {/* LINE 1 (FIRST): MONTH BY MONTH SHOW THE DATA                               */}
       {/* ========================================================================= */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -729,6 +927,7 @@ export default function DashboardPage({
           categories={categories}
           periods={periods}
           activePeriod={activePeriod}
+          onSelectPeriod={setActivePeriod}
           selectedModule={currentModule}
           computedMatrix={effectiveMatrix}
           isFullScreen={isTableFullScreen}
@@ -747,6 +946,8 @@ export default function DashboardPage({
         periods={periods}
         selectedModule={currentModule}
         onExportReport={handleExportReport}
+        activePeriod={activePeriod}
+        onPeriodChange={setActivePeriod}
       />
 
       {/* ========================================================================= */}
@@ -982,13 +1183,19 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {periods.length > 0 ? `Total Spend • ${periods.length} Months` : 'Total Spend'}
+                  {activePeriod === 'all'
+                    ? (periods.length > 0 ? `Total Spend • ${periods.length} Months` : 'Total Spend')
+                    : `${activePeriodObj?.period_label || 'Focus Month'} Spend`
+                  }
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
                   {formatINR(grandTotal)}
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  {periods.length > 0 ? `${periods[0]?.period_label} to ${periods[periods.length - 1]?.period_label} Total` : 'All recorded months'}
+                  {activePeriod === 'all'
+                    ? (periods.length > 0 ? `${periods[0]?.period_label} to ${periods[periods.length - 1]?.period_label} Total` : 'All recorded months')
+                    : `${activePeriodObj?.is_closed ? 'Audited & locked cycle' : 'Active billing cycle'}`
+                  }
                 </div>
               </div>
 
@@ -1003,13 +1210,25 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Spend` : 'Current Month Total'}
+                  {activePeriod === 'all'
+                    ? (activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Spend` : 'Current Month Total')
+                    : (prevPeriodObj ? `vs Previous Month (${prevPeriodObj.period_label})` : 'Monthly Average')
+                  }
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
-                  {formatINR(latestMonthTotal)}
+                  {activePeriod === 'all'
+                    ? formatINR(latestMonthTotal)
+                    : (prevPeriodObj
+                        ? `${grandTotal >= prevPeriodTotal ? '+' : ''}${prevPeriodTotal > 0 ? (((grandTotal - prevPeriodTotal) / prevPeriodTotal) * 100).toFixed(1) : '0'}%`
+                        : formatINR(monthlyAvg)
+                      )
+                  }
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  {activePeriodObj ? (activePeriodObj.is_closed ? 'Locked month' : 'Current active month') : 'Current month'}
+                  {activePeriod === 'all'
+                    ? (activePeriodObj ? (activePeriodObj.is_closed ? 'Locked month' : 'Current active month') : 'Current month')
+                    : (prevPeriodObj ? `Previous month spend: ${formatINR(prevPeriodTotal)}` : `Average across ${periods.length} months`)
+                  }
                 </div>
               </div>
 
@@ -1024,13 +1243,19 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Monthly Average
+                  {activePeriod === 'all' ? 'Monthly Average' : 'Share of 5-Month Total'}
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
-                  {formatINR(monthlyAvg)}
+                  {activePeriod === 'all'
+                    ? formatINR(monthlyAvg)
+                    : `${(effectiveMatrix?.grand_total?.total > 0 && grandTotal > 0) ? ((grandTotal / effectiveMatrix.grand_total.total) * 100).toFixed(1) : 0}%`
+                  }
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                  {periods.length > 0 ? `Average across ${periods.length} months` : 'Monthly average'}
+                  {activePeriod === 'all'
+                    ? (periods.length > 0 ? `Average across ${periods.length} months` : 'Monthly average')
+                    : `Out of ${formatINR(effectiveMatrix?.grand_total?.total || 0)} total recorded spend`
+                  }
                 </div>
               </div>
 
@@ -1045,13 +1270,13 @@ export default function DashboardPage({
                 overflow: 'hidden'
               }}>
                 <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#be185d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Highest Expense Category
+                  {activePeriod === 'all' ? 'Highest Expense Category' : `Top Category in ${activePeriodObj?.period_label || 'Month'}`}
                 </div>
                 <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '8px 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {largestCostHead.name}
                 </div>
                 <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }} className="currency-font">
-                  {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${periods.length} months)` : '₹0'}
+                  {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${activePeriod === 'all' ? `${periods.length} months` : activePeriodObj?.period_label})` : '₹0'}
                 </div>
               </div>
             </>

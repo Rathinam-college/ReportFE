@@ -43,14 +43,30 @@ export default function MonthlyExpenseSection({
   categories = [],
   periods = [],
   selectedModule = 'food',
-  onExportReport
+  onExportReport,
+  activePeriod = 'all',
+  onPeriodChange = null
 }) {
   const [chartModel, setChartModel] = useState('clustered_columns');
-  const [reportingCycle, setReportingCycle] = useState('all');
+  const [reportingCycle, setReportingCycle] = useState(activePeriod ? String(activePeriod) : 'all');
   const [unitMode, setUnitMode] = useState('full'); // 'full' | 'lakhs'
   const [showTable, setShowTable] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const sectionRef = useRef(null);
+
+  // Sync reportingCycle with activePeriod prop changes from parent (Sticky Filter Bar)
+  useEffect(() => {
+    if (activePeriod !== undefined && activePeriod !== null) {
+      setReportingCycle(String(activePeriod));
+    }
+  }, [activePeriod]);
+
+  const handleReportingCycleChange = (newCycle) => {
+    setReportingCycle(newCycle);
+    if (onPeriodChange) {
+      onPeriodChange(newCycle);
+    }
+  };
 
   // Fullscreen toggle with native browser requestFullscreen + CSS fixed fallback
   const toggleFullScreen = () => {
@@ -383,7 +399,7 @@ export default function MonthlyExpenseSection({
           setChartModel={setChartModel}
           modelOptions={CHART_MODELS}
           reportingCycle={reportingCycle}
-          setReportingCycle={setReportingCycle}
+          setReportingCycle={handleReportingCycleChange}
           cycleOptions={cycleOptions}
           unitMode={unitMode}
           setUnitMode={setUnitMode}
