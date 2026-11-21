@@ -6,7 +6,7 @@ import {
   TrendingUp, Calculator, Gauge, MapPin, AlertCircle, RefreshCw, Search,
   CheckCircle2, ArrowUpRight, BarChart3, PieChart
 } from 'lucide-react';
-import { formatINR, formatLakhs, formatPeriodLabel } from '../../../utils/formatters';
+import { formatINR, formatLakhs, formatPeriodLabel, formatIndianCompact } from '../../../utils/formatters';
 import { TRANSPORT_BRANCHES, CANONICAL_TRANSPORT_PARAMETERS } from '../../data_entry/TransportSpreadsheetEntry';
 import TransportVehicleExpensesTable from '../../data_entry/TransportVehicleExpensesTable';
 import TransportDashboardCensusView from '../TransportDashboardCensusView';
@@ -357,171 +357,394 @@ export default function TransportOperationsDashboard({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
 
       {/* ========================================================================= */}
-      {/* TOP HEADER & DASHBOARD TOOLBAR (MATCHING FOOD & HOSTEL BENTO DESIGN)        */}
+      {/* UNIFIED STICKY DASHBOARD HEADER & FILTER BAR (PINS TO TOP ON SCROLL)     */}
+      {/* Keeps "Transport Operations Dashboard" + Both Filters at Top (Only 1 Bar) */}
       {/* ========================================================================= */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '20px',
-        border: '1.5px solid #e2e8f0',
-        padding: '20px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px',
-        boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)'
-      }}>
-        {/* Left Title & Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            width: '46px',
-            height: '46px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
-            flexShrink: 0
-          }}>
-            <Bus size={26} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                Transport Operations Dashboard
-              </h1>
-              <span style={{
-                fontSize: '11px',
-                fontWeight: '800',
-                padding: '3px 10px',
-                borderRadius: '9999px',
-                backgroundColor: '#eff6ff',
-                color: '#0284c7',
-                border: '1px solid #bfdbfe'
-              }}>
-                Transport Fleet Details
-              </span>
+      <div 
+        className="sticky-dashboard-master-header"
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 80,
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          border: '1.5px solid #e2e8f0',
+          padding: '12px 20px',
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          marginBottom: '4px'
+        }}
+      >
+        {/* Tier 1: Transport Title, Badge, Subtitle & Action Buttons */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          {/* Module Title, Icon & Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              backgroundColor: '#eff6ff',
+              color: '#0284c7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
+              flexShrink: 0
+            }}>
+              🚌
             </div>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-              1. Month-by-Month Expenditure • 2. Fleet Expense by Category • 3. Financial & Fleet Summary • {periods.length} Months Recorded (Jun'26 – Oct'26)
-            </p>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h1 style={{
+                  fontSize: '20px',
+                  fontWeight: '800',
+                  color: '#0f172a',
+                  margin: 0,
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1.2
+                }}>
+                  Transport Operations Dashboard
+                </h1>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '2px 10px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#eff6ff',
+                  color: '#0284c7',
+                  border: '1px solid #bfdbfe'
+                }}>
+                  Transport
+                </span>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  backgroundColor: activeBranchObj.badgeBg,
+                  color: activeBranchObj.badgeColor,
+                  border: `1px solid ${activeBranchObj.badgeColor}30`
+                }}>
+                  {activeBranchObj.icon} {activeBranchObj.label} ({metrics.vehicles_count})
+                </span>
+              </div>
+              <p style={{
+                fontSize: '12px',
+                color: '#64748b',
+                margin: '2px 0 0 0',
+                fontWeight: '500'
+              }}>
+                1. Month-by-Month Expenditure • 2. Fleet Expense by Category • 3. Financial & Fleet Summary • {periods.length} Months Recorded (Jun'26 – Oct'26)
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Right Actions & Period Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Period Dropdown Selector */}
-          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#0284c7', pointerEvents: 'none' }} />
-            <select
-              value={activePeriod || 'all'}
-              onChange={(e) => setActivePeriod && setActivePeriod(e.target.value)}
-              style={{
-                backgroundColor: '#f8fafc',
-                border: '1.5px solid #cbd5e1',
-                borderRadius: '10px',
-                padding: '8px 30px 8px 30px',
-                fontSize: '12.5px',
-                fontWeight: '700',
-                color: '#0f172a',
-                outline: 'none',
-                cursor: 'pointer',
-                appearance: 'none',
-                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)'
-              }}
-            >
-              <option value="all">
-                All Months (Total Cumulative)
-              </option>
-              {periods.map(p => (
-                <option key={p.id} value={String(p.id)}>
-                  {formatPeriodLabel(p)} • {p.period_label || p.period_code}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} style={{ position: 'absolute', right: '10px', color: '#64748b', pointerEvents: 'none' }} />
-          </div>
-
-          {/* Refresh Live Button */}
-          <button
-            type="button"
-            onClick={fetchLiveMatrix}
-            disabled={loading}
-            title="Refresh live data from database"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 16px',
-              borderRadius: '9999px',
-              backgroundColor: '#ffffff',
-              border: '1.5px solid #cbd5e1',
-              color: '#475569',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: loading ? 'wait' : 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            <span>{loading ? 'Refreshing...' : 'Refresh Live'}</span>
-          </button>
-
-          {/* Download Official Report Button */}
-          <button
-            type="button"
-            onClick={handleExportReport || handlePrint}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 18px',
-              borderRadius: '9999px',
-              backgroundColor: '#0284c7',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0369a1'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0284c7'}
-          >
-            <Download size={14} />
-            <span>Download Report</span>
-          </button>
-
-          {/* Open Data Entry Button (Vibrant Coral Pink Pill Button) */}
-          {onOpenDataEntry && (
+          {/* Action Buttons (Refresh Live, Download Report, Open Data Entry) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Refresh Live Button */}
             <button
               type="button"
-              onClick={onOpenDataEntry}
+              onClick={fetchLiveMatrix}
+              disabled={loading}
+              title="Refresh live data from database"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '7px 14px',
+                borderRadius: '9999px',
+                backgroundColor: '#ffffff',
+                border: '1.5px solid #cbd5e1',
+                color: '#475569',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                cursor: loading ? 'wait' : 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+              <span>{loading ? 'Refreshing...' : 'Refresh Live'}</span>
+            </button>
+
+            {/* Download Official Report Button */}
+            <button
+              type="button"
+              onClick={handleExportReport || handlePrint}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '9px 20px',
+                padding: '8px 18px',
                 borderRadius: '9999px',
-                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
-                color: '#ffffff',
+                backgroundColor: '#0284c7',
                 border: 'none',
-                fontSize: '12.5px',
-                fontWeight: '800',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: '700',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
-                transition: 'all 0.18s ease'
+                boxShadow: '0 3px 12px rgba(2, 132, 199, 0.25)',
+                transition: 'all 0.15s ease'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0369a1'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0284c7'}
             >
-              <span>Open Data Entry</span>
-              <ArrowRight size={14} />
+              <Download size={13} />
+              <span>Download Report</span>
             </button>
-          )}
+
+            {/* Open Data Entry Button */}
+            {onOpenDataEntry && (
+              <button
+                type="button"
+                onClick={onOpenDataEntry}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 18px',
+                  borderRadius: '9999px',
+                  background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: '0 3px 12px rgba(255, 96, 136, 0.3)',
+                  transition: 'all 0.18s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <span>Open Data Entry</span>
+                <ArrowRight size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tier 2: Filter 1 - Institutional Fleets Selector */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '8px',
+          paddingTop: '8px',
+          borderTop: '1px solid #edf0f8'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{
+              fontSize: '11.5px',
+              fontWeight: '800',
+              color: '#475569',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginRight: '2px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              🏫 Institutional Fleets:
+            </span>
+            {TRANSPORT_BRANCHES.map(br => {
+              const isSel = activeBranch === br.id;
+              const countBadge = br.id === 'all' ? '58 Buses' : (br.id === 'Common' ? '18 Buses' : (br.id === 'RPS' ? '19 Buses' : (br.id === 'University' ? '16 Buses' : '5 Buses')));
+
+              return (
+                <button
+                  key={br.id}
+                  type="button"
+                  onClick={() => setActiveBranch(br.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 12px',
+                    borderRadius: '9999px',
+                    fontSize: '11.5px',
+                    fontWeight: isSel ? '800' : '650',
+                    border: isSel ? `2px solid ${br.badgeColor}` : '1.5px solid #e2e8f0',
+                    backgroundColor: isSel ? br.badgeBg : '#ffffff',
+                    color: isSel ? br.badgeColor : '#475569',
+                    cursor: 'pointer',
+                    boxShadow: isSel ? `0 2px 8px ${br.badgeColor}25` : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span>{br.icon}</span>
+                  <span>{br.label}</span>
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    backgroundColor: isSel ? '#ffffff' : '#f1f5f9',
+                    color: isSel ? br.badgeColor : '#64748b',
+                    padding: '1px 6px',
+                    borderRadius: '10px'
+                  }}>
+                    {countBadge}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: activeBranchObj.badgeBg,
+            color: activeBranchObj.badgeColor,
+            padding: '4px 10px',
+            borderRadius: '10px',
+            fontSize: '11px',
+            fontWeight: '700',
+            border: `1px solid ${activeBranchObj.badgeColor}30`
+          }}>
+            <span>{activeBranchObj.icon}</span>
+            <span>{activeBranchObj.description}</span>
+          </div>
+        </div>
+
+        {/* Tier 3: Filter 2 - Month Filter Pills & Viewing Indicator */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '8px',
+          paddingTop: '6px',
+          borderTop: '1px dashed #e2e8f0'
+        }}>
+          {/* Left: Month Filter Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11.5px',
+              fontWeight: '800',
+              color: '#475569',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginRight: '2px'
+            }}>
+              <Calendar size={14} color="#0284c7" />
+              <span>Filter Month:</span>
+            </div>
+
+            {/* All Months Pill */}
+            <button
+              type="button"
+              onClick={() => setActivePeriod && setActivePeriod('all')}
+              style={{
+                padding: '4px 13px',
+                borderRadius: '9999px',
+                fontSize: '11.5px',
+                fontWeight: isAllMonths ? '800' : '650',
+                border: isAllMonths ? '1.5px solid #0284c7' : '1.5px solid #cbd5e1',
+                backgroundColor: isAllMonths ? '#0284c7' : '#ffffff',
+                color: isAllMonths ? '#ffffff' : '#475569',
+                cursor: 'pointer',
+                boxShadow: isAllMonths ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>All months</span>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '800',
+                padding: '1px 5px',
+                borderRadius: '10px',
+                backgroundColor: isAllMonths ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                color: isAllMonths ? '#ffffff' : '#64748b'
+              }}>
+                {periods.length}
+              </span>
+            </button>
+
+            {/* Individual Month Pills */}
+            {periods.map(p => {
+              const isSel = !isAllMonths && String(p.id) === String(activePeriod);
+              const pBm = getBranchMetrics(activeBranch, String(p.id));
+              const pTotal = pBm?.total_expenses || 0;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setActivePeriod && setActivePeriod(String(p.id))}
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: '9999px',
+                    fontSize: '11.5px',
+                    fontWeight: isSel ? '800' : '650',
+                    border: isSel ? '1.5px solid #0284c7' : '1.5px solid #cbd5e1',
+                    backgroundColor: isSel ? '#0284c7' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#475569',
+                    cursor: 'pointer',
+                    boxShadow: isSel ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span>{p.period_label || p.period_code}</span>
+                  {pTotal > 0 && (
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      padding: '1px 5px',
+                      borderRadius: '10px',
+                      backgroundColor: isSel ? 'rgba(255,255,255,0.25)' : '#f8fafc',
+                      color: isSel ? '#ffffff' : '#64748b'
+                    }}>
+                      {formatIndianCompact(pTotal)}
+                    </span>
+                  )}
+                  {isSel && <Check size={11} strokeWidth={3} />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right: Active Viewing Indicator */}
+          <div style={{
+            fontSize: '12px',
+            color: '#64748b',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span>Viewing:</span>
+            <strong style={{
+              color: '#0f172a',
+              fontWeight: '800',
+              padding: '3px 10px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
+            }}>
+              {isAllMonths
+                ? `All Months (${periods.length} Cycles • ${formatINR(metrics.total_expenses)})`
+                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(metrics.total_expenses)})`
+              }
+            </strong>
+          </div>
         </div>
       </div>
 
@@ -585,83 +808,7 @@ export default function TransportOperationsDashboard({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* BRANCH / FLEET SELECTOR PILLS BAR                                         */}
-      {/* ========================================================================= */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        border: '1.5px solid #e2e8f0',
-        padding: '12px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            🏫 Institutional Fleets:
-          </span>
-          {TRANSPORT_BRANCHES.map(br => {
-            const isSel = activeBranch === br.id;
-            const countBadge = br.id === 'all' ? '58 Buses' : (br.id === 'Common' ? '18 Buses' : (br.id === 'RPS' ? '19 Buses' : (br.id === 'University' ? '16 Buses' : '5 Buses')));
 
-            return (
-              <button
-                key={br.id}
-                type="button"
-                onClick={() => setActiveBranch(br.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '12px',
-                  fontWeight: isSel ? '800' : '650',
-                  border: isSel ? `2px solid ${br.badgeColor}` : '1.5px solid #e2e8f0',
-                  backgroundColor: isSel ? br.badgeBg : '#ffffff',
-                  color: isSel ? br.badgeColor : '#475569',
-                  cursor: 'pointer',
-                  boxShadow: isSel ? `0 2px 8px ${br.badgeColor}25` : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <span>{br.icon}</span>
-                <span>{br.label}</span>
-                <span style={{
-                  fontSize: '10.5px',
-                  fontWeight: '800',
-                  backgroundColor: isSel ? '#ffffff' : '#f1f5f9',
-                  color: isSel ? br.badgeColor : '#64748b',
-                  padding: '1px 7px',
-                  borderRadius: '10px'
-                }}>
-                  {countBadge}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          backgroundColor: activeBranchObj.badgeBg,
-          color: activeBranchObj.badgeColor,
-          padding: '6px 14px',
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: '700',
-          border: `1px solid ${activeBranchObj.badgeColor}30`
-        }}>
-          <span>{activeBranchObj.icon}</span>
-          <span>{activeBranchObj.description}</span>
-        </div>
-      </div>
 
       {/* ========================================================================= */}
       {/* MAIN VIEW: EXECUTIVE OVERVIEW (3 NUMBERED SECTIONS MATCHING FOOD/HOSTEL)  */}
