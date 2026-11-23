@@ -31,6 +31,7 @@ import MonthlyExpenseSection from './monthly_expense/MonthlyExpenseSection';
 import HostelOperationsDashboard from './hostel/HostelOperationsDashboard';
 import TransportOperationsDashboard from './transport/TransportOperationsDashboard';
 import CctvOperationsDashboard from './cctv/CctvOperationsDashboard';
+import FoodBudgetChartSection from './food/FoodBudgetChartSection';
 
 // Helper to determine the period of the latest recorded entry across modules
 export const getLastEnteredPeriod = (periods = [], matrix = null, module = 'food', branch = null) => {
@@ -1051,6 +1052,18 @@ export default function DashboardPage({
         activePeriod={activePeriod}
         onPeriodChange={setActivePeriod}
       />
+
+      {/* ========================================================================= */}
+      {/* FOOD OPERATIONS BUDGET VS ACTUAL EXPENDITURE CHART                        */}
+      {/* ========================================================================= */}
+      {currentModule === 'food' && (
+        <FoodBudgetChartSection
+          computedMatrix={effectiveMatrix}
+          periods={periods}
+          activePeriod={activePeriod}
+          onPeriodChange={setActivePeriod}
+        />
+      )}
 
       {/* ========================================================================= */}
       {/* LINE 3 (LAST): EXECUTIVE FINANCIAL TOTALS SUMMARY                         */}

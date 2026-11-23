@@ -3,9 +3,10 @@ import { formatINR } from '../../utils/formatters';
 import { evaluateFormula } from '../../utils/formulaEngine';
 import { 
   Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Utensils, 
-  AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, Users, Award 
+  AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, Users, Award, Wallet
 } from 'lucide-react';
 import FoodCardSpreadsheet from './cards/FoodCardSpreadsheet';
+import FoodBudgetEntrySection from './food_budget/FoodBudgetEntrySection';
 
 export default function FoodSpreadsheetEntry({
   activePeriodObj,
@@ -411,6 +412,83 @@ export default function FoodSpreadsheetEntry({
     );
   }
 
+  if (activeSubTab === 'budget') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+        {/* Navigation Switcher Pills */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: '#ffffff',
+          padding: '12px 20px',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Switch Food View:
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '9999px' }}>
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('cards')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent',
+                  color: '#64748b'
+                }}
+              >
+                🗂️ Cards View
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('excel_grid')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent',
+                  color: '#64748b'
+                }}
+              >
+                📊 Multi-Month Excel Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('budget')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: '#4f46e5',
+                  color: '#ffffff',
+                  boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)'
+                }}
+              >
+                💰 Food Budget Tracking (8 Heads)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <FoodBudgetEntrySection periods={periods} onRefreshData={fetchData} />
+      </div>
+    );
+  }
+
   return (
     <div style={{
       backgroundColor: '#ffffff',
@@ -631,6 +709,22 @@ export default function FoodSpreadsheetEntry({
             }}
           >
             Focused Month ({activePeriodObj?.period_label})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('budget')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              fontSize: '11.5px',
+              fontWeight: '800',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: activeSubTab === 'budget' ? '#4f46e5' : 'transparent',
+              color: activeSubTab === 'budget' ? '#ffffff' : '#64748b'
+            }}
+          >
+            💰 Budget Tracking (8 Heads)
           </button>
         </div>
       </div>

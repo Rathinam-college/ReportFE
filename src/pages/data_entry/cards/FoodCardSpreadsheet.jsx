@@ -3,7 +3,7 @@ import { formatINR } from '../../../utils/formatters';
 import { 
   Plus, Trash2, Lock, Unlock, Copy, Check, Save, RefreshCw, 
   CheckCircle2, AlertCircle, FileSpreadsheet, LayoutGrid, Table,
-  Calculator, Users, Shield, Sparkles, Layers, MessageSquare
+  Calculator, Users, Shield, Sparkles, Layers, MessageSquare, Wallet
 } from 'lucide-react';
 
 // Palette assigned in order, cycling if more
@@ -359,6 +359,27 @@ export default function FoodCardSpreadsheet({
               >
                 <Table size={12} />
                 <span>Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('budget')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: viewMode === 'budget' ? '#4f46e5' : 'transparent',
+                  color: viewMode === 'budget' ? '#ffffff' : 'var(--text-muted, #66708f)',
+                  fontSize: '11.5px',
+                  fontWeight: viewMode === 'budget' ? '800' : '500',
+                  boxShadow: viewMode === 'budget' ? '0 2px 6px rgba(79, 70, 229, 0.25)' : 'none'
+                }}
+              >
+                <Wallet size={12} />
+                <span>Budget</span>
               </button>
             </div>
           )}
