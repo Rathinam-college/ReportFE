@@ -66,6 +66,21 @@ export default function CategoryCard({
 
   const isNonAdditiveCategory = isPersonCategory || isCostPerPerson || Boolean(category.isExcluded);
 
+  const getDaysInPeriod = (p) => {
+    if (!p) return 30;
+    if (p.operating_days) return Number(p.operating_days);
+    if (p.days) return Number(p.days);
+    const label = String(p.period_label || p.period_code || '').toLowerCase();
+    if (label.includes('jan') || label.includes('mar') || label.includes('may') || label.includes('jul') || label.includes('aug') || label.includes('oct') || label.includes('dec')) {
+      return 31;
+    }
+    if (label.includes('feb')) return 28;
+    return 30;
+  };
+
+  const currentPeriodObj = periods.find(p => String(p.id) === String(selectedPeriod));
+  const currentDays = getDaysInPeriod(currentPeriodObj);
+
   const isPersonItem = (itName = '') => {
     if (isPersonCategory) return true;
     const n = String(itName || '').toLowerCase().trim();
@@ -211,19 +226,76 @@ export default function CategoryCard({
         <div
           title={isAllMonths && isNonAdditiveCategory ? 'Total not applicable across cycles' : (isPersonCategory ? formatPerson(selectedAmount) : formatFull(selectedAmount))}
           style={{
-            fontSize: '24px',
-            fontWeight: '800',
-            letterSpacing: '-0.02em',
-            color: 'var(--text-main, #14172b)',
-            lineHeight: 1.25,
             marginTop: '4px'
           }}
         >
-          {isAllMonths && isNonAdditiveCategory
-            ? '—'
-            : (selectedAmount > 0 
-                ? (isPersonCategory ? formatPerson(selectedAmount) : formatCompact(selectedAmount)) 
-                : (isPersonCategory ? '0' : '—'))}
+          {isAllMonths && isNonAdditiveCategory ? (
+            <div style={{
+              fontSize: '24px',
+              fontWeight: '800',
+              letterSpacing: '-0.02em',
+              color: 'var(--text-main, #14172b)',
+              lineHeight: 1.25
+            }}>
+              —
+            </div>
+          ) : (
+            selectedAmount > 0 ? (
+              isCostPerPerson ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontSize: '24px',
+                      fontWeight: '800',
+                      letterSpacing: '-0.02em',
+                      color: 'var(--text-main, #14172b)',
+                      lineHeight: 1.25
+                    }}>
+                      {formatCompact(selectedAmount)}
+                    </span>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-muted, #6b7090)' }}>
+                      / per day
+                    </span>
+                    <span style={{
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      color: '#4f46e5',
+                      backgroundColor: '#eef2ff',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #c7d2fe',
+                      marginLeft: 'auto'
+                    }}>
+                      ≈ {formatCompact(Math.round(selectedAmount * currentDays * 10) / 10)} / mo
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted, #6b7090)', fontWeight: '600' }}>
+                    Monthly: ₹{Math.round(selectedAmount * currentDays).toLocaleString('en-IN')} ({currentDays} days)
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  fontSize: '24px',
+                  fontWeight: '800',
+                  letterSpacing: '-0.02em',
+                  color: 'var(--text-main, #14172b)',
+                  lineHeight: 1.25
+                }}>
+                  {isPersonCategory ? formatPerson(selectedAmount) : formatCompact(selectedAmount)}
+                </div>
+              )
+            ) : (
+              <div style={{
+                fontSize: '24px',
+                fontWeight: '800',
+                letterSpacing: '-0.02em',
+                color: 'var(--text-main, #14172b)',
+                lineHeight: 1.25
+              }}>
+                {isPersonCategory ? '0' : '—'}
+              </div>
+            )
+          )}
         </div>
 
         {/* Monthly Trend Bars: Value on Top, Bar in Middle, Month Label Under */}
@@ -251,7 +323,10 @@ export default function CategoryCard({
             const remarkSummary = hasRemarks
               ? monthRemarks.map(m => `• ${m.itemName}: "${m.text}"`).join('\n')
               : 'No remarks recorded';
-            const formattedMonthVal = isPersonCategory ? formatPerson(mVal) : formatFull(mVal);
+            const pDays = getDaysInPeriod(p);
+            const formattedMonthVal = isCostPerPerson 
+              ? `${formatFull(mVal)} / day`
+              : (isPersonCategory ? formatPerson(mVal) : formatFull(mVal));
             const tooltipTitle = hasRemarks
               ? `${p.period_label || p.period_code}: ${formattedMonthVal}\n\n💬 Remarks / Comments:\n${remarkSummary}`
               : `${p.period_label || p.period_code}: ${formattedMonthVal}`;
@@ -332,6 +407,15 @@ export default function CategoryCard({
                         {formattedMonthVal}
                       </span>
                     </div>
+
+                    {isCostPerPerson && mVal > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', fontSize: '11px', marginTop: '2px' }}>
+                        <span style={{ color: '#94a3b8' }}>Monthly ({pDays} days):</span>
+                        <span style={{ fontWeight: '800', color: '#a5b4fc' }}>
+                          ₹{Math.round(mVal * pDays).toLocaleString('en-IN')} / mo
+                        </span>
+                      </div>
+                    )}
 
                     <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -442,7 +526,99 @@ export default function CategoryCard({
             gap: '12px'
           }}
         >
-          {items.length === 0 ? (
+          {isCostPerPerson ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Daily Calculation Item */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '12.5px'
+                }}>
+                  <span style={{
+                    color: 'var(--text-main, #14172b)',
+                    fontWeight: '600',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span>Cost Per Person / Day</span>
+                  </span>
+                  <span style={{
+                    fontWeight: '700',
+                    color: (isAllMonths && isNonAdditiveCategory) ? 'var(--text-muted, #6b7090)' : 'var(--text-main, #14172b)'
+                  }}>
+                    {isAllMonths && isNonAdditiveCategory ? '—' : `${formatCompact(selectedAmount)} / day`}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: '100%',
+                    height: '7px',
+                    borderRadius: '9999px',
+                    backgroundColor: 'var(--bg-pill, #eceefa)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: (!isAllMonths && selectedAmount > 0) ? '100%' : '0%',
+                      height: '100%',
+                      borderRadius: '9999px',
+                      backgroundColor: color,
+                      transition: 'width 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Monthly Calculation Item */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '12.5px'
+                }}>
+                  <span style={{
+                    color: 'var(--text-main, #14172b)',
+                    fontWeight: '600',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span>Cost Per Person / Month ({isAllMonths ? 'Per Cycle' : `${currentDays} days`})</span>
+                  </span>
+                  <span style={{
+                    fontWeight: '700',
+                    color: (isAllMonths && isNonAdditiveCategory) ? 'var(--text-muted, #6b7090)' : '#4f46e5'
+                  }}>
+                    {isAllMonths && isNonAdditiveCategory ? '—' : `₹${Math.round(selectedAmount * currentDays).toLocaleString('en-IN')} / mo`}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: '100%',
+                    height: '7px',
+                    borderRadius: '9999px',
+                    backgroundColor: 'var(--bg-pill, #eceefa)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: (!isAllMonths && selectedAmount > 0) ? '100%' : '0%',
+                      height: '100%',
+                      borderRadius: '9999px',
+                      backgroundColor: '#6366f1',
+                      transition: 'width 0.45s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : items.length === 0 ? (
             <div style={{ fontSize: '12px', color: 'var(--text-muted, #6b7090)', fontStyle: 'italic' }}>
               No individual line items
             </div>

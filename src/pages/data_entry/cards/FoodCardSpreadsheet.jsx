@@ -1192,12 +1192,40 @@ export default function FoodCardSpreadsheet({
 
             {/* Calculated Metric Display */}
             <div>
-              <div style={{ fontSize: '30px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.02em' }}>
-                {formatINR(categorySubtotals[costPerPersonCategory.category_id]?.[editingPeriodId] ?? 0)}
-              </div>
-              <div style={{ fontSize: '12px', color: '#a5b4fc', marginTop: '4px' }}>
-                Computed live for {activePeriodLabel} • Read-Only
-              </div>
+              {(() => {
+                const cppVal = Number(categorySubtotals[costPerPersonCategory.category_id]?.[editingPeriodId] ?? 0);
+                const pLabel = String(activePeriod?.period_label || '').toLowerCase();
+                const daysInMo = (pLabel.includes('oct') || pLabel.includes('dec') || pLabel.includes('jan') || pLabel.includes('mar') || pLabel.includes('may') || pLabel.includes('jul') || pLabel.includes('aug')) ? 31 : (pLabel.includes('feb') ? 28 : 30);
+                const cppMonthly = cppVal * daysInMo;
+                return (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '28px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.02em' }}>
+                        {formatINR(cppVal)}
+                      </span>
+                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#a5b4fc' }}>
+                        / per day
+                      </span>
+                      {cppMonthly > 0 && (
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          color: '#e0e7ff',
+                          backgroundColor: 'rgba(255,255,255,0.15)',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          marginLeft: 'auto'
+                        }}>
+                          ≈ {formatINR(cppMonthly)} / mo
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#a5b4fc', marginTop: '6px' }}>
+                      Monthly calculation: {formatINR(cppVal)} × {daysInMo} days = {formatINR(cppMonthly)} / month • Computed live for {activePeriodLabel}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Formula Expression Details */}

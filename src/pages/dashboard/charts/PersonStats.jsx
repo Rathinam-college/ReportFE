@@ -204,12 +204,19 @@ export default function PersonStats({
           <span style={{ fontSize: '11px', fontWeight: '700', color: '#5b5bf0' }}>
             Cost Per Person
           </span>
-          <span
-            title={costPerPerson ? formatFull(costPerPerson) : ''}
-            style={{ fontSize: '18px', fontWeight: '800', color: '#5b5bf0' }}
-          >
-            {costPerPerson !== null && costPerPerson > 0 ? `₹${Math.round(costPerPerson).toLocaleString('en-IN')}` : '—'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+            <span
+              title={costPerPerson ? formatFull(costPerPerson) : ''}
+              style={{ fontSize: '18px', fontWeight: '800', color: '#5b5bf0' }}
+            >
+              {costPerPerson !== null && costPerPerson > 0 ? `₹${Math.round(costPerPerson).toLocaleString('en-IN')}` : '—'}
+            </span>
+            {costPerPerson !== null && costPerPerson > 0 && (
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#6b7090' }}>
+                / day
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
