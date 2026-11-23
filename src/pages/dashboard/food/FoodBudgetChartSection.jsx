@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { formatINR, formatLakhs, formatIndianCompact } from '../../../utils/formatters';
-import { 
-  BarChart3, Layers, Wallet, TrendingUp, PieChart, 
-  Calendar, Table, Check, ArrowUpRight, ArrowDownRight, 
-  ShieldCheck, AlertTriangle, CheckCircle2, Sparkles, Filter
-} from 'lucide-react';
+import { formatINR, formatLakhs } from '../../../utils/formatters';
+import { Wallet, Table } from 'lucide-react';
 import { CANONICAL_FOOD_BUDGET_HEADS, FOOD_MONTH_COLS } from '../../data_entry/food_budget/FoodBudgetEntrySection';
 
 export default function FoodBudgetChartSection({
@@ -14,10 +10,9 @@ export default function FoodBudgetChartSection({
   onPeriodChange
 }) {
   const [budgetData, setBudgetData] = useState([]);
-  const [chartView, setChartView] = useState('bars'); // 'bars' | 'cards' | 'matrix'
   const [loading, setLoading] = useState(false);
 
-  // 1. Fetch live budget data from PostgreSQL or computedMatrix
+  // 1. Fetch live budget data from PostgreSQL or fallback
   const fetchBudget = async () => {
     try {
       setLoading(true);
@@ -103,28 +98,16 @@ export default function FoodBudgetChartSection({
   const isOverallUnderBudget = currentVariance >= 0;
   const overallUtilizationPct = currentBudgetTarget > 0 ? ((totalCurrentActual / currentBudgetTarget) * 100).toFixed(1) : 0;
 
-  // Max value for chart bar scaling
-  const maxBarValue = useMemo(() => {
-    let max = 0;
-    budgetData.forEach(r => {
-      const b = getHeadBudget(r);
-      const a = getHeadActual(r);
-      if (b > max) max = b;
-      if (a > max) max = a;
-    });
-    return max > 0 ? max * 1.15 : 10000000;
-  }, [budgetData, activeColKey]);
-
   // Palette for 8 Heads
   const HEAD_COLORS = [
-    { primary: '#ffc90e', border: '#eab308', bg: '#fefce8' }, // 1. Food Material (Golden)
-    { primary: '#6366f1', border: '#4f46e5', bg: '#eef2ff' }, // 2. Salary (Indigo)
-    { primary: '#0284c7', border: '#0369a1', bg: '#f0f9ff' }, // 3. Contract Labour (Sky Blue)
-    { primary: '#ec4899', border: '#db2777', bg: '#fdf2f8' }, // 4. Catering Vendor (Pink)
-    { primary: '#f97316', border: '#ea580c', bg: '#fff7ed' }, // 5. FC Maint/Power (Orange)
-    { primary: '#8b5cf6', border: '#7c3aed', bg: '#f5f3ff' }, // 6. Event/Add Food (Purple)
-    { primary: '#10b981', border: '#059669', bg: '#ecfdf5' }, // 7. Food Festival (Emerald)
-    { primary: '#14b8a6', border: '#0d9488', bg: '#f0fdfa' }  // 8. Staff Welfare (Teal)
+    { primary: '#d97706', border: '#f59e0b', bg: '#fefce8' }, // 1. Food Material (Golden)
+    { primary: '#4f46e5', border: '#6366f1', bg: '#eef2ff' }, // 2. Salary (Indigo)
+    { primary: '#0284c7', border: '#38bdf8', bg: '#f0f9ff' }, // 3. Contract Labour (Sky Blue)
+    { primary: '#db2777', border: '#f472b6', bg: '#fdf2f8' }, // 4. Catering Vendor (Pink)
+    { primary: '#ea580c', border: '#fb923c', bg: '#fff7ed' }, // 5. FC Maint/Power (Orange)
+    { primary: '#7c3aed', border: '#a78bfa', bg: '#f5f3ff' }, // 6. Event/Add Food (Purple)
+    { primary: '#059669', border: '#34d399', bg: '#ecfdf5' }, // 7. Food Festival (Emerald)
+    { primary: '#0d9488', border: '#2dd4bf', bg: '#f0fdfa' }  // 8. Staff Welfare (Teal)
   ];
 
   return (
@@ -166,9 +149,9 @@ export default function FoodBudgetChartSection({
             <Wallet size={20} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                Food Operations Budget vs Actual Expenditure Chart
+                Food Operations Budget Allocation & Tracking
               </h2>
               <span style={{
                 fontSize: '11px',
@@ -192,75 +175,9 @@ export default function FoodBudgetChartSection({
               </span>
             </div>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-              Side-by-side comparison of Sanctioned Target vs Actual Expenses for {activePeriodLabel}
+              Comparison of Sanctioned Target vs Actual Expenses for {activePeriodLabel}
             </p>
           </div>
-        </div>
-
-        {/* View Model Toggle Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button
-            type="button"
-            onClick={() => setChartView('bars')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: chartView === 'bars' ? '800' : '600',
-              backgroundColor: chartView === 'bars' ? '#4f46e5' : '#f8fafc',
-              color: chartView === 'bars' ? '#ffffff' : '#64748b',
-              border: chartView === 'bars' ? '1px solid #4f46e5' : '1px solid #cbd5e1',
-              cursor: 'pointer'
-            }}
-          >
-            <BarChart3 size={13} />
-            <span>Clustered Bars</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setChartView('cards')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: chartView === 'cards' ? '800' : '600',
-              backgroundColor: chartView === 'cards' ? '#4f46e5' : '#f8fafc',
-              color: chartView === 'cards' ? '#ffffff' : '#64748b',
-              border: chartView === 'cards' ? '1px solid #4f46e5' : '1px solid #cbd5e1',
-              cursor: 'pointer'
-            }}
-          >
-            <Layers size={13} />
-            <span>Progress Gauges</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setChartView('matrix')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: chartView === 'matrix' ? '800' : '600',
-              backgroundColor: chartView === 'matrix' ? '#4f46e5' : '#f8fafc',
-              color: chartView === 'matrix' ? '#ffffff' : '#64748b',
-              border: chartView === 'matrix' ? '1px solid #4f46e5' : '1px solid #cbd5e1',
-              cursor: 'pointer'
-            }}
-          >
-            <Table size={13} />
-            <span>Matrix Table</span>
-          </button>
         </div>
       </div>
 
@@ -376,332 +293,162 @@ export default function FoodBudgetChartSection({
         </div>
       </div>
 
-      {/* 3. CHART VIEW: CLUSTERED SIDE-BY-SIDE BARS */}
-      {chartView === 'bars' && (
+      {/* 3. MATRIX TABLE */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '16px',
+        border: '1.5px solid #e2e8f0',
+        overflow: 'hidden',
+        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)'
+      }}>
         <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          padding: '24px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+          padding: '14px 18px',
+          backgroundColor: '#f8fafc',
+          borderBottom: '1.5px solid #e2e8f0',
           display: 'flex',
-          flexDirection: 'column',
-          gap: '18px'
+          alignItems: 'center',
+          justifyContent: 'space-between'
         }}>
-          {/* Chart Subtitle & Legend */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
-              8-Head Expenditure vs Target Comparison ({activePeriodLabel})
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Table size={16} style={{ color: '#4f46e5' }} />
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+              Budget Allocation & Expenditure Ledger
             </span>
-
-            {/* Legend */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#6366f1' }} />
-                <span style={{ fontWeight: '600', color: '#475569' }}>Budget Limit (₹)</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#10b981' }} />
-                <span style={{ fontWeight: '600', color: '#475569' }}>Actual Spent (Under Budget)</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#ef4444' }} />
-                <span style={{ fontWeight: '600', color: '#475569' }}>Exceeding Budget</span>
-              </div>
-            </div>
           </div>
+          <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>
+            Period: <strong style={{ color: '#0f172a' }}>{activePeriodLabel}</strong>
+          </span>
+        </div>
 
-          {/* Bar Chart Grid */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1.5px solid #cbd5e1', color: '#334155', fontWeight: '800' }}>
+              <th style={{ padding: '12px 14px', width: '50px', textAlign: 'center' }}>#</th>
+              <th style={{ padding: '12px 16px' }}>Budget Head Name</th>
+              <th style={{ padding: '12px 14px', textAlign: 'right' }}>Annual Sanctioned</th>
+              <th style={{ padding: '12px 14px', textAlign: 'right' }}>{activePeriodLabel} Actual</th>
+              <th style={{ padding: '12px 14px', textAlign: 'right' }}>Variance / Balance</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center' }}>Utilization</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center' }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
             {budgetData.map((row, idx) => {
-              const budgetVal = getHeadBudget(row);
-              const actualVal = getHeadActual(row);
-              const budgetPct = (budgetVal / maxBarValue) * 100;
-              const actualPct = (actualVal / maxBarValue) * 100;
-              const isOver = actualVal > budgetVal && budgetVal > 0;
-              const utilPct = budgetVal > 0 ? ((actualVal / budgetVal) * 100).toFixed(1) : 0;
+              const bTarget = getHeadBudget(row);
+              const actual = getHeadActual(row);
+              const balance = bTarget - actual;
+              const isOver = actual > bTarget && bTarget > 0;
+              const utilPct = bTarget > 0 ? ((actual / bTarget) * 100).toFixed(1) : 0;
               const theme = HEAD_COLORS[idx % HEAD_COLORS.length];
 
               return (
-                <div key={row.budget_head || idx} style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #edf2f7',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
+                <tr key={row.budget_head || idx} style={{
+                  borderBottom: '1px solid #f1f5f9',
+                  backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafbfc'
                 }}>
-                  {/* Row Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '6px',
-                        backgroundColor: theme.bg,
-                        color: theme.primary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        border: `1px solid ${theme.border}`
-                      }}>
-                        {idx + 1}
-                      </span>
-                      <strong style={{ fontSize: '13px', color: '#0f172a' }}>{row.budget_head}</strong>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>
-                        Budget: <strong>{formatINR(budgetVal)}</strong> ({formatLakhs(budgetVal)})
-                      </span>
-                      <span>•</span>
-                      <span style={{ fontSize: '12px', color: isOver ? '#dc2626' : '#16a34a' }}>
-                        Actual: <strong>{formatINR(actualVal)}</strong> ({formatLakhs(actualVal)})
-                      </span>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        padding: '2px 8px',
-                        borderRadius: '9999px',
-                        backgroundColor: isOver ? '#fee2e2' : '#dcfce7',
-                        color: isOver ? '#991b1b' : '#166534'
-                      }}>
-                        {utilPct}% Utilized
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Dual Comparison Bars */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
-                    {/* Bar 1: Budget Target */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ width: '48px', fontSize: '10.5px', fontWeight: '700', color: '#6366f1', textAlign: 'right' }}>
-                        Target
-                      </span>
-                      <div style={{ flex: 1, height: '10px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{
-                          width: `${Math.min(100, Math.max(2, budgetPct))}%`,
-                          height: '100%',
-                          backgroundColor: '#6366f1',
-                          borderRadius: '4px',
-                          transition: 'width 0.4s ease'
-                        }} />
-                      </div>
-                    </div>
-
-                    {/* Bar 2: Actual Spent */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ width: '48px', fontSize: '10.5px', fontWeight: '700', color: isOver ? '#dc2626' : '#16a34a', textAlign: 'right' }}>
-                        Actual
-                      </span>
-                      <div style={{ flex: 1, height: '10px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{
-                          width: `${Math.min(100, Math.max(2, actualPct))}%`,
-                          height: '100%',
-                          backgroundColor: isOver ? '#ef4444' : '#10b981',
-                          borderRadius: '4px',
-                          transition: 'width 0.4s ease'
-                        }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 4. CARDS VIEW: 8 BENTO PROGRESS GAUGES */}
-      {chartView === 'cards' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: '14px'
-        }}>
-          {budgetData.map((row, idx) => {
-            const budgetVal = getHeadBudget(row);
-            const actualVal = getHeadActual(row);
-            const balance = budgetVal - actualVal;
-            const isOver = actualVal > budgetVal && budgetVal > 0;
-            const utilPct = budgetVal > 0 ? ((actualVal / budgetVal) * 100).toFixed(1) : 0;
-            const theme = HEAD_COLORS[idx % HEAD_COLORS.length];
-
-            return (
-              <div key={row.budget_head || idx} style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '14px',
-                padding: '18px',
-                border: '1px solid #e2e8f0',
-                borderTop: `4px solid ${theme.primary}`,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                     <span style={{
-                      width: '24px',
-                      height: '24px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '22px',
+                      height: '22px',
                       borderRadius: '6px',
                       backgroundColor: theme.bg,
                       color: theme.primary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      fontWeight: '800'
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      border: `1px solid ${theme.border}`
                     }}>
                       {idx + 1}
                     </span>
-                    <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{row.budget_head}</strong>
-                  </div>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: '800',
-                    padding: '2px 8px',
-                    borderRadius: '9999px',
-                    backgroundColor: isOver ? '#fee2e2' : '#dcfce7',
-                    color: isOver ? '#991b1b' : '#166534'
-                  }}>
-                    {utilPct}%
-                  </span>
-                </div>
-
-                {/* Actual vs Target Amounts */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <div>
-                    <span style={{ fontSize: '10.5px', color: '#64748b', textTransform: 'uppercase' }}>Actual Spent</span>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: isOver ? '#dc2626' : '#0f172a' }} className="currency-font">
-                      {formatINR(actualVal)}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '10.5px', color: '#64748b', textTransform: 'uppercase' }}>Budget Limit</span>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#475569' }} className="currency-font">
-                      {formatINR(budgetVal)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div style={{
-                  width: '100%',
-                  height: '8px',
-                  backgroundColor: '#f1f5f9',
-                  borderRadius: '9999px',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${Math.min(100, Number(utilPct))}%`,
-                    height: '100%',
-                    backgroundColor: isOver ? '#ef4444' : Number(utilPct) > 85 ? '#f59e0b' : '#10b981',
-                    borderRadius: '9999px',
-                    transition: 'width 0.4s ease'
-                  }} />
-                </div>
-
-                {/* Footer Balance */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  </td>
+                  <td style={{ padding: '10px 16px', fontWeight: '700', color: '#0f172a' }}>{row.budget_head}</td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }} className="currency-font">
+                    {formatINR(row.sanctioned_amount)}
+                  </td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#dc2626' : '#0f172a' }} className="currency-font">
+                    {formatINR(actual)}
+                  </td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: balance >= 0 ? '#16a34a' : '#dc2626' }} className="currency-font">
+                    {balance >= 0 ? '+' : ''}{formatINR(balance)}
+                  </td>
+                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      backgroundColor: isOver ? '#fee2e2' : '#dcfce7',
+                      color: isOver ? '#991b1b' : '#166534'
+                    }}>
+                      {utilPct}%
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      backgroundColor: isOver ? '#fef2f2' : '#f0fdf4',
+                      color: isOver ? '#dc2626' : '#16a34a',
+                      border: `1px solid ${isOver ? '#fecaca' : '#bbf7d0'}`
+                    }}>
+                      {isOver ? 'Over Target' : 'Under Target'}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{
+              backgroundColor: '#f8fafc',
+              borderTop: '2px solid #cbd5e1',
+              fontWeight: '800',
+              color: '#0f172a'
+            }}>
+              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#4f46e5' }}>Σ</td>
+              <td style={{ padding: '12px 16px' }}>Total Operations Budget</td>
+              <td style={{ padding: '12px 14px', textAlign: 'right' }} className="currency-font">
+                {formatINR(totalSanctionedBudget)}
+              </td>
+              <td style={{ padding: '12px 14px', textAlign: 'right', color: isOverallUnderBudget ? '#0f172a' : '#dc2626' }} className="currency-font">
+                {formatINR(totalCurrentActual)}
+              </td>
+              <td style={{ padding: '12px 14px', textAlign: 'right', color: isOverallUnderBudget ? '#16a34a' : '#dc2626' }} className="currency-font">
+                {isOverallUnderBudget ? '+' : ''}{formatINR(currentVariance)}
+              </td>
+              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                <span style={{
                   fontSize: '11px',
-                  borderTop: '1px solid #f1f5f9',
-                  paddingTop: '8px'
+                  fontWeight: '800',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  backgroundColor: Number(overallUtilizationPct) <= 100 ? '#dcfce7' : '#fee2e2',
+                  color: Number(overallUtilizationPct) <= 100 ? '#166534' : '#991b1b'
                 }}>
-                  <span style={{ color: '#64748b' }}>Remaining Balance:</span>
-                  <strong style={{ color: balance >= 0 ? '#16a34a' : '#dc2626' }} className="currency-font">
-                    {formatINR(balance)}
-                  </strong>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 5. MATRIX TABLE VIEW */}
-      {chartView === 'matrix' && (
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          border: '1px solid #e2e8f0',
-          overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)'
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#334155', fontWeight: '800' }}>
-                <th style={{ padding: '12px 14px', width: '50px', textAlign: 'center' }}>#</th>
-                <th style={{ padding: '12px 16px' }}>Budget Head Name</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Annual Sanctioned</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>{activePeriodLabel} Actual</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Variance / Balance</th>
-                <th style={{ padding: '12px 14px', textAlign: 'center' }}>Utilization</th>
-                <th style={{ padding: '12px 14px', textAlign: 'center' }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {budgetData.map((row, idx) => {
-                const bTarget = getHeadBudget(row);
-                const actual = getHeadActual(row);
-                const balance = bTarget - actual;
-                const isOver = actual > bTarget && bTarget > 0;
-                const utilPct = bTarget > 0 ? ((actual / bTarget) * 100).toFixed(1) : 0;
-
-                return (
-                  <tr key={row.budget_head || idx} style={{
-                    borderBottom: '1px solid #f1f5f9',
-                    backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafbfc'
-                  }}>
-                    <td style={{ padding: '10px 14px', textAlign: 'center', color: '#94a3b8', fontWeight: '600' }}>{idx + 1}</td>
-                    <td style={{ padding: '10px 16px', fontWeight: '700', color: '#0f172a' }}>{row.budget_head}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }} className="currency-font">
-                      {formatINR(row.sanctioned_amount)}
-                    </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#dc2626' : '#0f172a' }} className="currency-font">
-                      {formatINR(actual)}
-                    </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: balance >= 0 ? '#16a34a' : '#dc2626' }} className="currency-font">
-                      {formatINR(balance)}
-                    </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        padding: '2px 8px',
-                        borderRadius: '9999px',
-                        backgroundColor: isOver ? '#fee2e2' : '#dcfce7',
-                        color: isOver ? '#991b1b' : '#166534'
-                      }}>
-                        {utilPct}%
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: isOver ? '#fef2f2' : '#f0fdf4',
-                        color: isOver ? '#dc2626' : '#16a34a',
-                        border: `1px solid ${isOver ? '#fecaca' : '#bbf7d0'}`
-                      }}>
-                        {isOver ? 'Over Target' : 'Under Target'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  {overallUtilizationPct}%
+                </span>
+              </td>
+              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: isOverallUnderBudget ? '#f0fdf4' : '#fef2f2',
+                  color: isOverallUnderBudget ? '#16a34a' : '#dc2626',
+                  border: `1px solid ${isOverallUnderBudget ? '#bbf7d0' : '#fecaca'}`
+                }}>
+                  {isOverallUnderBudget ? 'Under Target' : 'Over Target'}
+                </span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
 
     </section>
   );
