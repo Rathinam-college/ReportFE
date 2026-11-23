@@ -552,6 +552,77 @@ export default function ChartDataTable({
     document.body.removeChild(link);
   };
 
+  // Cell metric renderer applying Both / ₹ / % displayMode to the spreadsheet view
+  const renderCellMetric = (amount, totalDenom, isPerson = false, isBold = false) => {
+    const numAmt = Number(amount) || 0;
+    if (isPerson) {
+      return (
+        <span style={{ fontWeight: isBold ? '800' : '600', color: '#0f172a' }}>
+          {formatPersonCount(numAmt)}
+        </span>
+      );
+    }
+
+    const numDenom = Number(totalDenom) || 0;
+    const pct = (numDenom > 0 && numAmt > 0) ? ((numAmt / numDenom) * 100).toFixed(1) : '0.0';
+
+    if (displayMode === 'percentage_only') {
+      return (
+        <span style={{
+          fontWeight: isBold ? '800' : '650',
+          color: numAmt > 0 ? '#4f46e5' : '#94a3b8',
+          fontSize: '12px'
+        }}>
+          {numAmt > 0 ? `${pct}%` : '—'}
+        </span>
+      );
+    }
+
+    if (displayMode === 'amount_only') {
+      return (
+        <span style={{
+          fontWeight: isBold ? '800' : '600',
+          color: numAmt > 0 ? '#0f172a' : '#94a3b8'
+        }} className="currency-font">
+          {formatIndianCompact(numAmt)}
+        </span>
+      );
+    }
+
+    // displayMode === 'both'
+    return (
+      <div style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: '2px',
+        lineHeight: 1.15
+      }}>
+        <span style={{
+          fontWeight: isBold ? '800' : '600',
+          color: numAmt > 0 ? '#0f172a' : '#94a3b8',
+          fontSize: '12px'
+        }} className="currency-font">
+          {formatIndianCompact(numAmt)}
+        </span>
+        {numAmt > 0 && (
+          <span style={{
+            fontSize: '9.5px',
+            fontWeight: '700',
+            color: '#4f46e5',
+            backgroundColor: '#eef2ff',
+            padding: '1px 5px',
+            borderRadius: '4px',
+            border: '1px solid #e0e7ff',
+            lineHeight: 1
+          }}>
+            {pct}%
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       ref={containerRef}
@@ -878,51 +949,172 @@ export default function ChartDataTable({
             onToggleFullScreen={toggleFullScreen}
           />
         ) : (
-          <div style={{ overflowX: 'auto', backgroundColor: '#ffffff', borderRadius: '16px', padding: '16px', border: '1px solid var(--border-card, #e6e8f2)' }}>
+          <div style={{ overflowX: 'auto', backgroundColor: '#ffffff', borderRadius: '16px', padding: '16px', border: '1px solid var(--border-card, #e6e8f2)', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-card, #e6e8f2)', textAlign: 'left' }}>
-                  <th style={{ padding: '8px' }}>Category</th>
-                  <th style={{ padding: '8px' }}>Description</th>
+                <tr style={{
+                  borderBottom: '2px solid var(--border-card, #e6e8f2)',
+                  backgroundColor: '#f8fafc',
+                  textAlign: 'left',
+                  fontSize: '12px',
+                  color: '#334155'
+                }}>
+                  <th style={{ padding: '10px 12px', width: '220px' }}>Category</th>
+                  <th style={{ padding: '10px 12px', minWidth: '180px' }}>Cost Head / Description</th>
                   {periods.map(p => (
-                    <th key={p.id} style={{ padding: '8px', textAlign: 'right' }}>{p.period_label || p.period_code}</th>
+                    <th key={p.id} style={{ padding: '10px 12px', textAlign: 'right', minWidth: '110px' }}>
+                      <div style={{ fontWeight: '800' }}>{p.period_label || p.period_code}</div>
+                      <div style={{ fontSize: '10px', fontWeight: '600', color: '#64748b' }}>
+                        {displayMode === 'percentage_only' ? '% Share' : displayMode === 'amount_only' ? 'Amount (₹)' : '₹ & % Share'}
+                      </div>
+                    </th>
                   ))}
-                  <th style={{ padding: '8px', textAlign: 'right' }}>Total</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>Avg / Mo</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', minWidth: '120px' }}>
+                    <div style={{ fontWeight: '800' }}>Total</div>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: '#64748b' }}>
+                      {displayMode === 'percentage_only' ? '% Share' : displayMode === 'amount_only' ? 'Amount (₹)' : '₹ & % Share'}
+                    </div>
+                  </th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', minWidth: '110px' }}>
+                    <div style={{ fontWeight: '800' }}>Avg / Mo</div>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: '#64748b' }}>
+                      {displayMode === 'percentage_only' ? '% Share' : displayMode === 'amount_only' ? 'Amount (₹)' : '₹ & % Share'}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCategories.map(cat => (
-                  <React.Fragment key={cat.categoryId}>
-                    <tr style={{ backgroundColor: 'var(--bg-pill, #eceefa)', fontWeight: '700' }}>
-                      <td colSpan={periods.length + 4} style={{ padding: '8px 10px', color: cat.color }}>
-                        {cat.categoryName}
-                      </td>
-                    </tr>
-                    {cat.items.map(it => {
-                      const isItemPerson = isPersonCountItem(cat.categoryName, it.description || it.name);
-                      const fmt = isItemPerson ? formatPersonCount : formatIndianCompact;
-                      return (
-                        <tr key={it.id || it.description} style={{ borderBottom: '1px solid var(--border-card, #e6e8f2)' }}>
-                          <td style={{ padding: '6px 10px' }}></td>
-                          <td style={{ padding: '6px 10px', fontWeight: '600' }}>{it.description || it.name}</td>
-                          {periods.map(p => (
-                            <td key={p.id} style={{ padding: '6px 10px', textAlign: 'right' }}>
-                              {fmt(it.amounts?.[p.id] ?? 0)}
+                {filteredCategories.map(cat => {
+                  const isPersonCat = isPersonCountCategory(cat.categoryName);
+                  return (
+                    <React.Fragment key={cat.categoryId}>
+                      {/* Category Header Row with Subtotals */}
+                      <tr style={{
+                        backgroundColor: '#f8fafc',
+                        borderTop: '1.5px solid var(--border-card, #e6e8f2)',
+                        borderBottom: '1px solid var(--border-card, #e6e8f2)',
+                        fontWeight: '700'
+                      }}>
+                        <td style={{ padding: '8px 10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              width: '9px',
+                              height: '9px',
+                              borderRadius: '50%',
+                              backgroundColor: cat.color,
+                              flexShrink: 0
+                            }} />
+                            <strong style={{ color: '#0f172a', fontSize: '13px' }}>
+                              {cat.categoryName}
+                            </strong>
+                          </div>
+                        </td>
+                        <td style={{ padding: '8px 10px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
+                          Subtotal
+                        </td>
+                        {periods.map(p => {
+                          const catAmt = categorySubtotals[cat.categoryId]?.[p.id] || 0;
+                          return (
+                            <td key={p.id} style={{ padding: '8px 10px', textAlign: 'right' }}>
+                              {renderCellMetric(catAmt, monthlyGrandTotals.byPeriod[p.id], isPersonCat, true)}
                             </td>
-                          ))}
-                          <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '700' }}>
-                            {fmt(it.total || 0)}
-                          </td>
-                          <td style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-muted, #6b7090)' }}>
-                            {fmt(periods.length > 0 ? (it.total || 0) / periods.length : 0)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
+                          );
+                        })}
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                          {renderCellMetric(
+                            categorySubtotals[cat.categoryId]?.total || 0,
+                            monthlyGrandTotals.grandOverall,
+                            isPersonCat,
+                            true
+                          )}
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                          {renderCellMetric(
+                            periods.length > 0 ? (categorySubtotals[cat.categoryId]?.total || 0) / periods.length : 0,
+                            monthlyGrandTotals.avgMonthly,
+                            isPersonCat,
+                            true
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Line Items Rows */}
+                      {cat.items.map(it => {
+                        const isItemPerson = isPersonCountItem(cat.categoryName, it.description || it.name);
+                        const itTotal = it.total || 0;
+                        const itAvg = periods.length > 0 ? itTotal / periods.length : 0;
+                        return (
+                          <tr
+                            key={it.id || it.description}
+                            style={{
+                              borderBottom: '1px solid var(--border-card, #e6e8f2)',
+                              transition: 'background-color 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fafbfc'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <td style={{ padding: '6px 10px' }}></td>
+                            <td style={{ padding: '6px 10px', fontWeight: '500', color: '#334155' }}>
+                              {it.description || it.name}
+                            </td>
+                            {periods.map(p => {
+                              const val = it.amounts?.[p.id] ?? 0;
+                              return (
+                                <td key={p.id} style={{ padding: '6px 10px', textAlign: 'right' }}>
+                                  {renderCellMetric(val, monthlyGrandTotals.byPeriod[p.id], isItemPerson, false)}
+                                </td>
+                              );
+                            })}
+                            <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                              {renderCellMetric(itTotal, monthlyGrandTotals.grandOverall, isItemPerson, false)}
+                            </td>
+                            <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                              {renderCellMetric(itAvg, monthlyGrandTotals.avgMonthly, isItemPerson, false)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
+              <tfoot>
+                <tr style={{
+                  backgroundColor: '#f1f5f9',
+                  borderTop: '2px solid #cbd5e1',
+                  fontWeight: '800',
+                  color: '#0f172a'
+                }}>
+                  <td style={{ padding: '10px', textAlign: 'center', color: '#4f46e5' }}>Σ</td>
+                  <td style={{ padding: '10px' }}>Total Monthly Expenditure</td>
+                  {periods.map(p => (
+                    <td key={p.id} style={{ padding: '10px', textAlign: 'right' }}>
+                      {renderCellMetric(
+                        monthlyGrandTotals.byPeriod[p.id] || 0,
+                        monthlyGrandTotals.byPeriod[p.id],
+                        false,
+                        true
+                      )}
+                    </td>
+                  ))}
+                  <td style={{ padding: '10px', textAlign: 'right' }}>
+                    {renderCellMetric(
+                      monthlyGrandTotals.grandOverall,
+                      monthlyGrandTotals.grandOverall,
+                      false,
+                      true
+                    )}
+                  </td>
+                  <td style={{ padding: '10px', textAlign: 'right' }}>
+                    {renderCellMetric(
+                      monthlyGrandTotals.avgMonthly,
+                      monthlyGrandTotals.avgMonthly,
+                      false,
+                      true
+                    )}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )
