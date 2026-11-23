@@ -10,7 +10,6 @@ import { formatINR, formatLakhs, formatPeriodLabel, formatIndianCompact } from '
 import { TRANSPORT_BRANCHES, CANONICAL_TRANSPORT_PARAMETERS } from '../../data_entry/TransportSpreadsheetEntry';
 import TransportVehicleExpensesTable from '../../data_entry/TransportVehicleExpensesTable';
 import TransportDashboardCensusView from '../TransportDashboardCensusView';
-import TransportDashboardDataTable from '../TransportDashboardDataTable';
 import HeroSummary from '../charts/HeroSummary';
 import CategoryCard from '../charts/CategoryCard';
 
@@ -69,10 +68,26 @@ export default function TransportOperationsDashboard({
     if (visiblePeriods.length > 0 && setActivePeriod) {
       const isCurrentInVisible = visiblePeriods.some(p => String(p.id) === String(activePeriod));
       if (!isCurrentInVisible && activePeriod !== 'all') {
-        setActivePeriod(String(visiblePeriods[visiblePeriods.length - 1].id));
+        let lastEntered = null;
+        for (let i = visiblePeriods.length - 1; i >= 0; i--) {
+          const p = visiblePeriods[i];
+          const pid = String(p.id);
+          const d = effectiveMatrix?.transport_census_by_branch?.[activeBranch]?.[pid];
+          if (d && (
+            (Number(d.actual_kms) || 0) > 0 || 
+            (Number(d.total_expenses) || 0) > 0 || 
+            (Number(d.fuel_expenses) || 0) > 0 ||
+            (Number(d.vehicles_count) || 0) > 0
+          )) {
+            lastEntered = p;
+            break;
+          }
+        }
+        const target = lastEntered || visiblePeriods[visiblePeriods.length - 1];
+        setActivePeriod(String(target.id));
       }
     }
-  }, [activePeriod, visiblePeriods, setActivePeriod]);
+  }, [activePeriod, visiblePeriods, activeBranch, effectiveMatrix, setActivePeriod]);
 
   // Self-healing live fetch from API if computedMatrix not yet populated for transport
   const fetchLiveMatrix = async () => {
@@ -987,7 +1002,6 @@ export default function TransportOperationsDashboard({
           {[
             { id: 'executive', label: 'Executive Overview', icon: LayoutDashboard, desc: 'Bento Cards & Fleet Analysis' },
             { id: 'vehicles', label: 'Vehicle Ledger (58 Buses)', icon: Bus, desc: 'Live Vehicle-Wise Expenses Ledger' },
-            { id: 'parameters', label: '47 Parameters Matrix', icon: FileSpreadsheet, desc: 'Excel Matrix Data Sheet' },
             { id: 'all', label: 'All Views', icon: Layers, desc: 'Complete Stack' }
           ].map(tab => {
             const isActive = activeMainView === tab.id;
@@ -1675,20 +1689,6 @@ export default function TransportOperationsDashboard({
             periodId={activePeriodObj?.id}
             branch={activeBranch}
             embedded={true}
-          />
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* SUB-VIEW: 47 PARAMETERS MATRIX TABLE                                     */}
-      {/* ========================================================================= */}
-      {(activeMainView === 'parameters' || activeMainView === 'all') && (
-        <div style={{ width: '100%', marginTop: activeMainView === 'all' ? '20px' : 0 }}>
-          <TransportDashboardDataTable
-            periods={periods}
-            activePeriod={activePeriod}
-            computedMatrix={effectiveMatrix}
-            branch={activeBranch}
           />
         </div>
       )}

@@ -31,6 +31,57 @@ import MonthlyExpenseSection from './monthly_expense/MonthlyExpenseSection';
 import HostelOperationsDashboard from './hostel/HostelOperationsDashboard';
 import TransportOperationsDashboard from './transport/TransportOperationsDashboard';
 
+// Helper to determine the period of the latest recorded entry across modules
+export const getLastEnteredPeriod = (periods = [], matrix = null, module = 'food', branch = null) => {
+  if (!periods || periods.length === 0) return null;
+
+  // Scan backwards from newest period to oldest
+  for (let i = periods.length - 1; i >= 0; i--) {
+    const p = periods[i];
+    const pid = String(p.id);
+
+    // If branch filter applies (e.g. transport)
+    if (branch && p.branch && p.branch !== 'all' && p.branch !== branch) {
+      continue;
+    }
+
+    // 1. Check grand_total amounts in matrix
+    const gt = matrix?.grand_total?.amounts?.[pid] ?? matrix?.grand_total?.amounts?.[p.id];
+    if (gt !== undefined && gt !== null && Number(gt) > 0) {
+      return p;
+    }
+
+    // 2. Module specific checks
+    if (module === 'transport') {
+      const branchesToCheck = branch && branch !== 'all' ? [branch] : ['RPS', 'Common', 'KPM', 'University'];
+      const hasTransportData = branchesToCheck.some(b => {
+        const d = matrix?.transport_census_by_branch?.[b]?.[pid];
+        return d && (
+          (Number(d.actual_kms) || 0) > 0 || 
+          (Number(d.total_expenses) || 0) > 0 || 
+          (Number(d.fuel_expenses) || 0) > 0 ||
+          (Number(d.vehicles_count) || 0) > 0
+        );
+      });
+      if (hasTransportData) return p;
+    }
+
+    if (module === 'hostel') {
+      const hc = matrix?.hostel_census?.[pid];
+      if (hc && ((Number(hc.total_residents) || 0) > 0 || (Number(hc.actual_veg) || 0) > 0 || (Number(hc.expenses_occurred) || 0) > 0)) {
+        return p;
+      }
+    }
+  }
+
+  // Fallback to latest visible period if no positive amounts found
+  if (branch) {
+    const visible = periods.filter(p => !p.branch || p.branch === 'all' || p.branch === branch);
+    if (visible.length > 0) return visible[visible.length - 1];
+  }
+  return periods[periods.length - 1] || null;
+};
+
 export default function DashboardPage({
   selectedModule = 'food',
   onSelectModule,
@@ -47,7 +98,18 @@ export default function DashboardPage({
   const currentModule = selectedModule || 'food';
 
   const [activeChart, setActiveChart] = useState('clustered_table'); // Default: Excel-style Clustered Columns with Data Sheet
-  const [activePeriod, setActivePeriod] = useState('all'); // 'all' or period id
+  // User explicit month selection per module (defaults to undefined until user clicks)
+  const [userSelectedPeriodByModule, setUserSelectedPeriodByModule] = useState({});
+  const [activePeriod, setActivePeriodState] = useState(null); // 'all' or period id; auto-selected on load
+
+  const setActivePeriod = (pId) => {
+    setActivePeriodState(pId);
+    setUserSelectedPeriodByModule(prev => ({
+      ...prev,
+      [currentModule]: pId
+    }));
+  };
+
   const [showDataTable, setShowDataTable] = useState(true);
   const [isTableFullScreen, setIsTableFullScreen] = useState(false);
 
@@ -109,6 +171,27 @@ export default function DashboardPage({
 
   const periods = effectiveMatrix?.periods || [];
   const categories = effectiveMatrix?.categories || [];
+
+  // Automatically select the month with the last recorded entry on login/load or when module changes
+  useEffect(() => {
+    if (periods && periods.length > 0) {
+      const savedChoice = userSelectedPeriodByModule[currentModule];
+      if (savedChoice !== undefined && savedChoice !== null) {
+        if (savedChoice === 'all' || periods.some(p => String(p.id) === String(savedChoice))) {
+          if (String(activePeriod) !== String(savedChoice)) {
+            setActivePeriodState(savedChoice);
+          }
+          return;
+        }
+      }
+
+      // Automatically select the month with the latest recorded entry
+      const lastEntered = getLastEnteredPeriod(periods, effectiveMatrix, currentModule);
+      if (lastEntered) {
+        setActivePeriodState(String(lastEntered.id));
+      }
+    }
+  }, [periods, effectiveMatrix, currentModule, userSelectedPeriodByModule]);
 
   const moduleMeta = {
     food: {
@@ -597,7 +680,7 @@ export default function DashboardPage({
           computedMatrix={effectiveMatrix}
           periods={periods}
           categories={categories}
-          activePeriod={activePeriod === 'all' && periods.length > 0 ? String(periods[periods.length - 1].id) : activePeriod}
+          activePeriod={activePeriod || (periods.length > 0 ? String(periods[periods.length - 1].id) : 'all')}
           setActivePeriod={setActivePeriod}
           onOpenDataEntry={(targetPeriodId, targetBranch) => {
             const pId = targetPeriodId || (activePeriod !== 'all' ? Number(activePeriod) : null);
