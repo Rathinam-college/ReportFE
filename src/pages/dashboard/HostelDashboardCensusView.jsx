@@ -9,7 +9,9 @@ import {
 export default function HostelDashboardCensusView({
   computedMatrix: propComputedMatrix,
   activePeriodObj: propActivePeriodObj,
-  periods: propPeriods = []
+  periods: propPeriods = [],
+  activePeriod: propActivePeriod,
+  onPeriodChange
 }) {
   const [showLedgerTable, setShowLedgerTable] = useState(true);
   const [selectedSection, setSelectedSection] = useState('all');
@@ -62,39 +64,64 @@ export default function HostelDashboardCensusView({
   const hostelCensusMap = effectiveMatrix?.hostel_census || {};
 
   // Default selected period: smartly prefer period with recorded live expenses or period 30 (Oct'26)
-  const [selectedPeriodId, setSelectedPeriodId] = useState('');
+  const [selectedPeriodId, setSelectedPeriodId] = useState(() => {
+    if (propActivePeriod !== undefined && propActivePeriod !== null) return String(propActivePeriod);
+    if (propActivePeriodObj?.id) return String(propActivePeriodObj.id);
+    return '30';
+  });
 
   useEffect(() => {
-    if (propActivePeriodObj?.id) {
+    if (propActivePeriod !== undefined && propActivePeriod !== null) {
+      setSelectedPeriodId(String(propActivePeriod));
+    } else if (propActivePeriodObj?.id) {
       setSelectedPeriodId(String(propActivePeriodObj.id));
-    } else if (!selectedPeriodId && periods.length > 0) {
-      const withExpenses = periods.find(p => {
-        const c = hostelCensusMap[String(p.id)];
-        return c && Number(c.expenses_occurred || 0) > 0;
-      });
-      if (withExpenses) {
-        setSelectedPeriodId(String(withExpenses.id));
-      } else {
-        const oct = periods.find(p => String(p.id) === '30' || (p.period_label || '').toLowerCase().includes('oct'));
-        setSelectedPeriodId(oct ? String(oct.id) : String(periods[0].id));
-      }
     }
-  }, [propActivePeriodObj, periods, hostelCensusMap, selectedPeriodId]);
+  }, [propActivePeriod, propActivePeriodObj]);
+
+  const isAll = String(selectedPeriodId) === 'all';
 
   const activePeriodObj = useMemo(() => {
+    if (isAll) {
+      return { id: 'all', period_label: 'All Months (Cumulative Total)', period_code: 'ALL' };
+    }
     return periods.find(p => String(p.id) === String(selectedPeriodId)) || propActivePeriodObj || periods[0] || {};
-  }, [periods, selectedPeriodId, propActivePeriodObj]);
+  }, [periods, selectedPeriodId, propActivePeriodObj, isAll]);
 
-  const currentPeriodIdStr = String(selectedPeriodId || activePeriodObj?.id || '');
+  const currentPeriodIdStr = isAll ? 'all' : String(selectedPeriodId || activePeriodObj?.id || '');
 
   // Active month census record directly from PostgreSQL database
   const activeCensus = useMemo(() => {
+    if (isAll) {
+      const allVals = Object.values(hostelCensusMap);
+      if (allVals.length === 0) return {};
+      const latestVal = allVals[allVals.length - 1] || {};
+      const sumKey = (k) => allVals.reduce((acc, curr) => acc + (Number(curr[k]) || 0), 0);
+      return {
+        ...latestVal,
+        expenses_occurred: sumKey('expenses_occurred'),
+        cumulative_budget_spent: sumKey('cumulative_budget_spent') > 0 ? Math.max(...allVals.map(v => Number(v.cumulative_budget_spent) || 0)) : sumKey('expenses_occurred'),
+        power_cost: sumKey('power_cost'),
+        power_units: sumKey('power_units'),
+        normal_water_litres: sumKey('normal_water_litres'),
+        normal_water_cost: sumKey('normal_water_cost'),
+        drinking_water_litres: sumKey('drinking_water_litres'),
+        drinking_water_cost: sumKey('drinking_water_cost'),
+        water_purchase_cost: sumKey('water_purchase_cost'),
+        tickets_received: sumKey('tickets_received'),
+        tickets_closed: sumKey('tickets_closed'),
+        tickets_open: Math.max(0, sumKey('tickets_received') - sumKey('tickets_closed')),
+        quality_issues_received: sumKey('quality_issues_received'),
+        quality_issues_closed: sumKey('quality_issues_closed'),
+        quality_issues_open: Math.max(0, sumKey('quality_issues_received') - sumKey('quality_issues_closed')),
+        incidents_count: sumKey('incidents_count')
+      };
+    }
     if (currentPeriodIdStr && hostelCensusMap[currentPeriodIdStr]) {
       return hostelCensusMap[currentPeriodIdStr];
     }
     const keys = Object.keys(hostelCensusMap);
     return keys.length > 0 ? hostelCensusMap[keys[0]] : {};
-  }, [hostelCensusMap, currentPeriodIdStr]);
+  }, [hostelCensusMap, currentPeriodIdStr, isAll]);
 
   const num = (v, fb = 0) => {
     if (v === undefined || v === null || v === '') return fb;
@@ -307,7 +334,11 @@ export default function HostelDashboardCensusView({
             <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#059669', pointerEvents: 'none' }} />
             <select
               value={currentPeriodIdStr}
-              onChange={(e) => setSelectedPeriodId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedPeriodId(val);
+                if (onPeriodChange) onPeriodChange(val);
+              }}
               style={{
                 backgroundColor: '#ffffff',
                 border: '1.5px solid rgba(255, 255, 255, 0.4)',
@@ -322,6 +353,7 @@ export default function HostelDashboardCensusView({
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
               }}
             >
+              <option value="all">🌐 All Months (Overall Cycles)</option>
               {periods.map(p => (
                 <option key={p.id} value={String(p.id)}>
                   {formatPeriodLabel(p)} • {p.period_label || p.period_code}
@@ -684,23 +716,30 @@ export default function HostelDashboardCensusView({
                     Hostel Operations & Census Parameters
                   </th>
                   {periods.map(p => {
-                    const isCurrent = currentPeriodIdStr === String(p.id);
+                    const isExactSelected = currentPeriodIdStr === String(p.id);
                     return (
                       <th
                         key={p.id}
+                        onClick={() => {
+                          setSelectedPeriodId(String(p.id));
+                          if (onPeriodChange) onPeriodChange(String(p.id));
+                        }}
+                        title={`Click to filter dashboard for ${p.period_label || p.period_code}`}
                         style={{
                           minWidth: '135px',
                           padding: '10px 12px',
                           textAlign: 'center',
                           borderRight: '1px solid rgba(255,255,255,0.2)',
-                          backgroundColor: isCurrent ? '#047857' : '#059669',
-                          fontWeight: '800'
+                          backgroundColor: isExactSelected ? '#047857' : (isAll ? '#065f46' : '#059669'),
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.15s ease'
                         }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                           <span>{formatPeriodLabel(p)}</span>
                           <span style={{ fontSize: '10px', fontWeight: '600', opacity: 0.85 }}>{p.period_label || p.period_code}</span>
-                          {isCurrent && (
+                          {isExactSelected && (
                             <span style={{ fontSize: '9px', fontWeight: '900', backgroundColor: '#ffffff', color: '#047857', padding: '1px 6px', borderRadius: '4px', marginTop: '2px' }}>
                               ACTIVE
                             </span>

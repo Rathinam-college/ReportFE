@@ -311,15 +311,112 @@ export default function HostelOperationsDashboard({
           </div>
         </div>
 
-        {/* Tier 2: Month Filter Pills & Viewing Indicator */}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. UNIFIED STICKY VIEW SWITCHER & FILTER MONTH COMMAND BAR (PINS TO TOP)  */}
+      {/* Contains: Executive Overview | Census Ledger | Master Spreadsheet | All   */}
+      {/* + FILTER MONTH: All months | Jun'26 | Jul'26 | Aug'26 | Sept'26 | Oct'26  */}
+      {/* ========================================================================= */}
+      <div 
+        className="sticky-hostel-view-command-bar"
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 85,
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          border: '1.5px solid #059669',
+          padding: '12px 18px',
+          boxShadow: '0 4px 20px rgba(5, 150, 105, 0.12)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
+        }}
+      >
+        {/* Tier 1: View Switcher Tabs on Left, Active Viewing Indicator on Right */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '10px',
+          gap: '12px'
+        }}>
+          {/* Left: 4 View Switcher Tabs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'executive', label: 'Executive Overview', icon: LayoutDashboard, desc: 'Bento Cards & KPIs' },
+              { id: 'census_ledger', label: 'Census & Analytics Ledger', icon: Table, desc: '38-Parameter Multi-Month Grid' },
+              { id: 'spreadsheet_matrix', label: 'Master Spreadsheet & Matrix', icon: FileSpreadsheet, desc: 'Excel Matrix Data Sheet' },
+              { id: 'all', label: 'All Views', icon: Layers, desc: 'Complete Stack' }
+            ].map(tab => {
+              const isActive = activeMainView === tab.id;
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveMainView(tab.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '12px',
+                    border: isActive ? '1.5px solid #059669' : '1px solid #e2e8f0',
+                    backgroundColor: isActive ? '#ecfdf5' : '#f8fafc',
+                    color: isActive ? '#065f46' : '#64748b',
+                    fontSize: '13px',
+                    fontWeight: isActive ? '800' : '650',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isActive ? '0 2px 8px rgba(5, 150, 105, 0.12)' : 'none'
+                  }}
+                >
+                  <TabIcon size={16} color={isActive ? '#059669' : '#64748b'} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right: Active Viewing Indicator */}
+          <div style={{
+            fontSize: '12.5px',
+            color: '#64748b',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span>Viewing:</span>
+            <strong style={{
+              color: '#065f46',
+              fontWeight: '800',
+              padding: '3px 10px',
+              backgroundColor: '#ecfdf5',
+              borderRadius: '8px',
+              border: '1px solid #a7f3d0'
+            }}>
+              {isAllMonths
+                ? `All Months (${effectivePeriods.length} Cycles • ${formatINR(allMonthsTotalSpend)})`
+                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(Number(activeCensus?.expenses_occurred || 0) || Number(effectiveMatrix?.grand_total?.amounts?.[activePeriod] ?? effectiveMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0))})`
+              }
+            </strong>
+          </div>
+        </div>
+
+        {/* Tier 2: FILTER MONTH Pills (Directly integrated into the View Bar) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '8px',
           paddingTop: '8px',
-          borderTop: '1px solid #edf0f8'
+          borderTop: '1px dashed #e2e8f0'
         }}>
           {/* Left: Filter label and month pills */}
           <div style={{
@@ -327,7 +424,7 @@ export default function HostelOperationsDashboard({
             alignItems: 'center',
             gap: '6px',
             flexWrap: 'wrap',
-            maxWidth: 'calc(100% - 300px)'
+            maxWidth: '100%'
           }}>
             <div style={{
               display: 'inline-flex',
@@ -350,9 +447,9 @@ export default function HostelOperationsDashboard({
               type="button"
               onClick={() => setActivePeriod && setActivePeriod('all')}
               style={{
-                padding: '5px 14px',
+                padding: '4px 12px',
                 borderRadius: '9999px',
-                fontSize: '12px',
+                fontSize: '11.5px',
                 fontWeight: isAllMonths ? '800' : '650',
                 border: isAllMonths ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
                 backgroundColor: isAllMonths ? '#059669' : '#ffffff',
@@ -361,7 +458,7 @@ export default function HostelOperationsDashboard({
                 boxShadow: isAllMonths ? '0 2px 8px rgba(5, 150, 105, 0.3)' : 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 transition: 'all 0.15s ease',
                 flexShrink: 0
               }}
@@ -377,6 +474,7 @@ export default function HostelOperationsDashboard({
               }}>
                 {effectivePeriods.length}
               </span>
+              {isAllMonths && <Check size={11} strokeWidth={3} />}
             </button>
 
             {/* Individual Month Pills */}
@@ -401,9 +499,9 @@ export default function HostelOperationsDashboard({
                     type="button"
                     onClick={() => setActivePeriod && setActivePeriod(String(p.id))}
                     style={{
-                      padding: '5px 12px',
+                      padding: '4px 12px',
                       borderRadius: '9999px',
-                      fontSize: '12px',
+                      fontSize: '11.5px',
                       fontWeight: isSel ? '800' : '650',
                       border: isSel ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
                       backgroundColor: isSel ? '#059669' : '#ffffff',
@@ -437,89 +535,6 @@ export default function HostelOperationsDashboard({
               })}
             </div>
           </div>
-
-          {/* Right: Active Viewing Indicator */}
-          <div style={{
-            fontSize: '12px',
-            color: '#64748b',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            flexShrink: 0
-          }}>
-            <span>Viewing:</span>
-            <strong style={{
-              color: '#0f172a',
-              fontWeight: '800',
-              padding: '3px 10px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0'
-            }}>
-              {isAllMonths
-                ? `All Months (${effectivePeriods.length} Cycles • ${formatINR(allMonthsTotalSpend)})`
-                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(Number(activeCensus?.expenses_occurred || 0) || Number(effectiveMatrix?.grand_total?.amounts?.[activePeriod] ?? effectiveMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0))})`
-              }
-            </strong>
-          </div>
-        </div>
-      </div>
-
-      {/* VIEW SWITCHER TAB BAR */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        backgroundColor: '#ffffff',
-        padding: '10px 14px',
-        borderRadius: '16px',
-        border: '1.5px solid #e2e8f0',
-        boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {[
-            { id: 'executive', label: 'Executive Overview', icon: LayoutDashboard, desc: 'Bento Cards & KPIs' },
-            { id: 'census_ledger', label: 'Census & Analytics Ledger', icon: Table, desc: '38-Parameter Multi-Month Grid' },
-            { id: 'spreadsheet_matrix', label: 'Master Spreadsheet & Matrix', icon: FileSpreadsheet, desc: 'Excel Matrix Data Sheet' },
-            { id: 'all', label: 'All Views', icon: Layers, desc: 'Complete Stack' }
-          ].map(tab => {
-            const isActive = activeMainView === tab.id;
-            const TabIcon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveMainView(tab.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '9px 16px',
-                  borderRadius: '12px',
-                  border: isActive ? '1.5px solid #059669' : '1px solid #e2e8f0',
-                  backgroundColor: isActive ? '#ecfdf5' : '#f8fafc',
-                  color: isActive ? '#065f46' : '#64748b',
-                  fontSize: '13px',
-                  fontWeight: isActive ? '800' : '650',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isActive ? '0 2px 8px rgba(5, 150, 105, 0.12)' : 'none'
-                }}
-              >
-                <TabIcon size={16} color={isActive ? '#059669' : '#64748b'} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '600', paddingRight: '8px' }}>
-          Viewing Period: <strong style={{ color: '#059669', fontWeight: '800' }}>
-            {isAllMonths ? `All Months (${effectivePeriods.length} Months Total)` : formatPeriodLabel(activePeriodObj)}
-          </strong>
         </div>
       </div>
 
@@ -570,6 +585,7 @@ export default function HostelOperationsDashboard({
             activePeriodObj={activePeriodObj}
             periods={effectivePeriods}
             activePeriod={activePeriod}
+            onPeriodChange={setActivePeriod}
           />
         </div>
       )}
@@ -581,6 +597,7 @@ export default function HostelOperationsDashboard({
             periods={effectivePeriods}
             activePeriod={activePeriod}
             computedMatrix={effectiveMatrix}
+            onPeriodChange={setActivePeriod}
           />
         </div>
       )}

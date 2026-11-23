@@ -12,7 +12,8 @@ export default function HostelDashboardDataTable({
   activePeriod = 'all',
   computedMatrix: propComputedMatrix,
   isFullScreen: propIsFullScreen,
-  onToggleFullScreen: propOnToggleFullScreen
+  onToggleFullScreen: propOnToggleFullScreen,
+  onPeriodChange
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSection, setSelectedSection] = useState('all');
@@ -54,7 +55,7 @@ export default function HostelDashboardDataTable({
 
   // Selected Period for the Excel Template View
   const [selectedPeriodId, setSelectedPeriodId] = useState(() => {
-    if (activePeriod && activePeriod !== 'all') return String(activePeriod);
+    if (activePeriod !== undefined && activePeriod !== null) return String(activePeriod);
     if (periods.length > 0) {
       const withExpenses = periods.find(p => {
         const c = hostelCensusMap[String(p.id)];
@@ -69,23 +70,18 @@ export default function HostelDashboardDataTable({
   });
 
   useEffect(() => {
-    if (activePeriod && activePeriod !== 'all') {
+    if (activePeriod !== undefined && activePeriod !== null) {
       setSelectedPeriodId(String(activePeriod));
-    } else if (periods.length > 0 && (!selectedPeriodId || selectedPeriodId === 'all')) {
-      const withExpenses = periods.find(p => {
-        const c = hostelCensusMap[String(p.id)];
-        return c && Number(c.expenses_occurred || 0) > 0;
-      });
-      if (withExpenses) {
-        setSelectedPeriodId(String(withExpenses.id));
-      } else {
-        const oct = periods.find(p => String(p.id) === '30' || (p.period_label || '').toLowerCase().includes('oct'));
-        setSelectedPeriodId(oct ? String(oct.id) : String(periods[0].id));
+      if (activePeriod === 'all') {
+        setViewMode('ledger');
       }
     }
-  }, [activePeriod, periods, hostelCensusMap]);
+  }, [activePeriod]);
 
   const activePeriodObj = useMemo(() => {
+    if (String(selectedPeriodId) === 'all') {
+      return { id: 'all', period_label: 'All Recorded Months (Multi-Month Matrix)', period_code: 'ALL' };
+    }
     return periods.find(p => String(p.id) === String(selectedPeriodId)) || periods[0] || { id: 29, period_label: "Sep'25 (Sep 1st to 30th)" };
   }, [periods, selectedPeriodId]);
 
@@ -183,7 +179,30 @@ export default function HostelDashboardDataTable({
 
   // Get active data for the currently selected period (combining DB live values dynamically)
   const currentPeriodCensus = useMemo(() => {
-    const raw = hostelCensusMap[String(selectedPeriodId)] || {};
+    const isAll = String(selectedPeriodId) === 'all';
+    let raw = {};
+    if (isAll) {
+      const allVals = Object.values(hostelCensusMap);
+      const latestVal = allVals.length > 0 ? allVals[allVals.length - 1] : {};
+      const sumK = (k) => allVals.reduce((acc, obj) => acc + (Number(obj[k]) || 0), 0);
+      raw = {
+        ...latestVal,
+        expenses_occurred: sumK('expenses_occurred'),
+        cumulative_budget_spent: sumK('cumulative_budget_spent') > 0 ? Math.max(...allVals.map(o => Number(o.cumulative_budget_spent) || 0)) : sumK('expenses_occurred'),
+        power_cost: sumK('power_cost'),
+        power_units: sumK('power_units'),
+        normal_water_litres: sumK('normal_water_litres'),
+        normal_water_cost: sumK('normal_water_cost'),
+        drinking_water_litres: sumK('drinking_water_litres'),
+        drinking_water_cost: sumK('drinking_water_cost'),
+        water_purchase_cost: sumK('water_purchase_cost'),
+        tickets_received: sumK('tickets_received'),
+        tickets_closed: sumK('tickets_closed'),
+        tickets_open: Math.max(0, sumK('tickets_received') - sumK('tickets_closed')),
+      };
+    } else {
+      raw = hostelCensusMap[String(selectedPeriodId)] || {};
+    }
 
     // Helper: take raw DB value if present and non-zero/non-empty; fallback to calculated or 0
     const getVal = (key, fallbackVal = 0) => {
@@ -546,7 +565,14 @@ export default function HostelDashboardDataTable({
             <Calendar size={13} color="#64748b" />
             <select
               value={selectedPeriodId}
-              onChange={(e) => setSelectedPeriodId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedPeriodId(val);
+                if (val === 'all') {
+                  setViewMode('ledger');
+                }
+                if (onPeriodChange) onPeriodChange(val);
+              }}
               style={{
                 padding: '5px 10px',
                 fontSize: '12px',
@@ -559,8 +585,9 @@ export default function HostelDashboardDataTable({
                 outline: 'none'
               }}
             >
+              <option value="all">🌐 All Months (Multi-Month Matrix)</option>
               {periods.map(p => (
-                <option key={p.id} value={p.id}>{p.period_label}</option>
+                <option key={p.id} value={String(p.id)}>{p.period_label}</option>
               ))}
             </select>
           </div>
@@ -1611,6 +1638,36 @@ export default function HostelDashboardDataTable({
               📁 Worksheet Tabs:
             </span>
 
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPeriodId('all');
+                if (onPeriodChange) onPeriodChange('all');
+              }}
+              style={{
+                padding: '6px 14px',
+                backgroundColor: selectedPeriodId === 'all' ? '#ffffff' : 'transparent',
+                border: selectedPeriodId === 'all' ? '1px solid #94a3b8' : '1px solid transparent',
+                borderTop: selectedPeriodId === 'all' ? '3px solid #059669' : '1px solid transparent',
+                borderBottom: selectedPeriodId === 'all' ? 'none' : '1px solid transparent',
+                borderRadius: '4px 4px 0 0',
+                fontSize: '11.5px',
+                fontWeight: selectedPeriodId === 'all' ? '800' : '600',
+                color: selectedPeriodId === 'all' ? '#059669' : '#475569',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                boxShadow: selectedPeriodId === 'all' ? '0 -1px 3px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Table size={12} color={selectedPeriodId === 'all' ? '#059669' : '#64748b'} />
+              <span>ALL MONTHS</span>
+              {selectedPeriodId === 'all' && <Check size={11} color="#059669" />}
+            </button>
+
             {periods.map(p => {
               const isSel = String(p.id) === String(selectedPeriodId);
               // Format label short like SEPT'25, OCT'25, etc.
@@ -1619,7 +1676,10 @@ export default function HostelDashboardDataTable({
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setSelectedPeriodId(String(p.id))}
+                  onClick={() => {
+                    setSelectedPeriodId(String(p.id));
+                    if (onPeriodChange) onPeriodChange(String(p.id));
+                  }}
                   style={{
                     padding: '6px 14px',
                     backgroundColor: isSel ? '#ffffff' : 'transparent',
@@ -1706,13 +1766,19 @@ export default function HostelDashboardDataTable({
 
                 {periods.map(p => {
                   const isSel = String(p.id) === String(selectedPeriodId);
+                  const isAll = selectedPeriodId === 'all';
                   return (
                     <th
                       key={p.id}
+                      onClick={() => {
+                        setSelectedPeriodId(String(p.id));
+                        if (onPeriodChange) onPeriodChange(String(p.id));
+                      }}
+                      title={`Filter by ${p.period_label}`}
                       style={{
                         padding: '10px 14px',
                         textAlign: 'right',
-                        backgroundColor: isSel ? '#047857' : '#059669',
+                        backgroundColor: isSel ? '#047857' : (isAll ? '#065f46' : '#059669'),
                         color: '#ffffff',
                         fontWeight: '800',
                         fontSize: '12.5px',
@@ -1721,10 +1787,14 @@ export default function HostelDashboardDataTable({
                         minWidth: '130px',
                         position: 'sticky',
                         top: 0,
-                        zIndex: 20
+                        zIndex: 20,
+                        cursor: 'pointer'
                       }}
                     >
                       <div>{p.period_label.split('(')[0]}</div>
+                      {isSel && (
+                        <div style={{ fontSize: '9px', fontWeight: '900', color: '#a7f3d0' }}>ACTIVE</div>
+                      )}
                     </th>
                   );
                 })}
