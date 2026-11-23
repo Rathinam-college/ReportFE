@@ -69,9 +69,25 @@ export default function TransportVehicleExpensesTable({
       });
   }, []);
 
+  const visiblePeriods = useMemo(() => {
+    if (selectedBranch === 'all') return periods;
+    return periods.filter(p => !p.branch || p.branch === 'all' || p.branch === selectedBranch);
+  }, [periods, selectedBranch]);
+
   const activePeriodObj = useMemo(() => {
-    return periods.find(p => p.id === selectedPeriodId) || periods[periods.length - 1] || null;
-  }, [periods, selectedPeriodId]);
+    return visiblePeriods.find(p => p.id === selectedPeriodId) || visiblePeriods[visiblePeriods.length - 1] || periods[periods.length - 1] || null;
+  }, [visiblePeriods, periods, selectedPeriodId]);
+
+  useEffect(() => {
+    if (visiblePeriods.length > 0 && selectedBranch !== 'all' && selectedPeriodId) {
+      const exists = visiblePeriods.some(p => p.id === selectedPeriodId);
+      if (!exists) {
+        const nextId = visiblePeriods[visiblePeriods.length - 1].id;
+        setSelectedPeriodId(nextId);
+        if (onPeriodChange) onPeriodChange(nextId);
+      }
+    }
+  }, [visiblePeriods, selectedBranch, selectedPeriodId]);
 
   // 2. Fetch vehicles when period or branch changes
   const fetchVehicleData = async (periodId, branch) => {
@@ -465,7 +481,7 @@ export default function TransportVehicleExpensesTable({
                   outline: 'none'
                 }}
               >
-                {periods.map(p => (
+                {visiblePeriods.map(p => (
                   <option key={p.id} value={p.id}>
                     {p.period_label} ({p.period_code})
                   </option>

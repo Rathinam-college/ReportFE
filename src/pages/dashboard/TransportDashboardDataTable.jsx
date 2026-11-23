@@ -11,17 +11,25 @@ import TransportVehicleExpensesTable from '../data_entry/TransportVehicleExpense
 export default function TransportDashboardDataTable({
   periods: propPeriods = [],
   activePeriod = 'all',
+  branch = null,
   computedMatrix: propComputedMatrix,
   isFullScreen: propIsFullScreen,
   onToggleFullScreen: propOnToggleFullScreen
 }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeBranch, setActiveBranch] = useState('RPS');
+  const [activeBranch, setActiveBranch] = useState(branch || 'RPS');
   const [internalFullScreen, setInternalFullScreen] = useState(false);
   const [localMatrix, setLocalMatrix] = useState(null);
   const [loadingLocal, setLoadingLocal] = useState(false);
   const [masterParams, setMasterParams] = useState([]);
   const [viewMode, setViewMode] = useState('table'); // 'cards' | 'table'
+
+  // Synchronize activeBranch with parent prop when branch changes
+  useEffect(() => {
+    if (branch && branch !== activeBranch) {
+      setActiveBranch(branch);
+    }
+  }, [branch]);
 
   // Fetch live transport parameters from Master Data API
   useEffect(() => {
@@ -72,9 +80,14 @@ export default function TransportDashboardDataTable({
       : (localMatrix || {});
   }, [propComputedMatrix, localMatrix]);
 
+  // Strict fleet-scoped periods: only show months belonging to the active fleet or 'all'
+  const visiblePeriods = useMemo(() => {
+    return periods.filter(p => !p.branch || p.branch === 'all' || p.branch === activeBranch);
+  }, [periods, activeBranch]);
+
   const currentPeriodIdStr = useMemo(() => {
-    return activePeriod !== 'all' ? String(activePeriod) : String(periods[periods.length - 1]?.id || '29');
-  }, [activePeriod, periods]);
+    return activePeriod !== 'all' ? String(activePeriod) : String(visiblePeriods[visiblePeriods.length - 1]?.id || '29');
+  }, [activePeriod, visiblePeriods]);
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[1] || TRANSPORT_BRANCHES[0];
 
   const toggleFullScreen = () => {
@@ -373,7 +386,7 @@ export default function TransportDashboardDataTable({
           <TransportFleetCard
             transportCensus={computedMatrix?.transport_census || localMatrix?.transport_census}
             transportCensusByBranch={computedMatrix?.transport_census_by_branch || localMatrix?.transport_census_by_branch}
-            periods={periods}
+            periods={visiblePeriods}
             selectedPeriod={activePeriod}
           />
         </div>
@@ -448,7 +461,7 @@ export default function TransportDashboardDataTable({
               }}>
                 Parameters ({activeBranchObj.label})
               </th>
-              {periods.map(p => {
+              {visiblePeriods.map(p => {
                 const isSelected = String(p.id) === currentPeriodIdStr;
                 return (
                   <th
@@ -475,12 +488,12 @@ export default function TransportDashboardDataTable({
           </thead>
 
           <tbody>
-            {periods.length === 0 ? (
+            {visiblePeriods.length === 0 ? (
               <tr>
                 <td colSpan={2} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '16px', height: '16px', border: '2px solid #ea580c', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                    <span>Loading Transport Fleet Ledger & cycles from database...</span>
+                    <span>No recorded monthly cycles for {activeBranchObj.label}.</span>
                   </div>
                 </td>
               </tr>
@@ -496,7 +509,7 @@ export default function TransportDashboardDataTable({
                       <tr style={{ backgroundColor: '#fef08a', height: '22px' }}>
                         <td style={{ position: 'sticky', left: 0, borderRight: '1px solid #000000', borderBottom: '1px solid #000000', backgroundColor: '#fef08a', zIndex: 10 }}>&nbsp;</td>
                         <td style={{ position: 'sticky', left: '50px', borderRight: '2px solid #000000', borderBottom: '1px solid #000000', backgroundColor: '#fef08a', zIndex: 10 }}>&nbsp;</td>
-                        {periods.map(p => (
+                        {visiblePeriods.map(p => (
                           <td key={p.id} style={{ borderRight: '1px solid #000000', borderBottom: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
                         ))}
                       </tr>
@@ -537,7 +550,7 @@ export default function TransportDashboardDataTable({
                         {param.param_name}
                       </td>
 
-                      {periods.map(p => {
+                      {visiblePeriods.map(p => {
                         const pStr = String(p.id);
                         const rawVal = getParamValue(activeBranch, pStr, param.param_key);
                         const isRef = param.param_key === 'per_student_cost_expenses' && (rawVal === '#REF!' || !rawVal || rawVal === 0);

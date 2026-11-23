@@ -288,12 +288,13 @@ export default function TransportOperationsDashboard({
 
   // Single-month metrics strictly for the currently selected fleet branch
   const metrics = useMemo(() => {
-    return getBranchMetrics(activeBranch, activePeriodIdStr || String(periods[periods.length - 1]?.id || '1026'));
-  }, [activeBranch, activePeriodIdStr, periods, effectiveMatrix]);
+    return getBranchMetrics(activeBranch, activePeriodIdStr || String(visiblePeriods[visiblePeriods.length - 1]?.id || periods[periods.length - 1]?.id || '1026'));
+  }, [activeBranch, activePeriodIdStr, visiblePeriods, periods, effectiveMatrix]);
 
   // Effective metrics for a branch taking into account currently selected month
   const getBranchEffectiveMetrics = (branchId) => {
-    return getBranchMetrics(branchId, activePeriodIdStr || String(periods[periods.length - 1]?.id || '1026'));
+    const branchVisiblePeriods = periods.filter(p => !p.branch || p.branch === 'all' || p.branch === branchId);
+    return getBranchMetrics(branchId, activePeriodIdStr || String(branchVisiblePeriods[branchVisiblePeriods.length - 1]?.id || periods[periods.length - 1]?.id || '1026'));
   };
 
   // Helper to extract parameter value for a specific branch and period
@@ -318,7 +319,8 @@ export default function TransportOperationsDashboard({
   // Helper to calculate total across all periods for a parameter
   const getParamAllMonthsTotal = (branchId, paramKey) => {
     let tot = 0;
-    periods.forEach(p => {
+    const branchVisiblePeriods = periods.filter(p => !p.branch || p.branch === 'all' || p.branch === branchId);
+    branchVisiblePeriods.forEach(p => {
       tot += getParamVal(branchId, String(p.id), paramKey);
     });
     return tot;
@@ -1686,6 +1688,7 @@ export default function TransportOperationsDashboard({
             periods={periods}
             activePeriod={activePeriod}
             computedMatrix={effectiveMatrix}
+            branch={activeBranch}
           />
         </div>
       )}
