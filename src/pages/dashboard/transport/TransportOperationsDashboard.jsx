@@ -766,7 +766,78 @@ export default function TransportOperationsDashboard({
           </div>
         </div>
 
-        {/* Tier 2: Filter 1 - Institutional Fleets Selector */}
+        {/* Tier 2: View Switcher Tabs (Executive Overview, Vehicle Ledger, All Views) + Live Viewing Indicator */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          paddingTop: '8px',
+          borderTop: '1px solid #edf0f8'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'executive', label: 'Executive Overview', icon: LayoutDashboard, desc: 'Bento Cards & Fleet Analysis' },
+              { id: 'vehicles', label: 'Vehicle Ledger (58 Buses)', icon: Bus, desc: 'Live Vehicle-Wise Expenses Ledger' },
+              { id: 'all', label: 'All Views', icon: Layers, desc: 'Complete Stack' }
+            ].map(tab => {
+              const isActive = activeMainView === tab.id;
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveMainView(tab.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '7px 15px',
+                    borderRadius: '10px',
+                    border: isActive ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                    backgroundColor: isActive ? '#eff6ff' : '#f8fafc',
+                    color: isActive ? '#0369a1' : '#64748b',
+                    fontSize: '12.5px',
+                    fontWeight: isActive ? '800' : '650',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isActive ? '0 2px 8px rgba(2, 132, 199, 0.15)' : 'none'
+                  }}
+                >
+                  <TabIcon size={15} color={isActive ? '#0284c7' : '#64748b'} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right: Active Viewing Indicator */}
+          <div style={{
+            fontSize: '12px',
+            color: '#64748b',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span>Viewing:</span>
+            <strong style={{
+              color: '#0284c7',
+              fontWeight: '800',
+              padding: '3px 10px',
+              backgroundColor: '#f0f9ff',
+              borderRadius: '8px',
+              border: '1px solid #bae6fd'
+            }}>
+              {isAllMonths
+                ? `All Months (${formatINR(monthlyGrandTotals.grandOverall)}) • ${activeBranchObj.label}`
+                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(metrics.total_expenses)}) • ${activeBranchObj.label}`}
+            </strong>
+          </div>
+        </div>
+
+        {/* Tier 3: Filter 1 - Institutional Fleets Selector */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -774,7 +845,7 @@ export default function TransportOperationsDashboard({
           flexWrap: 'wrap',
           gap: '8px',
           paddingTop: '8px',
-          borderTop: '1px solid #edf0f8'
+          borderTop: '1px dashed #e2e8f0'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{
@@ -849,7 +920,7 @@ export default function TransportOperationsDashboard({
           </div>
         </div>
 
-        {/* Tier 3: Filter 2 - Month Filter Pills & Viewing Indicator */}
+        {/* Tier 4: Filter 2 - Month Filter Pills */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -957,88 +1028,12 @@ export default function TransportOperationsDashboard({
             })}
           </div>
 
-          {/* Right: Active Viewing Indicator */}
-          <div style={{
-            fontSize: '12px',
-            color: '#64748b',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <span>Viewing:</span>
-            <strong style={{
-              color: '#0f172a',
-              fontWeight: '800',
-              padding: '3px 10px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0'
-            }}>
-              {isAllMonths
-                ? `All Months (${formatINR(monthlyGrandTotals.grandOverall)}) • ${activeBranchObj.label}`
-                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(metrics.total_expenses)}) • ${activeBranchObj.label}`}
+          <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '600' }}>
+            <span>Fleet Period:</span>{' '}
+            <strong style={{ color: '#0f172a' }}>
+              {isAllMonths ? 'All Recorded Cycles' : activePeriodObj?.period_label || 'Focus'}
             </strong>
           </div>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* VIEW SWITCHER TAB BAR (EXACT MATCH TO HOSTEL OPERATIONS DASHBOARD)         */}
-      {/* ========================================================================= */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        backgroundColor: '#ffffff',
-        padding: '10px 14px',
-        borderRadius: '16px',
-        border: '1.5px solid #e2e8f0',
-        boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {[
-            { id: 'executive', label: 'Executive Overview', icon: LayoutDashboard, desc: 'Bento Cards & Fleet Analysis' },
-            { id: 'vehicles', label: 'Vehicle Ledger (58 Buses)', icon: Bus, desc: 'Live Vehicle-Wise Expenses Ledger' },
-            { id: 'all', label: 'All Views', icon: Layers, desc: 'Complete Stack' }
-          ].map(tab => {
-            const isActive = activeMainView === tab.id;
-            const TabIcon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveMainView(tab.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '9px 16px',
-                  borderRadius: '12px',
-                  border: isActive ? '1.5px solid #0284c7' : '1px solid #e2e8f0',
-                  backgroundColor: isActive ? '#eff6ff' : '#f8fafc',
-                  color: isActive ? '#0369a1' : '#64748b',
-                  fontSize: '13px',
-                  fontWeight: isActive ? '800' : '650',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isActive ? '0 2px 8px rgba(2, 132, 199, 0.12)' : 'none'
-                }}
-              >
-                <TabIcon size={16} color={isActive ? '#0284c7' : '#64748b'} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Viewing Period Indicator */}
-        <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '600', paddingRight: '8px' }}>
-          Viewing: <strong style={{ color: '#0284c7', fontWeight: '800' }}>
-            {formatPeriodLabel(activePeriodObj)} • {activeBranchObj.label}
-          </strong>
         </div>
       </div>
 
