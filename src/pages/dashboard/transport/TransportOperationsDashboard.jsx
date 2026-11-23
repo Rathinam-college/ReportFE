@@ -506,11 +506,7 @@ export default function TransportOperationsDashboard({
         selectedPercent: (curFuel / denom) * 100,
         monthlyAmounts: fuelMonthly,
         maxMonthlyAmount: fuelMax,
-        items: [
-          { id: 'f1', description: 'Diesel Consumption (Bulk)', total: curFuel * 0.85, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (fuelMonthly[p.id] || 0) * 0.85])) },
-          { id: 'f2', description: 'Lubricants & Engine Oil', total: curFuel * 0.10, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (fuelMonthly[p.id] || 0) * 0.10])) },
-          { id: 'f3', description: 'Special Trips & Transit Fuel', total: curFuel * 0.05, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (fuelMonthly[p.id] || 0) * 0.05])) }
-        ]
+        hideDetails: true
       },
       {
         categoryId: 'repair',
@@ -520,12 +516,7 @@ export default function TransportOperationsDashboard({
         selectedPercent: (curRep / denom) * 100,
         monthlyAmounts: repMonthly,
         maxMonthlyAmount: repMax,
-        items: [
-          { id: 'r1', description: 'Scheduled Periodic Service & Spares', total: curRep * 0.50, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (repMonthly[p.id] || 0) * 0.50])) },
-          { id: 'r2', description: 'Mechanical & Engine Maintenance', total: curRep * 0.30, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (repMonthly[p.id] || 0) * 0.30])) },
-          { id: 'r3', description: 'Tyre Retreading & Battery Change', total: curRep * 0.15, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (repMonthly[p.id] || 0) * 0.15])) },
-          { id: 'r4', description: 'Body Works & Painting', total: curRep * 0.05, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (repMonthly[p.id] || 0) * 0.05])) }
-        ]
+        hideDetails: true
       },
       {
         categoryId: 'driver',
@@ -535,11 +526,7 @@ export default function TransportOperationsDashboard({
         selectedPercent: (curEmp / denom) * 100,
         monthlyAmounts: empMonthly,
         maxMonthlyAmount: empMax,
-        items: [
-          { id: 'e1', description: 'Regular Institutional Drivers', total: curEmp * 0.75, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (empMonthly[p.id] || 0) * 0.75])) },
-          { id: 'e2', description: 'Cleaners & Route Conductors', total: curEmp * 0.15, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (empMonthly[p.id] || 0) * 0.15])) },
-          { id: 'e3', description: 'Overtime & Duty Bata', total: curEmp * 0.10, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (empMonthly[p.id] || 0) * 0.10])) }
-        ]
+        hideDetails: true
       },
       {
         categoryId: 'statutory',
@@ -549,12 +536,7 @@ export default function TransportOperationsDashboard({
         selectedPercent: (curFc / denom) * 100,
         monthlyAmounts: fcMonthly,
         maxMonthlyAmount: fcMax,
-        items: [
-          { id: 'fc1', description: 'Annual RTO Fitness Certificate (FC)', total: curFc * 0.50, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (fcMonthly[p.id] || 0) * 0.50])) },
-          { id: 'fc2', description: 'State Motor Vehicle Road Tax', total: curFc * 0.30, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (fcMonthly[p.id] || 0) * 0.30])) },
-          { id: 'fc3', description: 'Commercial Bus Insurance', total: curFc * 0.15, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (fcMonthly[p.id] || 0) * 0.15])) },
-          { id: 'fc4', description: 'Permits & Emission Testing', total: curFc * 0.05, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (fcMonthly[p.id] || 0) * 0.05])) }
-        ]
+        hideDetails: true
       },
       {
         categoryId: 'other',
@@ -564,11 +546,7 @@ export default function TransportOperationsDashboard({
         selectedPercent: (curOth / denom) * 100,
         monthlyAmounts: othMonthly,
         maxMonthlyAmount: othMax,
-        items: [
-          { id: 'o1', description: 'Fastag Highway Toll Passes', total: curOth * 0.55, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (othMonthly[p.id] || 0) * 0.55])) },
-          { id: 'o2', description: 'Parking & Campus Transit Fees', total: curOth * 0.25, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (othMonthly[p.id] || 0) * 0.25])) },
-          { id: 'o3', description: 'External Cab & Emergency Transit', total: curOth * 0.20, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (othMonthly[p.id] || 0) * 0.20])) }
-        ]
+        hideDetails: true
       },
       {
         categoryId: 'census',
@@ -579,10 +557,7 @@ export default function TransportOperationsDashboard({
         selectedPercent: 0,
         monthlyAmounts: paxMonthly,
         maxMonthlyAmount: paxMax,
-        items: [
-          { id: 'c1', description: 'Student Commuters', total: curPax * 0.82, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (paxMonthly[p.id] || 0) * 0.82])) },
-          { id: 'c2', description: 'Staff & Faculty Commuters', total: curPax * 0.18, amounts: Object.fromEntries(visiblePeriods.map(p => [p.id, (paxMonthly[p.id] || 0) * 0.18])) }
-        ]
+        hideDetails: true
       }
     ];
   }, [visiblePeriods, activeBranch, effectiveMatrix, isAllMonths, activePeriod, currentGrandTotal, metrics]);
@@ -1097,8 +1072,7 @@ export default function TransportOperationsDashboard({
                 selectedPercent={cat.selectedPercent}
                 monthlyAmounts={cat.monthlyAmounts}
                 maxMonthlyAmount={cat.maxMonthlyAmount}
-                isExpanded={Boolean(expandedCardIds[cat.categoryId])}
-                onToggleExpand={() => toggleCardExpand(cat.categoryId)}
+                hideDetails={true}
                 formatCompact={cat.isPersonCategory ? (v) => Math.round(Number(v || 0)).toLocaleString('en-IN') : formatIndianCompact}
                 formatFull={cat.isPersonCategory ? (v) => Math.round(Number(v || 0)).toLocaleString('en-IN') : formatINR}
                 hidePercentage={cat.isPersonCategory}
