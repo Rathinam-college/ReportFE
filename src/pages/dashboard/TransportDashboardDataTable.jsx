@@ -62,12 +62,19 @@ export default function TransportDashboardDataTable({
     }
   }, [propPeriods, propComputedMatrix]);
 
-  const periods = (propPeriods && propPeriods.length > 0) ? propPeriods : (localMatrix?.periods || []);
-  const computedMatrix = (propComputedMatrix?.transport_census_by_branch && Object.keys(propComputedMatrix.transport_census_by_branch).length > 0)
-    ? propComputedMatrix
-    : (localMatrix || {});
+  const periods = useMemo(() => {
+    return (propPeriods && propPeriods.length > 0) ? propPeriods : (localMatrix?.periods || []);
+  }, [propPeriods, localMatrix]);
 
-  const currentPeriodIdStr = activePeriod !== 'all' ? String(activePeriod) : String(periods[periods.length - 1]?.id || '29');
+  const computedMatrix = useMemo(() => {
+    return (propComputedMatrix?.transport_census_by_branch && Object.keys(propComputedMatrix.transport_census_by_branch).length > 0)
+      ? propComputedMatrix
+      : (localMatrix || {});
+  }, [propComputedMatrix, localMatrix]);
+
+  const currentPeriodIdStr = useMemo(() => {
+    return activePeriod !== 'all' ? String(activePeriod) : String(periods[periods.length - 1]?.id || '29');
+  }, [activePeriod, periods]);
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[1] || TRANSPORT_BRANCHES[0];
 
   const toggleFullScreen = () => {

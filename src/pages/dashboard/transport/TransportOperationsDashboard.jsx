@@ -28,6 +28,21 @@ export default function TransportOperationsDashboard({
   const [searchParamTerm, setSearchParamTerm] = useState('');
   const [vehicleStats, setVehicleStats] = useState(null);
 
+  const effectiveMatrix = useMemo(() => {
+    return (propComputedMatrix?.transport_census_by_branch && Object.keys(propComputedMatrix.transport_census_by_branch).length > 0)
+      ? propComputedMatrix
+      : (localMatrix || propComputedMatrix || {});
+  }, [propComputedMatrix, localMatrix]);
+
+  const periods = useMemo(() => {
+    return (propPeriods && propPeriods.length > 0) ? propPeriods : (effectiveMatrix?.periods || []);
+  }, [propPeriods, effectiveMatrix]);
+
+  // Strict fleet-scoped periods: only show months belonging to the active fleet or 'all'
+  const visiblePeriods = useMemo(() => {
+    return periods.filter(p => !p.branch || p.branch === 'all' || p.branch === activeBranch);
+  }, [periods, activeBranch]);
+
   // Disallow consolidated 'all' branch and 'all' period in transport
   useEffect(() => {
     if (activeBranch === 'all') {
@@ -36,10 +51,13 @@ export default function TransportOperationsDashboard({
   }, [activeBranch]);
 
   useEffect(() => {
-    if (activePeriod === 'all' && periods.length > 0 && setActivePeriod) {
-      setActivePeriod(String(periods[periods.length - 1].id));
+    if (visiblePeriods.length > 0 && setActivePeriod) {
+      const isCurrentInVisible = visiblePeriods.some(p => String(p.id) === String(activePeriod));
+      if (!isCurrentInVisible || activePeriod === 'all') {
+        setActivePeriod(String(visiblePeriods[visiblePeriods.length - 1].id));
+      }
     }
-  }, [activePeriod, periods, setActivePeriod]);
+  }, [activePeriod, visiblePeriods, setActivePeriod]);
 
   // Self-healing live fetch from API if computedMatrix not yet populated for transport
   const fetchLiveMatrix = async () => {
@@ -65,15 +83,9 @@ export default function TransportOperationsDashboard({
     }
   }, [propComputedMatrix]);
 
-  const effectiveMatrix = (propComputedMatrix?.transport_census_by_branch && Object.keys(propComputedMatrix.transport_census_by_branch).length > 0)
-    ? propComputedMatrix
-    : (localMatrix || propComputedMatrix || {});
-
-  const periods = (propPeriods && propPeriods.length > 0) ? propPeriods : (effectiveMatrix.periods || []);
-
   // Fetch live vehicle summary from /api/transport/vehicles
   useEffect(() => {
-    const pId = activePeriod !== 'all' ? activePeriod : (periods[periods.length - 1]?.id || 1026);
+    const pId = activePeriod !== 'all' ? activePeriod : (visiblePeriods[visiblePeriods.length - 1]?.id || periods[periods.length - 1]?.id || 1026);
     fetch(`/api/transport/vehicles?period_id=${pId}&branch=all`)
       .then(res => res.json())
       .then(d => {
@@ -82,17 +94,17 @@ export default function TransportOperationsDashboard({
         }
       })
       .catch(e => console.warn('[TransportDashboard] Vehicle stats notice:', e));
-  }, [activePeriod, periods]);
+  }, [activePeriod, visiblePeriods, periods]);
 
   const isAllMonths = activePeriod === 'all';
 
   // Effective period object for single-month snapshot metrics
   const activePeriodObj = useMemo(() => {
     if (activePeriod && activePeriod !== 'all') {
-      return periods.find(p => String(p.id) === String(activePeriod)) || periods[periods.length - 1] || null;
+      return visiblePeriods.find(p => String(p.id) === String(activePeriod)) || visiblePeriods[visiblePeriods.length - 1] || periods[periods.length - 1] || null;
     }
-    return periods[periods.length - 1] || null;
-  }, [activePeriod, periods]);
+    return visiblePeriods[visiblePeriods.length - 1] || periods[periods.length - 1] || null;
+  }, [activePeriod, visiblePeriods, periods]);
 
   const activePeriodIdStr = activePeriodObj ? String(activePeriodObj.id) : null;
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[0];
@@ -594,7 +606,7 @@ export default function TransportOperationsDashboard({
             </div>
 
             {/* Individual Month Pills */}
-            {periods.map(p => {
+            {visiblePeriods.map(p => {
               const isSel = String(p.id) === String(activePeriod);
               const pBm = getBranchMetrics(activeBranch, String(p.id));
               const pTotal = pBm?.total_expenses || 0;

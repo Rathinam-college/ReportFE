@@ -441,6 +441,31 @@ export default function PeriodsManager({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Calendar size={15} color={isSelected ? '#2563eb' : '#64748b'} />
                           <span>{p.period_label}</span>
+                          {p.branch && p.branch !== 'all' && (
+                            <span style={{
+                              fontSize: '10.5px',
+                              fontWeight: '800',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              backgroundColor: p.branch === 'KPM' ? '#fef3c7' : p.branch === 'RPS' ? '#e0e7ff' : p.branch === 'University' ? '#ecfdf5' : '#f0fdfa',
+                              color: p.branch === 'KPM' ? '#b45309' : p.branch === 'RPS' ? '#3730a3' : p.branch === 'University' ? '#047857' : '#0f766e',
+                              border: '1px solid rgba(0,0,0,0.08)'
+                            }}>
+                              {p.branch} Fleet
+                            </span>
+                          )}
+                          {p.branch === 'all' && (
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: '#f1f5f9',
+                              color: '#64748b'
+                            }}>
+                              All Fleets
+                            </span>
+                          )}
                         </div>
                       </td>
 

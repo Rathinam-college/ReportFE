@@ -204,6 +204,11 @@ export default function TransportSpreadsheetEntry({
 
   const isClosed = !!activePeriodObj?.is_closed;
   const periods = computedMatrix?.periods || [];
+  // Strict fleet-scoped periods: only show months belonging to the active fleet or 'all'
+  const visiblePeriods = useMemo(() => {
+    return periods.filter(p => !p.branch || p.branch === 'all' || p.branch === activeBranch);
+  }, [periods, activeBranch]);
+
   const currPeriodIdStr = String(editingPeriodId);
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES.find(b => b.id === 'RPS') || TRANSPORT_BRANCHES[1] || TRANSPORT_BRANCHES[0];
 
@@ -219,15 +224,15 @@ export default function TransportSpreadsheetEntry({
     if (onBranchChange) onBranchChange(b);
   };
 
-  // Ensure editingPeriodId belongs to transport periods, otherwise fallback to latest
+  // Ensure editingPeriodId belongs to visible fleet transport periods, otherwise fallback to latest
   useEffect(() => {
-    if (setEditingPeriodId && periods.length > 0) {
-      const exists = periods.some(p => p.id === editingPeriodId);
+    if (setEditingPeriodId && visiblePeriods.length > 0) {
+      const exists = visiblePeriods.some(p => p.id === editingPeriodId);
       if (!exists) {
-        setEditingPeriodId(periods[periods.length - 1].id);
+        setEditingPeriodId(visiblePeriods[visiblePeriods.length - 1].id);
       }
     }
-  }, [periods, editingPeriodId, setEditingPeriodId]);
+  }, [visiblePeriods, editingPeriodId, setEditingPeriodId]);
 
   // Fetch parameters from Master Data API
   const fetchParameters = async () => {
@@ -1096,7 +1101,7 @@ export default function TransportSpreadsheetEntry({
           <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             📅 Focus Month:
           </span>
-          {periods.map(p => {
+          {visiblePeriods.map(p => {
             const isSel = String(p.id) === currPeriodIdStr;
             return (
               <button
@@ -1554,7 +1559,7 @@ export default function TransportSpreadsheetEntry({
                 <th style={{ padding: '6px 12px', minWidth: '300px', textAlign: 'center', borderRight: '1px solid #000000', borderBottom: '2px solid #000000' }}>
                   Parameters
                 </th>
-                {periods.map(p => {
+                {visiblePeriods.map(p => {
                   const isCurrent = String(p.id) === currPeriodIdStr;
                   return (
                     <th
@@ -1601,7 +1606,7 @@ export default function TransportSpreadsheetEntry({
                       <tr style={{ backgroundColor: '#fef08a', height: '24px', borderBottom: '1px solid #000000' }}>
                         <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
                         <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
-                        {periods.map(p => (
+                        {visiblePeriods.map(p => (
                           <td key={p.id} style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
                         ))}
                         {showFormulaDetails && <td style={{ backgroundColor: '#fef08a' }}>&nbsp;</td>}
@@ -1656,7 +1661,7 @@ export default function TransportSpreadsheetEntry({
                       </td>
 
                       {/* Each Month Column */}
-                      {periods.map(p => {
+                      {visiblePeriods.map(p => {
                         const pStr = String(p.id);
                         const pMetrics = computeBranchMetrics(activeBranch, pStr);
                         const mVal = isFormula 

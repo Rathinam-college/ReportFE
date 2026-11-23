@@ -50,11 +50,11 @@ export default function HostelOperationsDashboard({
 
   const effectiveMatrix = (computedMatrix?.module === 'hostel' && (computedMatrix?.periods?.length || 0) >= 10)
     ? computedMatrix
-    : (localHostelMatrix || computedMatrix || {});
+    : (localHostelMatrix || (computedMatrix?.module === 'hostel' ? computedMatrix : {}));
 
   const effectivePeriods = (effectiveMatrix?.periods && effectiveMatrix.periods.length > 0)
     ? effectiveMatrix.periods
-    : periods;
+    : (computedMatrix?.module === 'hostel' ? (computedMatrix?.periods || []) : []);
 
   const hostelCensusMap = effectiveMatrix?.hostel_census || computedMatrix?.hostel_census || {};
 
