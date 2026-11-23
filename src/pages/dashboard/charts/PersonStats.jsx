@@ -37,15 +37,12 @@ export default function PersonStats({
   let totalPersons = null;
   let costPerPerson = null;
 
-  if (hasRows) {
+  const isAllMonths = selectedPeriod === 'all';
+
+  if (hasRows && !isAllMonths) {
     personRows.forEach((row) => {
       const desc = (row.description || row.name || '').toLowerCase();
-      let val = 0;
-      if (selectedPeriod === 'all') {
-        val = Number(row.total || 0);
-      } else {
-        val = Number(row.amounts?.[selectedPeriod] ?? row.amounts?.[String(selectedPeriod)] ?? 0);
-      }
+      const val = Number(row.amounts?.[selectedPeriod] ?? row.amounts?.[String(selectedPeriod)] ?? 0);
 
       if (desc.includes('student')) {
         students = val;
@@ -59,25 +56,27 @@ export default function PersonStats({
     });
   }
 
-  // Fallback to census data if available
-  if (students === null && (censusData?.students_count || censusData?.student_count)) {
-    students = Number(censusData.students_count || censusData.student_count || 0);
-  }
-  if (staff === null && censusData?.staff_count) {
-    staff = Number(censusData.staff_count || 0);
-  }
-  if (totalPersons === null) {
-    if (censusData?.total_occupied) {
-      totalPersons = Number(censusData.total_occupied);
-    } else if (students !== null || staff !== null) {
-      totalPersons = (students || 0) + (staff || 0);
+  // Fallback to census data if available (only for specific month)
+  if (!isAllMonths) {
+    if (students === null && (censusData?.students_count || censusData?.student_count)) {
+      students = Number(censusData.students_count || censusData.student_count || 0);
     }
-  }
-  if (costPerPerson === null) {
-    if (censusData?.per_student_cost_month) {
-      costPerPerson = Number(censusData.per_student_cost_month);
-    } else if (totalPersons && totalPersons > 0 && grandTotal > 0) {
-      costPerPerson = grandTotal / totalPersons;
+    if (staff === null && censusData?.staff_count) {
+      staff = Number(censusData.staff_count || 0);
+    }
+    if (totalPersons === null) {
+      if (censusData?.total_occupied) {
+        totalPersons = Number(censusData.total_occupied);
+      } else if (students !== null || staff !== null) {
+        totalPersons = (students || 0) + (staff || 0);
+      }
+    }
+    if (costPerPerson === null) {
+      if (censusData?.per_student_cost_month) {
+        costPerPerson = Number(censusData.per_student_cost_month);
+      } else if (totalPersons && totalPersons > 0 && grandTotal > 0) {
+        costPerPerson = grandTotal / totalPersons;
+      }
     }
   }
 

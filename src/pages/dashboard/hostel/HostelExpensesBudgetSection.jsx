@@ -257,14 +257,14 @@ export default function HostelExpensesBudgetSection({
     const avgVacant = countWithData > 0 ? Math.round(totalVacantSum / countWithData) : 0;
 
     // For single month: that month's occupied count.
-    // For 'all': total cumulative occupants across cycles
+    // For 'all': do not show total cumulative occupants across cycles
     const selectedAmount = isAll
-      ? totalOccupantsSum
+      ? 0
       : num(selCensus?.total_occupied, 0);
 
-    const students = isAll ? totalStudentsSum : num(selCensus?.students_total, 0);
-    const staff = isAll ? totalStaffSum : num(selCensus?.staff_total, 0);
-    const vacant = isAll ? totalVacantSum : num(selCensus?.vacant_total, 0);
+    const students = isAll ? 0 : num(selCensus?.students_total, 0);
+    const staff = isAll ? 0 : num(selCensus?.staff_total, 0);
+    const vacant = isAll ? 0 : num(selCensus?.vacant_total, 0);
 
     const maxMonth = Math.max(...Object.values(monthlyPersons), 1);
 
@@ -314,11 +314,11 @@ export default function HostelExpensesBudgetSection({
     const avgCostDay = countWithCost > 0 ? (sumCostDay / countWithCost) : 0;
 
     const selectedAmount = isAll
-      ? (avgCostMonth > 0 ? avgCostMonth : num(selCensus?.per_student_cost_month, 0))
+      ? 0
       : num(selCensus?.per_student_cost_month, 0);
 
-    const costMonth = isAll ? avgCostMonth : num(selCensus?.per_student_cost_month, 0);
-    const costDay = isAll ? avgCostDay : num(selCensus?.per_student_cost_day, 0);
+    const costMonth = isAll ? 0 : num(selCensus?.per_student_cost_month, 0);
+    const costDay = isAll ? 0 : num(selCensus?.per_student_cost_day, 0);
 
     const maxMonth = Math.max(...Object.values(monthlyCostPerPerson), 1);
 
@@ -327,6 +327,7 @@ export default function HostelExpensesBudgetSection({
       categoryName: 'Cost Per Occupant',
       color: '#f43f5e',
       isPersonCategory: false,
+      isCostPerPerson: true,
       selectedAmount: Math.round(selectedAmount * 100) / 100,
       selectedPercent: 0,
       monthlyAmounts: monthlyCostPerPerson,

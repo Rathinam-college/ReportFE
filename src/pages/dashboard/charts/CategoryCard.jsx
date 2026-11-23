@@ -35,6 +35,8 @@ export default function CategoryCard({
   const items = category.items || [];
   const [hoveredBarPeriod, setHoveredBarPeriod] = useState(null);
 
+  const isAllMonths = selectedPeriod === 'all';
+
   // Identify whether this category represents Person counts (not currency)
   const isPersonCategory = Boolean(
     category.isPersonCategory ||
@@ -45,9 +47,24 @@ export default function CategoryCard({
       categoryName.toLowerCase() === 'total persons' ||
       categoryName.toLowerCase() === 'headcount' ||
       categoryName.toLowerCase() === 'students' ||
-      categoryName.toLowerCase() === 'census'
+      categoryName.toLowerCase() === 'census' ||
+      categoryName.toLowerCase().includes('resident occupants')
     ) && !categoryName.toLowerCase().includes('cost'))
   );
+
+  // Identify whether this category represents Cost Per Person / Unit Rate
+  const isCostPerPerson = Boolean(
+    category.isCostPerPerson ||
+    (categoryName && (
+      categoryName.toLowerCase().includes('cost per person') ||
+      categoryName.toLowerCase().includes('cost/person') ||
+      categoryName.toLowerCase().includes('cost / person') ||
+      categoryName.toLowerCase().includes('cost per occupant') ||
+      categoryName.toLowerCase().includes('per student cost')
+    ))
+  );
+
+  const isNonAdditiveCategory = isPersonCategory || isCostPerPerson || Boolean(category.isExcluded);
 
   const isPersonItem = (itName = '') => {
     if (isPersonCategory) return true;
@@ -61,6 +78,26 @@ export default function CategoryCard({
       n.includes('person count') ||
       n === 'person' ||
       (n === 'others' && isPersonCategory)
+    );
+  };
+
+  const isNonAdditiveItem = (itName = '') => {
+    if (isNonAdditiveCategory) return true;
+    const n = String(itName || '').toLowerCase().trim();
+    return (
+      n.includes('student') ||
+      n.includes('staff count') ||
+      n.includes('staffs count') ||
+      n.includes('cost per person') ||
+      n.includes('cost/person') ||
+      n.includes('cost / person') ||
+      n.includes('per person') ||
+      n.includes('per occupant') ||
+      n.includes('per student') ||
+      n.includes('headcount') ||
+      n.includes('census') ||
+      n === 'others' ||
+      n === 'person'
     );
   };
 
@@ -172,7 +209,7 @@ export default function CategoryCard({
 
         {/* Big Amount: Category Total for Selection */}
         <div
-          title={isPersonCategory ? formatPerson(selectedAmount) : formatFull(selectedAmount)}
+          title={isAllMonths && isNonAdditiveCategory ? 'Total not applicable across cycles' : (isPersonCategory ? formatPerson(selectedAmount) : formatFull(selectedAmount))}
           style={{
             fontSize: '24px',
             fontWeight: '800',
@@ -182,9 +219,11 @@ export default function CategoryCard({
             marginTop: '4px'
           }}
         >
-          {selectedAmount > 0 
-            ? (isPersonCategory ? formatPerson(selectedAmount) : formatCompact(selectedAmount)) 
-            : (isPersonCategory ? '0' : '—')}
+          {isAllMonths && isNonAdditiveCategory
+            ? '—'
+            : (selectedAmount > 0 
+                ? (isPersonCategory ? formatPerson(selectedAmount) : formatCompact(selectedAmount)) 
+                : (isPersonCategory ? '0' : '—'))}
         </div>
 
         {/* Monthly Trend Bars: Value on Top, Bar in Middle, Month Label Under */}
@@ -410,15 +449,19 @@ export default function CategoryCard({
           ) : (
             items.map((it) => {
               let itAmount = 0;
-              if (selectedPeriod === 'all') {
-                itAmount = Number(it.total || 0);
+              const isNonAdditive = isNonAdditiveCategory || isNonAdditiveItem(it.description || it.name);
+
+              if (isAllMonths) {
+                itAmount = isNonAdditive ? 0 : Number(it.total || 0);
               } else {
                 itAmount = Number(it.amounts?.[selectedPeriod] ?? it.amounts?.[String(selectedPeriod)] ?? 0);
               }
 
               const safeCategoryTotal = selectedAmount > 0 ? selectedAmount : 1;
-              const itemSharePct = selectedAmount > 0 ? Math.min(100, Math.max(0, (itAmount / safeCategoryTotal) * 100)) : 0;
-              const hasValue = itAmount > 0;
+              const itemSharePct = (isAllMonths && isNonAdditive)
+                ? 0
+                : (selectedAmount > 0 ? Math.min(100, Math.max(0, (itAmount / safeCategoryTotal) * 100)) : 0);
+              const hasValue = (isAllMonths && isNonAdditive) ? false : itAmount > 0;
 
               // Collect remarks for this line item
               const itemRemarks = [];
@@ -456,9 +499,11 @@ export default function CategoryCard({
               const formattedItemFull = thisItemIsPerson ? formatPerson(itAmount) : formatFull(itAmount);
               const formattedItemCompact = thisItemIsPerson ? formatPerson(itAmount) : formatCompact(itAmount);
 
-              const itemTooltip = hasItemRemarks
-                ? `${it.description || it.name}: ${formattedItemFull}\n\n💬 Remarks: ${itemRemarks.map(r => `[${r.periodLabel}] "${r.text}"`).join('; ')}`
-                : `${it.description || it.name}: ${formattedItemFull}`;
+              const itemTooltip = (isAllMonths && isNonAdditive)
+                ? `${it.description || it.name}: Total not applicable across cycles`
+                : (hasItemRemarks
+                    ? `${it.description || it.name}: ${formattedItemFull}\n\n💬 Remarks: ${itemRemarks.map(r => `[${r.periodLabel}] "${r.text}"`).join('; ')}`
+                    : `${it.description || it.name}: ${formattedItemFull}`);
 
               return (
                 <div key={it.cost_head_id || it.id || it.description} title={itemTooltip} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -485,10 +530,12 @@ export default function CategoryCard({
                     <span
                       style={{
                         fontWeight: '700',
-                        color: hasValue ? 'var(--text-main, #14172b)' : 'var(--text-muted, #6b7090)'
+                        color: (isAllMonths && isNonAdditive) ? 'var(--text-muted, #6b7090)' : (hasValue ? 'var(--text-main, #14172b)' : 'var(--text-muted, #6b7090)')
                       }}
                     >
-                      {hasValue ? formattedItemCompact : (thisItemIsPerson ? '0' : '—')}
+                      {isAllMonths && isNonAdditive
+                        ? '—'
+                        : (hasValue ? formattedItemCompact : (thisItemIsPerson ? '0' : '—'))}
                     </span>
                   </div>
 

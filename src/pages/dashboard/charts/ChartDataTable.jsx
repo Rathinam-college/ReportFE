@@ -983,25 +983,33 @@ export default function ChartDataTable({
           >
             {filteredCategories.map((cat) => {
               const catId = cat.categoryId;
+              const isPersonCat = isPersonCountCategory(cat.categoryName);
+              const isCostPerPersonCat = cat.categoryName.toLowerCase().includes('cost per person') || 
+                                        cat.categoryName.toLowerCase().includes('cost/person') ||
+                                        cat.categoryName.toLowerCase().includes('cost / person') ||
+                                        cat.categoryName.toLowerCase().includes('cost per occupant');
+              const isNonAdditiveCat = isPersonCat || isCostPerPersonCat || cat.isExcluded;
+
               let catAmount = 0;
               if (selectedPeriod === 'all') {
-                catAmount = categorySubtotals[catId]?.total || 0;
+                catAmount = isNonAdditiveCat ? 0 : (categorySubtotals[catId]?.total || 0);
               } else {
                 catAmount = categorySubtotals[catId]?.[selectedPeriod] || 0;
               }
 
               const denom = currentGrandTotal > 0 ? currentGrandTotal : 1;
-              const catPercent = currentGrandTotal > 0 ? (catAmount / denom) * 100 : 0;
+              const catPercent = (currentGrandTotal > 0 && !isNonAdditiveCat) ? (catAmount / denom) * 100 : 0;
               const maxMonth = categoryMaxMonths[catId] || 1;
               const isExpanded = !!expandedCardIds[catId];
-              const isPersonCat = isPersonCountCategory(cat.categoryName);
 
               return (
                 <CategoryCard
                   key={catId || cat.categoryName}
                   category={{
                     ...cat,
-                    isPersonCategory: isPersonCat
+                    isPersonCategory: isPersonCat,
+                    isCostPerPerson: isCostPerPersonCat,
+                    isExcluded: isNonAdditiveCat
                   }}
                   periods={periods}
                   selectedPeriod={selectedPeriod}
@@ -1013,7 +1021,7 @@ export default function ChartDataTable({
                   onToggleExpand={handleToggleExpand}
                   formatCompact={isPersonCat ? formatPersonCount : formatIndianCompact}
                   formatFull={isPersonCat ? formatPersonCount : formatIndianFull}
-                  hidePercentage={cat.isExcluded || displayMode === 'amount_only'}
+                  hidePercentage={isNonAdditiveCat || displayMode === 'amount_only'}
                   remarksDraft={remarksDraft}
                 />
               );

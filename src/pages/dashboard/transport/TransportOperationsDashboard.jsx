@@ -512,7 +512,7 @@ export default function TransportOperationsDashboard({
     const curEmp = isAllMonths ? Object.values(empMonthly).reduce((a, b) => a + b, 0) : (empMonthly[activePeriod] || metrics.employee_cost);
     const curFc = isAllMonths ? Object.values(fcMonthly).reduce((a, b) => a + b, 0) : (fcMonthly[activePeriod] || (metrics.statutory_cost + metrics.fc_cost));
     const curOth = isAllMonths ? Object.values(othMonthly).reduce((a, b) => a + b, 0) : (othMonthly[activePeriod] || (metrics.other_cost + metrics.cab_billing));
-    const curPax = isAllMonths ? Object.values(paxMonthly).reduce((a, b) => a + b, 0) : (paxMonthly[activePeriod] || metrics.passengers_count);
+    const curPax = isAllMonths ? 0 : (paxMonthly[activePeriod] || metrics.passengers_count);
 
     return [
       {
