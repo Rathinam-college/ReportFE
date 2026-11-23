@@ -7,6 +7,7 @@ import {
 import HostelSpreadsheetEntry from './HostelSpreadsheetEntry';
 import TransportSpreadsheetEntry from './TransportSpreadsheetEntry';
 import FoodSpreadsheetEntry from './FoodSpreadsheetEntry';
+import CctvSpreadsheetEntry from './CctvSpreadsheetEntry';
 
 export default function MatrixTable({
   selectedModule = 'food',
@@ -174,6 +175,17 @@ export default function MatrixTable({
           openAddCategoryModal={openAddCategoryModal}
           handleCloneFromPrev={handleCloneFromPrev}
           handleToggleLock={handleToggleLock}
+        />
+      )}
+
+      {/* 5. CCTV OPERATIONS & SURVEILLANCE SPREADSHEET */}
+      {selectedModule === 'cctv' && (
+        <CctvSpreadsheetEntry
+          activePeriodObj={activePeriodObj}
+          computedMatrix={computedMatrix}
+          editingPeriodId={editingPeriodId}
+          setEditingPeriodId={setEditingPeriodId}
+          fetchData={fetchData}
         />
       )}
     {/* 2. FOOD OPERATIONS SPREADSHEET (from user's Excel mockup image) */}

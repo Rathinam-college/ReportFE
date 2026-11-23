@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Utensils, Home, Bus, Search, Bell, Database, User } from 'lucide-react';
+import { Utensils, Home, Bus, Video, Search, Bell, Database, User } from 'lucide-react';
 
 export default function SubNav({
   currentUser,
@@ -17,7 +17,8 @@ export default function SubNav({
   const modules = [
     { id: 'food', label: 'Food', icon: Utensils },
     { id: 'hostel', label: 'Hostel', icon: Home },
-    { id: 'transport', label: 'Transport', icon: Bus }
+    { id: 'transport', label: 'Transport', icon: Bus },
+    { id: 'cctv', label: 'CCTV', icon: Video }
   ];
 
   const currentSub = activeTab === 'dashboard' 

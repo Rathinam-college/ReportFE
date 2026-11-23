@@ -3,6 +3,7 @@ import { SlidersHorizontal, Calendar, CheckCircle2, AlertTriangle, Calculator, F
 import CostHeadsManager from './CostHeadsManager';
 import HostelMasterManager from './HostelMasterManager';
 import TransportMasterManager from './TransportMasterManager';
+import CctvMasterManager from './CctvMasterManager';
 import PeriodsManager from './PeriodsManager';
 import CategoryFormulaManager from './CategoryFormulaManager';
 import EditPeriodModal from './EditPeriodModal';
@@ -181,6 +182,8 @@ export default function MasterDataPage({
               <HostelMasterManager />
             ) : moduleName === 'Transport' ? (
               <TransportMasterManager />
+            ) : moduleName === 'CCTV' ? (
+              <CctvMasterManager />
             ) : (
               <CostHeadsManager
                 costHeadsList={costHeadsList}

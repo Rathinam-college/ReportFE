@@ -30,6 +30,7 @@ import TransportDashboardDataTable from './TransportDashboardDataTable';
 import MonthlyExpenseSection from './monthly_expense/MonthlyExpenseSection';
 import HostelOperationsDashboard from './hostel/HostelOperationsDashboard';
 import TransportOperationsDashboard from './transport/TransportOperationsDashboard';
+import CctvOperationsDashboard from './cctv/CctvOperationsDashboard';
 
 // Helper to determine the period of the latest recorded entry across modules
 export const getLastEnteredPeriod = (periods = [], matrix = null, module = 'food', branch = null) => {
@@ -69,6 +70,13 @@ export const getLastEnteredPeriod = (periods = [], matrix = null, module = 'food
     if (module === 'hostel') {
       const hc = matrix?.hostel_census?.[pid];
       if (hc && ((Number(hc.total_residents) || 0) > 0 || (Number(hc.actual_veg) || 0) > 0 || (Number(hc.expenses_occurred) || 0) > 0)) {
+        return p;
+      }
+    }
+
+    if (module === 'cctv') {
+      const ce = matrix?.cctv_entries?.[pid];
+      if (ce && ((Number(ce.total_expenses) || 0) > 0 || (Number(ce.projects_total) || 0) > 0)) {
         return p;
       }
     }
@@ -687,6 +695,27 @@ export default function DashboardPage({
             onOpenDataEntry?.('transport', pId, targetBranch);
           }}
           handleExportReport={handleExportReport}
+        />
+      </div>
+    );
+  }
+
+  // Dedicated Enterprise CCTV Operations & Surveillance Management Dashboard
+  if (currentModule === 'cctv') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
+        <CctvOperationsDashboard
+          computedMatrix={effectiveMatrix}
+          periods={periods}
+          activePeriod={activePeriod || (periods.length > 0 ? String(periods[periods.length - 1].id) : 'all')}
+          setActivePeriod={setActivePeriod}
+          onOpenDataEntry={(targetPeriodId) => {
+            const pId = targetPeriodId || (activePeriod !== 'all' ? Number(activePeriod) : null);
+            onOpenDataEntry?.('cctv', pId);
+          }}
+          handleExportReport={handleExportReport}
+          attachmentsSummary={attachmentsSummary}
+          onRefreshAttachments={fetchAttachmentsSummary}
         />
       </div>
     );
