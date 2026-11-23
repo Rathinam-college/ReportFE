@@ -12,6 +12,7 @@ import TransportVehicleExpensesTable from '../../data_entry/TransportVehicleExpe
 import TransportDashboardCensusView from '../TransportDashboardCensusView';
 import HeroSummary from '../charts/HeroSummary';
 import CategoryCard from '../charts/CategoryCard';
+import TransportVehicleDetailsModal from './TransportVehicleDetailsModal';
 
 export default function TransportOperationsDashboard({
   computedMatrix: propComputedMatrix,
@@ -34,6 +35,13 @@ export default function TransportOperationsDashboard({
   const [vehicleViewMode, setVehicleViewMode] = useState('cards'); // 'cards' | 'table'
   const [expandedVehicleId, setExpandedVehicleId] = useState(null);
   const [expandedCardIds, setExpandedCardIds] = useState({});
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [modalMetricFocus, setModalMetricFocus] = useState('all');
+
+  const handleOpenVehicleModal = (focus = 'all') => {
+    setModalMetricFocus(focus);
+    setIsVehicleModalOpen(true);
+  };
 
   const toggleCardExpand = (catId) => {
     setExpandedCardIds(prev => ({
@@ -590,6 +598,29 @@ export default function TransportOperationsDashboard({
     );
   }, [vehiclesList, vehicleSearchTerm]);
 
+  // Operational Fleet Performance Stats (Diesel Cons, KM Run, Mileage & Averages)
+  const opDieselLitres = vehicleStats?.summary?.diesel_litres !== undefined 
+    ? num(vehicleStats.summary.diesel_litres) 
+    : num(metrics.diesel_litres);
+
+  const opKmRun = vehicleStats?.summary?.km_run !== undefined 
+    ? num(vehicleStats.summary.km_run) 
+    : num(metrics.actual_kms);
+
+  const opMileage = vehicleStats?.summary?.mileage !== undefined 
+    ? num(vehicleStats.summary.mileage) 
+    : (opDieselLitres > 0 ? (opKmRun / opDieselLitres) : num(metrics.avg_mileage, 4.0));
+
+  const opBusCount = vehiclesList.length || (vehicleStats?.summary?.bus_count) || (activeBranchObj.busCount) || 18;
+
+  const opAvgDieselPerBus = opBusCount > 0 ? (opDieselLitres / opBusCount).toFixed(1) : '0';
+  const opAvgKmPerBus = opBusCount > 0 ? (opKmRun / opBusCount).toFixed(1) : '0';
+  const opFuelExpenses = vehicleStats?.summary?.fuel_expenses !== undefined
+    ? num(vehicleStats.summary.fuel_expenses)
+    : num(metrics.fuel_expenses);
+  const opFuelCostPerKm = opKmRun > 0 ? (opFuelExpenses / opKmRun).toFixed(2) : '0.00';
+  const opPeriodLabel = isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26");
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
 
@@ -1060,6 +1091,360 @@ export default function TransportOperationsDashboard({
             formatCompact={formatIndianCompact}
             formatFull={formatINR}
           />
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* 1.5. OPERATIONAL FLEET PERFORMANCE KPI CARDS (DIESEL, KM RUN, MILEAGE) */}
+          {/* Live DB connection • Click to inspect individual vehicles & averages   */}
+          {/* ----------------------------------------------------------------------- */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
+            gap: '14px',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            {/* KPI 1: Diesel cons */}
+            <div
+              onClick={() => handleOpenVehicleModal('diesel')}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                padding: '18px 20px',
+                border: '1.5px solid #fed7aa',
+                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.08)',
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 10px 22px rgba(245, 158, 11, 0.18)';
+                e.currentTarget.style.borderColor = '#f59e0b';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(245, 158, 11, 0.08)';
+                e.currentTarget.style.borderColor = '#fed7aa';
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: '#f59e0b' }} />
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      backgroundColor: '#fef3c7',
+                      color: '#d97706',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px'
+                    }}>
+                      ⛽
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                        Diesel cons
+                      </h3>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#92400e' }}>
+                        Diesel Consumption • {opPeriodLabel}
+                      </div>
+                    </div>
+                  </div>
+
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    padding: '3px 8px',
+                    borderRadius: '9999px',
+                    backgroundColor: '#fffbeb',
+                    color: '#b45309',
+                    border: '1px solid #fde68a'
+                  }}>
+                    Operational KPI
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '12px 0 10px 0' }}>
+                  <span style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.8px', lineHeight: 1 }}>
+                    {opDieselLitres.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
+                  </span>
+                  <span style={{ fontSize: '15px', fontWeight: '800', color: '#d97706' }}>
+                    Litres
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    padding: '3px 10px',
+                    borderRadius: '8px',
+                    backgroundColor: '#fef3c7',
+                    color: '#92400e',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <TrendingUp size={13} />
+                    Avg: <strong>{opAvgDieselPerBus} L / bus</strong>
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    Fuel Cost: <strong>₹{formatIndianCompact(opFuelExpenses)}</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div style={{
+                paddingTop: '10px',
+                borderTop: '1px solid #fef3c7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                color: '#d97706',
+                fontSize: '11.5px',
+                fontWeight: '700'
+              }}>
+                <span>Click to view {opBusCount} vehicle litres & avg</span>
+                <ArrowRight size={14} />
+              </div>
+            </div>
+
+            {/* KPI 2: KM run Oct */}
+            <div
+              onClick={() => handleOpenVehicleModal('km')}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                padding: '18px 20px',
+                border: '1.5px solid #bfdbfe',
+                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.08)',
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 10px 22px rgba(2, 132, 199, 0.18)';
+                e.currentTarget.style.borderColor = '#0284c7';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(2, 132, 199, 0.08)';
+                e.currentTarget.style.borderColor = '#bfdbfe';
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: '#0284c7' }} />
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      backgroundColor: '#eff6ff',
+                      color: '#0284c7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px'
+                    }}>
+                      🛣️
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                        {isAllMonths ? 'KM run (All Months)' : `KM run ${opPeriodLabel.split("'")[0]}`}
+                      </h3>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#0369a1' }}>
+                        Distance Logged • {opPeriodLabel}
+                      </div>
+                    </div>
+                  </div>
+
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    padding: '3px 8px',
+                    borderRadius: '9999px',
+                    backgroundColor: '#eff6ff',
+                    color: '#0369a1',
+                    border: '1px solid #bfdbfe'
+                  }}>
+                    Fleet Distance
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '12px 0 10px 0' }}>
+                  <span style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.8px', lineHeight: 1 }}>
+                    {Math.round(opKmRun).toLocaleString('en-IN')}
+                  </span>
+                  <span style={{ fontSize: '15px', fontWeight: '800', color: '#0284c7' }}>
+                    KM
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    padding: '3px 10px',
+                    borderRadius: '8px',
+                    backgroundColor: '#e0f2fe',
+                    color: '#075985',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <Gauge size={13} />
+                    Avg: <strong>{opAvgKmPerBus} KM / bus</strong>
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    Active: <strong>{opBusCount} buses active</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div style={{
+                paddingTop: '10px',
+                borderTop: '1px solid #e0f2fe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                color: '#0284c7',
+                fontSize: '11.5px',
+                fontWeight: '700'
+              }}>
+                <span>Click to view {opBusCount} vehicle KMs & avg</span>
+                <ArrowRight size={14} />
+              </div>
+            </div>
+
+            {/* KPI 3: Oct'26 Mila */}
+            <div
+              onClick={() => handleOpenVehicleModal('mileage')}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                padding: '18px 20px',
+                border: '1.5px solid #a7f3d0',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.08)',
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 10px 22px rgba(16, 185, 129, 0.18)';
+                e.currentTarget.style.borderColor = '#10b981';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.08)';
+                e.currentTarget.style.borderColor = '#a7f3d0';
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: '#10b981' }} />
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      backgroundColor: '#ecfdf5',
+                      color: '#059669',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px'
+                    }}>
+                      ⚡
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                        {isAllMonths ? 'Fleet Mileage' : `${opPeriodLabel} Mila`}
+                      </h3>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#065f46' }}>
+                        Fuel Efficiency • {opPeriodLabel}
+                      </div>
+                    </div>
+                  </div>
+
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    padding: '3px 8px',
+                    borderRadius: '9999px',
+                    backgroundColor: '#ecfdf5',
+                    color: '#065f46',
+                    border: '1px solid #a7f3d0'
+                  }}>
+                    Efficiency
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '12px 0 10px 0' }}>
+                  <span style={{ fontSize: '32px', fontWeight: '900', color: '#059669', letterSpacing: '-0.8px', lineHeight: 1 }}>
+                    {Number(opMileage).toFixed(2)}
+                  </span>
+                  <span style={{ fontSize: '15px', fontWeight: '800', color: '#047857' }}>
+                    km/L
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    padding: '3px 10px',
+                    borderRadius: '8px',
+                    backgroundColor: '#d1fae5',
+                    color: '#065f46',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <Sparkles size={13} />
+                    Fleet Avg: <strong>{Number(opMileage).toFixed(2)} km/L</strong>
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    Cost: <strong>₹{opFuelCostPerKm} / km</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div style={{
+                paddingTop: '10px',
+                borderTop: '1px solid #d1fae5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                color: '#059669',
+                fontSize: '11.5px',
+                fontWeight: '700'
+              }}>
+                <span>Click to view {opBusCount} vehicle mileage & avg</span>
+                <ArrowRight size={14} />
+              </div>
+            </div>
+          </div>
 
           {/* ----------------------------------------------------------------------- */}
           {/* 2. CATEGORY CARDS BENTO GRID WITH MONTHLY TREND BARS & DETAILS TOGGLE   */}
@@ -1687,6 +2072,25 @@ export default function TransportOperationsDashboard({
           />
         </div>
       )}
+
+      {/* ----------------------------------------------------------------------- */}
+      {/* VEHICLE DETAILS & FLEET AVERAGES MODAL (DB CONNECTED)                    */}
+      {/* ----------------------------------------------------------------------- */}
+      <TransportVehicleDetailsModal
+        isOpen={isVehicleModalOpen}
+        onClose={() => setIsVehicleModalOpen(false)}
+        vehicles={vehiclesList}
+        initialFocus={modalMetricFocus}
+        activeBranch={activeBranch}
+        activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
+        summary={vehicleStats?.summary || {}}
+        branches={TRANSPORT_BRANCHES}
+        onBranchChange={(newBranch) => setActiveBranch(newBranch)}
+        onJumpToLedger={() => {
+          setIsVehicleModalOpen(false);
+          setActiveMainView('vehicles');
+        }}
+      />
 
     </div>
   );
