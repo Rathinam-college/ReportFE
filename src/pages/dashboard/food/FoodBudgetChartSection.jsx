@@ -94,8 +94,7 @@ export default function FoodBudgetChartSection({
   }, [budgetData, activeColKey]);
 
   const currentBudgetTarget = activeColKey === 'all' ? totalSanctionedBudget : totalMonthlyLimit;
-  const currentVariance = currentBudgetTarget - totalCurrentActual; // Positive = Under Budget (Savings)
-  const isOverallUnderBudget = currentVariance >= 0;
+  const isOverallUnderBudget = totalCurrentActual <= currentBudgetTarget;
   const overallUtilizationPct = currentBudgetTarget > 0 ? ((totalCurrentActual / currentBudgetTarget) * 100).toFixed(1) : 0;
 
   // Palette for 8 Heads
@@ -184,7 +183,7 @@ export default function FoodBudgetChartSection({
       {/* 2. Executive Financial KPI Cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
         gap: '14px'
       }}>
         {/* Card 1: Budget Target */}
@@ -227,27 +226,7 @@ export default function FoodBudgetChartSection({
           </span>
         </div>
 
-        {/* Card 3: Variance / Balance */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '14px',
-          padding: '16px 18px',
-          border: '1px solid #e2e8f0',
-          borderLeft: `4px solid ${isOverallUnderBudget ? '#16a34a' : '#ef4444'}`,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-        }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', color: isOverallUnderBudget ? '#16a34a' : '#ef4444', textTransform: 'uppercase' }}>
-            {isOverallUnderBudget ? 'Budget Savings / Balance' : 'Budget Deficit / Overrun'}
-          </span>
-          <div style={{ fontSize: '22px', fontWeight: '900', color: isOverallUnderBudget ? '#16a34a' : '#dc2626', margin: '4px 0 2px 0' }} className="currency-font">
-            {isOverallUnderBudget ? '+' : ''}{formatINR(currentVariance)}
-          </div>
-          <span style={{ fontSize: '11px', color: '#64748b' }}>
-            {isOverallUnderBudget ? `${formatLakhs(currentVariance)} unspent cushion` : 'Expenditure exceeded target'}
-          </span>
-        </div>
-
-        {/* Card 4: Utilization Gauge */}
+        {/* Card 3: Utilization Gauge */}
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '14px',
@@ -327,7 +306,6 @@ export default function FoodBudgetChartSection({
               <th style={{ padding: '12px 16px' }}>Budget Head Name</th>
               <th style={{ padding: '12px 14px', textAlign: 'right' }}>Annual Sanctioned</th>
               <th style={{ padding: '12px 14px', textAlign: 'right' }}>{activePeriodLabel} Actual</th>
-              <th style={{ padding: '12px 14px', textAlign: 'right' }}>Variance / Balance</th>
               <th style={{ padding: '12px 14px', textAlign: 'center' }}>Utilization</th>
               <th style={{ padding: '12px 14px', textAlign: 'center' }}>Status</th>
             </tr>
@@ -336,7 +314,6 @@ export default function FoodBudgetChartSection({
             {budgetData.map((row, idx) => {
               const bTarget = getHeadBudget(row);
               const actual = getHeadActual(row);
-              const balance = bTarget - actual;
               const isOver = actual > bTarget && bTarget > 0;
               const utilPct = bTarget > 0 ? ((actual / bTarget) * 100).toFixed(1) : 0;
               const theme = HEAD_COLORS[idx % HEAD_COLORS.length];
@@ -369,9 +346,6 @@ export default function FoodBudgetChartSection({
                   </td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#dc2626' : '#0f172a' }} className="currency-font">
                     {formatINR(actual)}
-                  </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: balance >= 0 ? '#16a34a' : '#dc2626' }} className="currency-font">
-                    {balance >= 0 ? '+' : ''}{formatINR(balance)}
                   </td>
                   <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                     <span style={{
@@ -416,9 +390,6 @@ export default function FoodBudgetChartSection({
               </td>
               <td style={{ padding: '12px 14px', textAlign: 'right', color: isOverallUnderBudget ? '#0f172a' : '#dc2626' }} className="currency-font">
                 {formatINR(totalCurrentActual)}
-              </td>
-              <td style={{ padding: '12px 14px', textAlign: 'right', color: isOverallUnderBudget ? '#16a34a' : '#dc2626' }} className="currency-font">
-                {isOverallUnderBudget ? '+' : ''}{formatINR(currentVariance)}
               </td>
               <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                 <span style={{
