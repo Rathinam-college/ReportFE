@@ -80,9 +80,9 @@ export default function FoodBudgetChartSection({
   // Calculate budget target for a row depending on active month filter
   const getHeadBudget = (row) => {
     if (activeColKey === 'all') {
-      return Number(row.sanctioned_amount) || (Number(row.month_limit) * FOOD_MONTH_COLS.length) || 0;
+      return Number(row.sanctioned_amount) || 0;
     }
-    return Number(row.month_limit) || 0;
+    return Number(row.sanctioned_amount ? row.sanctioned_amount / 12 : (row.month_limit || 0));
   };
 
   // Executive Totals
@@ -91,8 +91,8 @@ export default function FoodBudgetChartSection({
   }, [budgetData]);
 
   const totalMonthlyLimit = useMemo(() => {
-    return budgetData.reduce((acc, r) => acc + (Number(r.month_limit) || 0), 0);
-  }, [budgetData]);
+    return totalSanctionedBudget / 12;
+  }, [totalSanctionedBudget]);
 
   const totalCurrentActual = useMemo(() => {
     return budgetData.reduce((acc, r) => acc + getHeadActual(r), 0);
@@ -640,7 +640,6 @@ export default function FoodBudgetChartSection({
                 <th style={{ padding: '12px 14px', width: '50px', textAlign: 'center' }}>#</th>
                 <th style={{ padding: '12px 16px' }}>Budget Head Name</th>
                 <th style={{ padding: '12px 14px', textAlign: 'right' }}>Annual Sanctioned</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Monthly Target</th>
                 <th style={{ padding: '12px 14px', textAlign: 'right' }}>{activePeriodLabel} Actual</th>
                 <th style={{ padding: '12px 14px', textAlign: 'right' }}>Variance / Balance</th>
                 <th style={{ padding: '12px 14px', textAlign: 'center' }}>Utilization</th>
@@ -664,9 +663,6 @@ export default function FoodBudgetChartSection({
                     <td style={{ padding: '10px 16px', fontWeight: '700', color: '#0f172a' }}>{row.budget_head}</td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }} className="currency-font">
                       {formatINR(row.sanctioned_amount)}
-                    </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }} className="currency-font">
-                      {formatINR(row.month_limit)}
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#dc2626' : '#0f172a' }} className="currency-font">
                       {formatINR(actual)}

@@ -282,7 +282,7 @@ export default function FoodBudgetEntrySection({
               )}
             </div>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
-              Sanctioned Annual Budget • Monthly Targets • Actual Recorded Spend • Live Balance
+              Sanctioned Annual Budget • Actual Recorded Spend • Live Balance
             </p>
           </div>
         </div>
@@ -403,7 +403,7 @@ export default function FoodBudgetEntrySection({
           </span>
         </div>
 
-        {/* KPI 2: Monthly Limit Target */}
+        {/* KPI 2: Budget Utilization */}
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '12px',
@@ -412,13 +412,13 @@ export default function FoodBudgetEntrySection({
           borderLeft: '4px solid #0284c7'
         }}>
           <span style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase' }}>
-            Monthly Budget Target
+            Budget Utilization
           </span>
-          <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px 0' }} className="currency-font">
-            {formatINR(totalMonthLimit)}
+          <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px 0' }}>
+            {overallUtilPercent}%
           </div>
           <span style={{ fontSize: '11px', color: '#64748b' }}>
-            Per month limit ({formatLakhs(totalMonthLimit)}/mo)
+            Of total annual sanctioned allocation
           </span>
         </div>
 
@@ -473,8 +473,7 @@ export default function FoodBudgetEntrySection({
             <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1.5px solid #cbd5e1', color: '#334155', fontWeight: '800' }}>
               <th style={{ padding: '12px 14px', width: '50px', textAlign: 'center' }}>#</th>
               <th style={{ padding: '12px 16px', minWidth: '240px', textAlign: 'left' }}>Budget Head Name</th>
-              <th style={{ padding: '12px 14px', minWidth: '150px', textAlign: 'right' }}>Sanctioned Budget (₹)</th>
-              <th style={{ padding: '12px 14px', minWidth: '140px', textAlign: 'right' }}>Monthly Limit (₹)</th>
+              <th style={{ padding: '12px 14px', minWidth: '160px', textAlign: 'right' }}>Sanctioned Budget (₹)</th>
 
               {/* Monthly Actuals Columns */}
               {FOOD_MONTH_COLS.map(col => (
@@ -550,25 +549,7 @@ export default function FoodBudgetEntrySection({
                     />
                   </td>
 
-                  {/* Monthly Limit Input */}
-                  <td style={{ padding: '8px 10px', textAlign: 'right' }}>
-                    <input
-                      type="number"
-                      value={limit || ''}
-                      onChange={(e) => handleCellChange(item.budget_head, 'month_limit', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '12.5px',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        boxSizing: 'border-box',
-                        backgroundColor: '#ffffff'
-                      }}
-                    />
-                  </td>
+
 
                   {/* Monthly Actual Inputs */}
                   {FOOD_MONTH_COLS.map(col => {
@@ -642,9 +623,6 @@ export default function FoodBudgetEntrySection({
               </td>
               <td style={{ padding: '12px 14px', textAlign: 'right', fontSize: '13px' }} className="currency-font">
                 {formatINR(totalSanctioned)}
-              </td>
-              <td style={{ padding: '12px 14px', textAlign: 'right', fontSize: '13px' }} className="currency-font">
-                {formatINR(totalMonthLimit)}
               </td>
 
               {FOOD_MONTH_COLS.map(col => (
@@ -754,25 +732,7 @@ export default function FoodBudgetEntrySection({
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                  Monthly Budget Limit (₹)
-                </label>
-                <input
-                  type="number"
-                  placeholder="e.g. 200000"
-                  value={newHeadLimit}
-                  onChange={(e) => setNewHeadLimit(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
+
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
                 <button
