@@ -2076,21 +2076,23 @@ export default function TransportOperationsDashboard({
       {/* ----------------------------------------------------------------------- */}
       {/* VEHICLE DETAILS & FLEET AVERAGES MODAL (DB CONNECTED)                    */}
       {/* ----------------------------------------------------------------------- */}
-      <TransportVehicleDetailsModal
-        isOpen={isVehicleModalOpen}
-        onClose={() => setIsVehicleModalOpen(false)}
-        vehicles={vehiclesList}
-        initialFocus={modalMetricFocus}
-        activeBranch={activeBranch}
-        activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
-        summary={vehicleStats?.summary || {}}
-        branches={TRANSPORT_BRANCHES}
-        onBranchChange={(newBranch) => setActiveBranch(newBranch)}
-        onJumpToLedger={() => {
-          setIsVehicleModalOpen(false);
-          setActiveMainView('vehicles');
-        }}
-      />
+      {isVehicleModalOpen && (
+        <TransportVehicleDetailsModal
+          isOpen={isVehicleModalOpen}
+          onClose={() => setIsVehicleModalOpen(false)}
+          vehicles={vehiclesList}
+          initialFocus={modalMetricFocus}
+          activeBranch={activeBranch}
+          activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
+          summary={vehicleStats?.summary || {}}
+          branches={TRANSPORT_BRANCHES}
+          onBranchChange={(newBranch) => setActiveBranch(newBranch)}
+          onJumpToLedger={() => {
+            setIsVehicleModalOpen(false);
+            setActiveMainView('vehicles');
+          }}
+        />
+      )}
 
     </div>
   );

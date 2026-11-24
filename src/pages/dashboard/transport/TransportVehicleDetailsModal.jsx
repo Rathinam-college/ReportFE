@@ -40,13 +40,11 @@ export default function TransportVehicleDetailsModal({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const num = (v) => Number(v) || 0;
 
   // Filter and sort vehicles
   const processedVehicles = useMemo(() => {
-    let list = [...vehicles];
+    let list = Array.isArray(vehicles) ? [...vehicles] : [];
 
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
@@ -71,19 +69,20 @@ export default function TransportVehicleDetailsModal({
 
   // Aggregate stats
   const totals = useMemo(() => {
-    const busCount = vehicles.length || 1;
-    const totDiesel = vehicles.reduce((sum, v) => sum + num(v.diesel_litres), 0);
-    const totKm = vehicles.reduce((sum, v) => sum + num(v.km_run), 0);
-    const totFuel = vehicles.reduce((sum, v) => sum + num(v.fuel_expenses), 0);
-    const totExp = vehicles.reduce((sum, v) => sum + num(v.total_expenses), 0);
-    const avgMileage = totDiesel > 0 ? (totKm / totDiesel) : (num(summary.mileage) || 0);
+    const list = Array.isArray(vehicles) ? vehicles : [];
+    const busCount = list.length || 1;
+    const totDiesel = list.reduce((sum, v) => sum + num(v.diesel_litres), 0);
+    const totKm = list.reduce((sum, v) => sum + num(v.km_run), 0);
+    const totFuel = list.reduce((sum, v) => sum + num(v.fuel_expenses), 0);
+    const totExp = list.reduce((sum, v) => sum + num(v.total_expenses), 0);
+    const avgMileage = totDiesel > 0 ? (totKm / totDiesel) : (num(summary?.mileage) || 0);
 
     return {
-      count: vehicles.length,
-      totDiesel: summary.diesel_litres ? num(summary.diesel_litres) : totDiesel,
-      totKm: summary.km_run ? num(summary.km_run) : totKm,
-      totFuel: summary.fuel_expenses ? num(summary.fuel_expenses) : totFuel,
-      totExp: summary.total_expenses ? num(summary.total_expenses) : totExp,
+      count: list.length,
+      totDiesel: summary?.diesel_litres ? num(summary.diesel_litres) : totDiesel,
+      totKm: summary?.km_run ? num(summary.km_run) : totKm,
+      totFuel: summary?.fuel_expenses ? num(summary.fuel_expenses) : totFuel,
+      totExp: summary?.total_expenses ? num(summary.total_expenses) : totExp,
       avgDieselPerBus: busCount > 0 ? (totDiesel / busCount).toFixed(1) : '0',
       avgKmPerBus: busCount > 0 ? (totKm / busCount).toFixed(1) : '0',
       avgMileage: avgMileage > 0 ? avgMileage.toFixed(2) : '4.00',
@@ -124,6 +123,9 @@ export default function TransportVehicleDetailsModal({
     link.click();
     document.body.removeChild(link);
   };
+
+  // Only return null after all hooks have been unconditionally registered
+  if (!isOpen) return null;
 
   return (
     <div style={{
