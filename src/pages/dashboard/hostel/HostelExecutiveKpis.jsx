@@ -77,14 +77,16 @@ export default function HostelExecutiveKpis({
     ? (allMonthsTotalSpend > 0 ? allMonthsTotalSpend : singleMonthExpenses)
     : singleMonthExpenses;
 
-  const costPerStudentMonth = num(
-    census.per_student_cost_month,
-    currentStudents > 0 ? singleMonthExpenses / currentStudents : 0
-  );
-  const costPerStudentDay = num(
-    census.per_student_cost_day,
-    currentStudents > 0 ? singleMonthExpenses / (currentStudents * 30) : 0
-  );
+  // Cost per Student / Person (Month) = Total Cost of Monthly / Total Occupied
+  const totalCostForMonth = isAllMonths
+    ? (periods.length > 0 ? displayExpenses / periods.length : displayExpenses)
+    : singleMonthExpenses;
+
+  const costPerStudentMonth = totalOccupied > 0 
+    ? (totalCostForMonth / totalOccupied) 
+    : (currentStudents > 0 ? totalCostForMonth / currentStudents : num(census.per_student_cost_month, 0));
+
+  const costPerStudentDay = costPerStudentMonth > 0 ? (costPerStudentMonth / 30) : 0;
 
   const kpis = [
     {
@@ -174,8 +176,10 @@ export default function HostelExecutiveKpis({
     },
     {
       label: 'Cost per Student (Month)',
-      value: costPerStudentMonth > 0 ? `₹${Math.round(costPerStudentMonth).toLocaleString()}` : '—',
-      sub: `Average cost per student`,
+      value: costPerStudentMonth > 0 ? `₹${Math.round(costPerStudentMonth).toLocaleString('en-IN')}` : '—',
+      sub: totalOccupied > 0 
+        ? `${isAllMonths ? 'Avg Monthly' : 'Monthly'} Cost ÷ ${totalOccupied.toLocaleString()} Occupants` 
+        : 'Total Cost ÷ Total Occupied',
       icon: TrendingUp,
       color: '#6366f1',
       bg: '#eef2ff',
@@ -184,7 +188,7 @@ export default function HostelExecutiveKpis({
     {
       label: 'Cost per Student (Day)',
       value: costPerStudentDay > 0 ? `₹${costPerStudentDay.toFixed(2)}` : '—',
-      sub: `Average cost per student per day`,
+      sub: `Per occupant per day (÷ 30 days)`,
       icon: Clock,
       color: '#475569',
       bg: '#f8fafc',

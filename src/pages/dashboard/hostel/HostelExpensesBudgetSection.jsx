@@ -300,12 +300,17 @@ export default function HostelExpensesBudgetSection({
 
     (periods || []).forEach(p => {
       const c = allHostelCensusMap[String(p.id)] || allHostelCensusMap[p.id] || {};
-      const costMonth = num(c.per_student_cost_month, 0);
+      const mCol = getBudgetMonthCol(p, p.id);
+      const pSpend = (activeBudgetHeads || []).reduce((sum, h) => sum + num(h[mCol], 0), 0) || num(c.expenses_occurred, 0);
+      const occ = num(c.total_occupied, num(c.students_total, 0) + num(c.staff_total, 0));
+      const costMonth = occ > 0 ? (pSpend / occ) : (num(c.students_total, 0) > 0 ? (pSpend / num(c.students_total, 0)) : num(c.per_student_cost_month, 0));
+      const costDay = costMonth > 0 ? (costMonth / 30) : num(c.per_student_cost_day, 0);
+
       monthlyCostPerPerson[p.id] = costMonth;
 
       if (costMonth > 0) {
         sumCostMonth += costMonth;
-        sumCostDay += num(c.per_student_cost_day, 0);
+        sumCostDay += costDay;
         countWithCost += 1;
       }
     });
@@ -313,12 +318,15 @@ export default function HostelExpensesBudgetSection({
     const avgCostMonth = countWithCost > 0 ? (sumCostMonth / countWithCost) : 0;
     const avgCostDay = countWithCost > 0 ? (sumCostDay / countWithCost) : 0;
 
-    const selectedAmount = isAll
-      ? 0
-      : num(selCensus?.per_student_cost_month, 0);
+    const selCol = activeMonthCol;
+    const selSpend = (activeBudgetHeads || []).reduce((sum, h) => sum + (selCol ? num(h[selCol], 0) : 0), 0) || num(selCensus?.expenses_occurred, 0);
+    const selOcc = num(selCensus?.total_occupied, num(selCensus?.students_total, 0) + num(selCensus?.staff_total, 0));
+    const selCostMonth = isAll ? avgCostMonth : (selOcc > 0 ? (selSpend / selOcc) : (num(selCensus?.students_total, 0) > 0 ? (selSpend / num(selCensus?.students_total, 0)) : num(selCensus?.per_student_cost_month, 0)));
+    const selCostDay = isAll ? avgCostDay : (selCostMonth > 0 ? (selCostMonth / 30) : num(selCensus?.per_student_cost_day, 0));
 
-    const costMonth = isAll ? 0 : num(selCensus?.per_student_cost_month, 0);
-    const costDay = isAll ? 0 : num(selCensus?.per_student_cost_day, 0);
+    const selectedAmount = isAll ? avgCostMonth : selCostMonth;
+    const costMonth = isAll ? avgCostMonth : selCostMonth;
+    const costDay = isAll ? avgCostDay : selCostDay;
 
     const maxMonth = Math.max(...Object.values(monthlyCostPerPerson), 1);
 
@@ -337,7 +345,7 @@ export default function HostelExpensesBudgetSection({
         { id: 'cpp_day', name: isAll ? 'Avg Cost Per Resident (Day)' : 'Cost Per Resident (Day)', amount: Math.round(costDay * 100) / 100 }
       ]
     };
-  }, [census, periods, activePeriod, allHostelCensusMap]);
+  }, [census, periods, activePeriod, allHostelCensusMap, activeBudgetHeads, activeMonthCol]);
 
   // Filtered periods for category sparkline bars aligning with monthFilter
   const cardPeriods = useMemo(() => {

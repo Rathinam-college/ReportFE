@@ -208,7 +208,7 @@ export default function HostelSpreadsheetEntry({
 
     // 12. Area & Per Student Metrics
     const sq_feet = num(d.sq_feet, 0);
-    const per_student_cost_month = students_total > 0 ? Math.round(expenses_occurred / students_total) : 0;
+    const per_student_cost_month = total_occupied > 0 ? Math.round(expenses_occurred / total_occupied) : (students_total > 0 ? Math.round(expenses_occurred / students_total) : 0);
     const per_student_cost_day = per_student_cost_month > 0 ? Math.round(per_student_cost_month / 30) : 0;
     const sq_feet_per_occupant = total_occupied > 0 ? Math.round(sq_feet / total_occupied) : 0;
 

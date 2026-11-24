@@ -280,8 +280,8 @@ export default function HostelDashboardDataTable({
     const balance = approved_budget > 0 ? Math.max(0, approved_budget - cumulative_budget_spent) : getVal('balance', 0);
 
     const sq_feet = getVal('sq_feet', 0);
-    const per_student_cost_month = getVal('per_student_cost_month', students_total > 0 ? Math.round(expenses_occurred / students_total) : 0);
-    const per_student_cost_day = getVal('per_student_cost_day', per_student_cost_month > 0 ? Math.round(per_student_cost_month / 30) : 0);
+    const per_student_cost_month = total_occupied > 0 ? Math.round(expenses_occurred / total_occupied) : (students_total > 0 ? Math.round(expenses_occurred / students_total) : getVal('per_student_cost_month', 0));
+    const per_student_cost_day = per_student_cost_month > 0 ? Math.round(per_student_cost_month / 30) : getVal('per_student_cost_day', 0);
     const sq_feet_per_occupant = getVal('sq_feet_per_occupant', total_occupied > 0 ? Math.round(sq_feet / total_occupied) : 0);
 
     const normal_water_litres = getVal('normal_water_litres', 0);

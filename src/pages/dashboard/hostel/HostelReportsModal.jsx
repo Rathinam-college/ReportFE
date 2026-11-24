@@ -100,13 +100,16 @@ export default function HostelReportsModal({
           const appBudget = num(c.approved_budget, 0);
           const exp = num(c.expenses_occurred, 0);
           const bal = num(c.balance, appBudget > 0 ? appBudget - num(c.cumulative_budget_spent, exp) : 0);
+          const occ = num(c.total_occupied, num(c.students_total, 0) + num(c.staff_total, 0));
+          const pCostMo = occ > 0 ? (exp / occ) : (num(c.students_total, 0) > 0 ? (exp / num(c.students_total, 0)) : num(c.per_student_cost_month, 0));
+          const pCostDay = pCostMo > 0 ? (pCostMo / 30) : num(c.per_student_cost_day, 0);
           return [
             `"${p.period_label || p.period_code}"`,
             appBudget,
             exp,
             bal,
-            num(c.per_student_cost_month, 0).toFixed(2),
-            num(c.per_student_cost_day, 0).toFixed(2)
+            pCostMo.toFixed(2),
+            pCostDay.toFixed(2)
           ];
         });
       }
@@ -445,8 +448,9 @@ export default function HostelReportsModal({
                   const appBudget = num(c.approved_budget, 0);
                   const exp = num(c.expenses_occurred, 0);
                   const bal = num(c.balance, appBudget > 0 ? Math.max(0, appBudget - num(c.cumulative_budget_spent, exp)) : 0);
-                  const pCostMo = num(c.per_student_cost_month, 0);
-                  const pCostDay = num(c.per_student_cost_day, 0);
+                  const occ = num(c.total_occupied, num(c.students_total, 0) + num(c.staff_total, 0));
+                  const pCostMo = occ > 0 ? (exp / occ) : (num(c.students_total, 0) > 0 ? (exp / num(c.students_total, 0)) : num(c.per_student_cost_month, 0));
+                  const pCostDay = pCostMo > 0 ? (pCostMo / 30) : num(c.per_student_cost_day, 0);
 
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfd' }}>
