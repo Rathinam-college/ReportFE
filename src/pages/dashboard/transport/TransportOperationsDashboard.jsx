@@ -1861,6 +1861,7 @@ export default function TransportOperationsDashboard({
                   periodId={activePeriodObj?.id}
                   branch={activeBranch}
                   embedded={true}
+                  readOnly={true}
                 />
               </div>
             )}
@@ -2069,6 +2070,7 @@ export default function TransportOperationsDashboard({
             periodId={activePeriodObj?.id}
             branch={activeBranch}
             embedded={true}
+            readOnly={true}
           />
         </div>
       )}

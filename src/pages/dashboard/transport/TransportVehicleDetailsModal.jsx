@@ -238,7 +238,7 @@ export default function TransportVehicleDetailsModal({
                   cursor: 'pointer'
                 }}
               >
-                <span>Edit in Ledger</span>
+                <span>View Full Ledger</span>
                 <ArrowRight size={13} />
               </button>
             )}
