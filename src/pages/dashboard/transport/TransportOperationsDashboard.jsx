@@ -1331,7 +1331,7 @@ export default function TransportOperationsDashboard({
               </div>
             </div>
 
-            {/* KPI 3: Oct'26 Mila */}
+            {/* KPI 3: Oct'26 Mileage */}
             <div
               onClick={() => handleOpenVehicleModal('mileage')}
               style={{
@@ -1379,7 +1379,7 @@ export default function TransportOperationsDashboard({
                     </div>
                     <div>
                       <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                        {isAllMonths ? 'Fleet Mileage' : `${opPeriodLabel} Mila`}
+                        {isAllMonths ? 'Fleet Mileage' : `${opPeriodLabel} Mileage`}
                       </h3>
                       <div style={{ fontSize: '11px', fontWeight: '600', color: '#065f46' }}>
                         Fuel Efficiency • {opPeriodLabel}

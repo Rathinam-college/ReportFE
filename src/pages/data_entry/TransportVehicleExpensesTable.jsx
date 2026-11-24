@@ -713,7 +713,7 @@ export default function TransportVehicleExpensesTable({
                 KM run {pLabel.split("'")[0]}
               </th>
               <th style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047', padding: '6px 8px', minWidth: '90px', fontWeight: '800' }}>
-                {pLabel} Mila
+                {pLabel} Mileage
               </th>
               {!readOnly && selectedBranch !== 'all' && (
                 <th style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', padding: '6px 6px', width: '50px' }}>
