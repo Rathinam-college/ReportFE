@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { formatINR } from '../../utils/formatters';
+import MonthlyAttachmentsModal from '../../components/attachments/MonthlyAttachmentsModal';
 import { 
   Save, RefreshCw, FileSpreadsheet, CheckCircle2, Zap, Home, 
   AlertCircle, FileText, Check, Plus, Trash2, Edit2, Layers, Table, BedDouble, Users, Droplets, Wrench, ShieldCheck,
-  ChevronRight, Calendar, ArrowRight, Settings, TrendingUp, TrendingDown
+  ChevronRight, Calendar, ArrowRight, Settings, TrendingUp, TrendingDown, Paperclip
 } from 'lucide-react';
 import HostelCardSpreadsheet from './cards/HostelCardSpreadsheet';
 import {
@@ -33,6 +34,7 @@ export default function HostelSpreadsheetEntry({
   const [loadingParams, setLoadingParams] = useState(true);
   const [localMessage, setLocalMessage] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
 
   const isClosed = !!activePeriodObj?.is_closed;
   const periods = computedMatrix?.periods || [];
@@ -582,6 +584,29 @@ export default function HostelSpreadsheetEntry({
             }}
           >
             📋 Copy Previous Month
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAttachmentsModal(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 18px',
+              borderRadius: '9999px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: '#ffffff',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              border: '1px solid rgba(255, 255, 255, 0.45)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            title="Upload or view bills, presentations, documents & attachments for this month"
+          >
+            <Paperclip size={13} color="#ffffff" />
+            <span>Attachments & Bills</span>
           </button>
 
           <button
@@ -2308,6 +2333,17 @@ export default function HostelSpreadsheetEntry({
         </button>
       </div>
 
+      {/* MONTHLY ATTACHMENTS & BILLS MODAL */}
+      {showAttachmentsModal && (
+        <MonthlyAttachmentsModal
+          isOpen={showAttachmentsModal}
+          onClose={() => setShowAttachmentsModal(false)}
+          module="hostel"
+          periodId={editingPeriodId}
+          periodLabel={activePeriodObj?.period_label || 'Current Period'}
+          periods={periods}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Bus, Fuel, Wrench, ShieldCheck, DollarSign, Plus, Trash2, 
   Save, Download, RefreshCw, CheckCircle2, AlertCircle, 
-  Calculator, Gauge, MapPin, ChevronRight, Layers, FileSpreadsheet
+  Calculator, Gauge, MapPin, ChevronRight, Layers, FileSpreadsheet,
+  Lock, Unlock
 } from 'lucide-react';
 import { formatINR } from '../../utils/formatters';
 
@@ -19,13 +20,16 @@ export default function TransportVehicleExpensesTable({
   periodId = null,
   initialBranch = 'Common',
   branch = 'Common',
+  periods: propPeriods = null,
   onPeriodChange = null,
   onBranchChange = null,
   embedded = false,
   readOnly = false,
+  isClosed: propIsClosed = null,
+  handleToggleLock = null,
   onSyncCensus = null
 }) {
-  const [periods, setPeriods] = useState([]);
+  const [periods, setPeriods] = useState(propPeriods || []);
   const [selectedPeriodId, setSelectedPeriodId] = useState(periodId || initialPeriodId);
   const [selectedBranch, setSelectedBranch] = useState(branch || initialBranch);
   const [vehicles, setVehicles] = useState([]);
@@ -77,6 +81,17 @@ export default function TransportVehicleExpensesTable({
   const activePeriodObj = useMemo(() => {
     return visiblePeriods.find(p => p.id === selectedPeriodId) || visiblePeriods[visiblePeriods.length - 1] || periods[periods.length - 1] || null;
   }, [visiblePeriods, periods, selectedPeriodId]);
+
+  // Synchronize periods from parent if provided
+  useEffect(() => {
+    if (propPeriods && propPeriods.length > 0) {
+      setPeriods(propPeriods);
+    }
+  }, [propPeriods]);
+
+  const effectivePeriod = (propPeriods || periods).find(p => String(p.id) === String(selectedPeriodId || periodId)) || activePeriodObj;
+  const effectiveIsClosed = propIsClosed !== null ? propIsClosed : !!effectivePeriod?.is_closed;
+  const effectiveReadOnly = readOnly || effectiveIsClosed;
 
   useEffect(() => {
     if (visiblePeriods.length > 0 && selectedBranch !== 'all' && selectedPeriodId) {
@@ -490,7 +505,33 @@ export default function TransportVehicleExpensesTable({
             </div>
           )}
 
-          {!readOnly && selectedBranch !== 'all' && (
+          {handleToggleLock && (
+            <button
+              type="button"
+              onClick={() => handleToggleLock(selectedPeriodId || periodId)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                backgroundColor: effectiveIsClosed ? '#fee2e2' : 'rgba(255,255,255,0.22)',
+                color: effectiveIsClosed ? '#b91c1c' : '#ffffff',
+                border: effectiveIsClosed ? '1.5px solid #f87171' : '1px solid rgba(255,255,255,0.35)',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: effectiveIsClosed ? '0 2px 8px rgba(239, 68, 68, 0.25)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+              title={effectiveIsClosed ? "Month is locked. Click to unlock Page 1 & Page 2" : "Click to lock Month across Page 1 & Page 2"}
+            >
+              {effectiveIsClosed ? <Lock size={13} color="#b91c1c" /> : <Unlock size={13} color="#ffffff" />}
+              <span>{effectiveIsClosed ? 'Unlock Month' : 'Lock Month'}</span>
+            </button>
+          )}
+
+          {!effectiveReadOnly && selectedBranch !== 'all' && (
             <button
               type="button"
               onClick={handleAddBus}
@@ -515,7 +556,7 @@ export default function TransportVehicleExpensesTable({
             </button>
           )}
 
-          {!readOnly && selectedBranch !== 'all' && (
+          {!effectiveReadOnly && selectedBranch !== 'all' && (
             <button
               type="button"
               onClick={handleSaveLedger}
@@ -656,6 +697,53 @@ export default function TransportVehicleExpensesTable({
         </div>
       )}
 
+      {/* Lock Alert Banner for Page 2 */}
+      {effectiveIsClosed && (
+        <div style={{
+          padding: '10px 18px',
+          backgroundColor: '#fef2f2',
+          borderBottom: '1.5px solid #fecaca',
+          color: '#991b1b',
+          fontSize: '12.5px',
+          fontWeight: '700',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={15} color="#dc2626" />
+            <span>
+              Month <strong>{effectivePeriod?.period_label || activePeriodObj?.period_label}</strong> is <strong>LOCKED (Read-Only)</strong>. Both <strong>Page 1 (Master Spreadsheet)</strong> and <strong>Page 2 (Vehicle Wise Ledger)</strong> are protected from editing.
+            </span>
+          </div>
+          {handleToggleLock && (
+            <button
+              type="button"
+              onClick={() => handleToggleLock(selectedPeriodId || periodId)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 12px',
+                borderRadius: '6px',
+                backgroundColor: '#dc2626',
+                color: '#ffffff',
+                border: 'none',
+                fontSize: '11.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)'
+              }}
+            >
+              <Unlock size={12} />
+              <span>Unlock Month Now</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 3. MAIN SPREADSHEET TABLE */}
       <div style={{ overflowX: 'auto', width: '100%', maxHeight: '680px' }}>
         <table style={{
@@ -715,7 +803,7 @@ export default function TransportVehicleExpensesTable({
               <th style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047', padding: '6px 8px', minWidth: '90px', fontWeight: '800' }}>
                 {pLabel} Mileage
               </th>
-              {!readOnly && selectedBranch !== 'all' && (
+              {!effectiveReadOnly && selectedBranch !== 'all' && (
                 <th style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', padding: '6px 6px', width: '50px' }}>
                   Action
                 </th>
@@ -735,7 +823,7 @@ export default function TransportVehicleExpensesTable({
                 <td colSpan={selectedBranch === 'all' ? 16 : 15} style={{ padding: '36px', textAlign: 'center', color: '#64748b' }}>
                   <Bus size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
                   <div style={{ fontSize: '13px', fontWeight: '700' }}>No vehicles recorded for {branchLabel} in {pLabel}.</div>
-                  {!readOnly && selectedBranch !== 'all' && (
+                  {!effectiveReadOnly && selectedBranch !== 'all' && (
                     <button
                       type="button"
                       onClick={handleAddBus}
@@ -759,7 +847,7 @@ export default function TransportVehicleExpensesTable({
             ) : (
               filteredVehicles.map((row, idx) => {
                 const isOdd = idx % 2 === 1;
-                const canEdit = !readOnly && selectedBranch !== 'all';
+                const canEdit = !effectiveReadOnly && selectedBranch !== 'all';
 
                 return (
                   <tr 
@@ -1182,7 +1270,7 @@ export default function TransportVehicleExpensesTable({
                 {totals.avgMileage.toFixed(2)}
               </td>
 
-              {!readOnly && selectedBranch !== 'all' && (
+              {!effectiveReadOnly && selectedBranch !== 'all' && (
                 <td style={{ border: '1px solid #eab308' }}></td>
               )}
             </tr>

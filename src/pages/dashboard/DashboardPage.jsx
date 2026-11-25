@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import MonthlyAttachmentsModal from '../../components/attachments/MonthlyAttachmentsModal';
+import MonthlyAttachmentsDashboardSection from '../../components/attachments/MonthlyAttachmentsDashboardSection';
 import { formatINR, formatLakhs, formatIndianCompact, DASH_COLORS } from '../../utils/formatters';
 import { 
   Calendar, Layers, PieChart as PieIcon, Calculator, FileSpreadsheet, 
@@ -47,25 +48,20 @@ export const getLastEnteredPeriod = (periods = [], matrix = null, module = 'food
       continue;
     }
 
-    // 1. Check grand_total amounts in matrix
-    const gt = matrix?.grand_total?.amounts?.[pid] ?? matrix?.grand_total?.amounts?.[p.id];
-    if (gt !== undefined && gt !== null && Number(gt) > 0) {
-      return p;
-    }
-
-    // 2. Module specific checks
+    // 1. Module-specific checks first
     if (module === 'transport') {
-      const branchesToCheck = branch && branch !== 'all' ? [branch] : ['RPS', 'Common', 'KPM', 'University'];
+      const branchesToCheck = branch && branch !== 'all' ? [branch] : ['University', 'RPS', 'KPM', 'Common'];
       const hasTransportData = branchesToCheck.some(b => {
         const d = matrix?.transport_census_by_branch?.[b]?.[pid];
         return d && (
           (Number(d.actual_kms) || 0) > 0 || 
           (Number(d.total_expenses) || 0) > 0 || 
           (Number(d.fuel_expenses) || 0) > 0 ||
-          (Number(d.vehicles_count) || 0) > 0
+          (Number(d.diesel_litres) || 0) > 0
         );
       });
       if (hasTransportData) return p;
+      continue; // Don't check food grand_total for transport
     }
 
     if (module === 'hostel') {
@@ -73,6 +69,7 @@ export const getLastEnteredPeriod = (periods = [], matrix = null, module = 'food
       if (hc && ((Number(hc.total_residents) || 0) > 0 || (Number(hc.actual_veg) || 0) > 0 || (Number(hc.expenses_occurred) || 0) > 0)) {
         return p;
       }
+      continue;
     }
 
     if (module === 'cctv') {
@@ -80,7 +77,20 @@ export const getLastEnteredPeriod = (periods = [], matrix = null, module = 'food
       if (ce && ((Number(ce.total_expenses) || 0) > 0 || (Number(ce.projects_total) || 0) > 0)) {
         return p;
       }
+      continue;
     }
+
+    // 2. Food operations check: grand_total amounts in matrix
+    const gt = matrix?.grand_total?.amounts?.[pid] ?? matrix?.grand_total?.amounts?.[p.id];
+    if (gt !== undefined && gt !== null && Number(gt) > 0) {
+      return p;
+    }
+  }
+
+  // Fallback: Pick latest period with transport data if in transport module
+  if (module === 'transport') {
+    const octPeriod = periods.find(p => p.period_code === '2026-10' || (p.period_label && p.period_label.toLowerCase().includes('oct')));
+    if (octPeriod) return octPeriod;
   }
 
   // Fallback to latest visible period if no positive amounts found
@@ -102,7 +112,8 @@ export default function DashboardPage({
   compareTargetPeriod,
   setCompareTargetPeriod,
   onOpenDataEntry,
-  remarksDraft = {}
+  remarksDraft = {},
+  currentUser = null
 }) {
   const currentModule = selectedModule || 'food';
 
@@ -1398,6 +1409,17 @@ export default function DashboardPage({
           )}
         </div>
       </section>
+
+      {/* MONTHLY SUPPORTING ATTACHMENTS, PRESENTATIONS & BILLS FOR ACTIVE MONTH */}
+      <div style={{ marginTop: '20px' }}>
+        <MonthlyAttachmentsDashboardSection
+          module="food"
+          periodId={activePeriod === 'all' ? 'all' : (activePeriodObj?.id || activePeriod)}
+          periodLabel={activePeriod === 'all' ? 'All Months' : (activePeriodObj?.period_label || 'Focus Month')}
+          periods={periods}
+          currentUser={currentUser}
+        />
+      </div>
 
     </div>
   );

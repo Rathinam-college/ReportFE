@@ -102,7 +102,8 @@ export default function DataEntryPage({
   const periods = computedMatrix.periods || [];
   const currentIdx = periods.findIndex(p => p.id === editingPeriodId);
   const prevPeriod = currentIdx > 0 ? periods[currentIdx - 1] : null;
-  const isClosed = !!activePeriodObj?.is_closed;
+  const currentPeriod = periods.find(p => p.id === editingPeriodId) || activePeriodObj;
+  const isClosed = !!currentPeriod?.is_closed;
 
   const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
   const [attachmentCount, setAttachmentCount] = useState(0);
@@ -196,7 +197,7 @@ export default function DataEntryPage({
 
         <button
           type="button"
-          onClick={handleToggleLock}
+          onClick={() => handleToggleLock && handleToggleLock(editingPeriodId)}
           style={{
             padding: '7px 16px',
             borderRadius: '9999px',
@@ -282,6 +283,20 @@ export default function DataEntryPage({
         handleAddNewMonth={handleAddNewMonth}
         moduleName={selectedModule === 'food' ? 'Food' : selectedModule === 'hostel' ? 'Hostel' : 'Transport'}
       />
+
+      {/* MODAL: MONTHLY ATTACHMENTS & BILLS (MULTI-FILE & PPT PREVIEW) */}
+      {showAttachmentsModal && (
+        <MonthlyAttachmentsModal
+          isOpen={showAttachmentsModal}
+          onClose={() => setShowAttachmentsModal(false)}
+          module={selectedModule}
+          periodId={editingPeriodId}
+          periodLabel={currentPeriod?.period_label || 'Current Period'}
+          periods={periods}
+          currentUser={currentUser}
+          onAttachmentCountChange={(count) => setAttachmentCount(count)}
+        />
+      )}
 
     </div>
   );

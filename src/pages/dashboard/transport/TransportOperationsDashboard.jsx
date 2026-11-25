@@ -7,12 +7,13 @@ import {
   CheckCircle2, ArrowUpRight, BarChart3, PieChart, LayoutGrid, ChevronUp
 } from 'lucide-react';
 import { formatINR, formatLakhs, formatPeriodLabel, formatIndianCompact } from '../../../utils/formatters';
-import { TRANSPORT_BRANCHES, CANONICAL_TRANSPORT_PARAMETERS } from '../../data_entry/TransportSpreadsheetEntry';
+import { TRANSPORT_BRANCHES, CANONICAL_TRANSPORT_PARAMETERS, DEFAULT_BRANCH_BUDGETS } from '../../data_entry/TransportSpreadsheetEntry';
 import TransportVehicleExpensesTable from '../../data_entry/TransportVehicleExpensesTable';
 import TransportDashboardCensusView from '../TransportDashboardCensusView';
 import HeroSummary from '../charts/HeroSummary';
 import CategoryCard from '../charts/CategoryCard';
 import TransportVehicleDetailsModal from './TransportVehicleDetailsModal';
+import MonthlyAttachmentsDashboardSection from '../../../components/attachments/MonthlyAttachmentsDashboardSection';
 
 export default function TransportOperationsDashboard({
   computedMatrix: propComputedMatrix,
@@ -23,9 +24,10 @@ export default function TransportOperationsDashboard({
   onOpenDataEntry,
   handleExportReport
 }) {
-  const [activeBranch, setActiveBranch] = useState('Common');
+  const [activeBranch, setActiveBranch] = useState('University');
   const [activeMainView, setActiveMainView] = useState('executive'); // 'executive' | 'vehicles' | 'parameters' | 'all'
   const [localMatrix, setLocalMatrix] = useState(null);
+  const [dbBranchBudgets, setDbBranchBudgets] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchParamTerm, setSearchParamTerm] = useState('');
   const [vehicleStats, setVehicleStats] = useState(null);
@@ -68,14 +70,22 @@ export default function TransportOperationsDashboard({
   // Disallow consolidated 'all' branch in transport
   useEffect(() => {
     if (activeBranch === 'all') {
-      setActiveBranch('Common');
+      setActiveBranch('University');
     }
   }, [activeBranch]);
 
   useEffect(() => {
     if (visiblePeriods.length > 0 && setActivePeriod) {
       const isCurrentInVisible = visiblePeriods.some(p => String(p.id) === String(activePeriod));
-      if (!isCurrentInVisible && activePeriod !== 'all') {
+      const currentPeriodData = effectiveMatrix?.transport_census_by_branch?.[activeBranch]?.[String(activePeriod)];
+      const hasDataInCurrent = currentPeriodData && (
+        (Number(currentPeriodData.actual_kms) || 0) > 0 ||
+        (Number(currentPeriodData.total_expenses) || 0) > 0 ||
+        (Number(currentPeriodData.fuel_expenses) || 0) > 0 ||
+        (Number(currentPeriodData.diesel_litres) || 0) > 0
+      );
+
+      if ((!isCurrentInVisible || (!hasDataInCurrent && activePeriod !== 'all')) && activePeriod !== 'all') {
         let lastEntered = null;
         for (let i = visiblePeriods.length - 1; i >= 0; i--) {
           const p = visiblePeriods[i];
@@ -85,14 +95,17 @@ export default function TransportOperationsDashboard({
             (Number(d.actual_kms) || 0) > 0 || 
             (Number(d.total_expenses) || 0) > 0 || 
             (Number(d.fuel_expenses) || 0) > 0 ||
-            (Number(d.vehicles_count) || 0) > 0
+            (Number(d.diesel_litres) || 0) > 0
           )) {
             lastEntered = p;
             break;
           }
         }
-        const target = lastEntered || visiblePeriods[visiblePeriods.length - 1];
-        setActivePeriod(String(target.id));
+        const octPeriod = visiblePeriods.find(p => p.period_code === '2026-10' || (p.period_label && p.period_label.toLowerCase().includes('oct')));
+        const target = lastEntered || octPeriod || visiblePeriods[visiblePeriods.length - 1];
+        if (target && String(target.id) !== String(activePeriod)) {
+          setActivePeriod(String(target.id));
+        }
       }
     }
   }, [activePeriod, visiblePeriods, activeBranch, effectiveMatrix, setActivePeriod]);
@@ -121,11 +134,42 @@ export default function TransportOperationsDashboard({
     }
   }, [propComputedMatrix]);
 
+  useEffect(() => {
+    if (propComputedMatrix?.transport_branch_budgets) {
+      setDbBranchBudgets(propComputedMatrix.transport_branch_budgets);
+    } else {
+      fetch('/api/transport/budget-tracking')
+        .then(res => res.json())
+        .then(d => {
+          if (d?.status === 'success' && d?.budgets) {
+            setDbBranchBudgets(d.budgets);
+          }
+        })
+        .catch(err => console.warn('[TransportDashboard] Budget tracking fetch notice:', err));
+    }
+  }, [propComputedMatrix]);
+
+  const isAllMonths = activePeriod === 'all';
+
+  // Effective period object for single-month snapshot metrics
+  const activePeriodObj = useMemo(() => {
+    if (activePeriod && activePeriod !== 'all') {
+      return visiblePeriods.find(p => String(p.id) === String(activePeriod)) || 
+             visiblePeriods.find(p => p.period_code === '2026-10') || 
+             visiblePeriods[visiblePeriods.length - 1] || 
+             periods[periods.length - 1] || 
+             null;
+    }
+    return visiblePeriods.find(p => p.period_code === '2026-10') || visiblePeriods[visiblePeriods.length - 1] || periods[periods.length - 1] || null;
+  }, [activePeriod, visiblePeriods, periods]);
+
+  const activePeriodIdStr = activePeriodObj ? String(activePeriodObj.id) : null;
+
   // Fetch live vehicle summary from /api/transport/vehicles for the active branch & period
   useEffect(() => {
-    const targetPeriodParam = activePeriod !== 'all' ? activePeriod : 'all';
+    const effectivePeriodId = activePeriod !== 'all' ? (activePeriodObj?.id || activePeriod || '1026') : 'all';
     setVehiclesLoading(true);
-    fetch(`/api/transport/vehicles?period_id=${targetPeriodParam}&branch=${activeBranch}`)
+    fetch(`/api/transport/vehicles?period_id=${effectivePeriodId}&branch=${activeBranch}`)
       .then(res => res.json())
       .then(d => {
         if (d && d.status === 'success') {
@@ -137,19 +181,7 @@ export default function TransportOperationsDashboard({
       })
       .catch(e => console.warn('[TransportDashboard] Vehicle stats notice:', e))
       .finally(() => setVehiclesLoading(false));
-  }, [activePeriod, activeBranch, visiblePeriods]);
-
-  const isAllMonths = activePeriod === 'all';
-
-  // Effective period object for single-month snapshot metrics
-  const activePeriodObj = useMemo(() => {
-    if (activePeriod && activePeriod !== 'all') {
-      return visiblePeriods.find(p => String(p.id) === String(activePeriod)) || visiblePeriods[visiblePeriods.length - 1] || periods[periods.length - 1] || null;
-    }
-    return visiblePeriods[visiblePeriods.length - 1] || periods[periods.length - 1] || null;
-  }, [activePeriod, visiblePeriods, periods]);
-
-  const activePeriodIdStr = activePeriodObj ? String(activePeriodObj.id) : null;
+  }, [activePeriod, activePeriodObj, activeBranch, visiblePeriods]);
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[0];
 
   const num = (v, fb = 0) => {
@@ -158,18 +190,18 @@ export default function TransportOperationsDashboard({
     return isNaN(n) ? fb : n;
   };
 
-  // Branch budget map for fallback / defaults
+  // Official Branch Sanctioned Budgets matching user's authoritative ledger (FY 2026-2027)
   const branchBudgetMap = {
-    Common: 3800000,
-    RPS: 8500000,
-    KPM: 6200000,
-    University: 14000000
+    University: 16670553,
+    RPS: 14107491,
+    KPM: 4000000,
+    Common: 5552143
   };
 
   // Helper to compute metrics for a branch and period
   const getBranchMetrics = (branchId, pStr) => {
     if (branchId === 'all') {
-      const realBranches = ['Common', 'RPS', 'KPM', 'University'];
+      const realBranches = ['University', 'RPS', 'KPM', 'Common'];
       let totPassengers = 0;
       let totAppKms = 0;
       let totActKms = 0;
@@ -180,6 +212,8 @@ export default function TransportOperationsDashboard({
       let totRep = 0;
       let totOth = 0;
       let totEmp = 0;
+      let totCctv = 0;
+      let totPark = 0;
       let totDemand = 0;
       let totPaid = 0;
       let totRpsBill = 0;
@@ -203,7 +237,9 @@ export default function TransportOperationsDashboard({
         totStat += num(m.statutory_cost, 0);
         totRep += num(m.repair_maintenance_cost, 0);
         totOth += num(m.other_cost, 0);
+        totCctv += num(m.cctv_replacement, 0);
         totEmp += num(m.employee_cost, 0);
+        totPark += num(m.parking_fastag, 0);
         totDemand += num(m.fee_demand, 0);
         totPaid += num(m.fee_collected, 0);
         totRpsBill += num(m.rps_monthly_billing, 0);
@@ -217,9 +253,10 @@ export default function TransportOperationsDashboard({
         totDiesel += num(m.diesel_litres, 0);
       });
 
-      const totExpenses = totFuel + totFc + totStat + totRep + totOth + totEmp;
+      const totExpenses = totFuel + totFc + totStat + totRep + totOth + totEmp + totCctv + totPark;
       const totIncome = totPaid + totRpsBill + totStaffDed + totAddKmsRps + totCab;
-      const totBal = totAppBud - totSpentBud;
+      const sanctionedTotal = 40330187; // Authentic consolidated total (16.67M + 14.11M + 4.00M + 5.55M)
+      const totBal = sanctionedTotal - totSpentBud;
 
       return {
         vehicles_count: '58 Buses (All 4 Fleets)',
@@ -234,7 +271,9 @@ export default function TransportOperationsDashboard({
         statutory_cost: totStat,
         repair_maintenance_cost: totRep,
         other_cost: totOth,
+        cctv_replacement: totCctv,
         employee_cost: totEmp,
+        parking_fastag: totPark,
         total_expenses: totExpenses,
         fee_demand: totDemand,
         fee_collected: totPaid,
@@ -242,9 +281,9 @@ export default function TransportOperationsDashboard({
         rps_monthly_billing: totRpsBill,
         staff_travel_deduction: totStaffDed,
         cumulative_income: totIncome,
-        approved_budget: totAppBud || 37730138,
+        approved_budget: sanctionedTotal,
         cumulative_budget_spent: totSpentBud,
-        balance: (totAppBud || 37730138) - totSpentBud,
+        balance: totBal,
         service_tickets_raised: totTkRaised,
         service_tickets_closed: totTkClosed,
         service_tickets_open: Math.max(0, totTkRaised - totTkClosed),
@@ -263,12 +302,14 @@ export default function TransportOperationsDashboard({
     const stat = num(m.statutory_cost, 0);
     const rep = num(m.repair_maintenance_cost, 0);
     const oth = num(m.other_cost, 0);
+    const cctv = num(m.cctv_replacement, 0);
     const emp = num(m.employee_cost, 0);
-    const totExpenses = fuel + fc + stat + rep + oth + emp;
+    const park = num(m.parking_fastag, 0);
+    const totExpenses = fuel + fc + stat + rep + oth + emp + cctv + park;
     const diesel = num(m.diesel_litres, 0);
     const demand = num(m.fee_demand, 0);
     const paid = num(m.fee_collected, 0);
-    const appBud = num(m.approved_budget, 0) || branchBudgetMap[branchId] || 8500000;
+    const appBud = branchBudgetMap[branchId] || num(m.approved_budget, 0) || 8500000;
     const spentBud = num(m.cumulative_budget_spent, 0);
     const tkRaised = num(m.service_tickets_raised, 0);
     const tkClosed = num(m.service_tickets_closed, 0);
@@ -288,7 +329,9 @@ export default function TransportOperationsDashboard({
       statutory_cost: stat,
       repair_maintenance_cost: rep,
       other_cost: oth,
+      cctv_replacement: cctv,
       employee_cost: emp,
+      parking_fastag: park,
       total_expenses: totExpenses,
       fee_demand: demand,
       fee_collected: paid,
@@ -323,7 +366,7 @@ export default function TransportOperationsDashboard({
   // Helper to extract parameter value for a specific branch and period
   const getParamVal = (branchId, periodIdStr, paramKey) => {
     if (branchId === 'all') {
-      const realBranches = ['Common', 'RPS', 'KPM', 'University'];
+      const realBranches = ['University', 'RPS', 'KPM', 'Common'];
       let tot = 0;
       let hasAny = false;
       realBranches.forEach(b => {
@@ -599,25 +642,25 @@ export default function TransportOperationsDashboard({
   }, [vehiclesList, vehicleSearchTerm]);
 
   // Operational Fleet Performance Stats (Diesel Cons, KM Run, Mileage & Averages)
-  const opDieselLitres = vehicleStats?.summary?.diesel_litres !== undefined 
+  const opDieselLitres = (vehicleStats?.summary?.diesel_litres && Number(vehicleStats.summary.diesel_litres) > 0)
     ? num(vehicleStats.summary.diesel_litres) 
-    : num(metrics.diesel_litres);
+    : (num(metrics.diesel_litres) || num(vehicleStats?.summary?.diesel_litres));
 
-  const opKmRun = vehicleStats?.summary?.km_run !== undefined 
+  const opKmRun = (vehicleStats?.summary?.km_run && Number(vehicleStats.summary.km_run) > 0)
     ? num(vehicleStats.summary.km_run) 
-    : num(metrics.actual_kms);
+    : (num(metrics.actual_kms) || num(vehicleStats?.summary?.km_run));
 
-  const opMileage = vehicleStats?.summary?.mileage !== undefined 
-    ? num(vehicleStats.summary.mileage) 
-    : (opDieselLitres > 0 ? (opKmRun / opDieselLitres) : num(metrics.avg_mileage, 4.0));
+  const opMileage = opDieselLitres > 0 
+    ? (opKmRun / opDieselLitres) 
+    : ((vehicleStats?.summary?.mileage && Number(vehicleStats.summary.mileage) > 0) ? num(vehicleStats.summary.mileage) : (num(metrics.avg_mileage) || 4.0));
 
   const opBusCount = vehiclesList.length || (vehicleStats?.summary?.bus_count) || (activeBranchObj.busCount) || 18;
 
   const opAvgDieselPerBus = opBusCount > 0 ? (opDieselLitres / opBusCount).toFixed(1) : '0';
   const opAvgKmPerBus = opBusCount > 0 ? (opKmRun / opBusCount).toFixed(1) : '0';
-  const opFuelExpenses = vehicleStats?.summary?.fuel_expenses !== undefined
+  const opFuelExpenses = (vehicleStats?.summary?.fuel_expenses && Number(vehicleStats.summary.fuel_expenses) > 0)
     ? num(vehicleStats.summary.fuel_expenses)
-    : num(metrics.fuel_expenses);
+    : (num(metrics.fuel_expenses) || num(vehicleStats?.summary?.fuel_expenses));
   const opFuelCostPerKm = opKmRun > 0 ? (opFuelExpenses / opKmRun).toFixed(2) : '0.00';
   const opPeriodLabel = isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26");
 
@@ -1093,7 +1136,37 @@ export default function TransportOperationsDashboard({
           />
 
           {/* ----------------------------------------------------------------------- */}
-          {/* 1.5. OPERATIONAL FLEET PERFORMANCE KPI CARDS (DIESEL, KM RUN, MILEAGE) */}
+          {/* 1.5. CATEGORY CARDS BENTO GRID WITH MONTHLY TREND BARS & DETAILS TOGGLE */}
+          {/* ----------------------------------------------------------------------- */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
+              gap: '14px',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
+            {transportCategories.map((cat) => (
+              <CategoryCard
+                key={cat.categoryId}
+                category={cat}
+                periods={visiblePeriods}
+                selectedPeriod={activePeriod}
+                selectedAmount={cat.selectedAmount}
+                selectedPercent={cat.selectedPercent}
+                monthlyAmounts={cat.monthlyAmounts}
+                maxMonthlyAmount={cat.maxMonthlyAmount}
+                hideDetails={true}
+                formatCompact={cat.isPersonCategory ? (v) => Math.round(Number(v || 0)).toLocaleString('en-IN') : formatIndianCompact}
+                formatFull={cat.isPersonCategory ? (v) => Math.round(Number(v || 0)).toLocaleString('en-IN') : formatINR}
+                hidePercentage={cat.isPersonCategory}
+              />
+            ))}
+          </div>
+
+{/* ----------------------------------------------------------------------- */}
+          {/* 2. OPERATIONAL FLEET PERFORMANCE KPI CARDS (DIESEL, KM RUN, MILEAGE)    */}
           {/* Live DB connection • Click to inspect individual vehicles & averages   */}
           {/* ----------------------------------------------------------------------- */}
           <div style={{
@@ -1446,427 +1519,531 @@ export default function TransportOperationsDashboard({
             </div>
           </div>
 
+
+
+          {/* 2B. VEHICLE FLEET OPERATIONAL ANALYTICS (3-ROW TABLE + SIDE CHART) */}
+          <TransportVehicleDetailsModal
+            embedded={true}
+            isOpen={true}
+            isAllMonths={isAllMonths}
+            vehicles={vehiclesList}
+            initialFocus={modalMetricFocus}
+            activeBranch={activeBranch}
+            activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
+            summary={vehicleStats?.summary || {}}
+            branches={TRANSPORT_BRANCHES}
+            onBranchChange={(newBranch) => setActiveBranch(newBranch)}
+            onJumpToLedger={() => setActiveMainView('vehicles')}
+          />
+
+
+                    {/* ----------------------------------------------------------------------- */}
+          {/* MULTI-MONTH SANCTIONED BUDGET PARAMETERS & UTILIZATION TABLE           */}
+          {/* Matching User's Image Design with live spend across all recorded months */}
           {/* ----------------------------------------------------------------------- */}
-          {/* 2. CATEGORY CARDS BENTO GRID WITH MONTHLY TREND BARS & DETAILS TOGGLE   */}
-          {/* ----------------------------------------------------------------------- */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
-              gap: '14px',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}
-          >
-            {transportCategories.map((cat) => (
-              <CategoryCard
-                key={cat.categoryId}
-                category={cat}
-                periods={visiblePeriods}
-                selectedPeriod={activePeriod}
-                selectedAmount={cat.selectedAmount}
-                selectedPercent={cat.selectedPercent}
-                monthlyAmounts={cat.monthlyAmounts}
-                maxMonthlyAmount={cat.maxMonthlyAmount}
-                hideDetails={true}
-                formatCompact={cat.isPersonCategory ? (v) => Math.round(Number(v || 0)).toLocaleString('en-IN') : formatIndianCompact}
-                formatFull={cat.isPersonCategory ? (v) => Math.round(Number(v || 0)).toLocaleString('en-IN') : formatINR}
-                hidePercentage={cat.isPersonCategory}
-              />
-            ))}
-          </div>
+          {(() => {
+            const activeBranchBudget = dbBranchBudgets?.[activeBranch] || 
+                                       propComputedMatrix?.transport_branch_budgets?.[activeBranch] || 
+                                       DEFAULT_BRANCH_BUDGETS[activeBranch];
+            if (!activeBranchBudget?.lineItems) return null;
+            const lineItems = activeBranchBudget.lineItems;
+            const branchSanctioned = activeBranchBudget.sanctioned || 0;
 
-          {/* ----------------------------------------------------------------------- */}
-          {/* 3. INSTITUTIONAL VEHICLE FLEET BREAKDOWN ("EACH VEHICLE DESIGN")        */}
-          {/* ----------------------------------------------------------------------- */}
-          <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-              backgroundColor: '#ffffff',
-              padding: '14px 18px',
-              borderRadius: '16px',
-              border: '1.5px solid #e2e8f0',
-              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  backgroundColor: activeBranchObj.badgeBg,
-                  color: activeBranchObj.badgeColor,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px'
-                }}>
-                  🚌
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                      {activeBranchObj.label} Vehicle Fleet Breakdown
-                    </h2>
-                    <span style={{
-                      fontSize: '11px',
-                      fontWeight: '800',
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      backgroundColor: activeBranchObj.badgeBg,
-                      color: activeBranchObj.badgeColor,
-                      border: `1px solid ${activeBranchObj.badgeColor}30`
-                    }}>
-                      {filteredVehicles.length} of {metrics.vehicles_count}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    Individual vehicle costs, diesel litres, mileage and maintenance ledger ({isAllMonths ? 'All months' : (activePeriodObj?.period_label || 'Focus month')})
-                  </div>
-                </div>
-              </div>
+            // Multi-month table periods: display all visible fleet periods across columns (matching Image 5)
+            const tablePeriods = (visiblePeriods && visiblePeriods.length > 0) ? visiblePeriods : [];
 
-              {/* Toolbar: Search + View Switcher */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                {/* Search Input */}
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Search size={14} style={{ position: 'absolute', left: '10px', color: '#64748b' }} />
-                  <input
-                    type="text"
-                    placeholder="Search bus no or make..."
-                    value={vehicleSearchTerm}
-                    onChange={(e) => setVehicleSearchTerm(e.target.value)}
-                    style={{
-                      padding: '6px 12px 6px 30px',
-                      fontSize: '12px',
-                      borderRadius: '8px',
-                      border: '1.5px solid #cbd5e1',
-                      backgroundColor: '#ffffff',
-                      color: '#0f172a',
-                      width: '180px',
-                      outline: 'none',
-                      fontWeight: '600'
-                    }}
-                  />
-                </div>
+            const getParamKeyFromItem = (pName) => {
+              const p = (pName || '').toLowerCase();
+              if (p.includes('fuel')) return 'fuel_expenses';
+              if (p.includes('fc')) return 'fc_cost';
+              if (p.includes('statutory')) return 'statutory_cost';
+              if (p.includes('repair') || p.includes('maintenance')) return 'repair_maintenance_cost';
+              if (p.includes('cctv')) return 'cctv_replacement';
+              if (p.includes('parking') || p.includes('fastag')) return 'parking_fastag';
+              if (p.includes('employee') || p.includes('driver')) return 'employee_cost';
+              if (p.includes('other')) return 'other_cost';
+              if (p.includes('total')) return 'total_expenses';
+              return null;
+            };
 
-                {/* Switch between Cards and Spreadsheet */}
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  backgroundColor: '#f1f5f9',
-                  padding: '2px',
-                  borderRadius: '8px'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setVehicleViewMode('cards')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '5px 10px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      fontSize: '11.5px',
-                      fontWeight: vehicleViewMode === 'cards' ? '800' : '600',
-                      backgroundColor: vehicleViewMode === 'cards' ? '#0284c7' : 'transparent',
-                      color: vehicleViewMode === 'cards' ? '#ffffff' : '#64748b',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <LayoutGrid size={13} />
-                    <span>Vehicle Cards</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVehicleViewMode('table')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '5px 10px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      fontSize: '11.5px',
-                      fontWeight: vehicleViewMode === 'table' ? '800' : '600',
-                      backgroundColor: vehicleViewMode === 'table' ? '#0284c7' : 'transparent',
-                      color: vehicleViewMode === 'table' ? '#ffffff' : '#64748b',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <FileSpreadsheet size={13} />
-                    <span>Table View</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            const getParamMonthSpend = (pId, paramName) => {
+              const key = getParamKeyFromItem(paramName);
+              const cleanParamKey = (paramName || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+              if (activeBranch === 'all') {
+                const realBranches = ['University', 'RPS', 'KPM', 'Common'];
+                return realBranches.reduce((sum, b) => {
+                  const d = effectiveMatrix?.transport_census_by_branch?.[b]?.[String(pId)] || {};
+                  const cm = d.custom_metrics || {};
+                  const val = key ? (Number(d[key]) || 0) : 0;
+                  const cmVal = Number(cm[key]) || Number(cm[cleanParamKey]) || Number(d[cleanParamKey]) || 0;
+                  return sum + (val || cmVal || 0);
+                }, 0);
+              }
+              const d = effectiveMatrix?.transport_census_by_branch?.[activeBranch]?.[String(pId)] || {};
+              const cm = d.custom_metrics || {};
+              const val = key ? (Number(d[key]) || 0) : 0;
+              const cmVal = Number(cm[key]) || Number(cm[cleanParamKey]) || Number(d[cleanParamKey]) || 0;
+              return val || cmVal || 0;
+            };
 
-            {/* Content: Either Vehicle Bento Cards or Table */}
-            {vehicleViewMode === 'cards' ? (
-              vehiclesLoading ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
-                  Loading {activeBranchObj.label} vehicles...
-                </div>
-              ) : filteredVehicles.length === 0 ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px', backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                  No vehicles found matching "{vehicleSearchTerm}" in {activeBranchObj.label}.
-                </div>
-              ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
-                  gap: '14px',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}>
-                  {filteredVehicles.map(veh => {
-                    const isExp = expandedVehicleId === (veh.id || veh.vehicle_no);
-                    const vehKm = num(veh.km_run);
-                    const vehDiesel = num(veh.diesel_litres);
-                    const vehFuel = num(veh.fuel_expenses);
-                    const vehRep = num(veh.repair_maintenance);
-                    const vehFc = num(veh.fc_cost) + num(veh.statutory_cost);
-                    const vehEmp = num(veh.employee_cost);
-                    const vehTot = num(veh.total_expenses);
-                    const vehMileage = veh.mileage || (vehDiesel > 0 ? (vehKm / vehDiesel).toFixed(2) : '0.00');
-                    const costPerKm = vehKm > 0 ? (vehFuel / vehKm).toFixed(2) : '0.00';
+            const branchTotalSpent = tablePeriods.reduce((sum, p) => sum + getParamMonthSpend(p.id, 'Total Expenses'), 0);
+            const branchBalance = branchSanctioned > 0 ? (branchSanctioned - branchTotalSpent) : 0;
+            const branchPctUtilized = branchSanctioned > 0 ? ((branchTotalSpent / branchSanctioned) * 100) : 0;
 
-                    return (
-                      <div
-                        key={veh.id || veh.vehicle_no}
-                        style={{
-                          backgroundColor: '#ffffff',
-                          borderRadius: '16px',
-                          border: '1.5px solid #e2e8f0',
-                          padding: '16px 18px',
-                          boxShadow: '0 2px 6px rgba(15, 23, 42, 0.03)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '12px',
-                          transition: 'all 0.15s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)'}
-                        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 2px 6px rgba(15, 23, 42, 0.03)'}
-                      >
-                        {/* License Plate & Fleet Tag Header */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            border: '1.5px solid #0f172a',
-                            borderRadius: '6px',
-                            overflow: 'hidden',
-                            backgroundColor: '#fef08a',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                          }}>
-                            <div style={{
-                              backgroundColor: '#1d4ed8',
-                              color: '#ffffff',
-                              fontSize: '8.5px',
-                              fontWeight: '900',
-                              padding: '2px 4px',
-                              letterSpacing: '0.05em'
-                            }}>
-                              IND
-                            </div>
-                            <div style={{
-                              padding: '2px 8px',
-                              fontSize: '13px',
-                              fontWeight: '900',
-                              letterSpacing: '0.06em',
-                              color: '#0f172a',
-                              fontFamily: 'monospace'
-                            }}>
-                              {veh.vehicle_no || 'TN-99'}
-                            </div>
-                          </div>
-
-                          <span style={{
-                            fontSize: '10.5px',
-                            fontWeight: '800',
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            backgroundColor: activeBranchObj.badgeBg,
-                            color: activeBranchObj.badgeColor
-                          }}>
-                            {activeBranchObj.label}
-                          </span>
-                        </div>
-
-                        {/* Make & Model */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            🚌 {veh.make || 'Heavy Commercial Bus'} {veh.model ? `• ${veh.model}` : ''}
-                          </div>
-                          <span style={{
-                            fontSize: '10.5px',
-                            fontWeight: '700',
-                            color: '#059669',
-                            backgroundColor: '#ecfdf5',
-                            padding: '2px 6px',
-                            borderRadius: '4px'
-                          }}>
-                            In Service
-                          </span>
-                        </div>
-
-                        {/* Big Total Spend */}
-                        <div style={{
-                          backgroundColor: '#f8fafc',
-                          borderRadius: '10px',
-                          padding: '10px 12px',
-                          display: 'flex',
-                          alignItems: 'baseline',
-                          justifyContent: 'space-between',
-                          border: '1px solid #edf2f7'
-                        }}>
-                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
-                            {isAllMonths ? 'Total Spend' : `${activePeriodObj?.period_label || 'Month'} Spend`}
-                          </span>
-                          <span style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a' }}>
-                            {formatINR(vehTot)}
-                          </span>
-                        </div>
-
-                        {/* 4 Cost Metrics Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11.5px' }}>
-                          <div style={{ backgroundColor: '#fff7ed', padding: '6px 8px', borderRadius: '8px', border: '1px solid #ffedd5' }}>
-                            <div style={{ color: '#ea580c', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' }}>⛽ Fuel</div>
-                            <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '12.5px' }}>{formatINR(vehFuel)}</div>
-                            <div style={{ color: '#9a3412', fontSize: '10px' }}>{vehDiesel.toLocaleString()} L</div>
-                          </div>
-                          <div style={{ backgroundColor: '#f0f9ff', padding: '6px 8px', borderRadius: '8px', border: '1px solid #e0f2fe' }}>
-                            <div style={{ color: '#0284c7', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' }}>🔧 Repairs</div>
-                            <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '12.5px' }}>{formatINR(vehRep)}</div>
-                            <div style={{ color: '#0369a1', fontSize: '10px' }}>Maintenance</div>
-                          </div>
-                          <div style={{ backgroundColor: '#ecfdf5', padding: '6px 8px', borderRadius: '8px', border: '1px solid #d1fae5' }}>
-                            <div style={{ color: '#059669', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' }}>🛡️ FC & Tax</div>
-                            <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '12.5px' }}>{formatINR(vehFc)}</div>
-                            <div style={{ color: '#047857', fontSize: '10px' }}>RTO Certified</div>
-                          </div>
-                          <div style={{ backgroundColor: '#f5f3ff', padding: '6px 8px', borderRadius: '8px', border: '1px solid #ede9fe' }}>
-                            <div style={{ color: '#7c3aed', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' }}>👤 Driver</div>
-                            <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '12.5px' }}>{formatINR(vehEmp)}</div>
-                            <div style={{ color: '#6d28d9', fontSize: '10px' }}>Staff Wages</div>
-                          </div>
-                        </div>
-
-                        {/* Efficiency Footer Bar: Mileage, Distance & Cost/KM */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          paddingTop: '8px',
-                          borderTop: '1px dashed #e2e8f0',
-                          fontSize: '11px',
-                          color: '#64748b'
-                        }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                            🛣️ <strong>{vehKm.toLocaleString()} KM</strong>
-                          </span>
-                          <span style={{
-                            backgroundColor: '#f1f5f9',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontWeight: '700',
-                            color: '#0f172a'
-                          }}>
-                            ⚡ {vehMileage} km/L
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setExpandedVehicleId(isExp ? null : (veh.id || veh.vehicle_no))}
-                            style={{
-                              color: '#0284c7',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              background: 'none',
-                              border: 'none',
-                              padding: 0,
-                              fontSize: '11px'
-                            }}
-                          >
-                            {isExp ? '▴ hide' : '▾ details'}
-                          </button>
-                        </div>
-
-                        {/* Expandable Details Drawer */}
-                        {isExp && (
-                          <div style={{
-                            backgroundColor: '#f8fafc',
-                            borderRadius: '8px',
-                            padding: '10px 12px',
-                            border: '1px solid #e2e8f0',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px',
-                            fontSize: '11px'
-                          }}>
-                            <div style={{ fontWeight: '800', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
-                              Vehicle Cost Itemization
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span>Fuel & Diesel Spend:</span>
-                              <strong>{formatINR(vehFuel)}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span>Workshop Maintenance:</span>
-                              <strong>{formatINR(vehRep)}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span>RTO Fitness Certificate (FC):</span>
-                              <strong>{formatINR(num(veh.fc_cost))}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span>Statutory Road Tax:</span>
-                              <strong>{formatINR(num(veh.statutory_cost))}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span>Fastag & Parking:</span>
-                              <strong>{formatINR(num(veh.parking_fastag))}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span>Assigned Driver Wage:</span>
-                              <strong>{formatINR(vehEmp)}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span>Sundry / Other Ops:</span>
-                              <strong>{formatINR(num(veh.other_cost))}</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '4px', fontWeight: '800', color: '#0284c7' }}>
-                              <span>Running Cost / KM:</span>
-                              <span>₹{costPerKm} / km</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )
-            ) : (
+            return (
               <div style={{
                 backgroundColor: '#ffffff',
                 borderRadius: '16px',
-                border: '1.5px solid #e2e8f0',
-                padding: '18px 20px',
-                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)'
+                border: `1.5px solid ${activeBranchObj.badgeColor}40`,
+                padding: '18px 22px',
+                boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px'
               }}>
-                <TransportVehicleExpensesTable
-                  periodId={activePeriodObj?.id}
-                  branch={activeBranch}
-                  embedded={true}
-                  readOnly={true}
-                />
-              </div>
-            )}
-          </section>
+                {/* Header Strip with Summary KPIs matching image layout */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      backgroundColor: activeBranchObj.badgeBg,
+                      color: activeBranchObj.badgeColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      boxShadow: `0 2px 6px ${activeBranchObj.badgeColor}30`
+                    }}>
+                      {activeBranchObj.icon}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
+                          {activeBranchObj.label} — Sanctioned Budget Parameters & Utilization
+                        </h4>
+                        <span style={{
+                          fontSize: '10px',
+                          fontFamily: 'monospace',
+                          fontWeight: '700',
+                          padding: '2px 7px',
+                          borderRadius: '5px',
+                          backgroundColor: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe'
+                        }}>
+                          Table: transport_budget_{activeBranch.toLowerCase()}
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          backgroundColor: isAllMonths ? '#eff6ff' : activeBranchObj.badgeBg,
+                          color: isAllMonths ? '#1d4ed8' : activeBranchObj.badgeColor,
+                          border: `1px solid ${isAllMonths ? '#bfdbfe' : activeBranchObj.badgeColor + '40'}`
+                        }}>
+                          {isAllMonths ? 'All Months Consolidated' : `${opPeriodLabel} Active`}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                        Authoritative management budget allocation (FY 2026-2027) • Multi-month spend tracking across all {tablePeriods.length} cycles (shows values where connected, dashes where unrecorded)
+                      </div>
+                    </div>
+                  </div>
 
+                  {/* Summary Metric Badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      padding: '4px 12px',
+                      borderRadius: '9999px',
+                      backgroundColor: '#f0fdf4',
+                      color: '#166534',
+                      border: '1.5px solid #bbf7d0'
+                    }}>
+                      Sanctioned: <strong>{formatINR(branchSanctioned)}</strong>
+                    </span>
+
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      padding: '4px 12px',
+                      borderRadius: '9999px',
+                      backgroundColor: '#fff7ed',
+                      color: '#c2410c',
+                      border: '1.5px solid #fed7aa'
+                    }}>
+                      Spent: <strong>{formatINR(branchTotalSpent)}</strong>
+                    </span>
+
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      padding: '4px 12px',
+                      borderRadius: '9999px',
+                      backgroundColor: branchBalance >= 0 ? '#f0fdf4' : '#fef2f2',
+                      color: branchBalance >= 0 ? '#166534' : '#991b1b',
+                      border: `1.5px solid ${branchBalance >= 0 ? '#bbf7d0' : '#fecaca'}`
+                    }}>
+                      Balance: <strong>{formatINR(branchBalance)}</strong>
+                    </span>
+
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      padding: '4px 12px',
+                      borderRadius: '9999px',
+                      backgroundColor: branchPctUtilized > 100 ? '#fef2f2' : '#eff6ff',
+                      color: branchPctUtilized > 100 ? '#b91c1c' : '#1d4ed8',
+                      border: `1.5px solid ${branchPctUtilized > 100 ? '#fecaca' : '#bfdbfe'}`
+                    }}>
+                      Utilized: <strong>{branchPctUtilized.toFixed(1)}%</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Multi-Month Table matching Image Design */}
+                <div style={{
+                  overflowX: 'auto',
+                  borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.02)'
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #94a3b8' }}>
+                        {/* 1. Parameters Column (Sticky Left) */}
+                        <th style={{
+                          padding: '10px 14px',
+                          fontWeight: '800',
+                          color: '#0f172a',
+                          position: 'sticky',
+                          left: 0,
+                          backgroundColor: '#f8fafc',
+                          zIndex: 20,
+                          minWidth: '240px',
+                          boxShadow: '2px 0 5px rgba(0,0,0,0.04)'
+                        }}>
+                          Parameters
+                        </th>
+
+                        {/* 2. Sanctioned (₹) Column (Green text matching image) */}
+                        <th style={{
+                          padding: '10px 14px',
+                          fontWeight: '800',
+                          color: '#166534',
+                          backgroundColor: '#f0fdf4',
+                          textAlign: 'right',
+                          minWidth: '135px',
+                          borderLeft: '1px solid #e2e8f0',
+                          borderRight: '1.5px solid #cbd5e1'
+                        }}>
+                          SANCTIONED (₹)
+                        </th>
+
+                        {/* 3. Monthly Spend Columns */}
+                        {tablePeriods.map((p) => {
+                          const isActiveMonth = !isAllMonths && (String(p.id) === String(activePeriod) || p.period_label === opPeriodLabel);
+                          return (
+                            <th
+                              key={p.id}
+                              onClick={() => setActivePeriod && setActivePeriod(String(p.id))}
+                              title={`Click to set ${p.period_label} as active cycle`}
+                              style={{
+                                padding: '8px 12px',
+                                fontWeight: '800',
+                                textAlign: 'right',
+                                minWidth: '110px',
+                                cursor: 'pointer',
+                                backgroundColor: isActiveMonth ? '#eff6ff' : '#f8fafc',
+                                color: isActiveMonth ? '#1d4ed8' : '#475569',
+                                borderTop: isActiveMonth ? '3px solid #2563eb' : 'none',
+                                borderLeft: '1px solid #e2e8f0',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                <span>{p.period_label}</span>
+                                {isActiveMonth && (
+                                  <span style={{
+                                    fontSize: '8.5px',
+                                    fontWeight: '800',
+                                    backgroundColor: '#2563eb',
+                                    color: '#ffffff',
+                                    padding: '1px 5px',
+                                    borderRadius: '3px',
+                                    marginTop: '2px',
+                                    letterSpacing: '0.04em'
+                                  }}>
+                                    ACTIVE
+                                  </span>
+                                )}
+                              </div>
+                            </th>
+                          );
+                        })}
+
+                        {/* 4. Total Spent Column */}
+                        <th style={{
+                          padding: '10px 14px',
+                          fontWeight: '800',
+                          color: '#0f172a',
+                          textAlign: 'right',
+                          minWidth: '125px',
+                          backgroundColor: '#f1f5f9',
+                          borderLeft: '1.5px solid #cbd5e1'
+                        }}>
+                          TOTAL SPENT (₹)
+                        </th>
+
+                        {/* 5. Balance Column */}
+                        <th style={{
+                          padding: '10px 14px',
+                          fontWeight: '800',
+                          color: '#0f172a',
+                          textAlign: 'right',
+                          minWidth: '120px',
+                          backgroundColor: '#f1f5f9',
+                          borderLeft: '1px solid #e2e8f0'
+                        }}>
+                          BALANCE (₹)
+                        </th>
+
+                        {/* 6. % Utilized Column */}
+                        <th style={{
+                          padding: '10px 12px',
+                          fontWeight: '800',
+                          color: '#0f172a',
+                          textAlign: 'center',
+                          minWidth: '95px',
+                          backgroundColor: '#f1f5f9',
+                          borderLeft: '1px solid #e2e8f0'
+                        }}>
+                          % UTILIZED
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {lineItems.map((item, idx) => {
+                        const rowSanctioned = item.amount || 0;
+                        const rowTotalSpent = tablePeriods.reduce((sum, p) => sum + getParamMonthSpend(p.id, item.param), 0);
+                        const rowBalance = rowSanctioned > 0 ? (rowSanctioned - rowTotalSpent) : 0;
+                        const rowPct = rowSanctioned > 0 ? ((rowTotalSpent / rowSanctioned) * 100) : 0;
+
+                        return (
+                          <tr
+                            key={idx}
+                            style={{
+                              backgroundColor: item.isTotal ? '#fef08a' : (idx % 2 === 0 ? '#ffffff' : '#fcfcfd'),
+                              borderBottom: item.isTotal ? '2.5px solid #ca8a04' : '1px solid #e2e8f0',
+                              borderTop: item.isTotal ? '2.5px solid #ca8a04' : 'none'
+                            }}
+                          >
+                            {/* Parameters Column (Sticky Left) */}
+                            <td style={{
+                              padding: item.isTotal ? '11px 14px' : '9px 14px',
+                              fontWeight: item.isTotal ? '900' : '700',
+                              color: item.isTotal ? '#854d0e' : '#1e293b',
+                              fontSize: item.isTotal ? '13.5px' : '12.5px',
+                              position: 'sticky',
+                              left: 0,
+                              backgroundColor: item.isTotal ? '#fef08a' : (idx % 2 === 0 ? '#ffffff' : '#fcfcfd'),
+                              zIndex: 10,
+                              boxShadow: '2px 0 5px rgba(0,0,0,0.03)'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: item.color || '#3b82f6',
+                                  display: item.isTotal ? 'none' : 'inline-block',
+                                  flexShrink: 0
+                                }} />
+                                {item.param}
+                              </div>
+                            </td>
+
+                            {/* SANCTIONED (₹) Column (Green text matching image) */}
+                            <td style={{
+                              padding: item.isTotal ? '11px 14px' : '9px 14px',
+                              fontWeight: item.isTotal ? '900' : '800',
+                              color: item.isTotal ? '#854d0e' : '#166534',
+                              textAlign: 'right',
+                              fontSize: item.isTotal ? '14px' : '12.5px',
+                              backgroundColor: item.isTotal ? '#fef08a' : '#f0fdf4',
+                              borderLeft: '1px solid #e2e8f0',
+                              borderRight: '1.5px solid #cbd5e1'
+                            }}>
+                              {item.isBlank || item.param === 'EMI' ? '—' : (item.amount > 0 ? formatINR(item.amount) : '0')}
+                            </td>
+
+                            {/* Monthly Spend Columns */}
+                            {tablePeriods.map((p) => {
+                              const monthSpend = getParamMonthSpend(p.id, item.param);
+                              const isActiveMonth = !isAllMonths && (String(p.id) === String(activePeriod) || p.period_label === opPeriodLabel);
+
+                              return (
+                                <td
+                                  key={p.id}
+                                  style={{
+                                    padding: item.isTotal ? '11px 12px' : '9px 12px',
+                                    fontWeight: item.isTotal ? '900' : (monthSpend > 0 ? '700' : '400'),
+                                    color: item.isTotal ? '#854d0e' : (monthSpend > 0 ? '#0f172a' : '#94a3b8'),
+                                    textAlign: 'right',
+                                    fontSize: item.isTotal ? '13.5px' : '12.5px',
+                                    backgroundColor: item.isTotal ? '#fef08a' : (isActiveMonth ? '#eff6ff50' : 'transparent'),
+                                    borderLeft: '1px solid #f1f5f9'
+                                  }}
+                                >
+                                  {monthSpend > 0 ? formatINR(monthSpend) : '—'}
+                                </td>
+                              );
+                            })}
+
+                            {/* Total Spent Column */}
+                            <td style={{
+                              padding: item.isTotal ? '11px 14px' : '9px 14px',
+                              fontWeight: item.isTotal ? '900' : '800',
+                              color: item.isTotal ? '#854d0e' : '#0f172a',
+                              textAlign: 'right',
+                              fontSize: item.isTotal ? '14px' : '12.5px',
+                              backgroundColor: item.isTotal ? '#fef08a' : '#f8fafc',
+                              borderLeft: '1.5px solid #cbd5e1'
+                            }}>
+                              {rowTotalSpent > 0 ? formatINR(rowTotalSpent) : (item.isBlank || item.param === 'EMI' ? '—' : '₹0')}
+                            </td>
+
+                            {/* Balance Column */}
+                            <td style={{
+                              padding: item.isTotal ? '11px 14px' : '9px 14px',
+                              fontWeight: item.isTotal ? '900' : '800',
+                              color: rowBalance >= 0 ? '#15803d' : '#dc2626',
+                              textAlign: 'right',
+                              fontSize: item.isTotal ? '14px' : '12.5px',
+                              backgroundColor: item.isTotal ? '#fef08a' : '#f8fafc',
+                              borderLeft: '1px solid #e2e8f0'
+                            }}>
+                              {item.isTotal || rowSanctioned > 0 ? formatINR(rowBalance) : '—'}
+                            </td>
+
+                            {/* % Utilized Column */}
+                            <td style={{
+                              padding: item.isTotal ? '11px 12px' : '9px 12px',
+                              textAlign: 'center',
+                              fontSize: '11.5px',
+                              backgroundColor: item.isTotal ? '#fef08a' : '#f8fafc',
+                              borderLeft: '1px solid #e2e8f0'
+                            }}>
+                              {rowSanctioned > 0 ? (
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '2px 7px',
+                                  borderRadius: '9999px',
+                                  fontWeight: '800',
+                                  fontSize: '11px',
+                                  backgroundColor: rowPct > 100 ? '#fef2f2' : rowPct > 80 ? '#fffbeb' : '#ecfdf5',
+                                  color: rowPct > 100 ? '#b91c1c' : rowPct > 80 ? '#b45309' : '#047857',
+                                  border: `1px solid ${rowPct > 100 ? '#fecaca' : rowPct > 80 ? '#fed7aa' : '#a7f3d0'}`
+                                }}>
+                                  {rowPct.toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
+
+
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* EMBEDDED FLEET VEHICLE CARDS & 3-MONTH PERFORMANCE ANALYTICS              */}
+      {/* ========================================================================= */}
+      {(activeMainView === 'vehicles') && (
+        <TransportVehicleDetailsModal
+          embedded={true}
+          isOpen={true}
+          isAllMonths={isAllMonths}
+          vehicles={vehiclesList}
+          initialFocus={modalMetricFocus}
+          activeBranch={activeBranch}
+          activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
+          summary={vehicleStats?.summary || {}}
+          branches={TRANSPORT_BRANCHES}
+          onBranchChange={(newBranch) => setActiveBranch(newBranch)}
+          onJumpToLedger={() => setActiveMainView('vehicles')}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-VIEW: VEHICLE-WISE EXPENSES LEDGER (58 BUSES)                         */}
+      {/* ========================================================================= */}
+      {(activeMainView === 'vehicles' || activeMainView === 'all') && (
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '18px',
+          border: '1.5px solid #e2e8f0',
+          padding: '20px 24px',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
+          marginTop: activeMainView === 'all' ? '20px' : 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ padding: '8px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#0284c7' }}>
+                <Bus size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                  Institutional Vehicle-Wise Expenses Ledger ({activeBranchObj.label} • {activePeriodObj?.period_label})
+                </h2>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                  All 58 institutional buses with Make, Model, Fuel, KM, Mileage, FC, Repair & Maintenance from live DB
+                </div>
+              </div>
+            </div>
+            <span style={{
+              fontSize: '11.5px',
+              fontWeight: '800',
+              padding: '4px 12px',
+              borderRadius: '9999px',
+              backgroundColor: '#eff6ff',
+              color: '#0284c7',
+              border: '1px solid #bfdbfe'
+            }}>
+              Live Database Feed • Table transport_vehicle_entries
+            </span>
+          </div>
+
+          <TransportVehicleExpensesTable
+            periodId={activePeriodObj?.id}
+            branch={activeBranch}
+            embedded={true}
+            readOnly={true}
+          />
+        </div>
+      )}
+
+      {/* ----------------------------------------------------------------------- */}
+      {/* SECTION: OVERALL EXPENSE SUMMARY (4 BENTO KPI CARDS) - MOVED TO BOTTOM    */}
+      {/* ----------------------------------------------------------------------- */}
+      {(activeMainView === 'executive' || activeMainView === 'all') && (
+        <div style={{ marginTop: '20px' }}>
           {/* ----------------------------------------------------------------------- */}
           {/* SECTION: OVERALL EXPENSE SUMMARY (4 BENTO KPI CARDS)                    */}
           {/* ----------------------------------------------------------------------- */}
@@ -1981,17 +2158,42 @@ export default function TransportOperationsDashboard({
                 justifyContent: 'space-between',
                 gap: '8px'
               }}>
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Sanctioned Budget & Balance
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Sanctioned Budget & Balance
+                  </div>
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: activeBranchObj.badgeBg,
+                    color: activeBranchObj.badgeColor
+                  }}>
+                    {activeBranchObj.label}
+                  </span>
                 </div>
                 <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0', letterSpacing: '-0.02em' }}>
                   {formatINR(metrics.balance)}
                 </div>
                 <div style={{ fontSize: '12px', color: '#0284c7', fontWeight: '700' }}>
-                  Budget: {formatLakhs(metrics.approved_budget)} • Spent: {formatLakhs(metrics.cumulative_budget_spent)}
+                  Budget: {formatLakhs(metrics.approved_budget)} • Spent: {formatLakhs(metrics.cumulative_budget_spent || metrics.total_expenses)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                  {metrics.approved_budget > 0 ? (((metrics.approved_budget - metrics.cumulative_budget_spent) / metrics.approved_budget) * 100).toFixed(1) : '100'}% Budget Remaining
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
+                    <span>Budget Balance:</span>
+                    <strong style={{ color: '#0284c7' }}>
+                      {metrics.approved_budget > 0 ? (((metrics.approved_budget - (metrics.cumulative_budget_spent || metrics.total_expenses)) / metrics.approved_budget) * 100).toFixed(1) : '100'}% Remaining
+                    </strong>
+                  </div>
+                  <div style={{ width: '100%', height: '5px', backgroundColor: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${metrics.approved_budget > 0 ? Math.min(100, Math.max(0, ((metrics.cumulative_budget_spent || metrics.total_expenses) / metrics.approved_budget) * 100)) : 0}%`,
+                      height: '100%',
+                      backgroundColor: '#0284c7',
+                      borderRadius: '9999px'
+                    }} />
+                  </div>
                 </div>
               </div>
 
@@ -2023,57 +2225,20 @@ export default function TransportOperationsDashboard({
               </div>
             </div>
           </section>
-
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* SUB-VIEW: VEHICLE-WISE EXPENSES LEDGER (58 BUSES)                         */}
-      {/* ========================================================================= */}
-      {(activeMainView === 'vehicles' || activeMainView === 'all') && (
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '18px',
-          border: '1.5px solid #e2e8f0',
-          padding: '20px 24px',
-          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
-          marginTop: activeMainView === 'all' ? '20px' : 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ padding: '8px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#0284c7' }}>
-                <Bus size={22} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Institutional Vehicle-Wise Expenses Ledger ({activeBranchObj.label} • {activePeriodObj?.period_label})
-                </h2>
-                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                  All 58 institutional buses with Make, Model, Fuel, KM, Mileage, FC, Repair & Maintenance from live DB
-                </div>
-              </div>
-            </div>
-            <span style={{
-              fontSize: '11.5px',
-              fontWeight: '800',
-              padding: '4px 12px',
-              borderRadius: '9999px',
-              backgroundColor: '#eff6ff',
-              color: '#0284c7',
-              border: '1px solid #bfdbfe'
-            }}>
-              Live Database Feed • Table transport_vehicle_entries
-            </span>
-          </div>
-
-          <TransportVehicleExpensesTable
-            periodId={activePeriodObj?.id}
-            branch={activeBranch}
-            embedded={true}
-            readOnly={true}
-          />
-        </div>
-      )}
+      {/* MONTHLY SUPPORTING ATTACHMENTS, PRESENTATIONS & BILLS FOR ACTIVE MONTH */}
+      <div style={{ marginTop: '18px' }}>
+        <MonthlyAttachmentsDashboardSection
+          module="transport"
+          periodId={isAllMonths ? 'all' : (activePeriodObj?.id || activePeriod)}
+          periodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
+          periods={visiblePeriods}
+          branch={activeBranch}
+          currentUser={null}
+        />
+      </div>
 
       {/* ----------------------------------------------------------------------- */}
       {/* VEHICLE DETAILS & FLEET AVERAGES MODAL (DB CONNECTED)                    */}
@@ -2081,6 +2246,7 @@ export default function TransportOperationsDashboard({
       {isVehicleModalOpen && (
         <TransportVehicleDetailsModal
           isOpen={isVehicleModalOpen}
+          isAllMonths={isAllMonths}
           onClose={() => setIsVehicleModalOpen(false)}
           vehicles={vehiclesList}
           initialFocus={modalMetricFocus}

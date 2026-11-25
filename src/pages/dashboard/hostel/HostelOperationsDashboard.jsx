@@ -13,6 +13,7 @@ import HostelReportsModal from './HostelReportsModal';
 import HostelDashboardCensusView from '../HostelDashboardCensusView';
 import HostelDashboardDataTable from '../HostelDashboardDataTable';
 import MonthlyAttachmentsModal from '../../../components/attachments/MonthlyAttachmentsModal';
+import MonthlyAttachmentsDashboardSection from '../../../components/attachments/MonthlyAttachmentsDashboardSection';
 
 export default function HostelOperationsDashboard({
   computedMatrix = {},
@@ -574,6 +575,18 @@ export default function HostelOperationsDashboard({
             onExportReport={handleExportReport}
             remarksDraft={remarksDraft}
           />
+
+          {/* 2B. MONTHLY SUPPORTING ATTACHMENTS, PRESENTATIONS & BILLS FOR ACTIVE MONTH */}
+          <div style={{ marginTop: '20px' }}>
+            <MonthlyAttachmentsDashboardSection
+              module="hostel"
+              periodId={isAllMonths ? 'all' : (activePeriodObj?.id || activePeriod)}
+              periodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'25")}
+              periods={effectivePeriods}
+              currentUser={null}
+              onRefresh={onRefreshAttachments}
+            />
+          </div>
         </div>
       )}
 

@@ -16,7 +16,8 @@ export default function MonthlyAttachmentsModal({
   onPeriodChange,
   readOnly = false,
   currentUser = null,
-  onAttachmentCountChange
+  onAttachmentCountChange,
+  initialPreviewAttachmentId = null
 }) {
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,6 +38,11 @@ export default function MonthlyAttachmentsModal({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [rotation, setRotation] = useState(0);
 
+  // PowerPoint Presentation Slide Deck State
+  const [pptSlides, setPptSlides] = useState([]);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [loadingPptSlides, setLoadingPptSlides] = useState(false);
+
   // Notification State
   const [message, setMessage] = useState(null);
 
@@ -48,6 +54,7 @@ export default function MonthlyAttachmentsModal({
       case 'food': return 'Food Operations';
       case 'hostel': return 'Hostel Operations';
       case 'transport': return 'Transport Fleet';
+      case 'cctv': return 'CCTV Surveillance';
       default: return 'Operations';
     }
   }, [module]);
@@ -65,6 +72,10 @@ export default function MonthlyAttachmentsModal({
         if (onAttachmentCountChange) {
           onAttachmentCountChange(list.length);
         }
+        if (initialPreviewAttachmentId) {
+          const target = list.find(a => a.id === initialPreviewAttachmentId);
+          if (target) setPreviewAttachment(target);
+        }
       }
     } catch (err) {
       console.error('Error fetching attachments:', err);
@@ -77,13 +88,58 @@ export default function MonthlyAttachmentsModal({
     if (isOpen && periodId) {
       fetchAttachments();
       setActiveTab('list');
-      setPreviewAttachment(null);
+      if (!initialPreviewAttachmentId) {
+        setPreviewAttachment(null);
+      }
       setSelectedFiles([]);
       setLinkUrl('');
       setLinkTitle('');
       setMessage(null);
     }
   }, [isOpen, module, periodId]);
+
+  // Fetch slides when PPT attachment is selected for preview
+  useEffect(() => {
+    if (previewAttachment && previewAttachment.file_type === 'ppt') {
+      if (previewAttachment.is_link) {
+        setPptSlides([]);
+        return;
+      }
+      setLoadingPptSlides(true);
+      setActiveSlideIndex(0);
+      fetch(`/api/attachments/${previewAttachment.id}/slides`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.status === 'success' && Array.isArray(d.slides) && d.slides.length > 0) {
+            setPptSlides(d.slides);
+          } else {
+            setPptSlides([]);
+          }
+        })
+        .catch(err => {
+          console.warn('[PPT Preview notice]', err);
+          setPptSlides([]);
+        })
+        .finally(() => setLoadingPptSlides(false));
+    } else {
+      setPptSlides([]);
+      setActiveSlideIndex(0);
+    }
+  }, [previewAttachment]);
+
+  // Keyboard navigation for presentation slides
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!previewAttachment || previewAttachment.file_type !== 'ppt' || pptSlides.length === 0) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        setActiveSlideIndex(prev => Math.min(pptSlides.length - 1, prev + 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        setActiveSlideIndex(prev => Math.max(0, prev - 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewAttachment, pptSlides]);
 
   // Handle Drag & Drop
   const handleDrag = (e) => {
@@ -770,63 +826,424 @@ export default function MonthlyAttachmentsModal({
                 </div>
               )}
 
-              {/* POWERPOINT / PRESENTATION PREVIEW CARD */}
+              {/* POWERPOINT / PRESENTATION SLIDE-BY-SIDE VIEWER */}
               {previewAttachment.file_type === 'ppt' && (
-                <div
-                  style={{
-                    backgroundColor: '#ffffff',
-                    padding: '36px',
-                    borderRadius: '16px',
-                    boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
-                    textAlign: 'center',
-                    maxWidth: '480px',
-                    width: '100%'
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '16px',
-                      backgroundColor: '#fff7ed',
-                      color: '#ea580c',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 16px'
-                    }}
-                  >
-                    <Presentation size={36} />
-                  </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0' }}>
-                    {previewAttachment.file_name}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }}>
-                    PowerPoint Presentation • Size: {formatSize(previewAttachment.file_size)}
-                  </p>
-                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                    <a
-                      href={previewAttachment.file_path}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download={!previewAttachment.is_link}
-                      style={{
-                        padding: '10px 20px',
+                <div style={{
+                  width: '100%',
+                  minHeight: '520px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundColor: '#0f172a',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.2)'
+                }}>
+                  {/* Presentation Top Toolbar */}
+                  <div style={{
+                    padding: '10px 16px',
+                    backgroundColor: '#1e293b',
+                    borderBottom: '1px solid #334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                    color: '#ffffff'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
                         backgroundColor: '#ea580c',
-                        color: '#ffffff',
-                        borderRadius: '9999px',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
+                        display: 'flex',
                         alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Download size={15} />
-                      <span>Download PPT Presentation</span>
-                    </a>
+                        justifyContent: 'center',
+                        color: '#ffffff'
+                      }}>
+                        <Presentation size={16} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '13px', color: '#f8fafc' }}>
+                          {previewAttachment.file_name}
+                        </strong>
+                        {pptSlides.length > 0 && (
+                          <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>
+                            ({pptSlides.length} Slides Deck)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Slide Navigation Controls */}
+                    {pptSlides.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          type="button"
+                          disabled={activeSlideIndex <= 0}
+                          onClick={() => setActiveSlideIndex(prev => Math.max(0, prev - 1))}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            backgroundColor: activeSlideIndex <= 0 ? '#334155' : '#ea580c',
+                            color: '#ffffff',
+                            border: 'none',
+                            cursor: activeSlideIndex <= 0 ? 'not-allowed' : 'pointer',
+                            fontSize: '11.5px',
+                            fontWeight: '700',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <ChevronLeft size={13} />
+                          <span>Prev Slide</span>
+                        </button>
+
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          color: '#f8fafc',
+                          backgroundColor: '#0f172a',
+                          padding: '3px 10px',
+                          borderRadius: '9999px',
+                          border: '1px solid #334155'
+                        }}>
+                          Slide {activeSlideIndex + 1} of {pptSlides.length}
+                        </span>
+
+                        <button
+                          type="button"
+                          disabled={activeSlideIndex >= pptSlides.length - 1}
+                          onClick={() => setActiveSlideIndex(prev => Math.min(pptSlides.length - 1, prev + 1))}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            backgroundColor: activeSlideIndex >= pptSlides.length - 1 ? '#334155' : '#ea580c',
+                            color: '#ffffff',
+                            border: 'none',
+                            cursor: activeSlideIndex >= pptSlides.length - 1 ? 'not-allowed' : 'pointer',
+                            fontSize: '11.5px',
+                            fontWeight: '700',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <span>Next Slide</span>
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Download Action */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <a
+                        href={previewAttachment.file_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={!previewAttachment.is_link}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          backgroundColor: '#334155',
+                          color: '#f8fafc',
+                          border: '1px solid #475569',
+                          fontSize: '11.5px',
+                          fontWeight: '700',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        <Download size={13} />
+                        <span>Download PPT</span>
+                      </a>
+                    </div>
                   </div>
+
+                  {/* Presentation Body: Left Slide Sidebar + Main 16:9 Stage */}
+                  {loadingPptSlides ? (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '60px' }}>
+                      <RefreshCw size={28} className="animate-spin" style={{ marginRight: '10px' }} />
+                      <span style={{ fontSize: '14px', fontWeight: '600' }}>Extracting presentation slides...</span>
+                    </div>
+                  ) : pptSlides.length > 0 ? (
+                    <div style={{ flex: 1, display: 'flex', minHeight: '460px', overflow: 'hidden' }}>
+                      {/* Left Side: Slide Thumbnails Panel */}
+                      <div style={{
+                        width: '230px',
+                        minWidth: '230px',
+                        backgroundColor: '#0f172a',
+                        borderRight: '1px solid #334155',
+                        overflowY: 'auto',
+                        padding: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        maxHeight: '520px'
+                      }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                          SLIDES DECK ({pptSlides.length})
+                        </div>
+                        {pptSlides.map((slide, sIdx) => {
+                          const isCurrent = activeSlideIndex === sIdx;
+                          return (
+                            <div
+                              key={sIdx}
+                              onClick={() => setActiveSlideIndex(sIdx)}
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: '8px',
+                                backgroundColor: isCurrent ? '#1e293b' : '#090d16',
+                                border: isCurrent ? '2px solid #ea580c' : '1px solid #1e293b',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                boxShadow: isCurrent ? '0 0 10px rgba(234, 88, 12, 0.3)' : 'none'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                <span style={{
+                                  fontSize: '9.5px',
+                                  fontWeight: '800',
+                                  backgroundColor: isCurrent ? '#ea580c' : '#334155',
+                                  color: '#ffffff',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px'
+                                }}>
+                                  Slide {sIdx + 1}
+                                </span>
+                                {slide.has_image && (
+                                  <span style={{ fontSize: '9px', color: '#94a3b8' }}>🖼️ Image</span>
+                                )}
+                              </div>
+                              <div style={{
+                                fontSize: '11px',
+                                fontWeight: isCurrent ? '700' : '500',
+                                color: isCurrent ? '#f8fafc' : '#94a3b8',
+                                lineHeight: '1.3',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical'
+                              }}>
+                                {slide.title || `Slide ${sIdx + 1}`}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Right Side: Main Slide Stage (16:9 Presentation Canvas) */}
+                      {(() => {
+                        const currentSlide = pptSlides[activeSlideIndex] || pptSlides[0];
+                        return (
+                          <div style={{
+                            flex: 1,
+                            backgroundColor: '#1e293b',
+                            padding: '24px',
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {/* 16:9 Slide Canvas */}
+                            <div style={{
+                              width: '100%',
+                              maxWidth: '850px',
+                              minHeight: '380px',
+                              backgroundColor: '#ffffff',
+                              borderRadius: '12px',
+                              boxShadow: '0 12px 35px rgba(0,0,0,0.3)',
+                              padding: '32px 38px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              position: 'relative',
+                              overflow: 'hidden'
+                            }}>
+                              {/* Slide Decorative Top Accent */}
+                              <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: '5px',
+                                background: 'linear-gradient(90deg, #ea580c 0%, #f97316 50%, #fbbf24 100%)'
+                              }} />
+
+                              <div>
+                                {/* Slide Title */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+                                  <h2 style={{
+                                    margin: 0,
+                                    fontSize: '20px',
+                                    fontWeight: '800',
+                                    color: '#0f172a',
+                                    lineHeight: '1.25'
+                                  }}>
+                                    {currentSlide.title || `Slide ${activeSlideIndex + 1}`}
+                                  </h2>
+                                  <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    padding: '2px 8px',
+                                    borderRadius: '6px',
+                                    backgroundColor: '#fff7ed',
+                                    color: '#ea580c',
+                                    border: '1px solid #fed7aa'
+                                  }}>
+                                    {activeSlideIndex + 1} / {pptSlides.length}
+                                  </span>
+                                </div>
+
+                                {/* Bullet Points & Text Blocks */}
+                                {currentSlide.text_blocks && currentSlide.text_blocks.length > 0 && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {currentSlide.text_blocks.map((block, bIdx) => (
+                                      <div
+                                        key={bIdx}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'flex-start',
+                                          gap: '10px',
+                                          marginLeft: `${block.level * 20}px`,
+                                          fontSize: '14px',
+                                          lineHeight: '1.45',
+                                          color: '#334155'
+                                        }}
+                                      >
+                                        <span style={{
+                                          color: '#ea580c',
+                                          fontWeight: '900',
+                                          lineHeight: '1.2',
+                                          fontSize: '16px'
+                                        }}>•</span>
+                                        <span>{block.text}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Tables on Slide */}
+                                {currentSlide.tables && currentSlide.tables.length > 0 && (
+                                  <div style={{ marginTop: '16px', overflowX: 'auto' }}>
+                                    {currentSlide.tables.map((tbl, tIdx) => (
+                                      <table key={tIdx} style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                        <tbody>
+                                          {tbl.map((row, rIdx) => (
+                                            <tr key={rIdx} style={{ backgroundColor: rIdx === 0 ? '#f8fafc' : '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
+                                              {row.map((cell, cIdx) => (
+                                                <td key={cIdx} style={{ padding: '6px 10px', fontWeight: rIdx === 0 ? '800' : '500', color: '#1e293b' }}>
+                                                  {cell}
+                                                </td>
+                                              ))}
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Slide Footer */}
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                borderTop: '1px solid #f1f5f9',
+                                paddingTop: '10px',
+                                marginTop: '14px',
+                                fontSize: '11px',
+                                color: '#94a3b8'
+                              }}>
+                                <span>Rathinam Group of Institutions • Monthly Operational Review</span>
+                                <span>Slide {activeSlideIndex + 1} of {pptSlides.length}</span>
+                              </div>
+                            </div>
+
+                            {/* Speaker Notes Drawer */}
+                            {currentSlide.notes && (
+                              <div style={{
+                                width: '100%',
+                                maxWidth: '850px',
+                                marginTop: '10px',
+                                backgroundColor: '#0f172a',
+                                border: '1px solid #334155',
+                                borderRadius: '8px',
+                                padding: '8px 12px',
+                                fontSize: '12px',
+                                color: '#cbd5e1'
+                              }}>
+                                <strong style={{ color: '#ea580c', marginRight: '6px' }}>Speaker Notes:</strong>
+                                {currentSlide.notes}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    /* Fallback for binary .ppt or when slides cannot be parsed */
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+                      <div style={{
+                        backgroundColor: '#ffffff',
+                        padding: '36px',
+                        borderRadius: '16px',
+                        boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                        textAlign: 'center',
+                        maxWidth: '520px',
+                        width: '100%'
+                      }}>
+                        <div style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '16px',
+                          backgroundColor: '#fff7ed',
+                          color: '#ea580c',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          margin: '0 auto 16px'
+                        }}>
+                          <Presentation size={36} />
+                        </div>
+                        <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0' }}>
+                          {previewAttachment.file_name}
+                        </h3>
+                        <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }}>
+                          PowerPoint Presentation • Size: {formatSize(previewAttachment.file_size)}
+                        </p>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                          <a
+                            href={previewAttachment.file_path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={!previewAttachment.is_link}
+                            style={{
+                              padding: '10px 20px',
+                              backgroundColor: '#ea580c',
+                              color: '#ffffff',
+                              borderRadius: '9999px',
+                              fontWeight: '700',
+                              fontSize: '13px',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Download size={15} />
+                            <span>Download PPT Presentation</span>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1483,7 +1900,7 @@ export default function MonthlyAttachmentsModal({
                           ) : (
                             <>
                               <UploadCloud size={15} />
-                              <span>Upload {selectedFiles.length} File(s)</span>
+                              <span>Upload All {selectedFiles.length} File(s) Now</span>
                             </>
                           )}
                         </button>
