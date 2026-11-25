@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Paperclip, UploadCloud, FileText, Image as ImageIcon,
   FileSpreadsheet, Presentation, Eye, Download, ExternalLink,
-  RefreshCw, CheckCircle2, ChevronRight, Layers, Plus, Calendar
+  RefreshCw, CheckCircle2, ChevronRight, Layers, Plus, Calendar,
+  Building2, Tag, Clock, Film
 } from 'lucide-react';
 import MonthlyAttachmentsModal from './MonthlyAttachmentsModal';
+import { getAttachmentDownloadUrl } from '../../utils/api';
 
 export default function MonthlyAttachmentsDashboardSection({
   module = 'transport',
@@ -58,10 +60,36 @@ export default function MonthlyAttachmentsDashboardSection({
     if (activeFilter === 'ppt') return att.file_type === 'ppt';
     if (activeFilter === 'pdf') return att.file_type === 'pdf';
     if (activeFilter === 'excel') return att.file_type === 'excel';
-    if (activeFilter === 'image') return att.file_type === 'image';
+    if (activeFilter === 'media') return ['image', 'video', 'audio'].includes(att.file_type);
     if (activeFilter === 'link') return att.is_link || att.file_type === 'link';
     return true;
   });
+
+  const formatUploadDate = (iso) => {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso).slice(0, 16);
+      return d.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  const getMonthBadgeLabel = (att) => {
+    const p = (periods || []).find(pr => String(pr.id) === String(att.period_id));
+    if (p) return p.period_label || p.period_code || periodLabel || 'Cycle';
+    return periodLabel || `Period #${att.period_id}`;
+  };
+
+  const deptLabelMap = { food: 'Food', hostel: 'Hostel', transport: 'Transport', cctv: 'CCTV' };
+  const deptLabel = deptLabelMap[String(module).toLowerCase()] || String(module).toUpperCase();
 
   const getFileBadge = (fileType) => {
     switch (fileType) {
@@ -72,7 +100,11 @@ export default function MonthlyAttachmentsDashboardSection({
       case 'excel':
         return { label: 'Spreadsheet', color: '#16a34a', bg: '#f0fdf4', border: '#dcfce7', icon: <FileSpreadsheet size={14} color="#16a34a" /> };
       case 'image':
-        return { label: 'Image', color: '#7c3aed', bg: '#f5f3ff', border: '#ede9fe', icon: <ImageIcon size={14} color="#7c3aed" /> };
+        return { label: 'Media • Image', color: '#7c3aed', bg: '#f5f3ff', border: '#ede9fe', icon: <ImageIcon size={14} color="#7c3aed" /> };
+      case 'video':
+        return { label: 'Media • Video', color: '#7c3aed', bg: '#f5f3ff', border: '#ede9fe', icon: <Film size={14} color="#7c3aed" /> };
+      case 'audio':
+        return { label: 'Media • Audio', color: '#7c3aed', bg: '#f5f3ff', border: '#ede9fe', icon: <Film size={14} color="#7c3aed" /> };
       case 'link':
         return { label: 'Web Link', color: '#0284c7', bg: '#f0f9ff', border: '#e0f2fe', icon: <ExternalLink size={14} color="#0284c7" /> };
       default:
@@ -91,7 +123,7 @@ export default function MonthlyAttachmentsDashboardSection({
   const pptCount = attachments.filter(a => a.file_type === 'ppt').length;
   const pdfCount = attachments.filter(a => a.file_type === 'pdf').length;
   const excelCount = attachments.filter(a => a.file_type === 'excel').length;
-  const imageCount = attachments.filter(a => a.file_type === 'image').length;
+  const mediaCount = attachments.filter(a => ['image', 'video', 'audio'].includes(a.file_type)).length;
 
   return (
     <div style={{
@@ -225,7 +257,7 @@ export default function MonthlyAttachmentsDashboardSection({
             ...(pptCount > 0 ? [{ id: 'ppt', label: `PPT Slides (${pptCount})` }] : []),
             ...(pdfCount > 0 ? [{ id: 'pdf', label: `PDFs (${pdfCount})` }] : []),
             ...(excelCount > 0 ? [{ id: 'excel', label: `Sheets (${excelCount})` }] : []),
-            ...(imageCount > 0 ? [{ id: 'image', label: `Images (${imageCount})` }] : [])
+            ...(mediaCount > 0 ? [{ id: 'media', label: `Media (${mediaCount})` }] : [])
           ].map(tab => (
             <button
               key={tab.id}
@@ -353,7 +385,7 @@ export default function MonthlyAttachmentsDashboardSection({
                   </div>
 
                   <h5 style={{
-                    margin: '0 0 4px 0',
+                    margin: '0 0 6px 0',
                     fontSize: '13px',
                     fontWeight: '800',
                     color: '#0f172a',
@@ -365,8 +397,44 @@ export default function MonthlyAttachmentsDashboardSection({
                     {att.file_name}
                   </h5>
 
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>
-                    Uploaded by {att.uploaded_by || 'User'}
+                  {/* Department, Month, Topic & Upload Date Meta */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                    <span style={{
+                      fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '4px',
+                      backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
+                      display: 'inline-flex', alignItems: 'center', gap: '3px'
+                    }}>
+                      <Building2 size={10} />
+                      {deptLabel}{att.branch && att.branch !== 'Common' ? ` (${att.branch})` : ''}
+                    </span>
+                    <span style={{
+                      fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '4px',
+                      backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a',
+                      display: 'inline-flex', alignItems: 'center', gap: '3px'
+                    }}>
+                      <Calendar size={10} />
+                      {getMonthBadgeLabel(att)}
+                    </span>
+                    {att.topic && (
+                      <span style={{
+                        fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '4px',
+                        backgroundColor: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe',
+                        display: 'inline-flex', alignItems: 'center', gap: '3px'
+                      }}>
+                        <Tag size={10} />
+                        {att.topic}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: '10.5px', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                    <span>By {att.uploaded_by || 'User'}</span>
+                    {att.created_at && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#475569', fontWeight: '600' }}>
+                        <Clock size={10} />
+                        {formatUploadDate(att.created_at)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -397,10 +465,10 @@ export default function MonthlyAttachmentsDashboardSection({
                   </button>
 
                   <a
-                    href={att.file_path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download={!att.is_link}
+                    href={getAttachmentDownloadUrl(att)}
+                    target={att.is_link ? '_blank' : undefined}
+                    rel={att.is_link ? 'noopener noreferrer' : undefined}
+                    download={att.is_link ? undefined : att.file_name}
                     style={{
                       padding: '6px 10px',
                       borderRadius: '6px',

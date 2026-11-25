@@ -33,3 +33,17 @@ export function getAssetUrl(relativePath) {
   return `${rawBase}${clean}`;
 }
 
+export function getAttachmentDownloadUrl(att) {
+  if (!att) return '#';
+  if (att.is_link) return att.file_path;
+  if (att.id) return `${APP_BASE}/api/attachments/${att.id}/download`;
+  return att.file_path || '#';
+}
+
+export function getAttachmentViewUrl(att) {
+  if (!att) return '#';
+  if (att.is_link) return att.file_path;
+  if (att.id) return `${APP_BASE}/api/attachments/${att.id}/view`;
+  return att.file_path || '#';
+}
+

@@ -5,6 +5,7 @@ import {
   ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCw, CheckCircle2,
   AlertCircle, RefreshCw, Calendar, Sparkles, Layers, ArrowLeft
 } from 'lucide-react';
+import { getAttachmentDownloadUrl, getAttachmentViewUrl } from '../../utils/api';
 
 export default function MonthlyAttachmentsModal({
   isOpen,
@@ -27,6 +28,7 @@ export default function MonthlyAttachmentsModal({
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadTopic, setUploadTopic] = useState('');
   
   // Link State
   const [linkUrl, setLinkUrl] = useState('');
@@ -188,6 +190,7 @@ export default function MonthlyAttachmentsModal({
       formData.append('period_id', String(periodId));
       formData.append('branch', 'Common');
       formData.append('uploaded_by', currentUser?.name || currentUser?.username || 'User');
+      formData.append('topic', uploadTopic.trim());
 
       selectedFiles.forEach(file => {
         formData.append('files', file);
@@ -206,6 +209,7 @@ export default function MonthlyAttachmentsModal({
       const result = await res.json();
       setMessage({ type: 'success', text: result.message || 'Files uploaded successfully!' });
       setSelectedFiles([]);
+      setUploadTopic('');
       setActiveTab('list');
       await fetchAttachments();
     } catch (err) {
@@ -672,7 +676,7 @@ export default function MonthlyAttachmentsModal({
                 )}
 
                 <a
-                  href={previewAttachment.file_path}
+                  href={getAttachmentDownloadUrl(previewAttachment)}
                   target="_blank"
                   rel="noopener noreferrer"
                   download={!previewAttachment.is_link}
@@ -712,7 +716,7 @@ export default function MonthlyAttachmentsModal({
               {previewAttachment.file_type === 'image' && (
                 <div style={{ textAlign: 'center', transition: 'transform 0.2s ease', transform: `scale(${zoomLevel}) rotate(${rotation}deg)` }}>
                   <img
-                    src={previewAttachment.file_path}
+                    src={getAttachmentViewUrl(previewAttachment)}
                     alt={previewAttachment.file_name}
                     style={{
                       maxWidth: '100%',
@@ -729,7 +733,7 @@ export default function MonthlyAttachmentsModal({
               {previewAttachment.file_type === 'pdf' && (
                 <div style={{ width: '100%', height: '100%', minHeight: '560px' }}>
                   <iframe
-                    src={`${previewAttachment.file_path}#toolbar=1&navpanes=0`}
+                    src={`${getAttachmentViewUrl(previewAttachment)}#toolbar=1&navpanes=0`}
                     title={previewAttachment.file_name}
                     style={{
                       width: '100%',
@@ -741,6 +745,25 @@ export default function MonthlyAttachmentsModal({
                       boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
                     }}
                   />
+                </div>
+              )}
+
+              {/* VIDEO MEDIA PREVIEW */}
+              {previewAttachment.file_type === 'video' && (
+                <div style={{ width: '100%', maxWidth: '860px', textAlign: 'center' }}>
+                  <video
+                    controls
+                    src={getAttachmentViewUrl(previewAttachment)}
+                    style={{ width: '100%', maxHeight: '580px', borderRadius: '12px', backgroundColor: '#000', boxShadow: '0 10px 35px rgba(0,0,0,0.4)' }}
+                  />
+                </div>
+              )}
+
+              {/* AUDIO MEDIA PREVIEW */}
+              {previewAttachment.file_type === 'audio' && (
+                <div style={{ backgroundColor: '#ffffff', padding: '32px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.08)', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{previewAttachment.file_name}</h4>
+                  <audio controls src={getAttachmentViewUrl(previewAttachment)} style={{ width: '100%' }} />
                 </div>
               )}
 
@@ -780,7 +803,7 @@ export default function MonthlyAttachmentsModal({
                   </p>
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                     <a
-                      href={previewAttachment.file_path}
+                      href={getAttachmentDownloadUrl(previewAttachment)}
                       target="_blank"
                       rel="noopener noreferrer"
                       download={!previewAttachment.is_link}
@@ -802,7 +825,7 @@ export default function MonthlyAttachmentsModal({
                     </a>
                     {previewAttachment.is_link && (
                       <a
-                        href={previewAttachment.file_path}
+                        href={getAttachmentDownloadUrl(previewAttachment)}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
@@ -939,7 +962,7 @@ export default function MonthlyAttachmentsModal({
                     {/* Download Action */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <a
-                        href={previewAttachment.file_path}
+                        href={getAttachmentDownloadUrl(previewAttachment)}
                         target="_blank"
                         rel="noopener noreferrer"
                         download={!previewAttachment.is_link}
@@ -1220,7 +1243,7 @@ export default function MonthlyAttachmentsModal({
                         </p>
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                           <a
-                            href={previewAttachment.file_path}
+                            href={getAttachmentDownloadUrl(previewAttachment)}
                             target="_blank"
                             rel="noopener noreferrer"
                             download={!previewAttachment.is_link}
@@ -1282,7 +1305,7 @@ export default function MonthlyAttachmentsModal({
                     {previewAttachment.file_path}
                   </p>
                   <a
-                    href={previewAttachment.file_path}
+                    href={getAttachmentDownloadUrl(previewAttachment)}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
@@ -1612,7 +1635,7 @@ export default function MonthlyAttachmentsModal({
                                     }}
                                   >
                                     <img
-                                      src={att.file_path}
+                                      src={getAttachmentViewUrl(att)}
                                       alt={att.file_name}
                                       style={{
                                         width: '100%',
@@ -1698,7 +1721,7 @@ export default function MonthlyAttachmentsModal({
                                   </button>
 
                                   <a
-                                    href={att.file_path}
+                                    href={getAttachmentDownloadUrl(att)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     download={!att.is_link}
@@ -1804,6 +1827,28 @@ export default function MonthlyAttachmentsModal({
                     <span style={{ fontSize: '11px', color: '#94a3b8', backgroundColor: '#f1f5f9', padding: '3px 10px', borderRadius: '9999px' }}>
                       Maximum file size: 50MB per file
                     </span>
+                  </div>
+
+                  {/* Optional Topic / Title for Uploaded Files */}
+                  <div style={{ marginTop: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '5px' }}>
+                      Topic / Description (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Monthly Audit Report, Fuel Bills, Hostel Inspection..."
+                      value={uploadTopic}
+                      onChange={(e) => setUploadTopic(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '12.5px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
                   </div>
 
                   {/* Selected Files Queue */}
