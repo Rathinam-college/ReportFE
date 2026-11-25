@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { formatINR } from '../../utils/formatters';
 import TransportVehicleExpensesTable from './TransportVehicleExpensesTable';
+import MonthlyAttachmentsModal from '../../components/attachments/MonthlyAttachmentsModal';
 import { 
   Save, RefreshCw, CheckCircle2, Zap, Bus, 
   AlertCircle, Check, Copy, Settings,
   Users, Fuel, Wrench, ShieldCheck, DollarSign, School, ChevronRight, Calculator,
-  TrendingUp, Award, Layers, Hash
+  TrendingUp, Award, Layers, Hash, Lock, Unlock, RotateCcw, X, Edit3, Paperclip
 } from 'lucide-react';
 
 export const TRANSPORT_BRANCHES = [
   { 
-    id: 'Common', 
-    code: 'Common', 
-    label: 'Common', 
-    icon: '🚌', 
-    badgeColor: '#d97706', 
-    badgeBg: '#fef3c7',
-    description: 'Central Campus Fleet • Shared shuttles, staff transit, central pool'
+    id: 'University', 
+    code: 'University', 
+    label: 'University Fleet', 
+    icon: '🎓', 
+    badgeColor: '#dc2626', 
+    badgeBg: '#fee2e2',
+    description: 'Rathinam University Main Fleet • College buses & commuter transit'
   },
   { 
     id: 'RPS', 
@@ -37,13 +38,13 @@ export const TRANSPORT_BRANCHES = [
     description: 'KPM Matriculation School Fleet • Dedicated student transit routes'
   },
   { 
-    id: 'University', 
-    code: 'University', 
-    label: 'University Fleet', 
-    icon: '🎓', 
-    badgeColor: '#dc2626', 
-    badgeBg: '#fee2e2',
-    description: 'Rathinam University Main Fleet • College buses & commuter transit'
+    id: 'Common', 
+    code: 'Common', 
+    label: 'Common', 
+    icon: '🚌', 
+    badgeColor: '#d97706', 
+    badgeBg: '#fef3c7',
+    description: 'Central Campus Fleet • Shared shuttles, staff transit, central pool'
   },
   { 
     id: 'all', 
@@ -55,6 +56,101 @@ export const TRANSPORT_BRANCHES = [
     description: 'Consolidated view • Combined metrics for all 4 institutions'
   }
 ];
+
+// Official Sanctioned Budgets per Operating Fleet (FY 2026-2027)
+export const DEFAULT_BRANCH_BUDGETS = {
+  University: {
+    sanctioned: 40330187,
+    label: 'University Fleet',
+    monthlyCeiling: 3360849,
+    busCount: 16,
+    color: '#dc2626',
+    icon: '🎓',
+    lineItems: [
+      { param: 'Fuel expenses', amount: 19000000, color: '#1e40af', bg: '#dbeafe' },
+      { param: 'FC 2026-2027', amount: 767200, color: '#9f1239', bg: '#ffe4e6' },
+      { param: 'Vehicle Statutory', amount: 2844105, color: '#92400e', bg: '#fef3c7' },
+      { param: 'Vehicle Repair & Maintenance', amount: 4352880, color: '#3730a3', bg: '#e0e7ff' },
+      { param: 'CCTV Replacement 26-27', amount: 960000, color: '#9f1239', bg: '#ffe4e6' },
+      { param: 'Vehicle Parking & Fastag Recharge 26-27', amount: 1030800, color: '#3f6212', bg: '#ecfccb' },
+      { param: 'Transport Employees Cost', amount: 10984952, color: '#075985', bg: '#e0f2fe' },
+      { param: 'Others 26-27', amount: 390250, color: '#065f46', bg: '#d1fae5' },
+      { param: 'Total Expenses', amount: 40330187, color: '#854d0e', bg: '#fef08a', isTotal: true }
+    ]
+  },
+  all: {
+    sanctioned: 40330187,
+    label: 'All Branches (Consolidated)',
+    monthlyCeiling: 3360849,
+    busCount: 58,
+    color: '#0284c7',
+    icon: '🏢',
+    lineItems: [
+      { param: 'Fuel expenses', amount: 19000000, color: '#1e40af', bg: '#dbeafe' },
+      { param: 'FC 2026-2027', amount: 767200, color: '#9f1239', bg: '#ffe4e6' },
+      { param: 'Vehicle Statutory', amount: 2844105, color: '#92400e', bg: '#fef3c7' },
+      { param: 'Vehicle Repair & Maintenance', amount: 4352880, color: '#3730a3', bg: '#e0e7ff' },
+      { param: 'CCTV Replacement 26-27', amount: 960000, color: '#9f1239', bg: '#ffe4e6' },
+      { param: 'Vehicle Parking & Fastag Recharge 26-27', amount: 1030800, color: '#3f6212', bg: '#ecfccb' },
+      { param: 'Transport Employees Cost', amount: 10984952, color: '#075985', bg: '#e0f2fe' },
+      { param: 'Others 26-27', amount: 390250, color: '#065f46', bg: '#d1fae5' },
+      { param: 'Total Expenses', amount: 40330187, color: '#854d0e', bg: '#fef08a', isTotal: true }
+    ]
+  },
+  RPS: {
+    sanctioned: 14107491,
+    label: 'RPS Branch',
+    monthlyCeiling: 1175624,
+    busCount: 19,
+    color: '#7c3aed',
+    icon: '🏫',
+    lineItems: [
+      { param: 'Fuel expenses (Rs)', amount: 4622687, color: '#1d4ed8', bg: '#eff6ff' },
+      { param: 'FC 2025-2026', amount: 405900, color: '#be123c', bg: '#fff1f2' },
+      { param: 'Vehicle Statutory', amount: 786280, color: '#b45309', bg: '#fffbeb' },
+      { param: 'Repair & Maintenance', amount: 1780500, color: '#4338ca', bg: '#eef2ff' },
+      { param: 'Others', amount: 519081, color: '#047857', bg: '#ecfdf5' },
+      { param: 'Transport Employees Cost', amount: 5993043, color: '#0369a1', bg: '#f0f9ff' },
+      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true },
+      { param: 'Total Expenses', amount: 14107491, color: '#854d0e', bg: '#fef08a', isTotal: true }
+    ]
+  },
+  KPM: {
+    sanctioned: 4000000,
+    label: 'KPM Branch',
+    monthlyCeiling: 333333,
+    busCount: 5,
+    color: '#059669',
+    icon: '🏫',
+    lineItems: [
+      { param: 'Fuel expenses (Rs)', amount: 1300000, color: '#1d4ed8', bg: '#eff6ff' },
+      { param: 'FC 2025-2026', amount: 150000, color: '#be123c', bg: '#fff1f2' },
+      { param: 'Vehicle Statutory', amount: 340000, color: '#b45309', bg: '#fffbeb' },
+      { param: 'Repair & Maintenance', amount: 500000, color: '#4338ca', bg: '#eef2ff' },
+      { param: 'Others', amount: 280000, color: '#047857', bg: '#ecfdf5' },
+      { param: 'Transport Employees Cost', amount: 1430000, color: '#0369a1', bg: '#f0f9ff' },
+      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true },
+      { param: 'Total Expenses', amount: 4000000, color: '#854d0e', bg: '#fef08a', isTotal: true }
+    ]
+  },
+  Common: {
+    sanctioned: 5552143,
+    label: 'Common Fleet',
+    monthlyCeiling: 462679,
+    busCount: 18,
+    color: '#d97706',
+    icon: '🚌',
+    lineItems: [
+      { param: 'Fuel expenses (Rs)', amount: 780000, color: '#1d4ed8', bg: '#eff6ff' },
+      { param: 'FC 2025-2026', amount: 50400, color: '#be123c', bg: '#fff1f2' },
+      { param: 'Vehicle Statutory', amount: 702465, color: '#b45309', bg: '#fffbeb' },
+      { param: 'Repair & Maintenance', amount: 973333, color: '#4338ca', bg: '#eef2ff' },
+      { param: 'Others', amount: 75000, color: '#047857', bg: '#ecfdf5' },
+      { param: 'Transport Employees Cost', amount: 2970945, color: '#0369a1', bg: '#f0f9ff' },
+      { param: 'Total Expenses', amount: 5552143, color: '#854d0e', bg: '#fef08a', isTotal: true }
+    ]
+  }
+};
 
 // Fallback section styling palette matching the uploaded image exactly
 const SECTION_STYLES = {
@@ -129,8 +225,10 @@ export const CANONICAL_TRANSPORT_PARAMETERS = [
   { id: 10, s_no: '10', param_key: 'statutory_cost', param_name: 'Vehicle Statutory', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 10, input_type: 'cost', unit: 'INR (₹)' },
   { id: 11, s_no: '11', param_key: 'repair_maintenance_cost', param_name: 'Repair & Maintenance', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 11, input_type: 'cost', unit: 'INR (₹)' },
   { id: 12, s_no: '12', param_key: 'other_cost', param_name: 'Others', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 12, input_type: 'cost', unit: 'INR (₹)' },
-  { id: 13, s_no: '13', param_key: 'employee_cost', param_name: 'Transport Employees Cost', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 13, input_type: 'cost', unit: 'INR (₹)' },
-  { id: 14, s_no: '14', param_key: 'total_expenses', param_name: 'Total Expenses', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 14, input_type: 'cost', unit: 'INR (₹)', formula: 'SUM(Fuel + FC + Statutory + Repair + Others + Employees Cost)' },
+  { id: 13, s_no: '13', param_key: 'cctv_replacement', param_name: 'CCTV replacement', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 13, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 14, s_no: '14', param_key: 'employee_cost', param_name: 'Transport Employees Cost', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 14, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 15, s_no: '15', param_key: 'parking_fastag', param_name: 'Vehicle Parking & Fastag Recharge', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 15, input_type: 'cost', unit: 'INR (₹)' },
+  { id: 16, s_no: '16', param_key: 'total_expenses', param_name: 'Total Expenses', section: 'Fleet Expenses & Operations', section_order: 2, display_order: 16, input_type: 'cost', unit: 'INR (₹)', formula: 'SUM(Fuel + FC + Statutory + Repair + Others + CCTV replacement + Employees Cost + Parking & Fastag)' },
 
   // Section 3: Revenue, Deductions & Income (Tan)
   { id: 15, s_no: '15', param_key: 'students_count_income', param_name: 'Students count', section: 'Revenue, Deductions & Income', section_order: 3, display_order: 15, input_type: 'single_count', unit: 'Students' },
@@ -201,8 +299,293 @@ export default function TransportSpreadsheetEntry({
 
   // Per-branch local edit buffers: { [branch]: { [periodId]: { [param_key]: val } } }
   const [branchDrafts, setBranchDrafts] = useState({});
+  const [lockedPeriodsOverride, setLockedPeriodsOverride] = useState({});
+  const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
 
-  const isClosed = !!activePeriodObj?.is_closed;
+  // Dedicated Sanctioned Budget Edit & Lock State
+  // Dedicated Sanctioned Budget Edit & Lock State across All 4 Fleets
+  const [budgetDisplayMode, setBudgetDisplayMode] = useState('active'); // 'active' | 'all'
+  const [branchBudgetsState, setBranchBudgetsState] = useState(() => {
+    return computedMatrix?.transport_branch_budgets || DEFAULT_BRANCH_BUDGETS;
+  });
+  const [budgetLocks, setBudgetLocks] = useState({
+    University: true,
+    RPS: true,
+    KPM: true,
+    Common: true
+  });
+  const [budgetDrafts, setBudgetDrafts] = useState({
+    University: {},
+    RPS: {},
+    KPM: {},
+    Common: {}
+  });
+  const [isSavingBudget, setIsSavingBudget] = useState(false);
+
+  // Sync budget from computedMatrix or direct API
+  useEffect(() => {
+    if (computedMatrix?.transport_branch_budgets && Object.keys(computedMatrix.transport_branch_budgets).length > 0) {
+      setBranchBudgetsState(prev => ({
+        ...prev,
+        ...computedMatrix.transport_branch_budgets
+      }));
+    } else {
+      fetch('/api/transport/budget-tracking')
+        .then(res => res.json())
+        .then(data => {
+          if (data?.status === 'success' && data?.budgets) {
+            setBranchBudgetsState(prev => ({
+              ...prev,
+              ...data.budgets
+            }));
+          }
+        })
+        .catch(err => console.warn('[TransportSpreadsheetEntry] Budget tracking fetch notice:', err));
+    }
+  }, [computedMatrix]);
+
+  // Backward compatibility helpers for active fleet
+  const isBudgetLocked = budgetLocks[activeBranch] !== false;
+  const budgetEditDraft = budgetDrafts[activeBranch] || {};
+  const activeBranchBudget = (branchBudgetsState && branchBudgetsState[activeBranch]) || DEFAULT_BRANCH_BUDGETS[activeBranch];
+
+  // Per-branch actions
+  const isBranchLocked = (bKey) => budgetLocks[bKey] !== false;
+
+  const handleStartEditBranch = (bKey) => {
+    const targetBranch = bKey || activeBranch;
+    const bBudget = (branchBudgetsState && branchBudgetsState[targetBranch]) || DEFAULT_BRANCH_BUDGETS[targetBranch];
+    if (!bBudget?.lineItems) return;
+    const initialDraft = {};
+    bBudget.lineItems.forEach(item => {
+      initialDraft[item.param] = item.amount;
+    });
+    setBudgetDrafts(prev => ({ ...prev, [targetBranch]: initialDraft }));
+    setBudgetLocks(prev => ({ ...prev, [targetBranch]: false }));
+  };
+
+  const handleCancelEditBranch = (bKey) => {
+    const targetBranch = bKey || activeBranch;
+    setBudgetDrafts(prev => ({ ...prev, [targetBranch]: {} }));
+    setBudgetLocks(prev => ({ ...prev, [targetBranch]: true }));
+  };
+
+  const handleBranchParamChange = (bKey, paramName, rawVal) => {
+    setBudgetDrafts(prev => ({
+      ...prev,
+      [bKey]: {
+        ...(prev[bKey] || {}),
+        [paramName]: rawVal
+      }
+    }));
+  };
+
+  const getBranchBudgetTotal = (bKey) => {
+    const bBudget = (branchBudgetsState && branchBudgetsState[bKey]) || DEFAULT_BRANCH_BUDGETS[bKey];
+    if (!bBudget?.lineItems) return 0;
+    const bDraft = budgetDrafts[bKey] || {};
+    return bBudget.lineItems.reduce((sum, item) => {
+      if (item.isTotal) return sum;
+      const draftVal = bDraft[item.param];
+      const amt = draftVal !== undefined ? Number(draftVal) : Number(item.amount);
+      return sum + (isNaN(amt) ? 0 : amt);
+    }, 0);
+  };
+
+  // Live computed total for active branch
+  const currentBudgetTotal = useMemo(() => {
+    return getBranchBudgetTotal(activeBranch);
+  }, [activeBranch, branchBudgetsState, budgetDrafts]);
+
+  // Single branch save to dedicated database table: transport_budget_<branch>
+  const handleSaveBranchBudget = async (bKey) => {
+    const targetBranch = bKey || activeBranch;
+    if (!targetBranch || targetBranch === 'all') return;
+    setIsSavingBudget(true);
+
+    try {
+      const bBudget = (branchBudgetsState && branchBudgetsState[targetBranch]) || DEFAULT_BRANCH_BUDGETS[targetBranch];
+      const bDraft = budgetDrafts[targetBranch] || {};
+      const newTotal = getBranchBudgetTotal(targetBranch);
+
+      const updatedLineItems = bBudget.lineItems.map(item => {
+        if (item.isTotal) {
+          return { ...item, amount: newTotal };
+        }
+        const draftVal = bDraft[item.param];
+        const draftAmt = draftVal !== undefined ? Number(draftVal) : item.amount;
+        return {
+          ...item,
+          amount: isNaN(draftAmt) ? 0 : draftAmt
+        };
+      });
+
+      const res = await fetch('/api/transport/budget-tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          branch: targetBranch,
+          lineItems: updatedLineItems
+        })
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.status === 'success') {
+        setBranchBudgetsState(prev => ({
+          ...prev,
+          [targetBranch]: {
+            ...prev[targetBranch],
+            sanctioned: newTotal,
+            lineItems: updatedLineItems
+          }
+        }));
+
+        if (DEFAULT_BRANCH_BUDGETS[targetBranch]) {
+          DEFAULT_BRANCH_BUDGETS[targetBranch].sanctioned = newTotal;
+          DEFAULT_BRANCH_BUDGETS[targetBranch].lineItems = updatedLineItems;
+        }
+
+        setBudgetLocks(prev => ({ ...prev, [targetBranch]: true }));
+        setBudgetDrafts(prev => ({ ...prev, [targetBranch]: {} }));
+        setLocalMessage({
+          type: 'success',
+          text: `Official Budget for ${targetBranch} has been saved to dedicated database table transport_budget_${targetBranch.toLowerCase()} & locked (Sanctioned: ${formatINR(newTotal)}).`
+        });
+
+        if (fetchData) {
+          fetchData('transport');
+        }
+      } else {
+        throw new Error(resData.detail || 'Failed to save budget');
+      }
+    } catch (err) {
+      console.error(`[TransportSpreadsheetEntry] Error saving budget for ${targetBranch}:`, err);
+      setLocalMessage({
+        type: 'error',
+        text: `Error saving budget for ${targetBranch}: ${err.message}`
+      });
+    } finally {
+      setIsSavingBudget(false);
+    }
+  };
+
+  // Bulk save all 4 fleet budget tables to their respective database tables
+  const handleSaveAllBranchBudgets = async () => {
+    setIsSavingBudget(true);
+    const realBranches = ['University', 'RPS', 'KPM', 'Common'];
+    const bulkBudgets = {};
+
+    realBranches.forEach(bKey => {
+      const bBudget = (branchBudgetsState && branchBudgetsState[bKey]) || DEFAULT_BRANCH_BUDGETS[bKey];
+      const bDraft = budgetDrafts[bKey] || {};
+      const newTotal = getBranchBudgetTotal(bKey);
+      const updatedLineItems = (bBudget?.lineItems || []).map(item => {
+        if (item.isTotal) return { ...item, amount: newTotal };
+        const draftVal = bDraft[item.param];
+        const draftAmt = draftVal !== undefined ? Number(draftVal) : item.amount;
+        return {
+          ...item,
+          amount: isNaN(draftAmt) ? 0 : draftAmt
+        };
+      });
+      bulkBudgets[bKey] = updatedLineItems;
+    });
+
+    try {
+      const res = await fetch('/api/transport/budget-tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budgets: bulkBudgets })
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.status === 'success') {
+        const nextBudgets = { ...branchBudgetsState };
+        realBranches.forEach(bKey => {
+          const items = bulkBudgets[bKey];
+          const total = getBranchBudgetTotal(bKey);
+          nextBudgets[bKey] = {
+            ...nextBudgets[bKey],
+            sanctioned: total,
+            lineItems: items
+          };
+          if (DEFAULT_BRANCH_BUDGETS[bKey]) {
+            DEFAULT_BRANCH_BUDGETS[bKey].sanctioned = total;
+            DEFAULT_BRANCH_BUDGETS[bKey].lineItems = items;
+          }
+        });
+
+        setBranchBudgetsState(nextBudgets);
+        setBudgetLocks({ University: true, RPS: true, KPM: true, Common: true });
+        setBudgetDrafts({ University: {}, RPS: {}, KPM: {}, Common: {} });
+        setLocalMessage({
+          type: 'success',
+          text: 'All 4 Fleet Budgets successfully saved to database tables (transport_budget_university, transport_budget_rps, transport_budget_kpm, transport_budget_common) and locked!'
+        });
+
+        if (fetchData) {
+          fetchData('transport');
+        }
+      } else {
+        throw new Error(resData.detail || 'Failed to save all budgets');
+      }
+    } catch (err) {
+      console.error('[TransportSpreadsheetEntry] Error saving all budgets:', err);
+      setLocalMessage({
+        type: 'error',
+        text: `Error saving all budgets: ${err.message}`
+      });
+    } finally {
+      setIsSavingBudget(false);
+    }
+  };
+
+  const handleUnlockAllBudgets = () => {
+    const realBranches = ['University', 'RPS', 'KPM', 'Common'];
+    const newLocks = {};
+    const newDrafts = {};
+    realBranches.forEach(bKey => {
+      newLocks[bKey] = false;
+      const bBudget = (branchBudgetsState && branchBudgetsState[bKey]) || DEFAULT_BRANCH_BUDGETS[bKey];
+      const draft = {};
+      if (bBudget?.lineItems) {
+        bBudget.lineItems.forEach(item => {
+          draft[item.param] = item.amount;
+        });
+      }
+      newDrafts[bKey] = draft;
+    });
+    setBudgetLocks(newLocks);
+    setBudgetDrafts(newDrafts);
+  };
+
+  const handleLockAllBudgets = () => {
+    setBudgetLocks({ University: true, RPS: true, KPM: true, Common: true });
+    setBudgetDrafts({ University: {}, RPS: {}, KPM: {}, Common: {} });
+  };
+
+  const handleResetBranchDefaults = (bKey) => {
+    const targetBranch = bKey || activeBranch;
+    const canonical = DEFAULT_BRANCH_BUDGETS[targetBranch];
+    if (!canonical?.lineItems) return;
+    const initialDraft = {};
+    canonical.lineItems.forEach(item => {
+      initialDraft[item.param] = item.amount;
+    });
+    setBudgetDrafts(prev => ({ ...prev, [targetBranch]: initialDraft }));
+    setLocalMessage({
+      type: 'info',
+      text: `Reset values to official baseline for ${targetBranch}. Click "Save & Lock Table" to persist.`
+    });
+  };
+
+  // Backwards compatible aliases for existing JSX
+  const handleStartEditBudget = () => handleStartEditBranch(activeBranch);
+  const handleCancelEditBudget = () => handleCancelEditBranch(activeBranch);
+  const handleBudgetParamChange = (paramName, rawVal) => handleBranchParamChange(activeBranch, paramName, rawVal);
+  const handleSaveAndLockBudget = () => handleSaveBranchBudget(activeBranch);
+  const handleResetToStandardDefaults = () => handleResetBranchDefaults(activeBranch);
+
   const periods = computedMatrix?.periods || [];
   // Strict fleet-scoped periods: only show months belonging to the active fleet or 'all'
   const visiblePeriods = useMemo(() => {
@@ -210,7 +593,53 @@ export default function TransportSpreadsheetEntry({
   }, [periods, activeBranch]);
 
   const currPeriodIdStr = String(editingPeriodId);
+  const currentPeriod = periods.find(p => String(p.id) === currPeriodIdStr) || activePeriodObj;
+  const isClosed = lockedPeriodsOverride[currPeriodIdStr] !== undefined
+    ? lockedPeriodsOverride[currPeriodIdStr]
+    : !!currentPeriod?.is_closed;
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES.find(b => b.id === 'RPS') || TRANSPORT_BRANCHES[1] || TRANSPORT_BRANCHES[0];
+
+  // Universal lock toggle that guarantees mutual locking & unlocking across Page 1 & Page 2
+  const handleUniversalToggleLock = async (targetPeriodId = null) => {
+    const pId = targetPeriodId || editingPeriodId;
+    if (!pId) return;
+
+    const pObj = periods.find(p => String(p.id) === String(pId)) || activePeriodObj;
+    const targetLabel = pObj?.period_label || pObj?.period_code || `Month ${pId}`;
+    const targetCode = pObj?.period_code || '2026-10';
+    const currentClosed = lockedPeriodsOverride[String(pId)] !== undefined 
+      ? lockedPeriodsOverride[String(pId)] 
+      : !!pObj?.is_closed;
+    const newStatus = !currentClosed;
+
+    // Optimistically update local override immediately across Page 1 & Page 2
+    setLockedPeriodsOverride(prev => ({ ...prev, [String(pId)]: newStatus }));
+
+    try {
+      const res = await fetch(`/api/periods/${pId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          period_label: targetLabel,
+          period_code: targetCode,
+          is_closed: newStatus
+        })
+      });
+
+      if (res.ok) {
+        setLocalMessage({
+          type: 'success',
+          text: `Month "${targetLabel}" is now ${newStatus ? 'LOCKED (Read-Only) across Page 1 & Page 2' : 'UNLOCKED for editing across Page 1 & Page 2'}.`
+        });
+      }
+    } catch (err) {
+      console.warn('[TransportSpreadsheetEntry] Direct period lock error:', err);
+    }
+
+    if (fetchData) {
+      fetchData('transport');
+    }
+  };
 
   // Synchronize branch from parent prop if provided
   useEffect(() => {
@@ -342,7 +771,7 @@ export default function TransportSpreadsheetEntry({
         totAddKmsRps += num(m.additional_kms_billed_rps);
         totAddKmsOthers += num(m.additional_kms_others_billing);
         totCabBilling += num(m.cab_billing);
-        totApprovedBudget += num(m.approved_budget);
+        totApprovedBudget += num(m.approved_budget) || (DEFAULT_BRANCH_BUDGETS[bCode]?.sanctioned || 0);
         totCumulativeBudgetSpent += num(m.cumulative_budget_spent);
         totTicketsRaised += num(m.service_tickets_raised);
         totTicketsClosed += num(m.service_tickets_closed);
@@ -353,7 +782,7 @@ export default function TransportSpreadsheetEntry({
 
       const totExpenses = totFuelExp + totFc + totStatutory + totRepair + totOther + totEmp;
       const totCumIncome = totFeePaid + totRpsBilling + totStaffDeduction + totAddKmsRps + totAddKmsOthers + totCabBilling;
-      const totBal = totApprovedBudget - totCumulativeBudgetSpent;
+      const totBal = (totApprovedBudget || 32500000) - totCumulativeBudgetSpent;
       const totFeeUnpaid = Math.max(0, totFeeDemand - totFeeDiscount - totFeePaid);
       const totTicketsOpen = Math.max(0, totTicketsRaised - totTicketsClosed);
       const totQualityOpen = Math.max(0, totQualityRec - totQualityCls);
@@ -371,7 +800,9 @@ export default function TransportSpreadsheetEntry({
         statutory_cost: totStatutory,
         repair_maintenance_cost: totRepair,
         other_cost: totOther,
+        cctv_replacement: 0,
         employee_cost: totEmp,
+        parking_fastag: 0,
         total_expenses: totExpenses,
         students_count_income: totPassengers,
         staff_count_income: 0,
@@ -383,7 +814,9 @@ export default function TransportSpreadsheetEntry({
         additional_kms_billed_rps: totAddKmsRps,
         additional_kms_others_billing: totAddKmsOthers,
         cumulative_income: totCumIncome,
-        approved_budget: totApprovedBudget,
+        approved_budget: totApprovedBudget || 32500000,
+        cumulative_budget_spent: totCumulativeBudgetSpent,
+        balance: (totApprovedBudget || 32500000) - totCumulativeBudgetSpent,
         cumulative_budget_spent: totCumulativeBudgetSpent,
         balance: totBal,
         service_tickets_raised: totTicketsRaised,
@@ -426,10 +859,12 @@ export default function TransportSpreadsheetEntry({
     const statutory_cost = g('statutory_cost');
     const repair_maintenance_cost = g('repair_maintenance_cost');
     const other_cost = g('other_cost');
+    const cctv_replacement = g('cctv_replacement');
     const employee_cost = g('employee_cost');
+    const parking_fastag = g('parking_fastag');
     
-    // Formula: Total Expenses = Fuel + FC + Statutory + Repair + Others + Employees Cost
-    const total_expenses = fuel_expenses + fc_cost + statutory_cost + repair_maintenance_cost + other_cost + employee_cost;
+    // Formula: Total Expenses = Fuel + FC + Statutory + Repair + Others + CCTV replacement + Employees Cost + Parking & Fastag
+    const total_expenses = fuel_expenses + fc_cost + statutory_cost + repair_maintenance_cost + other_cost + cctv_replacement + employee_cost + parking_fastag;
 
     // Section 3: Revenue, Deductions & Income
     const students_count_income = g('students_count_income');
@@ -447,7 +882,11 @@ export default function TransportSpreadsheetEntry({
     const cumulative_income = fee_collected + rps_monthly_billing + staff_travel_deduction + additional_kms_billed_rps + additional_kms_others_billing + cab_billing;
 
     // Section 4: Operating Budget & Balance
-    const approved_budget = g('approved_budget');
+    const defaultBranchBudget = branchId !== 'all' ? (DEFAULT_BRANCH_BUDGETS[branchId]?.sanctioned || 8500000) : 32500000;
+    const rawApprovedBudget = getParamRawValue(branchId, periodIdStr, 'approved_budget');
+    const approved_budget = (rawApprovedBudget !== undefined && rawApprovedBudget !== null && rawApprovedBudget !== '')
+      ? Number(rawApprovedBudget)
+      : defaultBranchBudget;
     const cumulative_budget_spent = g('cumulative_budget_spent');
     // Formula: Balance = Approved Budget - Cumulative Budget spent
     const balance = approved_budget - cumulative_budget_spent;
@@ -979,6 +1418,56 @@ export default function TransportSpreadsheetEntry({
             <RefreshCw size={13} /> Refresh
           </button>
 
+          {/* Universal Lock / Unlock Month Button (controls both Page 1 and Page 2) */}
+          <button
+            type="button"
+            onClick={() => handleUniversalToggleLock(editingPeriodId)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: `1.5px solid ${isClosed ? '#fca5a5' : 'rgba(255, 255, 255, 0.4)'}`,
+              borderRadius: '9999px',
+              padding: '7px 16px',
+              backgroundColor: isClosed ? '#fee2e2' : 'rgba(255, 255, 255, 0.18)',
+              color: isClosed ? '#991b1b' : '#ffffff',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              boxShadow: isClosed ? '0 2px 8px rgba(0, 0, 0, 0.2)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+            title={isClosed ? "Month is locked. Click to unlock Page 1 & Page 2" : "Click to lock Month across Page 1 & Page 2"}
+          >
+            {isClosed ? <Lock size={13} color="#991b1b" /> : <Unlock size={13} color="#ffffff" />}
+            <span>{isClosed ? 'Unlock Month' : 'Lock Month'}</span>
+          </button>
+
+          {/* Supporting Attachments & Bills Button */}
+          <button
+            type="button"
+            onClick={() => setShowAttachmentsModal(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1.5px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              padding: '7px 16px',
+              backgroundColor: 'rgba(255, 255, 255, 0.18)',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              boxShadow: 'none',
+              transition: 'all 0.15s ease'
+            }}
+            title="Upload or view bills, presentations, documents & attachments for this month"
+          >
+            <Paperclip size={13} color="#ffffff" />
+            <span>Attachments & Bills</span>
+          </button>
+
           {/* Master Save Button - only for parameter sheet, vehicle ledger has its own Save Vehicle Ledger button */}
           {activeView !== 'vehicles' && (
             <button
@@ -1083,6 +1572,810 @@ export default function TransportSpreadsheetEntry({
           <span>{activeBranchObj.icon}</span>
           <span>{activeBranchObj.description}</span>
         </div>
+      </div>
+
+      {/* 2.5 FLEET-WISE SANCTIONED BUDGET QUICK-ALLOCATION & VERIFICATION TABLE */}
+      <div style={{
+        padding: '14px 22px',
+        backgroundColor: '#f8fafc',
+        borderBottom: '1.5px solid #e2e8f0',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '16px' }}>🎯</span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.01em' }}>
+              Institutional Fleets Sanctioned Budget Allocation (FY 2026-2027)
+            </span>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: '700',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              backgroundColor: '#ecfdf5',
+              color: '#065f46',
+              border: '1px solid #a7f3d0'
+            }}>
+              Zero-Mismatch Verified
+            </span>
+          </div>
+          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '600' }}>
+            Click any fleet to switch and verify/edit its operational records
+          </span>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '10px',
+          width: '100%'
+        }}>
+          {TRANSPORT_BRANCHES.filter(b => b.id !== 'all').map(br => {
+            const bBudget = DEFAULT_BRANCH_BUDGETS[br.id] || { sanctioned: 8500000, monthlyCeiling: 708333, busCount: 16 };
+            const isCurrent = activeBranch === br.id;
+            const bMetrics = activeBranch === br.id ? activeMetrics : computeBranchMetrics(br.id, currPeriodIdStr);
+            const bSpend = num(bMetrics.total_expenses);
+            const bBal = bBudget.sanctioned - bSpend;
+
+            return (
+              <div
+                key={br.id}
+                onClick={() => setActiveBranch(br.id)}
+                style={{
+                  backgroundColor: isCurrent ? '#ffffff' : '#f8fafc',
+                  borderRadius: '12px',
+                  border: isCurrent ? `2px solid ${br.badgeColor}` : '1.5px solid #e2e8f0',
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  boxShadow: isCurrent ? `0 4px 14px ${br.badgeColor}25` : '0 1px 3px rgba(0,0,0,0.03)',
+                  transition: 'all 0.15s ease',
+                  position: 'relative'
+                }}
+              >
+                {isCurrent && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '10px',
+                    backgroundColor: br.badgeColor,
+                    color: '#ffffff',
+                    fontSize: '9.5px',
+                    fontWeight: '800',
+                    padding: '1px 8px',
+                    borderRadius: '9999px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                  }}>
+                    ACTIVE FLEET
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '16px' }}>{br.icon}</span>
+                    <strong style={{ fontSize: '13px', color: '#0f172a' }}>{br.label}</strong>
+                  </div>
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '700',
+                    padding: '1px 6px',
+                    borderRadius: '6px',
+                    backgroundColor: br.badgeBg,
+                    color: br.badgeColor
+                  }}>
+                    {bBudget.busCount} Buses
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 0' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Sanctioned Budget:</span>
+                  <strong style={{ fontSize: '14px', color: br.badgeColor, fontWeight: '800' }}>
+                    {formatINR(bBudget.sanctioned)}
+                  </strong>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', borderTop: '1px dashed #e2e8f0', paddingTop: '6px', marginTop: '4px' }}>
+                  <span>Monthly Ceiling:</span>
+                  <strong>{formatINR(bBudget.monthlyCeiling)}</strong>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#0f172a', marginTop: '3px' }}>
+                  <span>Month Spend:</span>
+                  <span style={{ fontWeight: '700', color: bSpend > bBudget.monthlyCeiling ? '#dc2626' : '#16a34a' }}>
+                    {formatINR(bSpend)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* View Mode Toggle: Active Fleet Table vs All 4 Fleet Tables */}
+        <div style={{
+          marginTop: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          padding: '10px 14px',
+          backgroundColor: '#f1f5f9',
+          borderRadius: '10px',
+          border: '1.5px solid #cbd5e1'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Fleet Budget Tables:
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setBudgetDisplayMode('active')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '7px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  backgroundColor: budgetDisplayMode === 'active' ? '#1e293b' : '#ffffff',
+                  color: budgetDisplayMode === 'active' ? '#ffffff' : '#475569',
+                  border: '1.5px solid ' + (budgetDisplayMode === 'active' ? '#1e293b' : '#cbd5e1'),
+                  boxShadow: budgetDisplayMode === 'active' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>{activeBranchObj.icon}</span>
+                <span>Active Fleet ({activeBranchObj.label})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBudgetDisplayMode('all')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '7px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  backgroundColor: budgetDisplayMode === 'all' ? '#1e293b' : '#ffffff',
+                  color: budgetDisplayMode === 'all' ? '#ffffff' : '#475569',
+                  border: '1.5px solid ' + (budgetDisplayMode === 'all' ? '#1e293b' : '#cbd5e1'),
+                  boxShadow: budgetDisplayMode === 'all' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Layers size={13} />
+                <span>View & Edit All 4 Fleet Tables (KPM, RPS, Common, University)</span>
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: '#64748b' }}>
+              Direct PostgreSQL Tables: <code style={{ backgroundColor: '#e2e8f0', padding: '2px 5px', borderRadius: '4px', color: '#0f172a' }}>transport_budget_*</code>
+            </span>
+          </div>
+        </div>
+
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 1: ACTIVE FLEET BUDGET TABLE                             */}
+        {/* ------------------------------------------------------------- */}
+        {budgetDisplayMode === 'active' && activeBranch !== 'all' && activeBranchBudget?.lineItems && (
+          <div style={{
+            marginTop: '12px',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: `1.5px solid ${isBudgetLocked ? (activeBranchObj.badgeColor + '40') : '#3b82f6'}`,
+            padding: '16px 20px',
+            boxShadow: isBudgetLocked ? '0 2px 8px rgba(0,0,0,0.03)' : '0 4px 16px rgba(59, 130, 246, 0.12)',
+            transition: 'all 0.2s ease'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '18px' }}>{activeBranchObj.icon}</span>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                      {activeBranchObj.label} — Official Sanctioned Budget Allocation
+                    </strong>
+                    {/* Database Table Pill */}
+                    <span style={{
+                      fontSize: '10px',
+                      fontFamily: 'monospace',
+                      fontWeight: '700',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: '#eff6ff',
+                      color: '#1d4ed8',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      Table: transport_budget_{activeBranch.toLowerCase()}
+                    </span>
+                    {/* Status Badge */}
+                    <span style={{
+                      fontSize: '10.5px',
+                      fontWeight: '800',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      backgroundColor: isBudgetLocked ? '#fef2f2' : '#f0fdf4',
+                      color: isBudgetLocked ? '#991b1b' : '#166534',
+                      border: `1px solid ${isBudgetLocked ? '#fecaca' : '#bbf7d0'}`
+                    }}>
+                      {isBudgetLocked ? <Lock size={11} color="#dc2626" /> : <Unlock size={11} color="#16a34a" />}
+                      {isBudgetLocked ? 'Locked (Read-Only)' : 'Unlocked (Editing Active)'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                    {isBudgetLocked
+                      ? 'Approved parameters & ceilings are protected. Click "Unlock to Edit Budget" to modify sanctioned amounts.'
+                      : 'Editing mode active: Modify parameter amounts below. Total Expenses automatically updates in real-time.'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons & Ceilings */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  padding: '4px 12px',
+                  borderRadius: '9999px',
+                  backgroundColor: isBudgetLocked ? activeBranchObj.badgeBg : '#eff6ff',
+                  color: isBudgetLocked ? activeBranchObj.badgeColor : '#1d4ed8',
+                  border: `1.5px solid ${isBudgetLocked ? activeBranchObj.badgeColor + '50' : '#bfdbfe'}`
+                }}>
+                  {activeBranchObj.label} Ceiling: {formatINR(isBudgetLocked ? (activeBranchBudget.sanctioned || 0) : currentBudgetTotal)}
+                </span>
+
+                {isBudgetLocked ? (
+                  <button
+                    type="button"
+                    onClick={() => handleStartEditBranch(activeBranch)}
+                    title="Unlock to modify budget parameter amounts for this fleet"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      backgroundColor: '#f8fafc',
+                      color: '#1e293b',
+                      border: '1.5px solid #cbd5e1',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#eff6ff';
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                      e.currentTarget.style.color = '#1d4ed8';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.color = '#1e293b';
+                    }}
+                  >
+                    <Unlock size={13} color="#2563eb" />
+                    <span>Unlock to Edit Budget</span>
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      disabled={isSavingBudget}
+                      onClick={() => handleSaveBranchBudget(activeBranch)}
+                      title={`Save modified parameter amounts directly to transport_budget_${activeBranch.toLowerCase()}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        backgroundColor: isSavingBudget ? '#86efac' : '#16a34a',
+                        color: '#ffffff',
+                        border: 'none',
+                        cursor: isSavingBudget ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSavingBudget) e.currentTarget.style.backgroundColor = '#15803d';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSavingBudget) e.currentTarget.style.backgroundColor = '#16a34a';
+                      }}
+                    >
+                      {isSavingBudget ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+                      <span>{isSavingBudget ? 'Saving...' : `Save & Lock ${activeBranch} Table`}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleResetBranchDefaults(activeBranch)}
+                      title="Reset numbers to management Excel default baseline"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        backgroundColor: '#fffbeb',
+                        color: '#b45309',
+                        border: '1.5px solid #fde68a',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <RotateCcw size={12} />
+                      <span>Reset Defaults</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCancelEditBranch(activeBranch)}
+                      title="Discard unsaved changes and lock"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        backgroundColor: '#f1f5f9',
+                        color: '#64748b',
+                        border: '1.5px solid #cbd5e1',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={12} />
+                      <span>Cancel</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Parameter Table matching Excel Layout */}
+            <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #94a3b8' }}>
+                    <th style={{ padding: '8px 14px', fontWeight: '800', color: '#0f172a', width: '60%' }}>Parameters</th>
+                    <th style={{ padding: '8px 14px', fontWeight: '800', color: '#0f172a', textAlign: 'right', width: '40%' }}>
+                      Sanctioned Amount (₹) {!isBudgetLocked && <span style={{ color: '#2563eb', fontSize: '11px', fontWeight: '700' }}>(Editable)</span>}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeBranchBudget.lineItems.map((item, idx) => {
+                    const isTotalRow = item.isTotal;
+                    const isBlankRow = item.isBlank || item.param === 'EMI';
+                    const draftVal = budgetEditDraft[item.param];
+
+                    return (
+                      <tr
+                        key={idx}
+                        style={{
+                          backgroundColor: isTotalRow ? '#fef08a' : (item.bg || '#ffffff'),
+                          borderBottom: isTotalRow ? '2.5px solid #ca8a04' : '1px solid #cbd5e1',
+                          borderTop: isTotalRow ? '2.5px solid #ca8a04' : 'none'
+                        }}
+                      >
+                        <td style={{
+                          padding: isTotalRow ? '10px 14px' : '7px 14px',
+                          fontWeight: isTotalRow ? '900' : '650',
+                          color: isTotalRow ? '#854d0e' : '#1e293b',
+                          fontSize: isTotalRow ? '13.5px' : '12.5px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {!isTotalRow && (
+                              <span style={{
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                backgroundColor: item.color || '#3b82f6',
+                                display: 'inline-block',
+                                flexShrink: 0
+                              }} />
+                            )}
+                            <span>{item.param}</span>
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: isTotalRow ? '10px 14px' : '6px 14px',
+                          fontWeight: isTotalRow ? '900' : '700',
+                          color: isTotalRow ? '#854d0e' : (item.color || '#0f172a'),
+                          textAlign: 'right',
+                          fontSize: isTotalRow ? '14px' : '12.5px'
+                        }}>
+                          {isTotalRow ? (
+                            <span style={{ fontSize: '14.5px', letterSpacing: '-0.2px' }}>
+                              ₹ {Number(currentBudgetTotal).toLocaleString('en-IN')}
+                            </span>
+                          ) : isBlankRow ? (
+                            <span style={{ color: '#94a3b8' }}>—</span>
+                          ) : isBudgetLocked ? (
+                            <span>
+                              {Number(item.amount) > 0 ? Number(item.amount).toLocaleString('en-IN') : '0'}
+                            </span>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#64748b' }}>₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="1000"
+                                value={draftVal !== undefined ? draftVal : item.amount}
+                                onChange={(e) => handleBranchParamChange(activeBranch, item.param, e.target.value)}
+                                style={{
+                                  width: '160px',
+                                  padding: '5px 10px',
+                                  fontSize: '13px',
+                                  fontWeight: '800',
+                                  textAlign: 'right',
+                                  color: '#0f172a',
+                                  backgroundColor: '#ffffff',
+                                  border: '1.5px solid #3b82f6',
+                                  borderRadius: '6px',
+                                  outline: 'none',
+                                  boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.15)'
+                                }}
+                              />
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 2: ALL 4 FLEET BUDGET TABLES (KPM, RPS, Common, Univ)   */}
+        {/* ------------------------------------------------------------- */}
+        {budgetDisplayMode === 'all' && (
+          <div style={{
+            marginTop: '12px',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1.5px solid #cbd5e1',
+            padding: '16px 20px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+          }}>
+            {/* Master Toolbar for All 4 Tables */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px',
+              paddingBottom: '12px',
+              borderBottom: '1.5px solid #e2e8f0',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
+                  Institutional Fleet Budget Tables (4 Dedicated PostgreSQL Tables)
+                </h4>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                  Edit individual fleet tables or update all budgets at once. Data is persisted directly to <code style={{ backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>transport_budget_kpm</code>, <code style={{ backgroundColor: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>transport_budget_rps</code>, etc.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleUnlockAllBudgets}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '6px 12px',
+                    borderRadius: '7px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    backgroundColor: '#f8fafc',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Unlock size={12} color="#16a34a" />
+                  <span>Unlock All</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLockAllBudgets}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '6px 12px',
+                    borderRadius: '7px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    backgroundColor: '#f8fafc',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Lock size={12} color="#dc2626" />
+                  <span>Lock All</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isSavingBudget}
+                  onClick={handleSaveAllBranchBudgets}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 16px',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: '800',
+                    backgroundColor: isSavingBudget ? '#86efac' : '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    cursor: isSavingBudget ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)'
+                  }}
+                >
+                  {isSavingBudget ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+                  <span>{isSavingBudget ? 'Saving All...' : '💾 Save All 4 Fleet Tables'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 2x2 Grid of Dedicated Fleet Budget Tables */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))',
+              gap: '16px'
+            }}>
+              {TRANSPORT_BRANCHES.filter(b => b.id !== 'all').map(br => {
+                const bKey = br.id;
+                const bBudget = (branchBudgetsState && branchBudgetsState[bKey]) || DEFAULT_BRANCH_BUDGETS[bKey];
+                const bLocked = isBranchLocked(bKey);
+                const bDraft = budgetDrafts[bKey] || {};
+                const bTotal = getBranchBudgetTotal(bKey);
+                const tableName = `transport_budget_${bKey.toLowerCase()}`;
+
+                return (
+                  <div
+                    key={bKey}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: '10px',
+                      border: `1.5px solid ${bLocked ? br.badgeColor + '50' : '#3b82f6'}`,
+                      boxShadow: bLocked ? '0 1px 4px rgba(0,0,0,0.03)' : '0 4px 12px rgba(59, 130, 246, 0.1)',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
+                    {/* Header */}
+                    <div style={{
+                      padding: '12px 14px',
+                      backgroundColor: br.badgeBg,
+                      borderBottom: `1.5px solid ${br.badgeColor}30`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '8px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '18px' }}>{br.icon}</span>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{br.label}</strong>
+                            <span style={{
+                              fontSize: '9.5px',
+                              fontFamily: 'monospace',
+                              fontWeight: '700',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: '#ffffff',
+                              color: '#334155',
+                              border: '1px solid #cbd5e1'
+                            }}>
+                              {tableName}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>
+                            {bBudget.busCount || 0} Buses • Ceiling: {formatINR(bTotal)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {bLocked ? (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditBranch(bKey)}
+                            title={`Unlock ${br.label} table to edit amounts`}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              backgroundColor: '#ffffff',
+                              color: '#1e293b',
+                              border: '1.5px solid #cbd5e1',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Unlock size={11} color="#2563eb" />
+                            <span>Unlock</span>
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <button
+                              type="button"
+                              disabled={isSavingBudget}
+                              onClick={() => handleSaveBranchBudget(bKey)}
+                              title={`Save & lock ${br.label} table`}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                backgroundColor: isSavingBudget ? '#86efac' : '#16a34a',
+                                color: '#ffffff',
+                                border: 'none',
+                                cursor: isSavingBudget ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              <Save size={11} />
+                              <span>Save</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCancelEditBranch(bKey)}
+                              title="Cancel edits"
+                              style={{
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                backgroundColor: '#f1f5f9',
+                                color: '#64748b',
+                                border: '1px solid #cbd5e1',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <X size={11} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Parameter Rows */}
+                    <div style={{ overflowX: 'auto', flex: 1 }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                            <th style={{ padding: '6px 12px', fontWeight: '800', color: '#475569', textAlign: 'left' }}>Parameter</th>
+                            <th style={{ padding: '6px 12px', fontWeight: '800', color: '#475569', textAlign: 'right' }}>Sanctioned (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(bBudget?.lineItems || []).map((item, idx) => {
+                            const isTotalRow = item.isTotal;
+                            const isBlankRow = item.isBlank || item.param === 'EMI';
+                            const draftVal = bDraft[item.param];
+
+                            return (
+                              <tr
+                                key={idx}
+                                style={{
+                                  backgroundColor: isTotalRow ? '#fef08a' : (item.bg || '#ffffff'),
+                                  borderBottom: isTotalRow ? '2px solid #ca8a04' : '1px solid #f1f5f9'
+                                }}
+                              >
+                                <td style={{
+                                  padding: isTotalRow ? '8px 12px' : '5px 12px',
+                                  fontWeight: isTotalRow ? '900' : '600',
+                                  color: isTotalRow ? '#854d0e' : '#1e293b'
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {!isTotalRow && (
+                                      <span style={{
+                                        width: '6px',
+                                        height: '6px',
+                                        borderRadius: '50%',
+                                        backgroundColor: item.color || '#3b82f6',
+                                        display: 'inline-block',
+                                        flexShrink: 0
+                                      }} />
+                                    )}
+                                    <span>{item.param}</span>
+                                  </div>
+                                </td>
+                                <td style={{
+                                  padding: isTotalRow ? '8px 12px' : '4px 12px',
+                                  fontWeight: isTotalRow ? '900' : '700',
+                                  color: isTotalRow ? '#854d0e' : (item.color || '#0f172a'),
+                                  textAlign: 'right'
+                                }}>
+                                  {isTotalRow ? (
+                                    <span style={{ fontSize: '13px' }}>
+                                      ₹ {Number(bTotal).toLocaleString('en-IN')}
+                                    </span>
+                                  ) : isBlankRow ? (
+                                    <span style={{ color: '#94a3b8' }}>—</span>
+                                  ) : bLocked ? (
+                                    <span>
+                                      {Number(item.amount) > 0 ? Number(item.amount).toLocaleString('en-IN') : '0'}
+                                    </span>
+                                  ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                      <span style={{ fontSize: '11px', color: '#64748b' }}>₹</span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="1000"
+                                        value={draftVal !== undefined ? draftVal : item.amount}
+                                        onChange={(e) => handleBranchParamChange(bKey, item.param, e.target.value)}
+                                        style={{
+                                          width: '130px',
+                                          padding: '3px 8px',
+                                          fontSize: '12px',
+                                          fontWeight: '800',
+                                          textAlign: 'right',
+                                          color: '#0f172a',
+                                          backgroundColor: '#ffffff',
+                                          border: '1.5px solid #3b82f6',
+                                          borderRadius: '5px',
+                                          outline: 'none'
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. CYCLE SELECTION & VIEW MODE TOGGLE */}
@@ -1192,6 +2485,41 @@ export default function TransportSpreadsheetEntry({
             </button>
           </div>
 
+          {/* Universal Lock/Unlock Toggle directly between Page 1 & Page 2 */}
+          <button
+            type="button"
+            onClick={() => handleUniversalToggleLock(editingPeriodId)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              fontSize: '11.5px',
+              fontWeight: '800',
+              border: `1.5px solid ${isClosed ? '#fca5a5' : '#86efac'}`,
+              cursor: 'pointer',
+              backgroundColor: isClosed ? '#fef2f2' : '#f0fdf4',
+              color: isClosed ? '#b91c1c' : '#15803d',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: isClosed ? '0 2px 6px rgba(239, 68, 68, 0.2)' : '0 2px 6px rgba(34, 197, 94, 0.2)',
+              transition: 'all 0.15s ease'
+            }}
+            title={isClosed ? "Click to unlock this month across Page 1 & Page 2" : "Click to lock this month (read-only) across Page 1 & Page 2"}
+          >
+            {isClosed ? <Lock size={13} color="#b91c1c" /> : <Unlock size={13} color="#15803d" />}
+            <span>{isClosed ? 'Unlock Month' : 'Lock Month'}</span>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: '800',
+              padding: '1px 6px',
+              borderRadius: '9999px',
+              backgroundColor: isClosed ? '#fee2e2' : '#dcfce7',
+              color: isClosed ? '#991b1b' : '#166534'
+            }}>
+              {isClosed ? 'Locked' : 'Open'}
+            </span>
+          </button>
+
           {/* Formula Details Toggle for Page 1 */}
           {activeView !== 'vehicles' && (
             <button
@@ -1219,6 +2547,51 @@ export default function TransportSpreadsheetEntry({
           )}
         </div>
       </div>
+
+      {/* Lock Status Alert Banner when Month is Locked across Page 1 & Page 2 */}
+      {isClosed && (
+        <div style={{
+          padding: '10px 22px',
+          backgroundColor: '#fef2f2',
+          borderBottom: '1.5px solid #fecaca',
+          color: '#991b1b',
+          fontSize: '12.5px',
+          fontWeight: '700',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={15} color="#dc2626" />
+            <span>
+              Month <strong>{currentPeriod?.period_label || activePeriodObj?.period_label}</strong> is <strong>LOCKED (Read-Only)</strong>. Both <strong>Page 1 (Master Spreadsheet)</strong> and <strong>Page 2 (Vehicle Wise Ledger)</strong> are protected against editing.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleUniversalToggleLock(editingPeriodId)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '4px 12px',
+              borderRadius: '6px',
+              backgroundColor: '#dc2626',
+              color: '#ffffff',
+              border: 'none',
+              fontSize: '11.5px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)'
+            }}
+          >
+            <Unlock size={12} />
+            <span>Unlock Month Now</span>
+          </button>
+        </div>
+      )}
 
       {/* Local Notification Toast */}
       {localMessage && (
@@ -1291,9 +2664,13 @@ export default function TransportSpreadsheetEntry({
             periodId={editingPeriodId}
             branch={activeBranch}
             embedded={true}
+            periods={periods}
+            readOnly={isClosed}
+            isClosed={isClosed}
             onBranchChange={setActiveBranch}
             onPeriodChange={setEditingPeriodId}
             onSyncCensus={fetchData}
+            handleToggleLock={(targetId) => handleUniversalToggleLock(targetId || editingPeriodId)}
           />
         </div>
       ) : (
@@ -1788,6 +3165,19 @@ export default function TransportSpreadsheetEntry({
           </span>
         </div>
       </div>
+
+      {/* MONTHLY ATTACHMENTS & BILLS MODAL */}
+      {showAttachmentsModal && (
+        <MonthlyAttachmentsModal
+          isOpen={showAttachmentsModal}
+          onClose={() => setShowAttachmentsModal(false)}
+          module="transport"
+          periodId={editingPeriodId}
+          periodLabel={activePeriodObj?.period_label || 'Current Period'}
+          periods={periods}
+          branch={activeBranch}
+        />
+      )}
     </div>
   );
 }

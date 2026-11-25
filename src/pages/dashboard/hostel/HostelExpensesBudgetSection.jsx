@@ -669,63 +669,121 @@ export default function HostelExpensesBudgetSection({
           </div>
         )}
 
-        {/* Section Divider Bar when displaying Both Views */}
-        {trackingViewMode === 'both' && (
-          <div style={{
-            padding: '12px 24px',
-            backgroundColor: '#f1f5f9',
-            borderBottom: '1.5px solid #e2e8f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '10px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Table size={16} color="#334155" />
-              <span style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                Official Hostel Budget Tracking Ledger ({periodRangeLabel})
-              </span>
-            </div>
-            <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '600' }}>
-              All 9 Operating Heads • Sanctioned Budget vs Monthly Expenditure Matrix
-            </span>
-          </div>
-        )}
-
-        {/* ------------------------------------------------------------- */}
-        {/* VIEW B: FULL HOSTEL LEDGER MATRIX TABLE (Without Month Limit)  */}
-        {/* Rendered when trackingViewMode === 'both' or 'matrix'         */}
-        {/* ------------------------------------------------------------- */}
+        {/* ============================================================== */}
+        {/* OFFICIAL HOSTEL BUDGET TRACKING LEDGER — Formal Ledger Header  */}
+        {/* ============================================================== */}
         {(trackingViewMode === 'both' || trackingViewMode === 'matrix') && (
           <div style={{ overflowX: 'auto', width: '100%' }}>
+
+            {/* Formal Ledger Title Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%)',
+              padding: '18px 24px 14px 24px',
+              borderBottom: '3px solid #fbbf24',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}>
+              {/* Left: Ledger Title Block */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '10px',
+                  background: 'rgba(251,191,36,0.15)',
+                  border: '2px solid rgba(251,191,36,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Landmark size={22} color="#fbbf24" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#fbbf24', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '2px' }}>
+                    Official Hostel Budget Tracking Ledger
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
+                    Budget Allocation &amp; Expenditure Ledger
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#a5b4fc', marginTop: '3px', fontWeight: '600' }}>
+                    9 Budget Heads &nbsp;•&nbsp; Period: <span style={{ color: '#fbbf24' }}>{periodRangeLabel}</span>
+                  </div>
+                </div>
+              </div>
+              {/* Right: Month filter + KPI */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#a5b4fc', textTransform: 'uppercase' }}>Sanctioned Budget</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#86efac' }} className="currency-font">{formatINR(totalSanctionedSum)}</div>
+                  </div>
+                  <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#a5b4fc', textTransform: 'uppercase' }}>Total Spent</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#fbbf24' }} className="currency-font">{formatINR(allMonthsActualSum)}</div>
+                  </div>
+                  <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#a5b4fc', textTransform: 'uppercase' }}>Balance</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#67e8f9' }} className="currency-font">{formatINR(totalSanctionedSum - allMonthsActualSum)}</div>
+                  </div>
+                </div>
+                <div style={{
+                  fontSize: '10.5px',
+                  fontWeight: '700',
+                  color: allMonthsActualSum <= totalSanctionedSum ? '#86efac' : '#fca5a5',
+                  backgroundColor: allMonthsActualSum <= totalSanctionedSum ? 'rgba(134,239,172,0.12)' : 'rgba(252,165,165,0.12)',
+                  border: `1px solid ${allMonthsActualSum <= totalSanctionedSum ? 'rgba(134,239,172,0.3)' : 'rgba(252,165,165,0.3)'}`,
+                  padding: '2px 10px',
+                  borderRadius: '9999px'
+                }}>
+                  {totalSanctionedSum > 0 ? ((allMonthsActualSum / totalSanctionedSum) * 100).toFixed(1) : '0.0'}% Utilized &nbsp;{allMonthsActualSum <= totalSanctionedSum ? '✓ Within Budget' : '⚠ Over Budget'}
+                </div>
+              </div>
+            </div>
+
+            {/* Ledger Matrix Table */}
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '980px' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#1e293b' }}>
-                  <th style={{ padding: '12px 10px', textAlign: 'center', width: '40px', fontWeight: '800' }}>#</th>
-                  <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: '800', minWidth: '200px' }}>Budget Head</th>
-                  <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', backgroundColor: '#ecfdf5', color: '#065f46', minWidth: '115px' }}>
-                    SANCTIONED (₹)
+                {/* Sub-header: group labels */}
+                <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                  <th colSpan={3} style={{ padding: '7px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '2px solid #cbd5e1' }}>
+                    Budget Head Details
+                  </th>
+                  <th colSpan={visibleMonthCols.length} style={{ padding: '7px 14px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '2px solid #cbd5e1', backgroundColor: '#eff6ff' }}>
+                    Month-wise Actual Expenditure (₹)
+                  </th>
+                  <th colSpan={3} style={{ padding: '7px 14px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.08em', backgroundColor: '#ecfdf5' }}>
+                    Summary
+                  </th>
+                </tr>
+                {/* Column Headers */}
+                <tr style={{ backgroundColor: '#1e293b', color: '#f8fafc', fontWeight: '800', fontSize: '11px' }}>
+                  <th style={{ padding: '11px 10px', textAlign: 'center', width: '40px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>S.No</th>
+                  <th style={{ padding: '11px 14px', textAlign: 'left', minWidth: '210px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Budget Head</th>
+                  <th style={{ padding: '11px 14px', textAlign: 'right', minWidth: '130px', backgroundColor: '#064e3b', color: '#6ee7b7', borderRight: '2px solid rgba(255,255,255,0.15)' }}>
+                    Sanctioned Amount (₹)
                   </th>
                   {visibleMonthCols.map((m) => {
                     const isActive = activePeriod !== 'all' && m.key === activeMonthCol;
                     return (
-                      <th
-                        key={m.key}
-                        style={{
-                          padding: '10px 10px',
-                          textAlign: 'right',
-                          fontWeight: isActive ? '900' : '700',
-                          backgroundColor: isActive ? '#eff6ff' : 'transparent',
-                          color: isActive ? '#1d4ed8' : '#475569',
-                          minWidth: '92px',
-                          borderBottom: isActive ? '3px solid #3b82f6' : 'none'
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <th key={m.key} style={{
+                        padding: '11px 10px',
+                        textAlign: 'right',
+                        minWidth: '90px',
+                        fontWeight: isActive ? '900' : '700',
+                        backgroundColor: isActive ? '#1e3a8a' : 'transparent',
+                        color: isActive ? '#93c5fd' : '#94a3b8',
+                        borderBottom: isActive ? '3px solid #3b82f6' : 'none',
+                        borderRight: '1px solid rgba(255,255,255,0.08)'
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                           <span>{m.label}</span>
                           {isActive && (
-                            <span style={{ fontSize: '9px', fontWeight: '900', backgroundColor: '#3b82f6', color: '#ffffff', padding: '1px 5px', borderRadius: '4px', marginTop: '2px' }}>
+                            <span style={{ fontSize: '8px', fontWeight: '900', backgroundColor: '#3b82f6', color: '#fff', padding: '1px 5px', borderRadius: '3px' }}>
                               ACTIVE
                             </span>
                           )}
@@ -733,48 +791,41 @@ export default function HostelExpensesBudgetSection({
                       </th>
                     );
                   })}
-                  <th style={{
-                    padding: '12px 14px',
-                    textAlign: 'center',
-                    fontWeight: '800',
-                    minWidth: '150px',
-                    backgroundColor: activePeriod === 'all' ? '#eff6ff' : 'transparent',
-                    color: activePeriod === 'all' ? '#1d4ed8' : '#1e293b',
-                    borderBottom: activePeriod === 'all' ? '3px solid #3b82f6' : 'none'
-                  }}>
-                    {activePeriod === 'all' ? 'All Months Cumulative Spend' : `${activePeriodName} Spend Share`}
+                  {/* Summary Columns */}
+                  <th style={{ padding: '11px 14px', textAlign: 'right', minWidth: '120px', backgroundColor: '#0c4a6e', color: '#7dd3fc', borderLeft: '2px solid rgba(255,255,255,0.15)' }}>
+                    TOTAL SPENT (₹)
+                  </th>
+                  <th style={{ padding: '11px 14px', textAlign: 'right', minWidth: '120px', backgroundColor: '#064e3b', color: '#6ee7b7' }}>
+                    BALANCE (₹)
+                  </th>
+                  <th style={{ padding: '11px 14px', textAlign: 'center', minWidth: '90px', backgroundColor: '#3b0764', color: '#d8b4fe' }}>
+                    % UTILIZED
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {activeBudgetHeads.map((head, idx) => {
                   const sanc = num(head.sanctioned_amount, 0);
-                  const activeVal = num(head[activeMonthCol], 0);
-                  const sharePct = activeMonthActualSum > 0 ? (activeVal / activeMonthActualSum) * 100 : 0;
+                  const totalSpent = visibleMonthCols.reduce((acc, m) => acc + num(head[m.key], 0), 0);
+                  const balance = sanc - totalSpent;
+                  const utilPct = sanc > 0 ? ((totalSpent / sanc) * 100) : 0;
+                  const isOver = totalSpent > sanc && sanc > 0;
 
                   return (
-                    <tr 
-                      key={head.budget_head || idx}
-                      style={{
-                        borderBottom: '1px solid #f1f5f9',
-                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafafa',
-                        transition: 'background-color 0.15s ease'
-                      }}
-                    >
-                      <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#94a3b8' }}>
+                    <tr key={head.budget_head || idx} style={{
+                      borderBottom: '1px solid #f1f5f9',
+                      backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                      transition: 'background-color 0.15s ease'
+                    }}>
+                      <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '700', color: '#94a3b8', fontSize: '11px', borderRight: '1px solid #f1f5f9' }}>
                         {head.s_no}
                       </td>
-                      <td style={{ padding: '12px 14px' }}>
+                      <td style={{ padding: '12px 14px', borderRight: '1px solid #f1f5f9' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
                           <div style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '8px',
-                            backgroundColor: '#f1f5f9',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
+                            width: '28px', height: '28px', borderRadius: '8px',
+                            backgroundColor: '#f1f5f9', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', flexShrink: 0
                           }}>
                             {getHeadIcon(head.s_no)}
                           </div>
@@ -783,187 +834,98 @@ export default function HostelExpensesBudgetSection({
                           </span>
                         </div>
                       </td>
-                      <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', color: '#166534', backgroundColor: '#f0fdf4' }} className="currency-font">
+                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#166534', backgroundColor: '#f0fdf4', borderRight: '2px solid #bbf7d0' }} className="currency-font">
                         {formatINR(sanc)}
                       </td>
 
-                      {/* Dynamic Month Columns directly from PostgreSQL DB */}
+                      {/* Month columns */}
                       {visibleMonthCols.map((m) => {
                         const mVal = num(head[m.key], 0);
                         const isActive = activePeriod !== 'all' && m.key === activeMonthCol;
                         return (
-                          <td
-                            key={m.key}
-                            style={{
-                              padding: '12px 10px',
-                              textAlign: 'right',
-                              fontWeight: isActive ? '900' : '650',
-                              backgroundColor: isActive ? '#eff6ff' : 'transparent',
-                              color: mVal > 0 ? (isActive ? '#1e40af' : '#1e293b') : '#94a3b8'
-                            }}
-                            className="currency-font"
-                          >
+                          <td key={m.key} style={{
+                            padding: '12px 10px', textAlign: 'right',
+                            fontWeight: isActive ? '900' : '500',
+                            backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                            color: mVal > 0 ? (isActive ? '#1e40af' : '#334155') : '#cbd5e1',
+                            borderRight: '1px solid #f1f5f9'
+                          }} className="currency-font">
                             {mVal > 0 ? formatINR(mVal) : '—'}
                           </td>
                         );
                       })}
 
-                      {/* Active Spend Share or All Months Cumulative Spend */}
-                      <td style={{
-                        padding: '10px 14px',
-                        textAlign: 'center',
-                        backgroundColor: activePeriod === 'all' ? '#f0f7ff' : 'transparent'
-                      }}>
-                        {activePeriod === 'all' ? (
-                          (() => {
-                            const totalHeadSpend = visibleMonthCols.reduce((acc, m) => acc + num(head[m.key], 0), 0);
-                            const headSharePct = allMonthsActualSum > 0 ? (totalHeadSpend / allMonthsActualSum) * 100 : 0;
-                            
-                            return (
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                                <span style={{ fontWeight: '800', color: totalHeadSpend > 0 ? '#1e40af' : '#64748b', fontSize: '12.5px' }} className="currency-font">
-                                  {totalHeadSpend > 0 ? formatINR(totalHeadSpend) : '—'}
-                                </span>
-                                {totalHeadSpend > 0 && (
-                                  <span style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    padding: '1px 7px',
-                                    borderRadius: '9999px',
-                                    fontSize: '10px',
-                                    fontWeight: '800',
-                                    backgroundColor: '#eff6ff',
-                                    color: '#1d4ed8',
-                                    border: '1px solid #bfdbfe'
-                                  }}>
-                                    {headSharePct.toFixed(1)}% of total
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })()
-                        ) : (
-                          activeVal === 0 ? (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              padding: '3px 9px',
-                              borderRadius: '9999px',
-                              fontSize: '11px',
-                              fontWeight: '700',
-                              backgroundColor: '#f1f5f9',
-                              color: '#64748b'
-                            }}>
-                              No Spend (0%)
-                            </span>
-                          ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '2px 8px',
-                                borderRadius: '9999px',
-                                fontSize: '10.5px',
-                                fontWeight: '800',
-                                backgroundColor: '#eff6ff',
-                                color: '#1d4ed8',
-                                border: '1px solid #bfdbfe'
-                              }}>
-                                {sharePct.toFixed(1)}% of month
-                              </span>
-                              <div style={{ width: '80px', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-                                <div style={{
-                                  width: `${Math.min(100, sharePct)}%`,
-                                  height: '100%',
-                                  backgroundColor: HEAD_COLORS[(head.s_no - 1) % HEAD_COLORS.length]
-                                }} />
-                              </div>
-                            </div>
-                          )
-                        )}
+                      {/* Total Spent */}
+                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: totalSpent > 0 ? '#0369a1' : '#94a3b8', backgroundColor: '#f0f9ff', borderLeft: '2px solid #bae6fd' }} className="currency-font">
+                        {totalSpent > 0 ? formatINR(totalSpent) : '₹0'}
+                      </td>
+
+                      {/* Balance */}
+                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#dc2626' : '#166534', backgroundColor: isOver ? '#fef2f2' : '#f0fdf4' }} className="currency-font">
+                        {formatINR(Math.abs(balance))}{isOver ? ' OVR' : ''}
+                      </td>
+
+                      {/* % Utilized */}
+                      <td style={{ padding: '10px 14px', textAlign: 'center', backgroundColor: '#faf5ff' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '3px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '11.5px',
+                          fontWeight: '800',
+                          backgroundColor: isOver ? '#fee2e2' : utilPct > 80 ? '#fef3c7' : '#dcfce7',
+                          color: isOver ? '#991b1b' : utilPct > 80 ? '#92400e' : '#166534',
+                          border: `1px solid ${isOver ? '#fca5a5' : utilPct > 80 ? '#fde68a' : '#86efac'}`
+                        }}>
+                          {utilPct.toFixed(1)}%
+                        </span>
                       </td>
                     </tr>
                   );
                 })}
-
-                {/* Bottom Total Summary Row */}
-                <tr style={{
-                  backgroundColor: '#fef08a',
-                  borderTop: '2px solid #ca8a04',
-                  fontWeight: '900',
-                  color: '#713f12'
-                }}>
-                  <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '13px' }}>∑</td>
-                  <td style={{ padding: '14px 14px', fontSize: '13px', textTransform: 'uppercase' }}>
-                    Total Budget Tracking (9 Heads)
+              </tbody>
+              <tfoot>
+                {/* Grand Total Row */}
+                <tr style={{ backgroundColor: '#fef08a', borderTop: '3px solid #ca8a04', fontWeight: '900', color: '#713f12' }}>
+                  <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>∑</td>
+                  <td style={{ padding: '14px 14px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    Grand Total — All Budget Heads
                   </td>
-                  <td style={{ padding: '14px 12px', textAlign: 'right', fontSize: '13.5px', color: '#166534' }} className="currency-font">
+                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', color: '#166534', backgroundColor: '#dcfce7', fontWeight: '900', borderRight: '2px solid #bbf7d0' }} className="currency-font">
                     {formatINR(totalSanctionedSum)}
                   </td>
-
-                  {/* Dynamic Month Totals calculated directly from DB rows */}
                   {visibleMonthCols.map((m) => {
                     const mSum = activeBudgetHeads.reduce((acc, h) => acc + num(h[m.key], 0), 0);
                     const isActive = activePeriod !== 'all' && m.key === activeMonthCol;
                     return (
-                      <td
-                        key={m.key}
-                        style={{
-                          padding: '14px 10px',
-                          textAlign: 'right',
-                          fontSize: '13px',
-                          fontWeight: '900',
-                          backgroundColor: isActive ? '#fef9c3' : 'transparent',
-                          color: mSum > 0 ? (isActive ? '#0f172a' : '#1e293b') : '#a16207'
-                        }}
-                        className="currency-font"
-                      >
+                      <td key={m.key} style={{
+                        padding: '14px 10px', textAlign: 'right', fontSize: '13px', fontWeight: '900',
+                        backgroundColor: isActive ? '#fef9c3' : '#fefce8',
+                        color: mSum > 0 ? '#713f12' : '#a16207',
+                        borderRight: '1px solid rgba(202,138,4,0.3)'
+                      }} className="currency-font">
                         {mSum > 0 ? formatINR(mSum) : '—'}
                       </td>
                     );
                   })}
-
-                  <td style={{
-                    padding: '14px 14px',
-                    textAlign: 'center',
-                    backgroundColor: activePeriod === 'all' ? '#fef9c3' : 'transparent'
-                  }}>
-                    {activePeriod === 'all' ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '900', color: '#166534' }} className="currency-font">
-                          {formatINR(allMonthsActualSum)}
-                        </span>
-                        <span style={{
-                          fontSize: '10px',
-                          fontWeight: '800',
-                          color: '#854d0e',
-                          backgroundColor: '#fef08a',
-                          padding: '1px 6px',
-                          borderRadius: '4px'
-                        }}>
-                          100% (Cumulative)
-                        </span>
-                      </div>
-                    ) : (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '4px 10px',
-                        borderRadius: '9999px',
-                        fontSize: '11.5px',
-                        fontWeight: '900',
-                        backgroundColor: '#fef9c3',
-                        color: '#854d0e',
-                        border: '1px solid #facc15'
-                      }}>
-                        {formatINR(activeMonthActualSum)} Active Spend
-                      </span>
-                    )}
+                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: '#0369a1', backgroundColor: '#e0f2fe', borderLeft: '2px solid #7dd3fc' }} className="currency-font">
+                    {formatINR(allMonthsActualSum)}
+                  </td>
+                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: allMonthsActualSum <= totalSanctionedSum ? '#166534' : '#dc2626', backgroundColor: allMonthsActualSum <= totalSanctionedSum ? '#dcfce7' : '#fee2e2' }} className="currency-font">
+                    {formatINR(Math.abs(totalSanctionedSum - allMonthsActualSum))}
+                  </td>
+                  <td style={{ padding: '14px 14px', textAlign: 'center', backgroundColor: '#fef9c3' }}>
+                    <span style={{
+                      display: 'inline-block', padding: '4px 12px', borderRadius: '9999px',
+                      fontSize: '12px', fontWeight: '900',
+                      backgroundColor: '#fbbf24', color: '#451a03',
+                      border: '2px solid #d97706'
+                    }}>
+                      {totalSanctionedSum > 0 ? ((allMonthsActualSum / totalSanctionedSum) * 100).toFixed(1) : '0.0'}%
+                    </span>
                   </td>
                 </tr>
-              </tbody>
+              </tfoot>
             </table>
           </div>
         )}

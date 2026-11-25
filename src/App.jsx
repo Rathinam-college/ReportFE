@@ -880,9 +880,11 @@ export default function App() {
     setEntryMessage({ type: 'success', text: `Values cloned from ${prevPeriod.period_label}. Review and click Save.` });
   };
 
-  const handleToggleLock = async () => {
+  const handleToggleLock = async (targetPeriodId = null) => {
     if (!computedMatrix) return;
-    const period = computedMatrix.periods.find(p => p.id === editingPeriodId);
+    const targetId = targetPeriodId !== null && targetPeriodId !== undefined ? targetPeriodId : editingPeriodId;
+    const period = (computedMatrix.periods || []).find(p => p.id === targetId || String(p.id) === String(targetId)) ||
+      (computedMatrix.periods || []).find(p => p.id === editingPeriodId);
     if (!period) return;
     const newStatus = !period.is_closed;
 
@@ -900,6 +902,18 @@ export default function App() {
         setEntryMessage({
           type: 'success',
           text: `Month ${period.period_label} has been ${newStatus ? 'locked (read-only)' : 'unlocked for entry'}.`
+        });
+        // Optimistically update computedMatrix periods state so UI updates instantaneously across Page 1 & Page 2
+        setMatrixData(prev => {
+          if (!prev || !prev.periods) return prev;
+          return {
+            ...prev,
+            periods: prev.periods.map(p => 
+              (p.id === period.id || String(p.id) === String(period.id))
+                ? { ...p, is_closed: newStatus }
+                : p
+            )
+          };
         });
         fetchData();
       }
@@ -1730,6 +1744,7 @@ export default function App() {
             setHoveredPieIndex={setHoveredPieIndex}
             computedMatrix={computedMatrix}
             remarksDraft={remarksDraft}
+            currentUser={currentUser}
             comparisonData={comparisonData}
             compareBasePeriod={compareBasePeriod}
             setCompareBasePeriod={setCompareBasePeriod}

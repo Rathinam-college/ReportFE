@@ -1,7 +1,33 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { formatINR, formatLakhs } from '../../../utils/formatters';
-import { Wallet, Table } from 'lucide-react';
+import { formatINR, formatLakhs, formatPeriodLabel } from '../../../utils/formatters';
+import { Wallet } from 'lucide-react';
 import { CANONICAL_FOOD_BUDGET_HEADS, FOOD_MONTH_COLS } from '../../data_entry/food_budget/FoodBudgetEntrySection';
+
+const mapFoodPeriodToColKey = (pObj) => {
+  if (!pObj) return null;
+  const found = FOOD_MONTH_COLS.find(c => String(c.periodId) === String(pObj.id));
+  if (found) return found.key;
+  const code = (pObj.period_code || pObj.period_label || '').toLowerCase();
+  if (code.includes('jun')) return 'jun_26_actual';
+  if (code.includes('jul')) return 'jul_26_actual';
+  if (code.includes('aug')) return 'aug_26_actual';
+  if (code.includes('sep')) return 'sep_26_actual';
+  if (code.includes('oct')) return 'oct_26_actual';
+  if (code.includes('nov')) return 'nov_26_actual';
+  if (code.includes('dec')) return 'dec_26_actual';
+  return `period_${pObj.id}_actual`;
+};
+
+const getFoodMonthVal = (row, col) => {
+  if (!row || !col) return 0;
+  if (row[col.key] !== undefined && row[col.key] !== null) {
+    return Number(row[col.key]) || 0;
+  }
+  if (row.monthly_actuals && col.periodId && row.monthly_actuals[String(col.periodId)] !== undefined) {
+    return Number(row.monthly_actuals[String(col.periodId)]) || 0;
+  }
+  return 0;
+};
 
 export default function FoodBudgetChartSection({
   computedMatrix,
@@ -11,6 +37,7 @@ export default function FoodBudgetChartSection({
 }) {
   const [budgetData, setBudgetData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [monthFilter, setMonthFilter] = useState('all'); // 'all' | 'recorded'
 
   // 1. Fetch live budget data from PostgreSQL or fallback
   const fetchBudget = async () => {
@@ -39,40 +66,63 @@ export default function FoodBudgetChartSection({
     }
   }, [computedMatrix?.food_budget_tracking]);
 
+  // Dynamic month columns derived from live periods (or canonical FOOD_MONTH_COLS fallback)
+  const allFoodMonthCols = useMemo(() => {
+    if (periods && periods.length > 0) {
+      return periods.map(p => ({
+        key: mapFoodPeriodToColKey(p),
+        label: formatPeriodLabel(p),
+        periodId: String(p.id)
+      }));
+    }
+    return FOOD_MONTH_COLS;
+  }, [periods]);
+
   // Determine active month column
   const activeColKey = useMemo(() => {
     if (!activePeriod || activePeriod === 'all') return 'all';
-    const found = FOOD_MONTH_COLS.find(c => String(c.periodId) === String(activePeriod));
-    if (found) return found.key;
-    // Fallback based on period code/label
+    const byId = allFoodMonthCols.find(c => String(c.periodId) === String(activePeriod));
+    if (byId) return byId.key;
     const pObj = periods.find(p => String(p.id) === String(activePeriod));
-    if (pObj) {
-      const code = (pObj.period_code || pObj.period_label || '').toLowerCase();
-      if (code.includes('jun')) return 'jun_26_actual';
-      if (code.includes('jul')) return 'jul_26_actual';
-      if (code.includes('aug')) return 'aug_26_actual';
-      if (code.includes('sep')) return 'sep_26_actual';
-      if (code.includes('oct')) return 'oct_26_actual';
+    return mapFoodPeriodToColKey(pObj) || 'oct_26_actual';
+  }, [activePeriod, periods, allFoodMonthCols]);
+
+  // Visible month columns based on filter pill ('all' shows every month, 'recorded' hides empty non-active months)
+  const visibleMonthCols = useMemo(() => {
+    if (monthFilter === 'recorded') {
+      return allFoodMonthCols.filter(m => {
+        const isCurrentActive = activeColKey !== 'all' && m.key === activeColKey;
+        const hasSpend = budgetData.some(r => getFoodMonthVal(r, m) > 0);
+        return isCurrentActive || hasSpend;
+      });
     }
-    return 'oct_26_actual';
-  }, [activePeriod, periods]);
+    return allFoodMonthCols;
+  }, [allFoodMonthCols, monthFilter, activeColKey, budgetData]);
 
   // Period label for display
   const activePeriodLabel = useMemo(() => {
     if (activePeriod === 'all') return 'All Months (Cumulative)';
     const pObj = periods.find(p => String(p.id) === String(activePeriod));
-    return pObj?.period_label || pObj?.period_code || "Oct'26";
+    return pObj ? formatPeriodLabel(pObj) : "Oct'26";
   }, [activePeriod, periods]);
 
-  // Calculate actual spend for a row depending on active month filter
+  const periodRangeLabel = useMemo(() => {
+    if (visibleMonthCols && visibleMonthCols.length > 0) {
+      return `${visibleMonthCols[0].label} – ${visibleMonthCols[visibleMonthCols.length - 1].label}`;
+    }
+    return "Jun'26 – Oct'26";
+  }, [visibleMonthCols]);
+
+  // Calculate actual spend for a row depending on active month filter (for KPI cards)
   const getHeadActual = (row) => {
     if (activeColKey === 'all') {
-      return FOOD_MONTH_COLS.reduce((sum, col) => sum + (Number(row[col.key]) || 0), 0);
+      return allFoodMonthCols.reduce((sum, col) => sum + getFoodMonthVal(row, col), 0);
     }
-    return Number(row[activeColKey]) || 0;
+    const colObj = allFoodMonthCols.find(c => c.key === activeColKey) || { key: activeColKey, periodId: String(activePeriod) };
+    return getFoodMonthVal(row, colObj);
   };
 
-  // Calculate budget target for a row depending on active month filter
+  // Calculate budget target for a row depending on active month filter (for KPI cards)
   const getHeadBudget = (row) => {
     if (activeColKey === 'all') {
       return Number(row.sanctioned_amount) || 0;
@@ -91,7 +141,13 @@ export default function FoodBudgetChartSection({
 
   const totalCurrentActual = useMemo(() => {
     return budgetData.reduce((acc, r) => acc + getHeadActual(r), 0);
-  }, [budgetData, activeColKey]);
+  }, [budgetData, activeColKey, allFoodMonthCols]);
+
+  const allVisibleMonthsActualSum = useMemo(() => {
+    return budgetData.reduce((acc, r) => {
+      return acc + visibleMonthCols.reduce((mAcc, m) => mAcc + getFoodMonthVal(r, m), 0);
+    }, 0);
+  }, [budgetData, visibleMonthCols]);
 
   const currentBudgetTarget = activeColKey === 'all' ? totalSanctionedBudget : totalMonthlyLimit;
   const isOverallUnderBudget = totalCurrentActual <= currentBudgetTarget;
@@ -272,153 +328,298 @@ export default function FoodBudgetChartSection({
         </div>
       </div>
 
-      {/* 3. MATRIX TABLE */}
+      {/* 3. OFFICIAL FOOD BUDGET TRACKING LEDGER */}
       <div style={{
         backgroundColor: '#ffffff',
         borderRadius: '16px',
         border: '1.5px solid #e2e8f0',
         overflow: 'hidden',
-        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)'
+        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.07)'
       }}>
+        {/* Formal Ledger Header */}
         <div style={{
-          padding: '14px 18px',
-          backgroundColor: '#f8fafc',
-          borderBottom: '1.5px solid #e2e8f0',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%)',
+          padding: '18px 24px 14px 24px',
+          borderBottom: '3px solid #fbbf24',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Table size={16} style={{ color: '#4f46e5' }} />
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
-              Budget Allocation & Expenditure Ledger
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: '44px', height: '44px', borderRadius: '10px',
+              background: 'rgba(251,191,36,0.15)',
+              border: '2px solid rgba(251,191,36,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+              <Wallet size={22} color="#fbbf24" />
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#fbbf24', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '2px' }}>
+                Official Food Operations Budget Tracking Ledger ({periodRangeLabel})
+              </div>
+              <div style={{ fontSize: '18px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
+                Budget Allocation &amp; Expenditure Ledger
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#a5b4fc', marginTop: '3px', fontWeight: '600' }}>
+                {budgetData.length} Budget Heads &nbsp;&bull;&nbsp; {visibleMonthCols.length} Months &nbsp;&bull;&nbsp; Focus: <span style={{ color: '#fbbf24' }}>{activePeriodLabel}</span>
+              </div>
+            </div>
           </div>
-          <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>
-            Period: <strong style={{ color: '#0f172a' }}>{activePeriodLabel}</strong>
-          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            {/* Month Column Filter Toggle */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.28)',
+              borderRadius: '9999px',
+              padding: '3px',
+              border: '1px solid rgba(255, 255, 255, 0.15)'
+            }}>
+              <button
+                type="button"
+                onClick={() => setMonthFilter('all')}
+                style={{
+                  border: 'none',
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  fontSize: '11px',
+                  fontWeight: monthFilter === 'all' ? '800' : '600',
+                  backgroundColor: monthFilter === 'all' ? '#ffffff' : 'transparent',
+                  color: monthFilter === 'all' ? '#1e1b4b' : '#c7d2fe',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                All Months ({allFoodMonthCols.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMonthFilter('recorded')}
+                style={{
+                  border: 'none',
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  fontSize: '11px',
+                  fontWeight: monthFilter === 'recorded' ? '800' : '600',
+                  backgroundColor: monthFilter === 'recorded' ? '#ffffff' : 'transparent',
+                  color: monthFilter === 'recorded' ? '#1e1b4b' : '#c7d2fe',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Active &amp; Recorded Only
+              </button>
+            </div>
+
+            {/* KPI Summary */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#a5b4fc', textTransform: 'uppercase' }}>Sanctioned Budget</div>
+                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#86efac' }} className="currency-font">{formatINR(totalSanctionedBudget)}</div>
+                </div>
+                <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#a5b4fc', textTransform: 'uppercase' }}>Total Spent</div>
+                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#fbbf24' }} className="currency-font">{formatINR(allVisibleMonthsActualSum)}</div>
+                </div>
+                <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#a5b4fc', textTransform: 'uppercase' }}>Balance</div>
+                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#67e8f9' }} className="currency-font">{formatINR(totalSanctionedBudget - allVisibleMonthsActualSum)}</div>
+                </div>
+              </div>
+              <div style={{
+                fontSize: '10.5px', fontWeight: '700',
+                color: allVisibleMonthsActualSum <= totalSanctionedBudget ? '#86efac' : '#fca5a5',
+                backgroundColor: allVisibleMonthsActualSum <= totalSanctionedBudget ? 'rgba(134,239,172,0.12)' : 'rgba(252,165,165,0.12)',
+                border: `1px solid ${allVisibleMonthsActualSum <= totalSanctionedBudget ? 'rgba(134,239,172,0.3)' : 'rgba(252,165,165,0.3)'}`,
+                padding: '2px 10px', borderRadius: '9999px'
+              }}>
+                {totalSanctionedBudget > 0 ? ((allVisibleMonthsActualSum / totalSanctionedBudget) * 100).toFixed(1) : '0.0'}% Utilized &nbsp;{allVisibleMonthsActualSum <= totalSanctionedBudget ? '\u2713 Within Budget' : '\u26a0 Over Budget'}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1.5px solid #cbd5e1', color: '#334155', fontWeight: '800' }}>
-              <th style={{ padding: '12px 14px', width: '50px', textAlign: 'center' }}>#</th>
-              <th style={{ padding: '12px 16px' }}>Budget Head Name</th>
-              <th style={{ padding: '12px 14px', textAlign: 'right' }}>Annual Sanctioned</th>
-              <th style={{ padding: '12px 14px', textAlign: 'right' }}>{activePeriodLabel} Actual</th>
-              <th style={{ padding: '12px 14px', textAlign: 'center' }}>Utilization</th>
-              <th style={{ padding: '12px 14px', textAlign: 'center' }}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {budgetData.map((row, idx) => {
-              const bTarget = getHeadBudget(row);
-              const actual = getHeadActual(row);
-              const isOver = actual > bTarget && bTarget > 0;
-              const utilPct = bTarget > 0 ? ((actual / bTarget) * 100).toFixed(1) : 0;
-              const theme = HEAD_COLORS[idx % HEAD_COLORS.length];
+        {/* Scrollable Ledger Matrix Table */}
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', minWidth: '980px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                <th colSpan={3} style={{ padding: '7px 14px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '2px solid #cbd5e1' }}>
+                  Budget Head Details
+                </th>
+                <th colSpan={visibleMonthCols.length} style={{ padding: '7px 14px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', borderRight: '2px solid #cbd5e1', backgroundColor: '#eff6ff' }}>
+                  Month-wise Actual Expenditure (&#8377;)
+                </th>
+                <th colSpan={3} style={{ padding: '7px 14px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.08em', backgroundColor: '#ecfdf5' }}>
+                  Summary
+                </th>
+              </tr>
+              <tr style={{ backgroundColor: '#1e293b', color: '#f8fafc', fontWeight: '800', fontSize: '11px' }}>
+                <th style={{ padding: '11px 10px', width: '44px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)' }}>S.No</th>
+                <th style={{ padding: '11px 14px', textAlign: 'left', minWidth: '220px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Budget Head Name</th>
+                <th style={{ padding: '11px 14px', textAlign: 'right', minWidth: '130px', backgroundColor: '#064e3b', color: '#6ee7b7', borderRight: '2px solid rgba(255,255,255,0.15)' }}>
+                  Sanctioned Amount (&#8377;)
+                </th>
+                {visibleMonthCols.map((m) => {
+                  const isActive = activeColKey !== 'all' && m.key === activeColKey;
+                  return (
+                    <th key={m.key} style={{
+                      padding: '11px 10px',
+                      textAlign: 'right',
+                      minWidth: '96px',
+                      fontWeight: isActive ? '900' : '700',
+                      backgroundColor: isActive ? '#1e3a8a' : 'transparent',
+                      color: isActive ? '#93c5fd' : '#94a3b8',
+                      borderBottom: isActive ? '3px solid #3b82f6' : 'none',
+                      borderRight: '1px solid rgba(255,255,255,0.08)'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                        <span>{m.label}</span>
+                        {isActive && (
+                          <span style={{ fontSize: '8px', fontWeight: '900', backgroundColor: '#3b82f6', color: '#fff', padding: '1px 5px', borderRadius: '3px' }}>
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+                <th style={{ padding: '11px 14px', textAlign: 'right', minWidth: '125px', backgroundColor: '#0c4a6e', color: '#7dd3fc', borderLeft: '2px solid rgba(255,255,255,0.15)' }}>
+                  TOTAL SPENT (&#8377;)
+                </th>
+                <th style={{ padding: '11px 14px', textAlign: 'right', minWidth: '125px', backgroundColor: '#064e3b', color: '#6ee7b7' }}>
+                  BALANCE (&#8377;)
+                </th>
+                <th style={{ padding: '11px 14px', textAlign: 'center', minWidth: '95px', backgroundColor: '#3b0764', color: '#d8b4fe' }}>
+                  % UTILIZED
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {budgetData.map((row, idx) => {
+                const sanc = Number(row.sanctioned_amount) || 0;
+                const totalSpent = visibleMonthCols.reduce((acc, m) => acc + getFoodMonthVal(row, m), 0);
+                const balance = sanc - totalSpent;
+                const isOver = totalSpent > sanc && sanc > 0;
+                const utilPct = sanc > 0 ? ((totalSpent / sanc) * 100) : 0;
+                const theme = HEAD_COLORS[idx % HEAD_COLORS.length];
 
-              return (
-                <tr key={row.budget_head || idx} style={{
-                  borderBottom: '1px solid #f1f5f9',
-                  backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafbfc'
-                }}>
-                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '22px',
-                      height: '22px',
-                      borderRadius: '6px',
-                      backgroundColor: theme.bg,
-                      color: theme.primary,
-                      fontSize: '11px',
-                      fontWeight: '800',
-                      border: `1px solid ${theme.border}`
-                    }}>
-                      {idx + 1}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontWeight: '700', color: '#0f172a' }}>{row.budget_head}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }} className="currency-font">
-                    {formatINR(row.sanctioned_amount)}
-                  </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#dc2626' : '#0f172a' }} className="currency-font">
-                    {formatINR(actual)}
-                  </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                    <span style={{
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      backgroundColor: isOver ? '#fee2e2' : '#dcfce7',
-                      color: isOver ? '#991b1b' : '#166534'
-                    }}>
-                      {utilPct}%
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                    <span style={{
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      backgroundColor: isOver ? '#fef2f2' : '#f0fdf4',
-                      color: isOver ? '#dc2626' : '#16a34a',
-                      border: `1px solid ${isOver ? '#fecaca' : '#bbf7d0'}`
-                    }}>
-                      {isOver ? 'Over Target' : 'Under Target'}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr style={{
-              backgroundColor: '#f8fafc',
-              borderTop: '2px solid #cbd5e1',
-              fontWeight: '800',
-              color: '#0f172a'
-            }}>
-              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#4f46e5' }}>Σ</td>
-              <td style={{ padding: '12px 16px' }}>Total Operations Budget</td>
-              <td style={{ padding: '12px 14px', textAlign: 'right' }} className="currency-font">
-                {formatINR(totalSanctionedBudget)}
-              </td>
-              <td style={{ padding: '12px 14px', textAlign: 'right', color: isOverallUnderBudget ? '#0f172a' : '#dc2626' }} className="currency-font">
-                {formatINR(totalCurrentActual)}
-              </td>
-              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  backgroundColor: Number(overallUtilizationPct) <= 100 ? '#dcfce7' : '#fee2e2',
-                  color: Number(overallUtilizationPct) <= 100 ? '#166534' : '#991b1b'
-                }}>
-                  {overallUtilizationPct}%
-                </span>
-              </td>
-              <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: isOverallUnderBudget ? '#f0fdf4' : '#fef2f2',
-                  color: isOverallUnderBudget ? '#16a34a' : '#dc2626',
-                  border: `1px solid ${isOverallUnderBudget ? '#bbf7d0' : '#fecaca'}`
-                }}>
-                  {isOverallUnderBudget ? 'Under Target' : 'Over Target'}
-                </span>
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+                return (
+                  <tr key={row.budget_head || idx} style={{
+                    borderBottom: '1px solid #f1f5f9',
+                    backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafbfc',
+                    transition: 'background 0.12s ease'
+                  }}>
+                    <td style={{ padding: '11px 10px', textAlign: 'center', borderRight: '1px solid #f1f5f9' }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: '24px', height: '24px', borderRadius: '7px',
+                        backgroundColor: theme.bg, color: theme.primary,
+                        fontSize: '11px', fontWeight: '800', border: `1px solid ${theme.border}`
+                      }}>
+                        {idx + 1}
+                      </span>
+                    </td>
+                    <td style={{ padding: '11px 14px', fontWeight: '700', color: '#0f172a', borderRight: '1px solid #f1f5f9' }}>
+                      {row.budget_head}
+                    </td>
+                    <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: '800', color: '#166534', backgroundColor: '#f0fdf4', borderRight: '2px solid #bbf7d0' }} className="currency-font">
+                      {formatINR(sanc)}
+                    </td>
+
+                    {/* Individual Month Columns */}
+                    {visibleMonthCols.map((m) => {
+                      const mVal = getFoodMonthVal(row, m);
+                      const isActive = activeColKey !== 'all' && m.key === activeColKey;
+                      return (
+                        <td key={m.key} style={{
+                          padding: '11px 10px',
+                          textAlign: 'right',
+                          fontWeight: isActive ? '900' : (mVal > 0 ? '600' : '500'),
+                          backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                          color: mVal > 0 ? (isActive ? '#1e40af' : '#334155') : '#cbd5e1',
+                          borderRight: '1px solid #f1f5f9'
+                        }} className="currency-font">
+                          {mVal > 0 ? formatINR(mVal) : '—'}
+                        </td>
+                      );
+                    })}
+
+                    {/* Summary Columns */}
+                    <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: '800', color: totalSpent > 0 ? '#0369a1' : '#94a3b8', backgroundColor: '#f0f9ff', borderLeft: '2px solid #bae6fd' }} className="currency-font">
+                      {totalSpent > 0 ? formatINR(totalSpent) : '₹0'}
+                    </td>
+                    <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#dc2626' : '#166534', backgroundColor: isOver ? '#fef2f2' : '#f0fdf4' }} className="currency-font">
+                      {isOver ? `-${formatINR(Math.abs(balance))}` : formatINR(balance)}
+                    </td>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', backgroundColor: '#faf5ff' }}>
+                      <span style={{
+                        display: 'inline-block', padding: '3px 10px', borderRadius: '9999px',
+                        fontSize: '11.5px', fontWeight: '800',
+                        backgroundColor: isOver ? '#fee2e2' : utilPct > 80 ? '#fef3c7' : '#dcfce7',
+                        color: isOver ? '#991b1b' : utilPct > 80 ? '#92400e' : '#166534',
+                        border: `1px solid ${isOver ? '#fca5a5' : utilPct > 80 ? '#fde68a' : '#86efac'}`
+                      }}>
+                        {utilPct.toFixed(1)}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ backgroundColor: '#fef08a', borderTop: '3px solid #ca8a04', fontWeight: '900', color: '#713f12' }}>
+                <td style={{ padding: '13px 10px', textAlign: 'center', fontSize: '14px' }}>&sum;</td>
+                <td style={{ padding: '13px 14px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  Grand Total &mdash; All Budget Heads
+                </td>
+                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: '#166534', backgroundColor: '#dcfce7', borderRight: '2px solid #bbf7d0' }} className="currency-font">
+                  {formatINR(totalSanctionedBudget)}
+                </td>
+                {visibleMonthCols.map((m) => {
+                  const mSum = budgetData.reduce((acc, r) => acc + getFoodMonthVal(r, m), 0);
+                  const isActive = activeColKey !== 'all' && m.key === activeColKey;
+                  return (
+                    <td key={m.key} style={{
+                      padding: '13px 10px',
+                      textAlign: 'right',
+                      fontSize: '13px',
+                      fontWeight: '900',
+                      backgroundColor: isActive ? '#fef9c3' : '#fefce8',
+                      color: mSum > 0 ? '#713f12' : '#a16207',
+                      borderRight: '1px solid rgba(202,138,4,0.3)'
+                    }} className="currency-font">
+                      {mSum > 0 ? formatINR(mSum) : '—'}
+                    </td>
+                  );
+                })}
+                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: '#0369a1', backgroundColor: '#e0f2fe', borderLeft: '2px solid #7dd3fc' }} className="currency-font">
+                  {formatINR(allVisibleMonthsActualSum)}
+                </td>
+                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: allVisibleMonthsActualSum <= totalSanctionedBudget ? '#166534' : '#dc2626', backgroundColor: allVisibleMonthsActualSum <= totalSanctionedBudget ? '#dcfce7' : '#fee2e2' }} className="currency-font">
+                  {allVisibleMonthsActualSum <= totalSanctionedBudget ? formatINR(totalSanctionedBudget - allVisibleMonthsActualSum) : `-${formatINR(Math.abs(totalSanctionedBudget - allVisibleMonthsActualSum))}`}
+                </td>
+                <td style={{ padding: '13px 14px', textAlign: 'center', backgroundColor: '#fef9c3' }}>
+                  <span style={{
+                    display: 'inline-block', padding: '4px 12px', borderRadius: '9999px',
+                    fontSize: '12px', fontWeight: '900',
+                    backgroundColor: '#fbbf24', color: '#451a03',
+                    border: '2px solid #d97706'
+                  }}>
+                    {totalSanctionedBudget > 0 ? ((allVisibleMonthsActualSum / totalSanctionedBudget) * 100).toFixed(1) : '0.0'}%
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
 
     </section>
