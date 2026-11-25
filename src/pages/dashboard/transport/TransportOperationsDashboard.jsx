@@ -468,14 +468,14 @@ export default function TransportOperationsDashboard({
         repAmt += getParamVal(activeBranch, String(p.id), 'repair_maintenance_cost');
         empAmt += getParamVal(activeBranch, String(p.id), 'employee_cost');
         fcAmt += (getParamVal(activeBranch, String(p.id), 'statutory_cost') + getParamVal(activeBranch, String(p.id), 'fc_cost'));
-        othAmt += (getParamVal(activeBranch, String(p.id), 'other_cost') + getParamVal(activeBranch, String(p.id), 'cab_billing'));
+        othAmt += (getParamVal(activeBranch, String(p.id), 'other_cost') + getParamVal(activeBranch, String(p.id), 'cab_billing') + getParamVal(activeBranch, String(p.id), 'parking_fastag') + getParamVal(activeBranch, String(p.id), 'cctv_replacement'));
       });
     } else {
       fuelAmt = metrics.fuel_expenses;
       repAmt = metrics.repair_maintenance_cost;
       empAmt = metrics.employee_cost;
       fcAmt = metrics.statutory_cost + metrics.fc_cost;
-      othAmt = metrics.other_cost + metrics.cab_billing;
+      othAmt = metrics.other_cost + metrics.cab_billing + (metrics.parking_fastag || 0) + (metrics.cctv_replacement || 0);
     }
 
     return [
@@ -538,7 +538,7 @@ export default function TransportOperationsDashboard({
       const r = getParamVal(activeBranch, String(p.id), 'repair_maintenance_cost');
       const e = getParamVal(activeBranch, String(p.id), 'employee_cost');
       const fc = getParamVal(activeBranch, String(p.id), 'statutory_cost') + getParamVal(activeBranch, String(p.id), 'fc_cost');
-      const o = getParamVal(activeBranch, String(p.id), 'other_cost') + getParamVal(activeBranch, String(p.id), 'cab_billing');
+      const o = getParamVal(activeBranch, String(p.id), 'other_cost') + getParamVal(activeBranch, String(p.id), 'cab_billing') + getParamVal(activeBranch, String(p.id), 'parking_fastag') + getParamVal(activeBranch, String(p.id), 'cctv_replacement');
       const px = getParamVal(activeBranch, String(p.id), 'passengers_count');
 
       fuelMonthly[p.id] = f;
@@ -562,7 +562,7 @@ export default function TransportOperationsDashboard({
     const curRep = isAllMonths ? Object.values(repMonthly).reduce((a, b) => a + b, 0) : (repMonthly[activePeriod] || metrics.repair_maintenance_cost);
     const curEmp = isAllMonths ? Object.values(empMonthly).reduce((a, b) => a + b, 0) : (empMonthly[activePeriod] || metrics.employee_cost);
     const curFc = isAllMonths ? Object.values(fcMonthly).reduce((a, b) => a + b, 0) : (fcMonthly[activePeriod] || (metrics.statutory_cost + metrics.fc_cost));
-    const curOth = isAllMonths ? Object.values(othMonthly).reduce((a, b) => a + b, 0) : (othMonthly[activePeriod] || (metrics.other_cost + metrics.cab_billing));
+    const curOth = isAllMonths ? Object.values(othMonthly).reduce((a, b) => a + b, 0) : (othMonthly[activePeriod] || (metrics.other_cost + metrics.cab_billing + (metrics.parking_fastag || 0) + (metrics.cctv_replacement || 0)));
     const curPax = isAllMonths ? 0 : (paxMonthly[activePeriod] || metrics.passengers_count);
 
     return [
