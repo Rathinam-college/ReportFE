@@ -28,7 +28,7 @@ export default function HostelExpensesBudgetSection({
   onTrackingViewModeChange,
   hideTopToggles = false
 }) {
-  const [internalTrackingViewMode, setInternalTrackingViewMode] = useState('both'); // 'both' | 'cards' | 'matrix' | 'distribution'
+  const [internalTrackingViewMode, setInternalTrackingViewMode] = useState('cards'); // 'both' | 'cards' | 'matrix' | 'distribution'
   const [internalMonthFilter, setInternalMonthFilter] = useState('all'); // 'all' | 'recorded'
   const trackingViewMode = propTrackingViewMode !== undefined ? propTrackingViewMode : internalTrackingViewMode;
   const setTrackingViewMode = onTrackingViewModeChange || setInternalTrackingViewMode;
@@ -374,204 +374,9 @@ export default function HostelExpensesBudgetSection({
         overflow: 'hidden',
         boxShadow: '0 8px 30px rgba(15, 23, 42, 0.05)'
       }}>
-        {/* Modern Header Banner with View Switcher */}
-        <div style={{
-          backgroundColor: 'var(--primary, #14245C)',
-          borderBottom: '3px solid var(--accent, #F5A524)',
-          color: '#ffffff',
-          padding: '18px 24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '14px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              backdropFilter: 'blur(8px)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid rgba(255, 255, 255, 0.25)'
-            }}>
-              <Table size={20} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: '900', margin: 0, color: '#ffffff', letterSpacing: '0.02em' }}>
-                  HOSTEL BUDGET TRACKING SUMMARY
-                </h3>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  backgroundColor: '#22c55e',
-                  color: '#ffffff',
-                  padding: '2px 10px',
-                  borderRadius: '9999px'
-                }}>
-                  {periodRangeLabel} ({visibleMonthCols.length} Months)
-                </span>
-              </div>
-              <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#c7d2fe' }}>
-                9 Official Budget Heads • Sanctioned Budget vs Monthly Actual Expenditure
-              </p>
-            </div>
-          </div>
-
-          {/* Interactive Month Filter & View Switcher Toggles (hidden when controlled from Sticky Top Filter Bar) */}
-          {!hideTopToggles && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {/* Filter: All Months vs Recorded Spend */}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.25)',
-              borderRadius: '9999px',
-              padding: '3px',
-              border: '1px solid rgba(255, 255, 255, 0.15)'
-            }}>
-              <button
-                type="button"
-                onClick={() => setMonthFilter('all')}
-                style={{
-                  border: 'none',
-                  padding: '5px 12px',
-                  borderRadius: '9999px',
-                  fontSize: '11px',
-                  fontWeight: monthFilter === 'all' ? '800' : '600',
-                  backgroundColor: monthFilter === 'all' ? '#ffffff' : 'transparent',
-                  color: monthFilter === 'all' ? '#1e1b4b' : '#c7d2fe',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                All Months ({allHostelMonthCols.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setMonthFilter('recorded')}
-                style={{
-                  border: 'none',
-                  padding: '5px 12px',
-                  borderRadius: '9999px',
-                  fontSize: '11px',
-                  fontWeight: monthFilter === 'recorded' ? '800' : '600',
-                  backgroundColor: monthFilter === 'recorded' ? '#ffffff' : 'transparent',
-                  color: monthFilter === 'recorded' ? '#1e1b4b' : '#c7d2fe',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                Active & Recorded Only
-              </button>
-            </div>
-
-            {/* View Switcher Toggles: Both (Default), Cards, Matrix Table, Cost Drivers */}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.25)',
-              borderRadius: '9999px',
-              padding: '3px',
-              border: '1px solid rgba(255, 255, 255, 0.15)'
-            }}>
-              <button
-                type="button"
-                onClick={() => setTrackingViewMode('both')}
-                style={{
-                  border: 'none',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '11.5px',
-                  fontWeight: '800',
-                  backgroundColor: trackingViewMode === 'both' ? '#ffffff' : 'transparent',
-                  color: trackingViewMode === 'both' ? '#1e1b4b' : '#c7d2fe',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Layers size={13} />
-                <span>Both (Cards & Table)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTrackingViewMode('cards')}
-                style={{
-                  border: 'none',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '11.5px',
-                  fontWeight: '800',
-                  backgroundColor: trackingViewMode === 'cards' ? '#ffffff' : 'transparent',
-                  color: trackingViewMode === 'cards' ? '#1e1b4b' : '#c7d2fe',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <LayoutGrid size={13} />
-                <span>Cards View</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTrackingViewMode('matrix')}
-                style={{
-                  border: 'none',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '11.5px',
-                  fontWeight: '800',
-                  backgroundColor: trackingViewMode === 'matrix' ? '#ffffff' : 'transparent',
-                  color: trackingViewMode === 'matrix' ? '#1e1b4b' : '#c7d2fe',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Table size={13} />
-                <span>Hostel Ledger</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTrackingViewMode('distribution')}
-                style={{
-                  border: 'none',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '11.5px',
-                  fontWeight: '800',
-                  backgroundColor: trackingViewMode === 'distribution' ? '#ffffff' : 'transparent',
-                  color: trackingViewMode === 'distribution' ? '#1e1b4b' : '#c7d2fe',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <BarChart3 size={13} />
-                <span>Cost Drivers</span>
-              </button>
-            </div>
-          </div>
-          )}
-        </div>
-
         {/* ------------------------------------------------------------- */}
-        {/* VIEW A: CATEGORY CARDS GRID (Food Dashboard Design)            */}
-        {/* Rendered when trackingViewMode === 'both' or 'cards'          */}
+        {/* VIEW A: CATEGORY CARDS GRID                                    */}
+        {/* Rendered when trackingViewMode === 'both' or 'cards'           */}
         {/* ------------------------------------------------------------- */}
         {(trackingViewMode === 'both' || trackingViewMode === 'cards') && (
           <div style={{
@@ -579,7 +384,6 @@ export default function HostelExpensesBudgetSection({
             backgroundColor: '#f8fafc',
             borderBottom: trackingViewMode === 'both' ? '2px solid #e2e8f0' : 'none'
           }}>
-            {/* Row 1: 9 Operating Budget Heads CategoryCards */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
@@ -639,7 +443,6 @@ export default function HostelExpensesBudgetSection({
               })}
             </div>
 
-            {/* Row 2: Operational Census & Unit Economics Cards (matching Food Dashboard) */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',

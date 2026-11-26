@@ -162,7 +162,7 @@ export default function HostelDashboardCensusView({
   const rawSpent = num(activeCensus.cumulative_budget_spent, 0);
   const spentBudget = rawSpent >= monthlyExpenses ? rawSpent : monthlyExpenses;
   const balBudget = appBudget > 0 ? Math.max(0, appBudget - spentBudget) : 0;
-  const totalOccupiedCount = totalOccupied > 0 ? totalOccupied : (studentsTotal + staffTotal);
+  const totalOccupiedCount = totalOcc > 0 ? totalOcc : (studentsTotal + staffTotal);
   const perStudentCost = totalOccupiedCount > 0 ? Math.round(monthlyExpenses / totalOccupiedCount) : (studentsTotal > 0 ? Math.round(monthlyExpenses / studentsTotal) : num(activeCensus.per_student_cost_month, 0));
   const perStudentCostDay = perStudentCost > 0 ? Math.round(perStudentCost / 30) : 0;
 

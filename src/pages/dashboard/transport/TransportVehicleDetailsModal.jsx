@@ -184,6 +184,44 @@ export default function TransportVehicleDetailsModal({
   const [viewMode, setViewMode] = useState('cards'); // 'cards' (Modern Bento + Side Chart) | 'table' (Flat Spreadsheet)
   const [selectedVehicleNo, setSelectedVehicleNo] = useState(null);
   const [sideChartTab, setSideChartTab] = useState('trend'); // 'trend' | 'ranking' | 'scatter'
+  const [liveHistoryByVehicle, setLiveHistoryByVehicle] = useState({});
+
+  // Fetch live multi-month vehicle history from /api/transport/vehicles for all periods of the active branch
+  const displayPeriods = useMemo(() => {
+    return Array.isArray(periods) && periods.length > 0
+      ? periods
+      : [{ id: 35, period_label: "Aug'26" }, { id: 36, period_label: "Sept'26" }, { id: 1026, period_label: "Oct'26" }];
+  }, [periods]);
+
+  useEffect(() => {
+    if ((!isOpen && !embedded) || !activeBranch) return;
+
+    let cancelled = false;
+    Promise.all(
+      displayPeriods.map((p) =>
+        fetch(`/api/transport/vehicles?period_id=${p.id}&branch=${encodeURIComponent(activeBranch)}`)
+          .then((r) => r.json())
+          .then((d) => ({ label: p.period_label || p.period_code || String(p.id), list: d?.vehicles || [] }))
+          .catch(() => ({ label: p.period_label || p.period_code || String(p.id), list: [] }))
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const map = {};
+      results.forEach(({ label, list }) => {
+        list.forEach((v) => {
+          const vNo = v.vehicle_no;
+          if (!vNo) return;
+          if (!map[vNo]) map[vNo] = {};
+          const dVal = Number(v.diesel_litres) || 0;
+          const kmVal = Number(v.km_run) || 0;
+          const mVal = dVal > 0 ? Number((kmVal / dVal).toFixed(2)) : (Number(v.mileage) || 0);
+          map[vNo][label] = { month: label, diesel: dVal, km: kmVal, mileage: mVal };
+        });
+      });
+      setLiveHistoryByVehicle(map);
+    });
+    return () => { cancelled = true; };
+  }, [activeBranch, displayPeriods, isOpen, embedded]);
 
   // Sync focus metric from props
   useEffect(() => {
@@ -209,36 +247,22 @@ export default function TransportVehicleDetailsModal({
     return isNaN(n) ? fb : n;
   };
 
-  // Helper to derive 3-month display metrics from the live vehicle record
+  // Helper to return live multi-month history from PostgreSQL (/api/transport/vehicles)
   const getVehicleHistory = (v) => {
+    const vNo = v.vehicle_no || '';
+    const vHist = liveHistoryByVehicle[vNo] || {};
     const curD = num(v.diesel_litres, 0);
     const curKm = num(v.km_run, 0);
-    const curM = curD > 0 ? (curKm / curD) : num(v.mileage, 0);
-    const vNo = v.vehicle_no || '';
-    if ((curD > 0 || curKm > 0) && HISTORICAL_VEHICLE_DATA[vNo]) {
-      return HISTORICAL_VEHICLE_DATA[vNo].months;
-    }
+    const curM = curD > 0 ? Number((curKm / curD).toFixed(2)) : num(v.mileage, 0);
 
-    return [
-      {
-        month: "Aug'26",
-        diesel: curD > 0 ? Math.round(curD * 0.98) : 0,
-        km: curKm > 0 ? Math.round(curKm * 0.94) : 0,
-        mileage: curD > 0 ? Number((curM * 0.96).toFixed(2)) : 0
-      },
-      {
-        month: "Sept'26",
-        diesel: curD > 0 ? Math.round(curD * 0.92) : 0,
-        km: curKm > 0 ? Math.round(curKm * 0.95) : 0,
-        mileage: curD > 0 ? Number((curM * 1.03).toFixed(2)) : 0
-      },
-      {
-        month: "Oct'26",
-        diesel: Math.round(curD),
-        km: Math.round(curKm),
-        mileage: Number(curM.toFixed(2))
+    return displayPeriods.map((p, idx) => {
+      const lbl = p.period_label || p.period_code || String(p.id);
+      if (vHist[lbl]) return vHist[lbl];
+      if (idx === displayPeriods.length - 1) {
+        return { month: lbl, diesel: Math.round(curD), km: Math.round(curKm), mileage: curM };
       }
-    ];
+      return { month: lbl, diesel: 0, km: 0, mileage: 0 };
+    });
   };
 
   // Filter and sort vehicles (strictly live DB vehicles, no dummy fallback)
@@ -491,54 +515,6 @@ export default function TransportVehicleDetailsModal({
               </button>
             </div>
 
-            {onJumpToLedger && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onJumpToLedger();
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '7px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: '#ffffff',
-                  border: '1.5px solid #cbd5e1',
-                  color: '#0284c7',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                <span>Full Ledger</span>
-                <ArrowRight size={13} />
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '7px 14px',
-                borderRadius: '8px',
-                backgroundColor: '#ffffff',
-                border: '1.5px solid #cbd5e1',
-                color: '#475569',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-              title="Download fleet operational data as CSV spreadsheet"
-            >
-              <Download size={13} />
-              <span>Export CSV</span>
-            </button>
-
             {!embedded && onClose && (
               <button
                 type="button"
@@ -718,19 +694,29 @@ export default function TransportVehicleDetailsModal({
                     </th>
                     {(isAllMonths || activePeriodLabel === 'All Months') ? (
                       <>
-                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', color: '#cbd5e1' }}>Aug&apos;26</th>
-                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', color: '#cbd5e1' }}>Sept&apos;26</th>
-                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', backgroundColor: '#1e3a8a', color: 'var(--accent, #F5A524)' }}>Oct&apos;26</th>
-                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', color: '#e2e8f0' }}>Diff (Prev &rarr; Cur)</th>
+                        {displayPeriods.map((p, pIdx) => {
+                          const isLast = pIdx === displayPeriods.length - 1;
+                          return (
+                            <th
+                              key={p.id || p.period_label || pIdx}
+                              style={{
+                                padding: '11px 10px',
+                                border: '1px solid rgba(255,255,255,0.14)',
+                                textAlign: 'right',
+                                backgroundColor: isLast ? '#1e3a8a' : 'transparent',
+                                color: isLast ? 'var(--accent, #F5A524)' : '#cbd5e1'
+                              }}
+                            >
+                              {p.period_label || p.period_code}
+                            </th>
+                          );
+                        })}
                         <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', backgroundColor: '#0f1c49', color: '#6ee7b7' }}>Total</th>
                       </>
                     ) : (
                       <>
                         <th style={{ padding: '11px 12px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', backgroundColor: '#1e3a8a', color: 'var(--accent, #F5A524)' }}>
                           {activePeriodLabel}
-                        </th>
-                        <th style={{ padding: '11px 12px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', color: '#e2e8f0' }}>
-                          Diff (Prev &rarr; Cur)
                         </th>
                       </>
                     )}
@@ -740,24 +726,32 @@ export default function TransportVehicleDetailsModal({
                   {processedVehicles.map((veh, vIdx) => {
                     const isSelected = activeVehicle?.vehicle_no === veh.vehicle_no;
                     const hist = getVehicleHistory(veh);
-                    const aug = hist[0] || { diesel: 0, km: 0, mileage: 0 };
-                    const sep = hist[1] || { diesel: 0, km: 0, mileage: 0 };
-                    const oct = hist[2] || { diesel: num(veh.diesel_litres), km: num(veh.km_run), mileage: num(veh.mileage) };
+                    const showAll = isAllMonths || activePeriodLabel === 'All Months';
+                    const selIdx = !showAll
+                      ? displayPeriods.findIndex(p => (p.period_label || p.period_code) === activePeriodLabel)
+                      : -1;
+                    const prevM = (!showAll && selIdx > 0)
+                      ? (hist[selIdx - 1] || { diesel: 0, km: 0, mileage: 0 })
+                      : (showAll && hist.length >= 2 ? hist[hist.length - 2] : { diesel: 0, km: 0, mileage: 0 });
+                    const curM = hist.length >= 1 ? hist[hist.length - 1] : { diesel: num(veh.diesel_litres), km: num(veh.km_run), mileage: num(veh.mileage) };
 
                     const vD = num(veh.diesel_litres);
                     const vKm = num(veh.km_run);
                     const vM = veh.mileage ? Number(veh.mileage) : (vD > 0 ? Number((vKm / vD).toFixed(2)) : 0);
 
-                    const diffD = Number((num(oct.diesel) - num(sep.diesel)).toFixed(1));
-                    const diffKm = Number((num(oct.km) - num(sep.km)).toFixed(1));
-                    const diffM = Number((num(oct.mileage) - num(sep.mileage)).toFixed(2));
+                    const curDVal = showAll ? num(curM.diesel) : vD;
+                    const curKmVal = showAll ? num(curM.km) : vKm;
+                    const curMVal = showAll ? num(curM.mileage) : vM;
+
+                    const diffD = Number((curDVal - num(prevM.diesel)).toFixed(1));
+                    const diffKm = Number((curKmVal - num(prevM.km)).toFixed(1));
+                    const diffM = Number((curMVal - num(prevM.mileage)).toFixed(2));
 
                     const totD = hist.reduce((s, m) => s + num(m.diesel), 0);
                     const totKm = hist.reduce((s, m) => s + num(m.km), 0);
                     const avgM = totD > 0 ? Number((totKm / totD).toFixed(2)) : 0;
 
                     const rowBg = isSelected ? '#eff6ff' : (vIdx % 2 === 0 ? '#ffffff' : '#fafbfc');
-                    const showAll = isAllMonths || activePeriodLabel === 'All Months';
 
                     return (
                       <React.Fragment key={veh.id || veh.vehicle_no}>
@@ -791,21 +785,20 @@ export default function TransportVehicleDetailsModal({
                           </td>
                           {showAll ? (
                             <>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', color: '#475569' }}>{num(aug.diesel).toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', color: '#475569' }}>{num(sep.diesel).toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '700', color: '#1e3a8a' }}>{num(oct.diesel).toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: diffD === 0 ? '#64748b' : (diffD > 0 ? '#2F4BB8' : '#A32626') }}>
-                                {diffD > 0 ? `+${diffD}` : diffD} L
-                              </td>
+                              {hist.map((m, mIdx) => {
+                                const isLast = mIdx === hist.length - 1;
+                                return (
+                                  <td key={m.month || mIdx} style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: isLast ? '700' : '400', color: isLast ? '#1e3a8a' : '#475569' }}>
+                                    {num(m.diesel).toLocaleString('en-IN')}
+                                  </td>
+                                );
+                              })}
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: '#065f46', backgroundColor: '#f0fdf4' }}>{totD.toLocaleString('en-IN')} L</td>
                             </>
                           ) : (
                             <>
                               <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
                                 {vD.toLocaleString('en-IN', { maximumFractionDigits: 1 })} L
-                              </td>
-                              <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: diffD <= 0 ? '#059669' : '#dc2626' }}>
-                                {diffD > 0 ? `+${diffD}` : diffD} L
                               </td>
                             </>
                           )}
@@ -821,21 +814,20 @@ export default function TransportVehicleDetailsModal({
                           </td>
                           {showAll ? (
                             <>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', color: '#475569' }}>{num(aug.km).toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', color: '#475569' }}>{num(sep.km).toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '700', color: '#1e3a8a' }}>{num(oct.km).toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: diffKm === 0 ? '#64748b' : (diffKm > 0 ? '#2F4BB8' : '#A32626') }}>
-                                {diffKm > 0 ? `+${diffKm}` : diffKm}
-                              </td>
+                              {hist.map((m, mIdx) => {
+                                const isLast = mIdx === hist.length - 1;
+                                return (
+                                  <td key={m.month || mIdx} style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: isLast ? '700' : '400', color: isLast ? '#1e3a8a' : '#475569' }}>
+                                    {num(m.km).toLocaleString('en-IN')}
+                                  </td>
+                                );
+                              })}
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: '#065f46', backgroundColor: '#f0fdf4' }}>{totKm.toLocaleString('en-IN')}</td>
                             </>
                           ) : (
                             <>
                               <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
                                 {vKm.toLocaleString('en-IN', { maximumFractionDigits: 1 })} KM
-                              </td>
-                              <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: diffKm >= 0 ? '#0369a1' : '#d97706' }}>
-                                {diffKm > 0 ? `+${diffKm}` : diffKm} KM
                               </td>
                             </>
                           )}
@@ -851,21 +843,20 @@ export default function TransportVehicleDetailsModal({
                           </td>
                           {showAll ? (
                             <>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', color: '#475569' }}>{num(aug.mileage).toFixed(2)}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', color: '#475569' }}>{num(sep.mileage).toFixed(2)}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '800', color: '#059669' }}>{num(oct.mileage).toFixed(2)}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '900', color: diffM === 0 ? '#64748b' : (diffM > 0 ? '#2F4BB8' : '#A32626') }}>
-                                {diffM > 0 ? `+${diffM.toFixed(2)}` : diffM.toFixed(2)}
-                              </td>
+                              {hist.map((m, mIdx) => {
+                                const isLast = mIdx === hist.length - 1;
+                                return (
+                                  <td key={m.month || mIdx} style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: isLast ? '800' : '400', color: isLast ? '#059669' : '#475569' }}>
+                                    {num(m.mileage).toFixed(2)}
+                                  </td>
+                                );
+                              })}
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '900', color: '#065f46', backgroundColor: '#f0fdf4' }}>{avgM.toFixed(2)} km/L</td>
                             </>
                           ) : (
                             <>
                               <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
                                 {vM.toFixed(2)} km/L
-                              </td>
-                              <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '900', color: diffM >= 0 ? '#059669' : '#dc2626' }}>
-                                {diffM > 0 ? `+${diffM.toFixed(2)}` : diffM.toFixed(2)} km/L
                               </td>
                             </>
                           )}
@@ -1342,16 +1333,30 @@ export default function TransportVehicleDetailsModal({
                     }}>
                       Mileage (km/L)
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '110px' }}>Fuel Cost (₹)</th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '110px' }}>Total Cost (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '105px' }}>Fuel Cost (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '95px' }}>FC Cost (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '95px' }}>Statutory (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '115px' }}>Repair &amp; Maint (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '110px' }}>Fastag / Park (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '90px' }}>CCTV (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '105px' }}>Employee (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '90px' }}>Others (₹)</th>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', minWidth: '115px', fontWeight: '800' }}>Total Cost (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {processedVehicles.map((v, idx) => {
                     const vKm = num(v.km_run);
                     const vD = num(v.diesel_litres);
-                    const vM = v.mileage ? Number(v.mileage) : (vD > 0 ? Number((vKm / vD).toFixed(2)) : 4.0);
-                    const vFuel = num(v.fuel_expenses) || (vD * 99.4);
+                    const vM = v.mileage ? Number(v.mileage) : (vD > 0 ? Number((vKm / vD).toFixed(2)) : 0);
+                    const vFuel = num(v.fuel_expenses);
+                    const vFc = num(v.fc_cost);
+                    const vStat = num(v.statutory_cost);
+                    const vRep = num(v.repair_maintenance);
+                    const vPark = num(v.parking_fastag);
+                    const vCctv = num(v.cctv_replacement);
+                    const vEmp = num(v.employee_cost);
+                    const vOth = num(v.other_cost);
                     const vTot = num(v.total_expenses);
 
                     return (
@@ -1375,12 +1380,17 @@ export default function TransportVehicleDetailsModal({
                         <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
                           {vKm.toLocaleString('en-IN', { maximumFractionDigits: 1 })} KM
                         </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: vM >= 4.0 ? '#059669' : '#d97706' }}>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: vM >= 4.0 ? '#059669' : (vM > 0 ? '#d97706' : '#64748b') }}>
                           {vM.toFixed(2)} km/L
                         </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>
-                          {formatINR(vFuel)}
-                        </td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatINR(vFuel)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatINR(vFc)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatINR(vStat)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatINR(vRep)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatINR(vPark)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatINR(vCctv)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatINR(vEmp)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{formatINR(vOth)}</td>
                         <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: '#0f172a' }}>
                           {formatINR(vTot)}
                         </td>
@@ -1388,6 +1398,35 @@ export default function TransportVehicleDetailsModal({
                     );
                   })}
                 </tbody>
+                {processedVehicles.length > 0 && (
+                  <tfoot>
+                    <tr style={{ backgroundColor: '#f1f5f9', borderTop: '2px solid #cbd5e1', fontWeight: '800', color: '#0f172a' }}>
+                      <td colSpan={3} style={{ padding: '10px 12px' }}>Total ({processedVehicles.length} Vehicles)</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                        {processedVehicles.reduce((s, v) => s + num(v.diesel_litres), 0).toLocaleString('en-IN', { maximumFractionDigits: 1 })} L
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                        {processedVehicles.reduce((s, v) => s + num(v.km_run), 0).toLocaleString('en-IN', { maximumFractionDigits: 1 })} KM
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                        {(() => {
+                          const td = processedVehicles.reduce((s, v) => s + num(v.diesel_litres), 0);
+                          const tk = processedVehicles.reduce((s, v) => s + num(v.km_run), 0);
+                          return `${(td > 0 ? tk / td : 0).toFixed(2)} km/L`;
+                        })()}
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.fuel_expenses), 0))}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.fc_cost), 0))}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.statutory_cost), 0))}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.repair_maintenance), 0))}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.parking_fastag), 0))}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.cctv_replacement), 0))}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.employee_cost), 0))}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.other_cost), 0))}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatINR(processedVehicles.reduce((s, v) => s + num(v.total_expenses), 0))}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             )}
           </div>

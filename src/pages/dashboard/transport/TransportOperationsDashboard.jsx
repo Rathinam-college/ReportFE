@@ -25,7 +25,7 @@ export default function TransportOperationsDashboard({
   handleExportReport
 }) {
   const [activeBranch, setActiveBranch] = useState('University');
-  const [activeMainView, setActiveMainView] = useState('executive'); // 'executive' | 'vehicles' | 'parameters' | 'all'
+  const [activeMainView, setActiveMainView] = useState('all'); // 'executive' | 'vehicles' | 'parameters' | 'all'
   const [localMatrix, setLocalMatrix] = useState(null);
   const [dbBranchBudgets, setDbBranchBudgets] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -85,7 +85,7 @@ export default function TransportOperationsDashboard({
         (Number(currentPeriodData.diesel_litres) || 0) > 0
       );
 
-      if ((!isCurrentInVisible || (!hasDataInCurrent && activePeriod !== 'all')) && activePeriod !== 'all') {
+      if (!isCurrentInVisible && activePeriod !== 'all') {
         let lastEntered = null;
         for (let i = visiblePeriods.length - 1; i >= 0; i--) {
           const p = visiblePeriods[i];
@@ -803,7 +803,7 @@ export default function TransportOperationsDashboard({
           </div>
         </div>
 
-        {/* ROW 2: VIEW segmented control + FLEET chips */}
+        {/* ROW 2: FLEET chips */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -811,57 +811,16 @@ export default function TransportOperationsDashboard({
           flexWrap: 'wrap',
           gap: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              VIEW
-            </span>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F5FA)',
-              padding: '3px',
-              borderRadius: '10px',
-              border: '1px solid #E1E6F2',
-              flexWrap: 'wrap',
-              gap: '2px'
-            }}>
-              {[
-                { id: 'executive', label: 'Executive overview' },
-                { id: 'vehicles', label: 'Vehicle ledger (58 buses)' },
-                { id: 'all', label: 'All views' }
-              ].map(tab => {
-                const isActive = activeMainView === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveMainView(tab.id)}
-                    style={{
-                      minHeight: '34px',
-                      padding: '5px 13px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      backgroundColor: isActive ? 'var(--primary, #14245C)' : 'transparent',
-                      color: isActive ? '#ffffff' : '#475569',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>
               FLEET
             </span>
             {TRANSPORT_BRANCHES.filter(br => br.id !== 'all').map(br => {
               const isSel = activeBranch === br.id;
-              const countBadge = br.id === 'Common' ? '18 buses' : (br.id === 'RPS' ? '19' : (br.id === 'University' ? '16' : '5'));
+              const liveBranchCount = vehicleStats?.branch_summaries?.[br.id]?.bus_count;
+              const countBadge = liveBranchCount !== undefined
+                ? (br.id === 'Common' ? `${liveBranchCount} buses` : String(liveBranchCount))
+                : '—';
               return (
                 <button
                   key={br.id}
@@ -1844,44 +1803,16 @@ export default function TransportOperationsDashboard({
       {/* ========================================================================= */}
       {/* SUB-VIEW: VEHICLE-WISE EXPENSES LEDGER (58 BUSES)                         */}
       {/* ========================================================================= */}
-      {(activeMainView === 'vehicles' || activeMainView === 'all') && (
+      {(activeMainView === 'executive' || activeMainView === 'vehicles' || activeMainView === 'all') && (
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '18px',
-          border: '1.5px solid #e2e8f0',
-          padding: '20px 24px',
-          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
-          marginTop: activeMainView === 'all' ? '20px' : 0
+          borderRadius: '20px',
+          border: '1px solid #E1E6F2',
+          padding: '28px',
+          boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ padding: '8px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#0284c7' }}>
-                <Bus size={22} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Institutional Vehicle-Wise Expenses Ledger ({activeBranchObj.label} • {activePeriodObj?.period_label})
-                </h2>
-                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                  All 58 institutional buses with Make, Model, Fuel, KM, Mileage, FC, Repair & Maintenance from live DB
-                </div>
-              </div>
-            </div>
-            <span style={{
-              fontSize: '11.5px',
-              fontWeight: '800',
-              padding: '4px 12px',
-              borderRadius: '9999px',
-              backgroundColor: '#eff6ff',
-              color: '#0284c7',
-              border: '1px solid #bfdbfe'
-            }}>
-              Live Database Feed • Table transport_vehicle_entries
-            </span>
-          </div>
-
           <TransportVehicleExpensesTable
-            periodId={activePeriodObj?.id}
+            periodId={isAllMonths ? 'all' : activePeriodObj?.id}
             branch={activeBranch}
             embedded={true}
             readOnly={true}

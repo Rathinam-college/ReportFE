@@ -29,10 +29,10 @@ export default function HostelOperationsDashboard({
 }) {
   const [showHostelAttachmentsModal, setShowHostelAttachmentsModal] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
-  const [activeMainView, setActiveMainView] = useState('executive'); // 'executive' | 'census_ledger' | 'spreadsheet_matrix' | 'all'
+  const [activeMainView, setActiveMainView] = useState('all'); // 'executive' | 'census_ledger' | 'spreadsheet_matrix' | 'all'
   const [residentFilter, setResidentFilter] = useState('all'); // 'all' | 'boys' | 'girls' | 'college' | 'school' | 'sports' | 'staff'
   const [budgetMonthFilter, setBudgetMonthFilter] = useState('all'); // 'all' | 'recorded'
-  const [budgetViewMode, setBudgetViewMode] = useState('both'); // 'both' | 'cards' | 'matrix' | 'distribution'
+  const [budgetViewMode, setBudgetViewMode] = useState('cards'); // 'both' | 'cards' | 'matrix' | 'distribution'
   const [budgetTrackingData, setBudgetTrackingData] = useState([]);
   const [localHostelMatrix, setLocalHostelMatrix] = useState(null);
 
@@ -276,99 +276,6 @@ export default function HostelOperationsDashboard({
           </div>
         </div>
 
-        {/* ROW 2: VIEW segmented control + RESIDENTS chips */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
-          {/* VIEW segmented control */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              VIEW
-            </span>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F5FA)',
-              padding: '3px',
-              borderRadius: '10px',
-              border: '1px solid #E1E6F2',
-              flexWrap: 'wrap',
-              gap: '2px'
-            }}>
-              {[
-                { id: 'executive', label: 'Executive overview' },
-                { id: 'census_ledger', label: 'Census & analytics ledger' },
-                { id: 'spreadsheet_matrix', label: 'Master spreadsheet & matrix' },
-                { id: 'all', label: 'All views' }
-              ].map(tab => {
-                const isActive = activeMainView === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveMainView(tab.id)}
-                    style={{
-                      minHeight: '34px',
-                      padding: '5px 12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      backgroundColor: isActive ? 'var(--primary, #14245C)' : 'transparent',
-                      color: isActive ? '#ffffff' : '#475569',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* RESIDENTS chips */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>
-              RESIDENTS
-            </span>
-            {[
-              { id: 'all', label: 'All Residents' },
-              { id: 'boys', label: 'Boys' },
-              { id: 'girls', label: 'Girls' },
-              { id: 'college', label: 'College' },
-              { id: 'school', label: 'School' },
-              { id: 'sports', label: 'Sports' },
-              { id: 'staff', label: 'Staff' }
-            ].map(r => {
-              const isSel = residentFilter === r.id;
-              return (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setResidentFilter(r.id)}
-                  style={{
-                    minHeight: '34px',
-                    padding: '5px 11px',
-                    borderRadius: '8px',
-                    border: isSel ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
-                    backgroundColor: isSel ? 'var(--primary, #14245C)' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#475569',
-                    fontSize: '12px',
-                    fontWeight: isSel ? '700' : '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {r.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* ROW 3: MONTH chips (All months, Sep'25 to Sep'26) + BUDGET toggles */}
         <div style={{
           display: 'flex',
@@ -432,39 +339,6 @@ export default function HostelOperationsDashboard({
             <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               BUDGET
             </span>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F5FA)',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid #E1E6F2'
-            }}>
-              {[
-                { id: 'all', label: `All months (${effectivePeriods.length || 13})` },
-                { id: 'recorded', label: 'Active & recorded only' }
-              ].map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setBudgetMonthFilter(m.id)}
-                  style={{
-                    minHeight: '32px',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
-                    backgroundColor: budgetMonthFilter === m.id ? 'var(--primary, #14245C)' : 'transparent',
-                    color: budgetMonthFilter === m.id ? '#ffffff' : '#475569',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -561,31 +435,6 @@ export default function HostelOperationsDashboard({
               onRefresh={onRefreshAttachments}
             />
           </div>
-        </div>
-      )}
-
-      {/* CENSUS & ANALYTICS LEDGER */}
-      {(activeMainView === 'census_ledger' || activeMainView === 'all') && (
-        <div style={{ width: '100%', marginTop: activeMainView === 'all' ? '20px' : 0 }}>
-          <HostelDashboardCensusView
-            computedMatrix={effectiveMatrix}
-            activePeriodObj={activePeriodObj}
-            periods={effectivePeriods}
-            activePeriod={activePeriod}
-            onPeriodChange={setActivePeriod}
-          />
-        </div>
-      )}
-
-      {/* MASTER SPREADSHEET & MATRIX */}
-      {(activeMainView === 'spreadsheet_matrix' || activeMainView === 'all') && (
-        <div style={{ width: '100%', marginTop: activeMainView === 'all' ? '20px' : 0 }}>
-          <HostelDashboardDataTable
-            periods={effectivePeriods}
-            activePeriod={activePeriod}
-            computedMatrix={effectiveMatrix}
-            onPeriodChange={setActivePeriod}
-          />
         </div>
       )}
 

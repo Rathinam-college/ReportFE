@@ -38,6 +38,12 @@ export default function TransportVehicleExpensesTable({
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState(embedded ? 'cards' : 'table'); // 'cards' | 'table'
+  const [selectedVehicleKey, setSelectedVehicleKey] = useState(null);
+
+  useEffect(() => {
+    setSelectedVehicleKey(null);
+  }, [selectedBranch, selectedPeriodId]);
 
   // Synchronize with parent props whenever they update
   useEffect(() => {
@@ -392,58 +398,59 @@ export default function TransportVehicleExpensesTable({
   return (
     <div style={{
       backgroundColor: '#ffffff',
-      borderRadius: '12px',
-      border: '1px solid #cbd5e1',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+      borderRadius: '16px',
+      border: '1px solid #E1E6F2',
+      boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)',
       overflow: 'hidden',
-      marginBottom: '24px',
-      fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+      marginBottom: embedded ? 0 : '24px',
+      fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
     }}>
-      {/* 1. TOP HEADER BANNER (Cyan Electric Blue matching uploaded image) */}
+      {/* 1. TOP HEADER BANNER (Rathinam Navy & Gold) */}
       <div style={{
-        backgroundColor: '#00a2e8', // Exact cyan blue from image
-        backgroundImage: 'linear-gradient(135deg, #0284c7 0%, #00a2e8 50%, #38bdf8 100%)',
-        padding: '12px 18px',
+        backgroundColor: '#14245C',
+        padding: '14px 20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '12px',
         color: '#ffffff',
-        borderBottom: '2px solid #0369a1'
+        borderBottom: '3px solid #F5A524'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            backgroundColor: 'rgba(255,255,255,0.2)',
-            padding: '7px 9px',
-            borderRadius: '8px',
+            backgroundColor: '#F5A524',
+            color: '#14245C',
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '18px'
+            fontSize: '17px',
+            fontWeight: '800'
           }}>
-            🚌
+            <Bus size={18} />
           </div>
           <div>
             <h2 style={{
               margin: 0,
               fontSize: '15px',
-              fontWeight: '900',
-              letterSpacing: '0.5px',
+              fontWeight: '800',
+              letterSpacing: '0.02em',
               textTransform: 'uppercase',
-              color: '#ffffff',
-              textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+              color: '#ffffff'
             }}>
-              COLLEGE CAB VEHICLE WISE EXPENSES - {pLabel.toUpperCase()}
+              {branchLabel.toUpperCase()} • VEHICLE WISE EXPENSES - {pLabel.toUpperCase()}
             </h2>
-            <div style={{ fontSize: '11px', opacity: 0.92, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.78)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span>Fleet Ledger • {branchLabel}</span>
               <span>•</span>
-              <span style={{ fontWeight: '700' }}>{totals.count} Buses Active</span>
+              <span style={{ fontWeight: '700', color: '#ffffff' }}>{totals.count} Buses Active</span>
               <span>•</span>
               <span>Total Distance: {totals.km.toLocaleString()} KM</span>
               <span>•</span>
-              <span style={{ fontWeight: '700', backgroundColor: '#fef08a', color: '#854d0e', padding: '1px 6px', borderRadius: '4px' }}>
+              <span style={{ fontWeight: '800', backgroundColor: '#F5A524', color: '#14245C', padding: '1px 8px', borderRadius: '9999px' }}>
                 Fleet Avg: {totals.avgMileage} km/L
               </span>
             </div>
@@ -452,6 +459,42 @@ export default function TransportVehicleExpensesTable({
 
         {/* Action Controls in Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Cards | Table View Toggle */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255,255,255,0.12)',
+            padding: '3px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255,255,255,0.2)'
+          }}>
+            {[
+              { id: 'cards', label: 'Cards' },
+              { id: 'table', label: 'Table' }
+            ].map(vm => {
+              const isVm = viewMode === vm.id;
+              return (
+                <button
+                  key={vm.id}
+                  type="button"
+                  onClick={() => setViewMode(vm.id)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    backgroundColor: isVm ? '#F5A524' : 'transparent',
+                    color: isVm ? '#14245C' : '#ffffff',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {vm.label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Quick Search */}
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <input
@@ -744,7 +787,240 @@ export default function TransportVehicleExpensesTable({
         </div>
       )}
 
+      {/* 2B. VEHICLE NUMBER CARDS VIEW (Click a vehicle card to inspect all its expenses) */}
+      {viewMode === 'cards' && (
+        <div style={{ padding: '20px', backgroundColor: '#F3F5FA' }}>
+          {loading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+              <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 8px' }} />
+              <div style={{ fontWeight: '700' }}>Loading vehicle fleet records...</div>
+            </div>
+          ) : filteredVehicles.length === 0 ? (
+            <div style={{ padding: '36px', textAlign: 'center', color: '#64748b', backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid #E1E6F2' }}>
+              <Bus size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+              <div style={{ fontSize: '13.5px', fontWeight: '700' }}>No vehicles recorded for {branchLabel} in {pLabel}.</div>
+            </div>
+          ) : (
+            <>
+              {(() => {
+                const selectedVeh = filteredVehicles.find(v => (v.id || v.vehicle_no) === selectedVehicleKey) || null;
+                if (!selectedVeh) return null;
+                const svFuel = num(selectedVeh.fuel_expenses);
+                const svFc = num(selectedVeh.fc_cost);
+                const svStat = num(selectedVeh.statutory_cost);
+                const svRep = num(selectedVeh.repair_maintenance);
+                const svPark = num(selectedVeh.parking_fastag);
+                const svCctv = num(selectedVeh.cctv_replacement);
+                const svEmp = num(selectedVeh.employee_cost);
+                const svOth = num(selectedVeh.other_cost);
+                const svTot = num(selectedVeh.total_expenses);
+                const svDiesel = num(selectedVeh.diesel_litres);
+                const svKm = num(selectedVeh.km_run);
+                const svMil = svDiesel > 0 ? (svKm / svDiesel) : num(selectedVeh.mileage);
+
+                const expenseItems = [
+                  { label: 'Fuel Expenses', val: svFuel, color: '#0284c7' },
+                  { label: 'FC 2026-2027', val: svFc, color: '#d97706' },
+                  { label: 'Vehicle Statutory', val: svStat, color: '#ea580c' },
+                  { label: 'Repair & Maintenance', val: svRep, color: '#475569' },
+                  { label: 'Parking & Fastag', val: svPark, color: '#059669' },
+                  { label: 'CCTV Replacement', val: svCctv, color: '#7c3aed' },
+                  { label: 'Employees Cost', val: svEmp, color: '#4338ca' },
+                  { label: 'Others 26-27', val: svOth, color: '#64748b' }
+                ];
+
+                return (
+                  <div style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '16px',
+                    border: '2px solid #14245C',
+                    boxShadow: '0 8px 24px rgba(20, 36, 92, 0.12)',
+                    padding: '20px',
+                    marginBottom: '20px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #E1E6F2' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          padding: '8px 14px',
+                          borderRadius: '10px',
+                          backgroundColor: '#14245C',
+                          color: '#F5A524',
+                          fontFamily: 'monospace',
+                          fontSize: '15px',
+                          fontWeight: '800'
+                        }}>
+                          {selectedVeh.vehicle_no}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '15px', fontWeight: '800', color: '#14245C' }}>
+                            {selectedVeh.make || 'Vehicle'} {selectedVeh.model ? `• ${selectedVeh.model}` : ''}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>
+                            {selectedVeh.branch || branchLabel} • {pLabel} Expense Breakdown
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <div style={{
+                          padding: '6px 14px',
+                          borderRadius: '10px',
+                          backgroundColor: '#14245C',
+                          color: '#ffffff',
+                          fontSize: '13px',
+                          fontWeight: '800'
+                        }} className="currency-font">
+                          Total: <span style={{ color: '#F5A524' }}>{formatINR(svTot)}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedVehicleKey(null)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid #CBD5E1',
+                            backgroundColor: '#F8FAFC',
+                            color: '#334155',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Close ✕
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))',
+                      gap: '12px',
+                      marginBottom: '14px'
+                    }}>
+                      {expenseItems.map((it) => (
+                        <div key={it.label} style={{
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: '12px',
+                          border: '1px solid #E1E6F2',
+                          borderTop: `3px solid ${it.color}`,
+                          padding: '12px 14px'
+                        }}>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            {it.label}
+                          </div>
+                          <div style={{ fontSize: '17px', fontWeight: '800', color: '#14245C', marginTop: '4px' }} className="currency-font">
+                            {formatINR(it.val)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '14px',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      backgroundColor: '#F3F5FA',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      color: '#14245C'
+                    }}>
+                      <span>Diesel: {svDiesel.toLocaleString('en-IN', { maximumFractionDigits: 1 })} L</span>
+                      <span>•</span>
+                      <span>KM Run: {svKm.toLocaleString('en-IN', { maximumFractionDigits: 1 })} KM</span>
+                      <span>•</span>
+                      <span>Mileage: {svMil.toFixed(2)} km/L</span>
+                      {selectedVeh.remarks && (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: '#475569' }}>Remarks: {selectedVeh.remarks}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Vehicle Number Cards Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(225px, 1fr))',
+                gap: '14px'
+              }}>
+                {filteredVehicles.map((v, idx) => {
+                  const vKey = v.id || v.vehicle_no || idx;
+                  const isSel = selectedVehicleKey === vKey;
+                  const vTot = num(v.total_expenses);
+                  const vD = num(v.diesel_litres);
+                  const vKm = num(v.km_run);
+                  const vMil = vD > 0 ? (vKm / vD) : num(v.mileage);
+
+                  return (
+                    <button
+                      key={vKey}
+                      type="button"
+                      onClick={() => setSelectedVehicleKey(isSel ? null : vKey)}
+                      style={{
+                        textAlign: 'left',
+                        backgroundColor: isSel ? '#EFF6FF' : '#ffffff',
+                        borderRadius: '14px',
+                        border: isSel ? '2px solid #14245C' : '1px solid #E1E6F2',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        boxShadow: isSel ? '0 6px 18px rgba(20, 36, 92, 0.14)' : '0 2px 6px rgba(20, 36, 92, 0.04)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
+                        <span style={{
+                          fontFamily: 'monospace',
+                          fontSize: '13.5px',
+                          fontWeight: '800',
+                          color: isSel ? '#F5A524' : '#14245C',
+                          backgroundColor: isSel ? '#14245C' : '#F3F5FA',
+                          padding: '4px 9px',
+                          borderRadius: '8px'
+                        }}>
+                          {v.vehicle_no}
+                        </span>
+                        <span style={{
+                          fontSize: '10.5px',
+                          fontWeight: '700',
+                          color: '#64748b'
+                        }}>
+                          #{idx + 1}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+                        {v.make || '—'}{v.model ? ` • ${v.model}` : ''}
+                      </div>
+
+                      <div style={{ fontSize: '20px', fontWeight: '800', color: '#14245C' }} className="currency-font">
+                        {formatINR(vTot)}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingTop: '8px', borderTop: '1px solid #F1F5F9', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>
+                        <span>{vD.toLocaleString('en-IN', { maximumFractionDigits: 1 })} L • {vKm.toLocaleString('en-IN', { maximumFractionDigits: 0 })} KM</span>
+                        <span style={{ color: isSel ? '#14245C' : '#2F4BB8' }}>
+                          {isSel ? 'Viewing ▲' : 'View expenses →'}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* 3. MAIN SPREADSHEET TABLE */}
+      {viewMode === 'table' && (
       <div style={{ overflowX: 'auto', width: '100%', maxHeight: '680px' }}>
         <table style={{
           width: '100%',
@@ -753,58 +1029,58 @@ export default function TransportVehicleExpensesTable({
           fontFamily: 'Segoe UI, -apple-system, sans-serif'
         }}>
           <thead>
-            {/* Header row with exact colors from the image */}
-            <tr style={{ height: '36px', textAlign: 'center', fontWeight: '700' }}>
-              <th style={{ backgroundColor: '#fed7aa', color: '#9a3412', border: '1px solid #fdba74', padding: '6px 8px', minWidth: '130px', position: 'sticky', left: 0, zIndex: 10 }}>
+            {/* Navy & Gold Header Row */}
+            <tr style={{ height: '40px', textAlign: 'center', fontWeight: '800', backgroundColor: '#14245C', color: '#ffffff' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '130px', position: 'sticky', left: 0, zIndex: 10 }}>
                 Vehicle
               </th>
               {selectedBranch === 'all' && (
-                <th style={{ backgroundColor: '#e2e8f0', color: '#334155', border: '1px solid #cbd5e1', padding: '6px 8px', minWidth: '90px' }}>
+                <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px' }}>
                   Branch
                 </th>
               )}
-              <th style={{ backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 8px', minWidth: '130px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '130px' }}>
                 Make
               </th>
-              <th style={{ backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 8px', minWidth: '90px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px' }}>
                 Model
               </th>
-              <th style={{ backgroundColor: '#bae6fd', color: '#0284c7', border: '1px solid #7dd3fc', padding: '6px 8px', minWidth: '95px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '95px' }}>
                 Fuel expenses
               </th>
-              <th style={{ backgroundColor: '#fed7aa', color: '#c2410c', border: '1px solid #fdba74', padding: '6px 8px', minWidth: '95px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '95px' }}>
                 FC 2026-2027
               </th>
-              <th style={{ backgroundColor: '#fed7aa', color: '#c2410c', border: '1px solid #fdba74', padding: '6px 8px', minWidth: '95px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '95px' }}>
                 Vehicle Statutory
               </th>
-              <th style={{ backgroundColor: '#e2e8f0', color: '#475569', border: '1px solid #cbd5e1', padding: '6px 8px', minWidth: '110px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '110px' }}>
                 Vehicle Repair & Maintenance
               </th>
-              <th style={{ backgroundColor: '#bbf7d0', color: '#166534', border: '1px solid #86efac', padding: '6px 8px', minWidth: '110px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '110px' }}>
                 Vehicle Parking & Fastag Recharge
               </th>
-              <th style={{ backgroundColor: '#c7d2fe', color: '#3730a3', border: '1px solid #a5b4fc', padding: '6px 8px', minWidth: '110px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '110px' }}>
                 Transport Employees Cost
               </th>
-              <th style={{ backgroundColor: '#cbd5e1', color: '#334155', border: '1px solid #94a3b8', padding: '6px 8px', minWidth: '90px' }}>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px' }}>
                 Others 26-27
               </th>
-              {/* Highlighted Yellow Columns (Calculated Outputs) */}
-              <th style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047', padding: '6px 8px', minWidth: '105px', fontWeight: '800' }}>
+              {/* Highlighted Summary Columns (Navy + Gold) */}
+              <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '105px', fontWeight: '800' }}>
                 Total Expens
               </th>
-              <th style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047', padding: '6px 8px', minWidth: '90px', fontWeight: '800' }}>
+              <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
                 Diesel cons
               </th>
-              <th style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047', padding: '6px 8px', minWidth: '90px', fontWeight: '800' }}>
+              <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
                 KM run {pLabel.split("'")[0]}
               </th>
-              <th style={{ backgroundColor: '#fef08a', color: '#854d0e', border: '1px solid #fde047', padding: '6px 8px', minWidth: '90px', fontWeight: '800' }}>
+              <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
                 {pLabel} Mileage
               </th>
               {!effectiveReadOnly && selectedBranch !== 'all' && (
-                <th style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', padding: '6px 6px', width: '50px' }}>
+                <th style={{ backgroundColor: '#991b1b', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 6px', width: '50px' }}>
                   Action
                 </th>
               )}
@@ -1277,6 +1553,7 @@ export default function TransportVehicleExpensesTable({
           </tfoot>
         </table>
       </div>
+      )}
 
       {/* 5. FOOTER SUMMARY STATS CARDS */}
       <div style={{
