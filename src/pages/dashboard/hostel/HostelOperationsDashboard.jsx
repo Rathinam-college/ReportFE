@@ -30,9 +30,6 @@ export default function HostelOperationsDashboard({
   const [showHostelAttachmentsModal, setShowHostelAttachmentsModal] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const [activeMainView, setActiveMainView] = useState('executive'); // 'executive' | 'census_ledger' | 'spreadsheet_matrix' | 'all'
-  const [residentFilter, setResidentFilter] = useState('all'); // 'all' | 'boys' | 'girls' | 'college' | 'school' | 'sports' | 'staff'
-  const [budgetMonthFilter, setBudgetMonthFilter] = useState('all'); // 'all' | 'recorded'
-  const [budgetViewMode, setBudgetViewMode] = useState('both'); // 'both' | 'cards' | 'matrix' | 'distribution'
   const [budgetTrackingData, setBudgetTrackingData] = useState([]);
   const [localHostelMatrix, setLocalHostelMatrix] = useState(null);
 
@@ -151,26 +148,32 @@ export default function HostelOperationsDashboard({
   }, [budgetTrackingData, hostelCensusMap, computedMatrix]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', backgroundColor: 'var(--bg-canvas, #F3F5FA)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
+      
       {/* ========================================================================= */}
-      {/* STICKY TOP FILTER BAR (WHITE, BOTTOM BORDER, SOFT SHADOW, 3 ROWS)         */}
+      {/* UNIFIED STICKY DASHBOARD HEADER & FILTER BAR (PINS TO TOP ON SCROLL)     */}
+      {/* Keeps "Hostel Operations Dashboard" + Badges + Month Filter Pills at Top */}
       {/* ========================================================================= */}
-      <div
-        className="sticky-hostel-view-command-bar"
+      <div 
+        className="sticky-dashboard-master-header"
         style={{
           position: 'sticky',
           top: 0,
-          zIndex: 85,
-          backgroundColor: '#ffffff',
-          borderBottom: '1px solid #E1E6F2',
-          padding: '16px 28px',
-          boxShadow: '0 4px 16px rgba(20, 36, 92, 0.05)',
+          zIndex: 80,
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          border: '1.5px solid #e2e8f0',
+          padding: '12px 20px',
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px'
+          gap: '10px',
+          marginBottom: '4px'
         }}
       >
-        {/* ROW 1: Title + green "Hostel" badge, Hostel Reports, Download Report (outline) & Open Data Entry (gold) */}
+        {/* Tier 1: Hostel Title, Badge, Subtitle & Action Buttons (Always visible at top) */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -178,74 +181,105 @@ export default function HostelOperationsDashboard({
           flexWrap: 'wrap',
           gap: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <h1 style={{
-              fontSize: '21px',
-              fontWeight: '800',
-              color: 'var(--primary, #14245C)',
-              margin: 0,
-              letterSpacing: '-0.02em'
+          {/* Module Title, Icon & Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              backgroundColor: '#ecfdf5',
+              color: '#059669',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              boxShadow: '0 2px 6px rgba(5, 150, 105, 0.15)',
+              flexShrink: 0
             }}>
-              Hostel Operations Dashboard
-            </h1>
-            <span style={{
-              fontSize: '11.5px',
-              fontWeight: '800',
-              padding: '3px 11px',
-              borderRadius: '9999px',
-              backgroundColor: '#E4F6EC',
-              color: '#0F6B3A',
-              border: '1px solid #b7e8cc'
-            }}>
-              Hostel
-            </span>
+              🏢
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h1 style={{
+                  fontSize: '20px',
+                  fontWeight: '800',
+                  color: '#0f172a',
+                  margin: 0,
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1.2
+                }}>
+                  Hostel Operations Dashboard
+                </h1>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '2px 10px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#ecfdf5',
+                  color: '#059669',
+                  border: '1px solid #a7f3d0'
+                }}>
+                  Hostel
+                </span>
+              </div>
+            </div>
           </div>
 
+          {/* Action Buttons (Reports, Download Report, Open Data Entry) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Detailed Reports Modal Button */}
             <button
               type="button"
               onClick={() => setReportsModalOpen(true)}
               style={{
-                minHeight: '38px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 15px',
-                borderRadius: '10px',
+                padding: '8px 16px',
+                borderRadius: '9999px',
                 backgroundColor: '#ffffff',
-                border: '1px solid #CBD5E1',
-                color: 'var(--primary, #14245C)',
-                fontSize: '12.5px',
+                border: '1.5px solid #059669',
+                color: '#059669',
+                fontSize: '12px',
                 fontWeight: '700',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(5, 150, 105, 0.08)',
+                transition: 'all 0.15s ease'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ecfdf5'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
             >
-              <FileText size={14} />
+              <FileText size={13} color="#059669" />
               <span>Hostel Reports</span>
             </button>
 
+            {/* Download Official Audit Report Button */}
             <button
               type="button"
               onClick={handleExportReport}
               style={{
-                minHeight: '38px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 15px',
-                borderRadius: '10px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #CBD5E1',
-                color: 'var(--primary, #14245C)',
-                fontSize: '12.5px',
+                padding: '8px 18px',
+                borderRadius: '9999px',
+                backgroundColor: '#059669',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '12px',
                 fontWeight: '700',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 3px 12px rgba(5, 150, 105, 0.25)',
+                transition: 'all 0.15s ease'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#047857'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#059669'}
             >
-              <Download size={14} />
+              <Download size={13} />
               <span>Download Report</span>
             </button>
 
+            {/* Open Data Entry Button */}
             {onOpenDataEntry && (
               <button
                 type="button"
@@ -254,29 +288,56 @@ export default function HostelOperationsDashboard({
                   onOpenDataEntry(targetPeriodId);
                 }}
                 style={{
-                  minHeight: '38px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 16px',
-                  borderRadius: '10px',
-                  backgroundColor: 'var(--accent, #F5A524)',
-                  color: 'var(--primary, #14245C)',
+                  padding: '8px 18px',
+                  borderRadius: '9999px',
+                  background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+                  color: '#ffffff',
                   border: 'none',
-                  fontSize: '12.5px',
+                  fontSize: '12px',
                   fontWeight: '800',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(245, 165, 36, 0.28)'
+                  boxShadow: '0 3px 12px rgba(255, 96, 136, 0.3)',
+                  transition: 'all 0.18s ease'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 <span>Open Data Entry</span>
-                <ArrowRight size={14} />
+                <ArrowRight size={13} />
               </button>
             )}
           </div>
         </div>
 
-        {/* ROW 2: VIEW segmented control + RESIDENTS chips */}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. UNIFIED STICKY VIEW SWITCHER & FILTER MONTH COMMAND BAR (PINS TO TOP)  */}
+      {/* Contains: Executive Overview | Census Ledger | Master Spreadsheet | All   */}
+      {/* + FILTER MONTH: All months | Jun'26 | Jul'26 | Aug'26 | Sept'26 | Oct'26  */}
+      {/* ========================================================================= */}
+      <div 
+        className="sticky-hostel-view-command-bar"
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 85,
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          border: '1.5px solid #059669',
+          padding: '12px 18px',
+          boxShadow: '0 4px 20px rgba(5, 150, 105, 0.12)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
+        }}
+      >
+        {/* Tier 1: View Switcher Tabs on Left, Active Viewing Indicator on Right */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -284,227 +345,200 @@ export default function HostelOperationsDashboard({
           flexWrap: 'wrap',
           gap: '12px'
         }}>
-          {/* VIEW segmented control */}
+          {/* Left: 4 View Switcher Tabs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              VIEW
-            </span>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F5FA)',
-              padding: '3px',
-              borderRadius: '10px',
-              border: '1px solid #E1E6F2',
-              flexWrap: 'wrap',
-              gap: '2px'
-            }}>
-              {[
-                { id: 'executive', label: 'Executive overview' },
-                { id: 'census_ledger', label: 'Census & analytics ledger' },
-                { id: 'spreadsheet_matrix', label: 'Master spreadsheet & matrix' },
-                { id: 'all', label: 'All views' }
-              ].map(tab => {
-                const isActive = activeMainView === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveMainView(tab.id)}
-                    style={{
-                      minHeight: '34px',
-                      padding: '5px 12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      backgroundColor: isActive ? 'var(--primary, #14245C)' : 'transparent',
-                      color: isActive ? '#ffffff' : '#475569',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* RESIDENTS chips */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>
-              RESIDENTS
-            </span>
             {[
-              { id: 'all', label: 'All Residents' },
-              { id: 'boys', label: 'Boys' },
-              { id: 'girls', label: 'Girls' },
-              { id: 'college', label: 'College' },
-              { id: 'school', label: 'School' },
-              { id: 'sports', label: 'Sports' },
-              { id: 'staff', label: 'Staff' }
-            ].map(r => {
-              const isSel = residentFilter === r.id;
+              { id: 'executive', label: 'Executive Overview', icon: LayoutDashboard, desc: 'Bento Cards & KPIs' },
+              { id: 'census_ledger', label: 'Census & Analytics Ledger', icon: Table, desc: '38-Parameter Multi-Month Grid' },
+              { id: 'spreadsheet_matrix', label: 'Master Spreadsheet & Matrix', icon: FileSpreadsheet, desc: 'Excel Matrix Data Sheet' },
+              { id: 'all', label: 'All Views', icon: Layers, desc: 'Complete Stack' }
+            ].map(tab => {
+              const isActive = activeMainView === tab.id;
+              const TabIcon = tab.icon;
               return (
                 <button
-                  key={r.id}
+                  key={tab.id}
                   type="button"
-                  onClick={() => setResidentFilter(r.id)}
+                  onClick={() => setActiveMainView(tab.id)}
                   style={{
-                    minHeight: '34px',
-                    padding: '5px 11px',
-                    borderRadius: '8px',
-                    border: isSel ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
-                    backgroundColor: isSel ? 'var(--primary, #14245C)' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#475569',
-                    fontSize: '12px',
-                    fontWeight: isSel ? '700' : '600',
-                    cursor: 'pointer'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '12px',
+                    border: isActive ? '1.5px solid #059669' : '1px solid #e2e8f0',
+                    backgroundColor: isActive ? '#ecfdf5' : '#f8fafc',
+                    color: isActive ? '#065f46' : '#64748b',
+                    fontSize: '13px',
+                    fontWeight: isActive ? '800' : '650',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isActive ? '0 2px 8px rgba(5, 150, 105, 0.12)' : 'none'
                   }}
                 >
-                  {r.label}
+                  <TabIcon size={16} color={isActive ? '#059669' : '#64748b'} />
+                  <span>{tab.label}</span>
                 </button>
               );
             })}
           </div>
+
+          {/* Right: Active Viewing Indicator */}
+          <div style={{
+            fontSize: '12.5px',
+            color: '#64748b',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span>Viewing:</span>
+            <strong style={{
+              color: '#065f46',
+              fontWeight: '800',
+              padding: '3px 10px',
+              backgroundColor: '#ecfdf5',
+              borderRadius: '8px',
+              border: '1px solid #a7f3d0'
+            }}>
+              {isAllMonths
+                ? `All Months (${effectivePeriods.length} Cycles • ${formatINR(allMonthsTotalSpend)})`
+                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(Number(activeCensus?.expenses_occurred || 0) || Number(effectiveMatrix?.grand_total?.amounts?.[activePeriod] ?? effectiveMatrix?.grand_total?.amounts?.[String(activePeriod)] ?? 0))})`
+              }
+            </strong>
+          </div>
         </div>
 
-        {/* ROW 3: MONTH chips (All months, Sep'25 to Sep'26) + BUDGET toggles */}
+        {/* Tier 2: FILTER MONTH Pills (Directly integrated into the View Bar) */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '12px',
-          paddingTop: '6px',
-          borderTop: '1px solid #F1F5F9'
+          gap: '8px',
+          paddingTop: '8px',
+          borderTop: '1px dashed #e2e8f0'
         }}>
-          {/* MONTH chips */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', flex: 1 }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>
-              MONTH
-            </span>
+          {/* Left: Filter label and month pills */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            flexWrap: 'wrap',
+            maxWidth: '100%'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11.5px',
+              fontWeight: '800',
+              color: '#475569',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginRight: '2px',
+              flexShrink: 0
+            }}>
+              <Calendar size={14} color="#059669" />
+              <span>Filter Month:</span>
+            </div>
+
+            {/* All Months Pill */}
             <button
               type="button"
               onClick={() => setActivePeriod && setActivePeriod('all')}
               style={{
-                minHeight: '34px',
-                padding: '5px 12px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '700',
-                border: isAllMonths ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
-                backgroundColor: isAllMonths ? 'var(--primary, #14245C)' : '#ffffff',
+                padding: '4px 12px',
+                borderRadius: '9999px',
+                fontSize: '11.5px',
+                fontWeight: isAllMonths ? '800' : '650',
+                border: isAllMonths ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
+                backgroundColor: isAllMonths ? '#059669' : '#ffffff',
                 color: isAllMonths ? '#ffffff' : '#475569',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: isAllMonths ? '0 2px 8px rgba(5, 150, 105, 0.3)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease',
+                flexShrink: 0
               }}
             >
-              All months
+              <span>All months</span>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '800',
+                padding: '1px 5px',
+                borderRadius: '10px',
+                backgroundColor: isAllMonths ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                color: isAllMonths ? '#ffffff' : '#64748b'
+              }}>
+                {effectivePeriods.length}
+              </span>
+              {isAllMonths && <Check size={11} strokeWidth={3} />}
             </button>
-            {effectivePeriods.map(p => {
-              const isSel = !isAllMonths && String(p.id) === String(activePeriod);
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setActivePeriod && setActivePeriod(String(p.id))}
-                  style={{
-                    minHeight: '34px',
-                    padding: '5px 11px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: isSel ? '700' : '600',
-                    border: isSel ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
-                    backgroundColor: isSel ? 'var(--primary, #14245C)' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#475569',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {p.period_label || p.period_code}
-                </button>
-              );
-            })}
-          </div>
 
-          {/* BUDGET toggles */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              BUDGET
-            </span>
+            {/* Individual Month Pills */}
             <div style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F5FA)',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid #E1E6F2'
+              gap: '6px',
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              maxWidth: '100%',
+              paddingBottom: '2px'
             }}>
-              {[
-                { id: 'all', label: `All months (${effectivePeriods.length || 13})` },
-                { id: 'recorded', label: 'Active & recorded only' }
-              ].map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setBudgetMonthFilter(m.id)}
-                  style={{
-                    minHeight: '32px',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
-                    backgroundColor: budgetMonthFilter === m.id ? 'var(--primary, #14245C)' : 'transparent',
-                    color: budgetMonthFilter === m.id ? '#ffffff' : '#475569',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F5FA)',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid #E1E6F2'
-            }}>
-              {[
-                { id: 'both', label: 'Both' },
-                { id: 'cards', label: 'Cards view' },
-                { id: 'matrix', label: 'Hostel ledger' },
-                { id: 'distribution', label: 'Cost drivers' }
-              ].map(v => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setBudgetViewMode(v.id)}
-                  style={{
-                    minHeight: '32px',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
-                    backgroundColor: budgetViewMode === v.id ? 'var(--primary, #14245C)' : 'transparent',
-                    color: budgetViewMode === v.id ? '#ffffff' : '#475569',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {v.label}
-                </button>
-              ))}
+              {effectivePeriods.map(p => {
+                const isSel = !isAllMonths && String(p.id) === String(activePeriod);
+                const pCensus = hostelCensusMap[String(p.id)];
+                const pExp = Number(pCensus?.expenses_occurred || 0);
+                const pMatrixAmt = Number(effectiveMatrix?.grand_total?.amounts?.[p.id] ?? effectiveMatrix?.grand_total?.amounts?.[String(p.id)] ?? 0);
+                const pAmt = pExp > 0 ? pExp : pMatrixAmt;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setActivePeriod && setActivePeriod(String(p.id))}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '9999px',
+                      fontSize: '11.5px',
+                      fontWeight: isSel ? '800' : '650',
+                      border: isSel ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
+                      backgroundColor: isSel ? '#059669' : '#ffffff',
+                      color: isSel ? '#ffffff' : '#475569',
+                      cursor: 'pointer',
+                      boxShadow: isSel ? '0 2px 8px rgba(5, 150, 105, 0.3)' : 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <span>{p.period_label || p.period_code}</span>
+                    {pAmt > 0 && (
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        padding: '1px 5px',
+                        borderRadius: '10px',
+                        backgroundColor: isSel ? 'rgba(255,255,255,0.25)' : '#f8fafc',
+                        color: isSel ? '#ffffff' : '#64748b'
+                      }}>
+                        {formatIndianCompact(pAmt)}
+                      </span>
+                    )}
+                    {isSel && <Check size={11} strokeWidth={3} />}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA ON var(--bg-canvas, #F3F5FA) CANVAS (28px padding, 28px gap) */}
-      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '28px', width: '100%', boxSizing: 'border-box' }}>
       {/* EXECUTIVE OVERVIEW (BENTO KPI CARDS + 3 CORE SECTIONS) */}
       {(activeMainView === 'executive' || activeMainView === 'all') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
@@ -529,9 +563,6 @@ export default function HostelOperationsDashboard({
             periods={effectivePeriods}
             activePeriodId={isAllMonths ? 'all' : effectivePeriodId}
             onPeriodSelect={(pid) => setActivePeriod && setActivePeriod(String(pid))}
-            movementFilter={residentFilter}
-            onMovementFilterChange={setResidentFilter}
-            hideMovementFilter={true}
           />
 
           {/* 2. EXPENSES & BUDGET TRACKING */}
@@ -543,11 +574,6 @@ export default function HostelOperationsDashboard({
             activePeriod={activePeriod}
             onExportReport={handleExportReport}
             remarksDraft={remarksDraft}
-            monthFilter={budgetMonthFilter}
-            onMonthFilterChange={setBudgetMonthFilter}
-            trackingViewMode={budgetViewMode}
-            onTrackingViewModeChange={setBudgetViewMode}
-            hideTopToggles={true}
           />
 
           {/* 2B. MONTHLY SUPPORTING ATTACHMENTS, PRESENTATIONS & BILLS FOR ACTIVE MONTH */}
@@ -588,8 +614,6 @@ export default function HostelOperationsDashboard({
           />
         </div>
       )}
-
-      </div>
 
       {/* DETAILED REPORTS MODAL */}
       <HostelReportsModal

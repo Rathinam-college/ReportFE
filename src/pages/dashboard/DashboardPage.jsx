@@ -2,13 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import MonthlyAttachmentsModal from '../../components/attachments/MonthlyAttachmentsModal';
 import MonthlyAttachmentsDashboardSection from '../../components/attachments/MonthlyAttachmentsDashboardSection';
 import { formatINR, formatLakhs, formatIndianCompact, DASH_COLORS } from '../../utils/formatters';
-import { getAssetUrl } from '../../utils/api';
 import { 
   Calendar, Layers, PieChart as PieIcon, Calculator, FileSpreadsheet, 
   TrendingUp, Hash, Users, ArrowRight, Table, BarChart3, CheckCircle2,
-  Maximize2, Minimize2, Download, Check, Search, LayoutGrid 
+  Maximize2, Minimize2, Download, Check 
 } from 'lucide-react';
-import Footer from '../../components/common/Footer';
 
 // 12 Chart Components & Master Selector
 import ChartSelectorBar from './charts/ChartSelectorBar';
@@ -135,12 +133,6 @@ export default function DashboardPage({
   const [showDataTable, setShowDataTable] = useState(true);
   const [isTableFullScreen, setIsTableFullScreen] = useState(false);
 
-  // Unified Top Filter Bar UI states
-  const [topSearchTerm, setTopSearchTerm] = useState('');
-  const [topCategoryFilter, setTopCategoryFilter] = useState('all');
-  const [topUnitMode, setTopUnitMode] = useState('full'); // 'full' | 'lakhs'
-  const [topViewMode, setTopViewMode] = useState('cards'); // 'cards' | 'spreadsheet'
-
   // Attachments State
   const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
   const [attachmentsSummary, setAttachmentsSummary] = useState({});
@@ -226,8 +218,8 @@ export default function DashboardPage({
       title: 'Food Operations Dashboard',
       subtitle: `Food overview • ${periods[0]?.period_label || "Jun'26"} – ${periods[periods.length - 1]?.period_label || "Sept'26"} • FY 2026-2027 • Currency INR (₹)`,
       badge: 'Food',
-      badgeColor: '#F27B21',
-      badgeBg: '#fff7ed'
+      badgeColor: '#4f46e5',
+      badgeBg: '#eef2ff'
     },
     hostel: {
       title: 'Hostel Operations Dashboard',
@@ -745,24 +737,29 @@ export default function DashboardPage({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
       
       {/* ========================================================================= */}
-      {/* STICKY TOP FILTER BAR (WHITE, BOTTOM BORDER, ALL FILTERS LIVE HERE ONLY)  */}
+      {/* UNIFIED STICKY DASHBOARD HEADER & FILTER BAR (PINS TO TOP ON SCROLL)     */}
+      {/* Keeps "Food Operations Dashboard" + Badges + Month Filter Pills at Top   */}
       {/* ========================================================================= */}
-      <div
+      <div 
         className="sticky-dashboard-master-header"
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 80,
-          backgroundColor: '#ffffff',
-          borderBottom: '1px solid #E1E6F2',
-          padding: '16px 28px',
-          boxShadow: '0 4px 16px rgba(20, 36, 92, 0.05)',
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          border: '1.5px solid #e2e8f0',
+          padding: '12px 20px',
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '14px'
+          gap: '10px',
+          marginBottom: '4px'
         }}
       >
-        {/* Row 1: Title + Department Badge + Search Box + Download Report */}
+        {/* Tier 1: Food Title, Badge, Subtitle & Action Buttons (Always visible at top) */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -770,112 +767,171 @@ export default function DashboardPage({
           flexWrap: 'wrap',
           gap: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <h1 style={{
-              fontSize: '21px',
-              fontWeight: '800',
-              color: 'var(--primary, #14245C)',
-              margin: 0,
-              letterSpacing: '-0.02em'
+          {/* Module Title, Icon & Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              backgroundColor: currentMeta.badgeBg || '#efeefc',
+              color: currentMeta.badgeColor || '#6c56db',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              boxShadow: '0 2px 6px rgba(108, 86, 219, 0.15)',
+              flexShrink: 0
             }}>
-              {currentMeta.title}
-            </h1>
-            <span style={{
-              fontSize: '11.5px',
-              fontWeight: '800',
-              padding: '4px 12px',
-              borderRadius: '9999px',
-              backgroundColor: '#FFF8EA',
-              color: '#8A4A00',
-              border: '1px solid var(--accent, #F5A524)'
-            }}>
-              {currentMeta.badge}
-            </span>
+              {currentModule === 'food' ? '🍽️' : currentModule === 'hostel' ? '🏢' : '🚌'}
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h1 style={{
+                  fontSize: '20px',
+                  fontWeight: '800',
+                  color: '#1a1d36',
+                  margin: 0,
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1.2
+                }}>
+                  {currentMeta.title}
+                </h1>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '2px 10px',
+                  borderRadius: '9999px',
+                  backgroundColor: currentMeta.badgeBg || '#efeefc',
+                  color: currentMeta.badgeColor || '#6c56db',
+                  border: '1px solid #d8d4fa'
+                }}>
+                  {currentMeta.badge}
+                </span>
+              </div>
+            </div>
           </div>
 
+          {/* Action Buttons (Download Report + Open Data Entry) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {/* Search Box */}
-            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-              <Search size={15} color="#64748b" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
-              <input
-                type="text"
-                aria-label="Search expenses"
-                placeholder="Search items..."
-                value={topSearchTerm}
-                onChange={(e) => setTopSearchTerm(e.target.value)}
-                style={{
-                  minHeight: '40px',
-                  padding: '8px 14px 8px 36px',
-                  borderRadius: '10px',
-                  border: '1px solid #E1E6F2',
-                  backgroundColor: 'var(--bg-canvas, #F3F6FB)',
-                  color: 'var(--primary, #14245C)',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  outline: 'none',
-                  width: '210px'
-                }}
-              />
-            </div>
-
-            {/* Download Report */}
             <button
               type="button"
               onClick={handleExportReport}
               style={{
-                minHeight: '40px',
                 padding: '8px 18px',
-                borderRadius: '10px',
-                backgroundColor: 'var(--primary, #14245C)',
+                borderRadius: '9999px',
+                backgroundColor: '#6c56db',
                 color: '#ffffff',
                 border: 'none',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: '700',
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '7px',
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(20, 36, 92, 0.22)'
+                boxShadow: '0 3px 12px rgba(108, 86, 219, 0.3)',
+                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5d44db'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6c56db'}
             >
-              <Download size={15} />
+              <Download size={13} />
               <span>Download report</span>
             </button>
+
+            {onOpenDataEntry && (
+              <button
+                type="button"
+                onClick={() => {
+                  const targetPeriodId = activePeriod !== 'all' ? Number(activePeriod) : null;
+                  onOpenDataEntry('food', targetPeriodId);
+                }}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '9999px',
+                  background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  boxShadow: '0 3px 12px rgba(255, 96, 136, 0.3)',
+                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <span>Open Data Entry</span>
+                <ArrowRight size={13} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Row 2: Month Chips + Category Dropdown + Units Toggle + View Toggle */}
+        {/* Tier 2: Month Filter Pills & Viewing Indicator */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '12px'
+          gap: '10px',
+          paddingTop: '8px',
+          borderTop: '1px solid #edf0f8'
         }}>
-          {/* Month Chips */}
+          {/* Left: Filter label and month pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11.5px',
+              fontWeight: '800',
+              color: '#475569',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginRight: '2px'
+            }}>
+              <Calendar size={14} color="#6c56db" />
+              <span>Filter Month:</span>
+            </div>
+
+            {/* All Months Pill */}
             <button
               type="button"
               onClick={() => setActivePeriod('all')}
               style={{
-                minHeight: '40px',
-                padding: '6px 14px',
-                borderRadius: '10px',
-                fontSize: '12.5px',
-                fontWeight: '700',
-                border: activePeriod === 'all' ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
-                backgroundColor: activePeriod === 'all' ? 'var(--primary, #14245C)' : 'var(--bg-canvas, #F3F6FB)',
-                color: activePeriod === 'all' ? '#ffffff' : 'var(--primary, #14245C)',
+                padding: '5px 14px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: activePeriod === 'all' ? '800' : '650',
+                border: activePeriod === 'all' ? '1.5px solid #6c56db' : '1.5px solid #cbd5e1',
+                backgroundColor: activePeriod === 'all' ? '#6c56db' : '#ffffff',
+                color: activePeriod === 'all' ? '#ffffff' : '#475569',
                 cursor: 'pointer',
+                boxShadow: activePeriod === 'all' ? '0 2px 8px rgba(108, 86, 219, 0.3)' : 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                transition: 'all 0.15s ease'
               }}
             >
-              <span>All months ({periods.length})</span>
+              <span>All months</span>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '800',
+                padding: '1px 5px',
+                borderRadius: '10px',
+                backgroundColor: activePeriod === 'all' ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                color: activePeriod === 'all' ? '#ffffff' : '#64748b'
+              }}>
+                {periods.length}
+              </span>
             </button>
 
-            {periods.map((p) => {
+            {/* Individual Month Pills */}
+            {periods.map(p => {
               const isSel = String(p.id) === String(activePeriod);
               const pMonthTotal = effectiveMatrix?.grand_total?.amounts?.[p.id] ?? effectiveMatrix?.grand_total?.amounts?.[String(p.id)] ?? 0;
               return (
@@ -884,367 +940,487 @@ export default function DashboardPage({
                   type="button"
                   onClick={() => setActivePeriod(String(p.id))}
                   style={{
-                    minHeight: '40px',
-                    padding: '6px 13px',
-                    borderRadius: '10px',
-                    fontSize: '12.5px',
-                    fontWeight: isSel ? '700' : '600',
-                    border: isSel ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
-                    backgroundColor: isSel ? 'var(--primary, #14245C)' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#334155',
+                    padding: '5px 13px',
+                    borderRadius: '9999px',
+                    fontSize: '12px',
+                    fontWeight: isSel ? '800' : '650',
+                    border: isSel ? '1.5px solid #6c56db' : '1.5px solid #cbd5e1',
+                    backgroundColor: isSel ? '#6c56db' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#475569',
                     cursor: 'pointer',
+                    boxShadow: isSel ? '0 2px 8px rgba(108, 86, 219, 0.3)' : 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   <span>{p.period_label || p.period_code}</span>
                   {pMonthTotal > 0 && (
                     <span style={{
-                      fontSize: '10.5px',
+                      fontSize: '10px',
                       fontWeight: '700',
-                      padding: '2px 6px',
-                      borderRadius: '6px',
-                      backgroundColor: isSel ? 'rgba(255,255,255,0.18)' : 'var(--bg-canvas, #F3F6FB)',
-                      color: isSel ? 'var(--accent, #F5A524)' : '#64748b'
+                      padding: '1px 5px',
+                      borderRadius: '10px',
+                      backgroundColor: isSel ? 'rgba(255,255,255,0.25)' : '#f8fafc',
+                      color: isSel ? '#ffffff' : '#64748b'
                     }}>
                       {formatIndianCompact(pMonthTotal)}
                     </span>
                   )}
+                  {isSel && <Check size={11} strokeWidth={3} />}
                 </button>
               );
             })}
           </div>
 
-          {/* Right Controls: Category Dropdown, Units Toggle, View Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <select
-              aria-label="Filter by category"
-              value={topCategoryFilter}
-              onChange={(e) => setTopCategoryFilter(e.target.value)}
-              style={{
-                minHeight: '40px',
-                padding: '8px 14px',
-                borderRadius: '10px',
-                border: '1px solid #E1E6F2',
-                backgroundColor: '#ffffff',
-                color: 'var(--primary, #14245C)',
-                fontSize: '12.5px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                outline: 'none'
-              }}
-            >
-              <option value="all">All categories ({categories.length})</option>
-              {categories.map((c) => {
-                const name = c.category_name || c.name;
-                return <option key={name} value={name}>{name}</option>;
-              })}
-            </select>
-
-            {/* Units Toggle: ₹ Full | Lakhs */}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F6FB)',
-              padding: '3px',
-              borderRadius: '10px',
-              border: '1px solid #E1E6F2'
+          {/* Right: Active Viewing Indicator */}
+          <div style={{
+            fontSize: '12px',
+            color: '#64748b',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span>Viewing:</span>
+            <strong style={{
+              color: '#0f172a',
+              fontWeight: '800',
+              padding: '3px 10px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
             }}>
-              {[
-                { id: 'full', label: '₹ Full' },
-                { id: 'lakhs', label: 'Lakhs' }
-              ].map((u) => {
-                const isSel = topUnitMode === u.id;
-                return (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => setTopUnitMode(u.id)}
-                    style={{
-                      minHeight: '34px',
-                      padding: '5px 12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      backgroundColor: isSel ? 'var(--primary, #14245C)' : 'transparent',
-                      color: isSel ? '#ffffff' : '#64748b',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {u.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* View Toggle: Cards | Spreadsheet */}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F6FB)',
-              padding: '3px',
-              borderRadius: '10px',
-              border: '1px solid #E1E6F2'
-            }}>
-              {[
-                { id: 'cards', label: 'Cards' },
-                { id: 'spreadsheet', label: 'Spreadsheet' }
-              ].map((v) => {
-                const isSel = topViewMode === v.id;
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setTopViewMode(v.id)}
-                    style={{
-                      minHeight: '34px',
-                      padding: '5px 12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      backgroundColor: isSel ? 'var(--primary, #14245C)' : 'transparent',
-                      color: isSel ? '#ffffff' : '#64748b',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {v.label}
-                  </button>
-                );
-              })}
-            </div>
+              {activePeriod === 'all'
+                ? `All Months (${periods.length} Cycles • ${formatINR(effectiveMatrix?.grand_total?.total || 0)})`
+                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(grandTotal)})`
+              }
+            </strong>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* MAIN CONTENT ON LIGHT GREY-BLUE BACKGROUND (var(--bg-canvas, #F3F6FB), 28px padding/gap)    */}
+      {/* LINE 1 (FIRST): MONTH BY MONTH SHOW THE DATA                               */}
       {/* ========================================================================= */}
-      <div style={{
-        padding: '28px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '28px',
-        backgroundColor: 'var(--bg-canvas, #F3F6FB)',
-        boxSizing: 'border-box'
-      }}>
-        {categories.length === 0 && grandTotal === 0 ? (
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '18px',
-            border: '1px solid #E1E6F2',
-            padding: '48px 28px',
-            textAlign: 'center',
-            color: '#64748b',
-            fontSize: '15px',
-            fontWeight: '700'
-          }}>
-            No {currentMeta.badge} expenses recorded yet
-          </div>
-        ) : (
-          <>
-            {/* b. MONTH-BY-MONTH EXPENDITURE (CARDS OR SPREADSHEET PER VIEW TOGGLE) */}
-            <section style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '18px',
-              padding: '28px',
-              border: '1px solid #E1E6F2',
-              boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px'
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              backgroundColor: '#0f172a',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: '800'
             }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--primary, #14245C)', margin: 0, letterSpacing: '-0.02em' }}>
-                Month-by-Month Expenditure
-              </h2>
-              <ChartDataTable
-                categories={categories}
-                periods={periods}
-                activePeriod={activePeriod}
-                onSelectPeriod={setActivePeriod}
-                selectedModule={currentModule}
-                computedMatrix={effectiveMatrix}
-                isFullScreen={isTableFullScreen}
-                onToggleFullScreen={setIsTableFullScreen}
-                remarksDraft={remarksDraft}
-                attachmentsSummary={attachmentsSummary}
-                searchTerm={topSearchTerm}
-                selectedCategoryFilter={topCategoryFilter}
-                viewMode={topViewMode}
-                unitMode={topUnitMode}
-                hideHeaderBar={true}
-              />
-            </section>
+              1
+            </span>
+            <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+              Month-by-Month Expenditure Data Sheet
+            </h2>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#4338ca', backgroundColor: '#eef2ff', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #c7d2fe' }}>
+              Line-by-Line Monthly Columns
+            </span>
+          </div>
 
-            {/* c. EXPENSE BY CATEGORY CHART (TABS + FULL CHART DROPDOWN) */}
-            <MonthlyExpenseSection
-              computedMatrix={effectiveMatrix}
-              categories={categories}
-              periods={periods}
-              selectedModule={currentModule}
-              onExportReport={handleExportReport}
-              activePeriod={activePeriod}
-              onPeriodChange={setActivePeriod}
-              unitMode={topUnitMode}
-              hideControlsBar={true}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12.5px', color: '#64748b' }}>
+              Displaying each monthly cycle side-by-side with exact values & category subtotals
+            </span>
+          </div>
+        </div>
 
-            {/* d. BUDGET ALLOCATION AND EXPENDITURE LEDGER */}
-            {currentModule === 'food' && (
-              <FoodBudgetChartSection
-                computedMatrix={effectiveMatrix}
-                periods={periods}
-                activePeriod={activePeriod}
-                onPeriodChange={setActivePeriod}
-              />
-            )}
+        {/* The Full Month-by-Month Data Table (Modern Card Dashboard across Food, Hostel, Transport) */}
+        <ChartDataTable
+          categories={categories}
+          periods={periods}
+          activePeriod={activePeriod}
+          onSelectPeriod={setActivePeriod}
+          selectedModule={currentModule}
+          computedMatrix={effectiveMatrix}
+          isFullScreen={isTableFullScreen}
+          onToggleFullScreen={setIsTableFullScreen}
+          remarksDraft={remarksDraft}
+          attachmentsSummary={attachmentsSummary}
+        />
+      </section>
 
-            {/* KPI STRIP (4 CARDS) */}
-            {(() => {
-              const fbList = effectiveMatrix?.food_budget_tracking || [];
-              const totSanc = fbList.reduce((acc, r) => acc + (Number(r.sanctioned_amount) || 0), 0);
-              const budgetTarget = activePeriod === 'all' ? totSanc : (totSanc / 12);
-              const utilPct = budgetTarget > 0 ? ((grandTotal / budgetTarget) * 100) : 0;
-              const fmtVal = (v) => topUnitMode === 'lakhs' ? formatLakhs(v) : formatINR(v);
-              const deltaPct = prevPeriodTotal > 0 ? (((grandTotal - prevPeriodTotal) / prevPeriodTotal) * 100).toFixed(1) : '0.0';
+      {/* ========================================================================= */}
+      {/* LINE 2 (SECOND): MONTHLY EXPENSE BY CATEGORY                               */}
+      {/* ========================================================================= */}
+      <MonthlyExpenseSection
+        computedMatrix={effectiveMatrix}
+        categories={categories}
+        periods={periods}
+        selectedModule={currentModule}
+        onExportReport={handleExportReport}
+        activePeriod={activePeriod}
+        onPeriodChange={setActivePeriod}
+      />
 
-              return (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-                  gap: '20px'
-                }}>
-                  {/* Card 1: Total Expense (Dark Brand Card var(--primary, #14245C)) */}
-                  <div style={{
-                    backgroundColor: 'var(--primary, #14245C)',
-                    color: '#ffffff',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    border: '1px solid var(--primary, #14245C)',
-                    boxShadow: '0 6px 20px rgba(20, 36, 92, 0.16)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--accent, #F5A524)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      {activePeriod === 'all' ? `Total Expense (${periods.length} Months)` : `Total Expense (${activePeriodObj?.period_label || 'Month'})`}
-                    </div>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.02em' }} className="currency-font">
-                      {fmtVal(grandTotal)}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>
-                      {activePeriod === 'all' ? 'All recorded cycles' : (activePeriodObj?.is_closed ? 'Audited & locked cycle' : 'Active billing cycle')}
-                    </div>
-                  </div>
+      {/* ========================================================================= */}
+      {/* FOOD OPERATIONS BUDGET VS ACTUAL EXPENDITURE CHART                        */}
+      {/* ========================================================================= */}
+      {currentModule === 'food' && (
+        <FoodBudgetChartSection
+          computedMatrix={effectiveMatrix}
+          periods={periods}
+          activePeriod={activePeriod}
+          onPeriodChange={setActivePeriod}
+        />
+      )}
 
-                  {/* Card 2: Vs Previous Month / Monthly Average */}
-                  <div style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    border: '1px solid #E1E6F2',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      {activePeriod === 'all' ? 'Monthly Average' : `Vs Previous Month (${prevPeriodObj?.period_label || 'Prev'})`}
-                    </div>
-                    <div style={{ fontSize: '26px', fontWeight: '800', color: 'var(--primary, #14245C)', letterSpacing: '-0.02em' }} className="currency-font">
-                      {activePeriod === 'all'
-                        ? fmtVal(monthlyAvg)
-                        : (prevPeriodObj ? `${grandTotal >= prevPeriodTotal ? '+' : ''}${deltaPct}%` : fmtVal(monthlyAvg))
-                      }
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
-                      {activePeriod === 'all'
-                        ? `Average across ${periods.length} months`
-                        : (prevPeriodObj ? `Previous: ${fmtVal(prevPeriodTotal)}` : `Average across ${periods.length} months`)
-                      }
-                    </div>
-                  </div>
+      {/* ========================================================================= */}
+      {/* LINE 3 (LAST): EXECUTIVE FINANCIAL TOTALS SUMMARY                         */}
+      {/* ========================================================================= */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              backgroundColor: '#0f172a',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: '800'
+            }}>
+              3
+            </span>
+            <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+              Overall Expense Summary
+            </h2>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#047857', backgroundColor: '#ecfdf5', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #a7f3d0' }}>
+              Expense Summary
+            </span>
+          </div>
 
-                  {/* Card 3: Budget Utilization with Progress Bar */}
-                  <div style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    border: '1px solid #E1E6F2',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Budget Utilization
-                      </span>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        padding: '2px 8px',
-                        borderRadius: '9999px',
-                        backgroundColor: utilPct > 100 ? '#FBE3E3' : utilPct >= 80 ? '#FFF1DD' : '#E4F6EC',
-                        color: utilPct > 100 ? '#A32626' : utilPct >= 80 ? '#8A4A00' : '#0F6B3A'
-                      }}>
-                        {utilPct.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--primary, #14245C)' }} className="currency-font">
-                      {budgetTarget > 0 ? fmtVal(budgetTarget) : '—'}
-                    </div>
-                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-canvas, #F3F6FB)', borderRadius: '9999px', overflow: 'hidden' }}>
-                      <div style={{
-                        width: `${Math.min(100, utilPct)}%`,
-                        height: '100%',
-                        backgroundColor: utilPct > 100 ? '#D6455D' : utilPct >= 80 ? 'var(--accent, #F5A524)' : '#18A058',
-                        borderRadius: '9999px'
-                      }} />
-                    </div>
-                  </div>
+          <div style={{ fontSize: '12.5px', color: '#64748b' }}>
+            Total spent, current month, monthly average, and largest expense
+          </div>
+        </div>
 
-                  {/* Card 4: Top Category */}
-                  <div style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    border: '1px solid #E1E6F2',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      Top Category
-                    </div>
-                    <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary, #14245C)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {largestCostHead.name}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }} className="currency-font">
-                      {largestCostHead.total > 0 ? fmtVal(largestCostHead.total) : '₹0'}
-                    </div>
-                  </div>
+        {/* 1. TOP 4 EXECUTIVE FINANCIAL TOTAL CARDS (BENTO STYLE) */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '18px'
+        }}>
+          {currentModule === 'hostel' ? (
+            <>
+              {/* Hostel Card 1: Bed Capacity & Total Occupancy */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #10b981',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Total Beds & Occupancy
                 </div>
-              );
-            })()}
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
+                  {num(activeHostelCensus?.total_occupied, 2974).toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>/ {num(activeHostelCensus?.bed_capacity_total, 3119).toLocaleString()} Beds</span>
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#059669', fontWeight: '700', marginTop: '4px' }}>
+                  {num(activeHostelCensus?.occupied_pct, 95.4).toFixed(1)}% Occupancy • {num(activeHostelCensus?.students_total, 2843).toLocaleString()} Students • {num(activeHostelCensus?.staff_total, 131)} Staff
+                </div>
+              </div>
 
-            {/* e. ATTACHED FILES, PRESENTATIONS & BILLS */}
-            <MonthlyAttachmentsDashboardSection
-              module="food"
-              periodId={activePeriod === 'all' ? 'all' : (activePeriodObj?.id || activePeriod)}
-              periodLabel={activePeriod === 'all' ? 'All Months' : (activePeriodObj?.period_label || 'Focus Month')}
-              periods={periods}
-              currentUser={currentUser}
-            />
-          </>
-        )}
+              {/* Hostel Card 2: Expenses Occurred (Total Monthly Spend) */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #ea580c',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {activePeriodObj?.period_label || 'Focus Month'} Expenses Occurred
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  {formatINR(num(activeHostelCensus?.expenses_occurred, 9349172))}
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  Total monthly operating expenses matching Data Entry Row 20
+                </div>
+              </div>
+
+              {/* Hostel Card 3: Operating Budget & Balance */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #16a34a',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Balance Budget Remaining
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  {formatINR(num(activeHostelCensus?.balance, 97260304))}
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  Budget: {formatINR(num(activeHostelCensus?.approved_budget, 131788118))} • Spent: {formatINR(num(activeHostelCensus?.cumulative_budget_spent, 34527814))}
+                </div>
+              </div>
+
+              {/* Hostel Card 4: Monthly Cost per Student */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #ca8a04',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#854d0e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Monthly Cost per Student
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  ₹ {Math.round(num(activeHostelCensus?.per_student_cost_month, 3288)).toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>/ mo</span>
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  Daily: ₹{num(activeHostelCensus?.per_student_cost_day, 109.62).toFixed(2)}/day • Power: ₹{Math.round(num(activeHostelCensus?.power_cost_occupant, 494))}/occ
+                </div>
+              </div>
+            </>
+          ) : currentModule === 'transport' ? (
+            <>
+              {/* Transport Card 1: Fleet & Distance */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #ea580c',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Fleet Operations & Distance
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
+                  {activeTransportCensus?.vehicles_count || '18+1 Fleet'} <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>({num(activeTransportCensus?.actual_kms, 82006).toLocaleString()} KMs)</span>
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  Approved: {num(activeTransportCensus?.approved_kms, 96303).toLocaleString()} KMs • Addl: +{num(activeTransportCensus?.additional_kms, 9553).toLocaleString()} KMs
+                </div>
+              </div>
+
+              {/* Transport Card 2: Total Expenses */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #16a34a',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {activePeriod === 'all' ? `All ${periods.length}-Month Total Expenses` : `${activePeriodObj?.period_label || 'Focus Month'} Total Expenses`}
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  {formatINR(activePeriod === 'all' ? (effectiveMatrix?.grand_total?.total || 18322733) : (latestMonthTotal || 4453115))}
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  Fuel: {formatINR(num(activeTransportCensus?.fuel_expenses, 1788764))} • Diesel: {num(activeTransportCensus?.diesel_litres, 19252).toLocaleString()} L
+                </div>
+              </div>
+
+              {/* Transport Card 3: Budget & Balance */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #10b981',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Transport Balance Budget
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  {formatINR(num(activeTransportCensus?.balance, 29007225))}
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  Budget: {formatINR(num(activeTransportCensus?.approved_budget, 37730138))} • Spent: {formatINR(num(activeTransportCensus?.cumulative_budget_spent, 8722912))}
+                </div>
+              </div>
+
+              {/* Transport Card 4: Service Tickets & Passengers */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #9333ea',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Service Tickets & Compliance
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }}>
+                  {num(activeTransportCensus?.service_tickets_closed, 47)} / {num(activeTransportCensus?.service_tickets_raised, 47)} Closed
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  100% Statutory Compliant • Passengers: {num(activeTransportCensus?.passengers_count, 2070).toLocaleString()}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Default Food Executive Cards */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #10b981',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {activePeriod === 'all'
+                    ? (periods.length > 0 ? `Total Spend • ${periods.length} Months` : 'Total Spend')
+                    : `${activePeriodObj?.period_label || 'Focus Month'} Spend`
+                  }
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  {formatINR(grandTotal)}
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  {activePeriod === 'all'
+                    ? (periods.length > 0 ? `${periods[0]?.period_label} to ${periods[periods.length - 1]?.period_label} Total` : 'All recorded months')
+                    : `${activePeriodObj?.is_closed ? 'Audited & locked cycle' : 'Active billing cycle'}`
+                  }
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #4f46e5',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {activePeriod === 'all'
+                    ? (activePeriodObj?.period_label ? `${activePeriodObj.period_label} Total Spend` : 'Current Month Total')
+                    : (prevPeriodObj ? `vs Previous Month (${prevPeriodObj.period_label})` : 'Monthly Average')
+                  }
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  {activePeriod === 'all'
+                    ? formatINR(latestMonthTotal)
+                    : (prevPeriodObj
+                        ? `${grandTotal >= prevPeriodTotal ? '+' : ''}${prevPeriodTotal > 0 ? (((grandTotal - prevPeriodTotal) / prevPeriodTotal) * 100).toFixed(1) : '0'}%`
+                        : formatINR(monthlyAvg)
+                      )
+                  }
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  {activePeriod === 'all'
+                    ? (activePeriodObj ? (activePeriodObj.is_closed ? 'Locked month' : 'Current active month') : 'Current month')
+                    : (prevPeriodObj ? `Previous month spend: ${formatINR(prevPeriodTotal)}` : `Average across ${periods.length} months`)
+                  }
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #f59e0b',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {activePeriod === 'all' ? 'Monthly Average' : 'Share of 5-Month Total'}
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0', letterSpacing: '-0.02em' }} className="currency-font">
+                  {activePeriod === 'all'
+                    ? formatINR(monthlyAvg)
+                    : `${(effectiveMatrix?.grand_total?.total > 0 && grandTotal > 0) ? ((grandTotal / effectiveMatrix.grand_total.total) * 100).toFixed(1) : 0}%`
+                  }
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                  {activePeriod === 'all'
+                    ? (periods.length > 0 ? `Average across ${periods.length} months` : 'Monthly average')
+                    : `Out of ${formatINR(effectiveMatrix?.grand_total?.total || 0)} total recorded spend`
+                  }
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #ec4899',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#be185d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {activePeriod === 'all' ? 'Highest Expense Category' : `Top Category in ${activePeriodObj?.period_label || 'Month'}`}
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '8px 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {largestCostHead.name}
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }} className="currency-font">
+                  {largestCostHead.total > 0 ? `${formatINR(largestCostHead.total)} (${activePeriod === 'all' ? `${periods.length} months` : activePeriodObj?.period_label})` : '₹0'}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* MONTHLY SUPPORTING ATTACHMENTS, PRESENTATIONS & BILLS FOR ACTIVE MONTH */}
+      <div style={{ marginTop: '20px' }}>
+        <MonthlyAttachmentsDashboardSection
+          module="food"
+          periodId={activePeriod === 'all' ? 'all' : (activePeriodObj?.id || activePeriod)}
+          periodLabel={activePeriod === 'all' ? 'All Months' : (activePeriodObj?.period_label || 'Focus Month')}
+          periods={periods}
+          currentUser={currentUser}
+        />
       </div>
 
-      {/* Footer rendered by App shell */}
     </div>
   );
 }

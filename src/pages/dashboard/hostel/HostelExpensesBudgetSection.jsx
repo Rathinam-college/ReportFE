@@ -21,19 +21,10 @@ export default function HostelExpensesBudgetSection({
   periods = [],
   activePeriod = 'all',
   onExportReport,
-  remarksDraft = {},
-  monthFilter: propMonthFilter,
-  onMonthFilterChange,
-  trackingViewMode: propTrackingViewMode,
-  onTrackingViewModeChange,
-  hideTopToggles = false
+  remarksDraft = {}
 }) {
-  const [internalTrackingViewMode, setInternalTrackingViewMode] = useState('both'); // 'both' | 'cards' | 'matrix' | 'distribution'
-  const [internalMonthFilter, setInternalMonthFilter] = useState('all'); // 'all' | 'recorded'
-  const trackingViewMode = propTrackingViewMode !== undefined ? propTrackingViewMode : internalTrackingViewMode;
-  const setTrackingViewMode = onTrackingViewModeChange || setInternalTrackingViewMode;
-  const monthFilter = propMonthFilter !== undefined ? propMonthFilter : internalMonthFilter;
-  const setMonthFilter = onMonthFilterChange || setInternalMonthFilter;
+  const [trackingViewMode, setTrackingViewMode] = useState('both'); // 'both' | 'cards' | 'matrix' | 'distribution'
+  const [monthFilter, setMonthFilter] = useState('all'); // 'all' | 'recorded'
   const [budgetTrackingData, setBudgetTrackingData] = useState([]);
   const [expandedCardIds, setExpandedCardIds] = useState({});
 
@@ -376,8 +367,7 @@ export default function HostelExpensesBudgetSection({
       }}>
         {/* Modern Header Banner with View Switcher */}
         <div style={{
-          backgroundColor: 'var(--primary, #14245C)',
-          borderBottom: '3px solid var(--accent, #F5A524)',
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
           color: '#ffffff',
           padding: '18px 24px',
           display: 'flex',
@@ -423,8 +413,7 @@ export default function HostelExpensesBudgetSection({
             </div>
           </div>
 
-          {/* Interactive Month Filter & View Switcher Toggles (hidden when controlled from Sticky Top Filter Bar) */}
-          {!hideTopToggles && (
+          {/* Interactive Month Filter & View Switcher Toggles */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {/* Filter: All Months vs Recorded Spend */}
             <div style={{
@@ -566,7 +555,6 @@ export default function HostelExpensesBudgetSection({
               </button>
             </div>
           </div>
-          )}
         </div>
 
         {/* ------------------------------------------------------------- */}
@@ -689,9 +677,9 @@ export default function HostelExpensesBudgetSection({
 
             {/* Formal Ledger Title Header */}
             <div style={{
-              backgroundColor: 'var(--primary, #14245C)',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%)',
               padding: '18px 24px 14px 24px',
-              borderBottom: '3px solid var(--accent, #F5A524)',
+              borderBottom: '3px solid #fbbf24',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -898,12 +886,12 @@ export default function HostelExpensesBudgetSection({
               </tbody>
               <tfoot>
                 {/* Grand Total Row */}
-                <tr style={{ backgroundColor: '#FFF8EA', borderTop: '3px solid var(--accent, #F5A524)', borderBottom: '2px solid var(--accent, #F5A524)', fontWeight: '900', color: 'var(--primary, #14245C)' }}>
+                <tr style={{ backgroundColor: '#fef08a', borderTop: '3px solid #ca8a04', fontWeight: '900', color: '#713f12' }}>
                   <td style={{ padding: '14px 10px', textAlign: 'center', fontSize: '14px' }}>∑</td>
                   <td style={{ padding: '14px 14px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                     Grand Total — All Budget Heads
                   </td>
-                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', color: '#0F6B3A', backgroundColor: '#E4F6EC', fontWeight: '900', borderRight: '2px solid #b7e8cc' }} className="currency-font">
+                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', color: '#166534', backgroundColor: '#dcfce7', fontWeight: '900', borderRight: '2px solid #bbf7d0' }} className="currency-font">
                     {formatINR(totalSanctionedSum)}
                   </td>
                   {visibleMonthCols.map((m) => {
@@ -912,26 +900,26 @@ export default function HostelExpensesBudgetSection({
                     return (
                       <td key={m.key} style={{
                         padding: '14px 10px', textAlign: 'right', fontSize: '13px', fontWeight: '900',
-                        backgroundColor: isActive ? '#FEF0C7' : '#FFF8EA',
-                        color: mSum > 0 ? 'var(--primary, #14245C)' : '#8A4A00',
-                        borderRight: '1px solid rgba(245, 165, 36, 0.35)'
+                        backgroundColor: isActive ? '#fef9c3' : '#fefce8',
+                        color: mSum > 0 ? '#713f12' : '#a16207',
+                        borderRight: '1px solid rgba(202,138,4,0.3)'
                       }} className="currency-font">
                         {mSum > 0 ? formatINR(mSum) : '—'}
                       </td>
                     );
                   })}
-                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: 'var(--primary, #14245C)', backgroundColor: '#EDF2FF', borderLeft: '2px solid #cbd5e1' }} className="currency-font">
+                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: '#0369a1', backgroundColor: '#e0f2fe', borderLeft: '2px solid #7dd3fc' }} className="currency-font">
                     {formatINR(allMonthsActualSum)}
                   </td>
-                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: allMonthsActualSum <= totalSanctionedSum ? '#0F6B3A' : '#A32626', backgroundColor: allMonthsActualSum <= totalSanctionedSum ? '#E4F6EC' : '#FBE3E3' }} className="currency-font">
+                  <td style={{ padding: '14px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: allMonthsActualSum <= totalSanctionedSum ? '#166534' : '#dc2626', backgroundColor: allMonthsActualSum <= totalSanctionedSum ? '#dcfce7' : '#fee2e2' }} className="currency-font">
                     {formatINR(Math.abs(totalSanctionedSum - allMonthsActualSum))}
                   </td>
-                  <td style={{ padding: '14px 14px', textAlign: 'center', backgroundColor: '#FFF8EA' }}>
+                  <td style={{ padding: '14px 14px', textAlign: 'center', backgroundColor: '#fef9c3' }}>
                     <span style={{
                       display: 'inline-block', padding: '4px 12px', borderRadius: '9999px',
                       fontSize: '12px', fontWeight: '900',
-                      backgroundColor: 'var(--accent, #F5A524)', color: 'var(--primary, #14245C)',
-                      border: '1.5px solid #d98a0b'
+                      backgroundColor: '#fbbf24', color: '#451a03',
+                      border: '2px solid #d97706'
                     }}>
                       {totalSanctionedSum > 0 ? ((allMonthsActualSum / totalSanctionedSum) * 100).toFixed(1) : '0.0'}%
                     </span>

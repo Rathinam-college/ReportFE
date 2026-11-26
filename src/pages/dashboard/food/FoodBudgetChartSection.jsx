@@ -331,16 +331,16 @@ export default function FoodBudgetChartSection({
       {/* 3. OFFICIAL FOOD BUDGET TRACKING LEDGER */}
       <div style={{
         backgroundColor: '#ffffff',
-        borderRadius: '18px',
-        border: '1px solid #E1E6F2',
+        borderRadius: '16px',
+        border: '1.5px solid #e2e8f0',
         overflow: 'hidden',
-        boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)'
+        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.07)'
       }}>
         {/* Formal Ledger Header */}
         <div style={{
-          backgroundColor: 'var(--primary, #14245C)',
-          padding: '20px 24px 16px 24px',
-          borderBottom: '3px solid var(--accent, #F5A524)',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%)',
+          padding: '18px 24px 14px 24px',
+          borderBottom: '3px solid #fbbf24',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -556,16 +556,16 @@ export default function FoodBudgetChartSection({
                     <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: '800', color: totalSpent > 0 ? '#0369a1' : '#94a3b8', backgroundColor: '#f0f9ff', borderLeft: '2px solid #bae6fd' }} className="currency-font">
                       {totalSpent > 0 ? formatINR(totalSpent) : '₹0'}
                     </td>
-                    <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#A32626' : '#0F6B3A', backgroundColor: isOver ? '#FBE3E3' : '#E4F6EC' }} className="currency-font">
+                    <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: '800', color: isOver ? '#dc2626' : '#166534', backgroundColor: isOver ? '#fef2f2' : '#f0fdf4' }} className="currency-font">
                       {isOver ? `-${formatINR(Math.abs(balance))}` : formatINR(balance)}
                     </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center', backgroundColor: '#fafbff' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', backgroundColor: '#faf5ff' }}>
                       <span style={{
                         display: 'inline-block', padding: '3px 10px', borderRadius: '9999px',
                         fontSize: '11.5px', fontWeight: '800',
-                        backgroundColor: utilPct > 100 ? '#FBE3E3' : utilPct >= 80 ? '#FFF1DD' : '#E4F6EC',
-                        color: utilPct > 100 ? '#A32626' : utilPct >= 80 ? '#8A4A00' : '#0F6B3A',
-                        border: `1px solid ${utilPct > 100 ? '#f5bcbc' : utilPct >= 80 ? '#f7d7a3' : '#b7e8cc'}`
+                        backgroundColor: isOver ? '#fee2e2' : utilPct > 80 ? '#fef3c7' : '#dcfce7',
+                        color: isOver ? '#991b1b' : utilPct > 80 ? '#92400e' : '#166534',
+                        border: `1px solid ${isOver ? '#fca5a5' : utilPct > 80 ? '#fde68a' : '#86efac'}`
                       }}>
                         {utilPct.toFixed(1)}%
                       </span>
@@ -575,12 +575,12 @@ export default function FoodBudgetChartSection({
               })}
             </tbody>
             <tfoot>
-              <tr style={{ backgroundColor: '#FFF8EA', borderTop: '3px solid var(--accent, #F5A524)', borderBottom: '2px solid var(--accent, #F5A524)', fontWeight: '900', color: 'var(--primary, #14245C)' }}>
+              <tr style={{ backgroundColor: '#fef08a', borderTop: '3px solid #ca8a04', fontWeight: '900', color: '#713f12' }}>
                 <td style={{ padding: '13px 10px', textAlign: 'center', fontSize: '14px' }}>&sum;</td>
                 <td style={{ padding: '13px 14px', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   Grand Total &mdash; All Budget Heads
                 </td>
-                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: '#0F6B3A', backgroundColor: '#E4F6EC', borderRight: '2px solid #b7e8cc' }} className="currency-font">
+                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: '#166534', backgroundColor: '#dcfce7', borderRight: '2px solid #bbf7d0' }} className="currency-font">
                   {formatINR(totalSanctionedBudget)}
                 </td>
                 {visibleMonthCols.map((m) => {
@@ -592,26 +592,26 @@ export default function FoodBudgetChartSection({
                       textAlign: 'right',
                       fontSize: '13px',
                       fontWeight: '900',
-                      backgroundColor: isActive ? '#FEF0C7' : '#FFF8EA',
-                      color: mSum > 0 ? 'var(--primary, #14245C)' : '#8A4A00',
-                      borderRight: '1px solid rgba(245, 165, 36, 0.35)'
+                      backgroundColor: isActive ? '#fef9c3' : '#fefce8',
+                      color: mSum > 0 ? '#713f12' : '#a16207',
+                      borderRight: '1px solid rgba(202,138,4,0.3)'
                     }} className="currency-font">
                       {mSum > 0 ? formatINR(mSum) : '—'}
                     </td>
                   );
                 })}
-                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: 'var(--primary, #14245C)', backgroundColor: '#EDF2FF', borderLeft: '2px solid #cbd5e1' }} className="currency-font">
+                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: '#0369a1', backgroundColor: '#e0f2fe', borderLeft: '2px solid #7dd3fc' }} className="currency-font">
                   {formatINR(allVisibleMonthsActualSum)}
                 </td>
-                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: allVisibleMonthsActualSum <= totalSanctionedBudget ? '#0F6B3A' : '#A32626', backgroundColor: allVisibleMonthsActualSum <= totalSanctionedBudget ? '#E4F6EC' : '#FBE3E3' }} className="currency-font">
+                <td style={{ padding: '13px 14px', textAlign: 'right', fontSize: '13.5px', fontWeight: '900', color: allVisibleMonthsActualSum <= totalSanctionedBudget ? '#166534' : '#dc2626', backgroundColor: allVisibleMonthsActualSum <= totalSanctionedBudget ? '#dcfce7' : '#fee2e2' }} className="currency-font">
                   {allVisibleMonthsActualSum <= totalSanctionedBudget ? formatINR(totalSanctionedBudget - allVisibleMonthsActualSum) : `-${formatINR(Math.abs(totalSanctionedBudget - allVisibleMonthsActualSum))}`}
                 </td>
-                <td style={{ padding: '13px 14px', textAlign: 'center', backgroundColor: '#FFF8EA' }}>
+                <td style={{ padding: '13px 14px', textAlign: 'center', backgroundColor: '#fef9c3' }}>
                   <span style={{
                     display: 'inline-block', padding: '4px 12px', borderRadius: '9999px',
                     fontSize: '12px', fontWeight: '900',
-                    backgroundColor: 'var(--accent, #F5A524)', color: 'var(--primary, #14245C)',
-                    border: '1.5px solid #d98a0b'
+                    backgroundColor: '#fbbf24', color: '#451a03',
+                    border: '2px solid #d97706'
                   }}>
                     {totalSanctionedBudget > 0 ? ((allVisibleMonthsActualSum / totalSanctionedBudget) * 100).toFixed(1) : '0.0'}%
                   </span>

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import {
-  Home, FileSpreadsheet, SlidersHorizontal,
-  ShieldCheck, LogOut, Utensils, Building2, Bus, Video, ChevronDown
+import { 
+  Home, FileSpreadsheet, SlidersHorizontal, 
+  ShieldCheck, Bell, LogOut, Sparkles, Building2, HelpCircle
 } from 'lucide-react';
-import { getAssetUrl } from '../../utils/api';
 
 export default function Navbar({
   activeTab,
@@ -11,19 +10,9 @@ export default function Navbar({
   currentUser,
   handleLogout,
   permissions = [],
-  dbStatus = 'connected',
-  dashboardSubTab = 'food',
-  setDashboardSubTab
+  dbStatus = 'connected'
 }) {
-  const [hoveredId, setHoveredId] = useState(null);
-  const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
-
-  const departments = [
-    { id: 'food', label: 'Food', icon: Utensils },
-    { id: 'hostel', label: 'Hostel', icon: Building2 },
-    { id: 'transport', label: 'Transport', icon: Bus },
-    { id: 'cctv', label: 'CCTV', icon: Video }
-  ];
+  const [hoveredTab, setHoveredTab] = useState(null);
 
   const allTabs = [
     { id: 'dashboard', label: 'Home', fullLabel: 'Dashboard', icon: Home },
@@ -40,334 +29,214 @@ export default function Navbar({
     return perm ? perm.can_access : true;
   });
 
-  const activeDept = dashboardSubTab || 'food';
-
   return (
-    <aside
+    <aside 
       className="bento-navbar-aside"
       style={{
-        width: '268px',
-        minWidth: '268px',
-        height: '100%',
+        width: '84px',
+        minWidth: '84px',
+        height: 'calc(100% - 24px)',
         flexShrink: 0,
-        backgroundColor: 'var(--primary, #14245C)',
+        margin: '12px 0 12px 12px',
+        borderRadius: '24px',
+        background: 'linear-gradient(180deg, #745df0 0%, #5d44db 100%)',
         color: '#ffffff',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '20px 16px 16px 16px',
+        alignItems: 'center',
+        padding: '16px 0 14px 0',
         boxSizing: 'border-box',
         position: 'relative',
         userSelect: 'none',
-        boxShadow: '4px 0 24px rgba(20, 36, 92, 0.14)',
-        zIndex: 20,
-        overflowY: 'auto'
+        boxShadow: '0 12px 35px rgba(108, 86, 219, 0.28)',
+        zIndex: 10
       }}
     >
-      {/* TOP: COLLEGE LOGO + BRAND */}
-      <div className="nav-top-section" style={{ display: 'flex', flexDirection: 'column', gap: '22px', width: '100%' }}>
+      {/* TOP SECTION: NOTIFICATION BELL & BRAND */}
+      <div className="nav-top-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', width: '100%' }}>
+        
+        {/* Top Notification Bell in Pill Circle (Matching Image 1) */}
         <button
+          className="nav-bell-btn"
           type="button"
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.18)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(8px)'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.28)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.18)'}
+          title="Notifications & Alerts"
+        >
+          <Bell size={18} strokeWidth={2.2} />
+        </button>
+
+        {/* Small Brand Dot Indicator */}
+        <div 
+          className="nav-brand-dot"
           onClick={() => {
             setActiveTab('dashboard');
             window.location.hash = 'dashboard';
           }}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '10px 10px',
-            borderRadius: '14px',
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            textAlign: 'left',
-            cursor: 'pointer',
-            width: '100%'
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: '#ff6088',
+            boxShadow: '0 0 8px #ff6088',
+            cursor: 'pointer'
           }}
-        >
-          <img
-            src={getAssetUrl('rathinam_logo.png')}
-            alt="Rathinam Group of Institutions"
-            style={{
-              width: '40px',
-              height: '40px',
-              objectFit: 'contain',
-              borderRadius: '10px',
-              backgroundColor: '#ffffff',
-              padding: '4px',
-              flexShrink: 0
-            }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <span style={{
-              fontSize: '13px',
-              fontWeight: '800',
-              color: '#ffffff',
-              lineHeight: 1.25,
-              letterSpacing: '-0.01em'
-            }}>
-              Rathinam Group of Institutions
-            </span>
-            <span style={{
-              fontSize: '10.5px',
-              fontWeight: '600',
-              color: 'var(--accent, #F5A524)',
-              marginTop: '2px'
-            }}>
-              Operations Portal
-            </span>
-          </div>
-        </button>
+          title="Rathinam Group"
+        />
 
-        {/* SECTION: WORKSPACE */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-          <div style={{
-            fontSize: '10.5px',
-            fontWeight: '800',
-            color: 'rgba(255, 255, 255, 0.52)',
-            letterSpacing: '0.09em',
-            textTransform: 'uppercase',
-            padding: '0 10px 4px 10px'
-          }}>
-            WORKSPACE
-          </div>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
-            {visibleTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              const isHovered = hoveredId === `ws_${tab.id}`;
-              const isHome = tab.id === 'dashboard';
-              const showHomeDropdown = isHome && activeTab === 'dashboard' && homeDropdownOpen;
-              return (
-                <div key={tab.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
-                  <button
-                    className="nav-item-btn"
-                    type="button"
-                    onClick={() => {
-                      if (isHome) {
-                        if (activeTab !== 'dashboard') {
-                          setActiveTab('dashboard');
-                          window.location.hash = 'dashboard';
-                          setHomeDropdownOpen(true);
-                        } else {
-                          setHomeDropdownOpen((prev) => !prev);
-                        }
-                      } else {
-                        setHomeDropdownOpen(false);
-                        setActiveTab(tab.id);
-                        window.location.hash = tab.id;
-                      }
-                    }}
-                    onMouseEnter={() => setHoveredId(`ws_${tab.id}`)}
-                    onMouseLeave={() => setHoveredId(null)}
-                    style={{
-                      width: '100%',
-                      minHeight: '42px',
-                      padding: '8px 12px',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      backgroundColor: isActive
-                        ? 'rgba(255, 255, 255, 0.14)'
-                        : (isHovered ? 'rgba(255, 255, 255, 0.07)' : 'transparent'),
-                      border: isActive ? '1px solid rgba(255, 255, 255, 0.18)' : '1px solid transparent',
-                      color: '#ffffff',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.15s ease'
-                    }}
-                    title={tab.fullLabel}
-                  >
-                    <span style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '9px',
-                      backgroundColor: isActive ? 'var(--accent, #F5A524)' : 'rgba(255, 255, 255, 0.1)',
-                      color: isActive ? 'var(--primary, #14245C)' : '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <Icon size={16} strokeWidth={2.2} />
-                    </span>
-                    <span style={{
-                      fontSize: '13.5px',
-                      fontWeight: isActive ? '800' : '600',
-                      color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.82)',
-                      flex: 1
-                    }}>
-                      {tab.label}
-                    </span>
-                    {isHome && (
-                      <ChevronDown
-                        size={15}
-                        strokeWidth={2.2}
-                        style={{
-                          color: 'rgba(255, 255, 255, 0.72)',
-                          transform: showHomeDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                          transition: 'transform 0.15s ease',
-                          flexShrink: 0
-                        }}
-                      />
-                    )}
-                  </button>
+        {/* Vertical Stack of Navigation Pill Icons */}
+        <nav style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          width: '100%',
+          marginTop: '6px'
+        }}>
+          {visibleTabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const isHovered = hoveredTab === tab.id;
 
-                  {showHomeDropdown && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '3px',
-                        marginLeft: '14px',
-                        padding: '6px',
-                        borderRadius: '12px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.07)',
-                        border: '1px solid rgba(255, 255, 255, 0.12)'
-                      }}
-                    >
-                      {departments.map((dept) => {
-                        const DeptIcon = dept.icon;
-                        const isDeptSelected = activeDept === dept.id;
-                        const isDeptHovered = hoveredId === `home_dd_${dept.id}`;
-                        return (
-                          <button
-                            key={dept.id}
-                            type="button"
-                            onClick={() => {
-                              if (setDashboardSubTab) setDashboardSubTab(dept.id);
-                              setActiveTab('dashboard');
-                              window.location.hash = 'dashboard';
-                            }}
-                            onMouseEnter={() => setHoveredId(`home_dd_${dept.id}`)}
-                            onMouseLeave={() => setHoveredId(null)}
-                            style={{
-                              width: '100%',
-                              minHeight: '36px',
-                              padding: '6px 10px',
-                              borderRadius: '9px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              backgroundColor: isDeptSelected
-                                ? 'rgba(245, 165, 36, 0.2)'
-                                : (isDeptHovered ? 'rgba(255, 255, 255, 0.08)' : 'transparent'),
-                              border: isDeptSelected ? '1px solid rgba(245, 165, 36, 0.45)' : '1px solid transparent',
-                              color: '#ffffff',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            <span style={{
-                              width: '24px',
-                              height: '24px',
-                              borderRadius: '7px',
-                              backgroundColor: isDeptSelected ? 'var(--accent, #F5A524)' : 'rgba(255, 255, 255, 0.1)',
-                              color: isDeptSelected ? 'var(--primary, #14245C)' : '#ffffff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0
-                            }}>
-                              <DeptIcon size={13} strokeWidth={2.3} />
-                            </span>
-                            <span style={{
-                              fontSize: '12.5px',
-                              fontWeight: isDeptSelected ? '800' : '600',
-                              color: isDeptSelected ? 'var(--accent, #F5A524)' : 'rgba(255, 255, 255, 0.85)'
-                            }}>
-                              {dept.label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
-        </div>
+            return (
+              <button
+                key={tab.id}
+                className="nav-item-btn"
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  window.location.hash = tab.id;
+                }}
+                onMouseEnter={() => setHoveredTab(tab.id)}
+                onMouseLeave={() => setHoveredTab(null)}
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '3px',
+                  border: 'none',
+                  backgroundColor: isActive 
+                    ? '#39287a' 
+                    : (isHovered ? 'rgba(255, 255, 255, 0.16)' : 'transparent'),
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  boxShadow: isActive ? '0 8px 20px rgba(45, 25, 110, 0.35)' : 'none',
+                  transform: isActive ? 'scale(1.04)' : 'scale(1)',
+                  position: 'relative'
+                }}
+                title={tab.fullLabel}
+              >
+                <Icon 
+                  size={20} 
+                  color="#ffffff" 
+                  strokeWidth={isActive ? 2.5 : 2} 
+                  style={{ opacity: isActive ? 1 : 0.75 }}
+                />
+                <span style={{
+                  fontSize: '9.5px',
+                  fontWeight: isActive ? '800' : '600',
+                  opacity: isActive ? 1 : 0.75,
+                  letterSpacing: '0.02em',
+                  lineHeight: 1
+                }}>
+                  {tab.label}
+                </span>
+
+                {/* Active Indicator Pip */}
+                {isActive && (
+                  <span style={{
+                    position: 'absolute',
+                    right: '-4px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: '4px',
+                    height: '14px',
+                    borderRadius: '9999px',
+                    backgroundColor: '#ff6088'
+                  }} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
-      {/* BOTTOM: USER CARD + LOGOUT */}
-      <div className="nav-bottom-section" style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-        width: '100%',
-        paddingTop: '14px',
-        borderTop: '1px solid rgba(255, 255, 255, 0.12)'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '10px 12px',
-          borderRadius: '12px',
-          backgroundColor: 'rgba(255, 255, 255, 0.09)',
-          border: '1px solid rgba(255, 255, 255, 0.12)'
-        }}>
-          <div style={{
-            width: '34px',
-            height: '34px',
-            borderRadius: '10px',
-            backgroundColor: 'var(--accent, #F5A524)',
-            color: 'var(--primary, #14245C)',
+      {/* BOTTOM SECTION: SUPPORT & LOGOUT (Matching Image Bottom Dock) */}
+      <div className="nav-bottom-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%' }}>
+        
+        {/* Support Pill Button */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('settings')}
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.12)',
+            border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: '800',
-            fontSize: '12.5px',
-            flexShrink: 0
-          }}>
-            {(currentUser?.full_name || currentUser?.username || 'CO').slice(0, 2).toUpperCase()}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-            <span style={{
-              fontSize: '12px',
-              fontWeight: '700',
-              color: '#ffffff',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              Campus Operations
-            </span>
-            <span style={{
-              fontSize: '10.5px',
-              fontWeight: '600',
-              color: 'rgba(255, 255, 255, 0.68)'
-            }}>
-              {currentUser?.role === 'admin' ? 'Administrator' : 'Manager'}
-            </span>
-          </div>
-        </div>
+            color: '#ffffff',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.22)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'}
+          title="System Help & Support"
+        >
+          <HelpCircle size={17} style={{ opacity: 0.85 }} />
+        </button>
 
+        {/* Logout Pill Button in Translucent Circle (Matching Image Exit Icon) */}
         <button
           type="button"
           onClick={handleLogout}
           style={{
-            width: '100%',
-            minHeight: '40px',
-            padding: '8px 12px',
-            borderRadius: '10px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.14)',
-            color: '#ffffff',
-            fontSize: '12.5px',
-            fontWeight: '700',
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.18)',
+            border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            cursor: 'pointer'
+            color: '#ffffff',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(8px)'
           }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 96, 136, 0.35)';
+            e.currentTarget.style.color = '#ffffff';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.18)';
+            e.currentTarget.style.color = '#ffffff';
+          }}
+          title="Log Out of System"
         >
-          <LogOut size={15} />
-          <span>Sign Out</span>
+          <LogOut size={18} strokeWidth={2.2} />
         </button>
       </div>
     </aside>
