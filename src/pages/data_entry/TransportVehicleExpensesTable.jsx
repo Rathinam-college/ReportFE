@@ -740,8 +740,8 @@ export default function TransportVehicleExpensesTable({
         </div>
       )}
 
-      {/* Lock Alert Banner for Page 2 */}
-      {effectiveIsClosed && (
+      {/* Lock Alert Banner for Page 2 (Data Entry only, hidden when embedded on Dashboard) */}
+      {!embedded && effectiveIsClosed && (
         <div style={{
           padding: '10px 18px',
           backgroundColor: '#fef2f2',
@@ -802,9 +802,83 @@ export default function TransportVehicleExpensesTable({
             </div>
           ) : (
             <>
+              {/* Horizontal Scrollable Vehicle Number Strip */}
+              <div style={{
+                display: 'flex',
+                overflowX: 'auto',
+                gap: '12px',
+                padding: '2px 2px 14px 2px',
+                marginBottom: '12px',
+                scrollbarWidth: 'thin'
+              }}>
+                {filteredVehicles.map((v, idx) => {
+                  const vKey = v.id || v.vehicle_no || idx;
+                  const activeKey = selectedVehicleKey || (filteredVehicles[0]?.id || filteredVehicles[0]?.vehicle_no || 0);
+                  const isSel = activeKey === vKey;
+                  const vTot = num(v.total_expenses);
+                  const vD = num(v.diesel_litres);
+                  const vKm = num(v.km_run);
+
+                  return (
+                    <button
+                      key={vKey}
+                      type="button"
+                      onClick={() => setSelectedVehicleKey(vKey)}
+                      style={{
+                        flex: '0 0 auto',
+                        minWidth: '185px',
+                        textAlign: 'left',
+                        backgroundColor: isSel ? '#EFF6FF' : '#ffffff',
+                        borderRadius: '12px',
+                        border: isSel ? '2px solid #14245C' : '1px solid #E1E6F2',
+                        padding: '12px 14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        boxShadow: isSel ? '0 4px 12px rgba(20, 36, 92, 0.14)' : '0 1px 4px rgba(20, 36, 92, 0.04)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
+                        <span style={{
+                          fontFamily: 'monospace',
+                          fontSize: '12.5px',
+                          fontWeight: '800',
+                          color: isSel ? '#F5A524' : '#14245C',
+                          backgroundColor: isSel ? '#14245C' : '#F3F5FA',
+                          padding: '3px 8px',
+                          borderRadius: '7px'
+                        }}>
+                          {v.vehicle_no}
+                        </span>
+                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>
+                          #{idx + 1}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+                        {v.make || '—'}{v.model ? ` • ${v.model}` : ''}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%', paddingTop: '4px', borderTop: '1px solid #F1F5F9' }}>
+                        <span style={{ fontSize: '15px', fontWeight: '800', color: '#14245C' }} className="currency-font">
+                          {formatINR(vTot)}
+                        </span>
+                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: isSel ? '#14245C' : '#64748b' }}>
+                          {vD.toLocaleString('en-IN', { maximumFractionDigits: 0 })}L • {vKm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}km
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Fixed Single-Vehicle Detail Section */}
               {(() => {
-                const selectedVeh = filteredVehicles.find(v => (v.id || v.vehicle_no) === selectedVehicleKey) || null;
+                const selectedVeh = filteredVehicles.find(v => (v.id || v.vehicle_no) === selectedVehicleKey) || filteredVehicles[0];
                 if (!selectedVeh) return null;
+                const selectedIdx = filteredVehicles.indexOf(selectedVeh) + 1;
                 const svFuel = num(selectedVeh.fuel_expenses);
                 const svFc = num(selectedVeh.fc_cost);
                 const svStat = num(selectedVeh.statutory_cost);
@@ -834,9 +908,8 @@ export default function TransportVehicleExpensesTable({
                     backgroundColor: '#ffffff',
                     borderRadius: '16px',
                     border: '2px solid #14245C',
-                    boxShadow: '0 8px 24px rgba(20, 36, 92, 0.12)',
-                    padding: '20px',
-                    marginBottom: '20px'
+                    boxShadow: '0 8px 24px rgba(20, 36, 92, 0.10)',
+                    padding: '20px'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #E1E6F2' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -861,7 +934,17 @@ export default function TransportVehicleExpensesTable({
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          padding: '5px 10px',
+                          borderRadius: '8px',
+                          backgroundColor: '#F3F5FA',
+                          color: '#475569',
+                          fontSize: '11.5px',
+                          fontWeight: '700'
+                        }}>
+                          Vehicle #{selectedIdx} of {filteredVehicles.length}
+                        </span>
                         <div style={{
                           padding: '6px 14px',
                           borderRadius: '10px',
@@ -872,22 +955,6 @@ export default function TransportVehicleExpensesTable({
                         }} className="currency-font">
                           Total: <span style={{ color: '#F5A524' }}>{formatINR(svTot)}</span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedVehicleKey(null)}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            border: '1px solid #CBD5E1',
-                            backgroundColor: '#F8FAFC',
-                            color: '#334155',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Close ✕
-                        </button>
                       </div>
                     </div>
 
@@ -941,79 +1008,6 @@ export default function TransportVehicleExpensesTable({
                   </div>
                 );
               })()}
-
-              {/* Vehicle Number Cards Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(225px, 1fr))',
-                gap: '14px'
-              }}>
-                {filteredVehicles.map((v, idx) => {
-                  const vKey = v.id || v.vehicle_no || idx;
-                  const isSel = selectedVehicleKey === vKey;
-                  const vTot = num(v.total_expenses);
-                  const vD = num(v.diesel_litres);
-                  const vKm = num(v.km_run);
-                  const vMil = vD > 0 ? (vKm / vD) : num(v.mileage);
-
-                  return (
-                    <button
-                      key={vKey}
-                      type="button"
-                      onClick={() => setSelectedVehicleKey(isSel ? null : vKey)}
-                      style={{
-                        textAlign: 'left',
-                        backgroundColor: isSel ? '#EFF6FF' : '#ffffff',
-                        borderRadius: '14px',
-                        border: isSel ? '2px solid #14245C' : '1px solid #E1E6F2',
-                        padding: '16px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px',
-                        boxShadow: isSel ? '0 6px 18px rgba(20, 36, 92, 0.14)' : '0 2px 6px rgba(20, 36, 92, 0.04)',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
-                        <span style={{
-                          fontFamily: 'monospace',
-                          fontSize: '13.5px',
-                          fontWeight: '800',
-                          color: isSel ? '#F5A524' : '#14245C',
-                          backgroundColor: isSel ? '#14245C' : '#F3F5FA',
-                          padding: '4px 9px',
-                          borderRadius: '8px'
-                        }}>
-                          {v.vehicle_no}
-                        </span>
-                        <span style={{
-                          fontSize: '10.5px',
-                          fontWeight: '700',
-                          color: '#64748b'
-                        }}>
-                          #{idx + 1}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
-                        {v.make || '—'}{v.model ? ` • ${v.model}` : ''}
-                      </div>
-
-                      <div style={{ fontSize: '20px', fontWeight: '800', color: '#14245C' }} className="currency-font">
-                        {formatINR(vTot)}
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingTop: '8px', borderTop: '1px solid #F1F5F9', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>
-                        <span>{vD.toLocaleString('en-IN', { maximumFractionDigits: 1 })} L • {vKm.toLocaleString('en-IN', { maximumFractionDigits: 0 })} KM</span>
-                        <span style={{ color: isSel ? '#14245C' : '#2F4BB8' }}>
-                          {isSel ? 'Viewing ▲' : 'View expenses →'}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
             </>
           )}
         </div>

@@ -378,11 +378,11 @@ export default function HostelExpensesBudgetSection({
         {/* VIEW A: CATEGORY CARDS GRID                                    */}
         {/* Rendered when trackingViewMode === 'both' or 'cards'           */}
         {/* ------------------------------------------------------------- */}
-        {(trackingViewMode === 'both' || trackingViewMode === 'cards') && (
+        {(trackingViewMode === 'all' || trackingViewMode === 'both' || trackingViewMode === 'cards') && (
           <div style={{
             padding: '20px',
             backgroundColor: '#f8fafc',
-            borderBottom: trackingViewMode === 'both' ? '2px solid #e2e8f0' : 'none'
+            borderBottom: (trackingViewMode === 'all' || trackingViewMode === 'both') ? '2px solid #e2e8f0' : 'none'
           }}>
             <div style={{
               display: 'grid',
@@ -487,7 +487,7 @@ export default function HostelExpensesBudgetSection({
         {/* ============================================================== */}
         {/* OFFICIAL HOSTEL BUDGET TRACKING LEDGER — Formal Ledger Header  */}
         {/* ============================================================== */}
-        {(trackingViewMode === 'both' || trackingViewMode === 'matrix') && (
+        {(trackingViewMode === 'all' || trackingViewMode === 'both' || trackingViewMode === 'matrix') && (
           <div style={{ overflowX: 'auto', width: '100%' }}>
 
             {/* Formal Ledger Title Header */}
@@ -748,7 +748,7 @@ export default function HostelExpensesBudgetSection({
         {/* ------------------------------------------------------------- */}
         {/* VIEW C: COST DRIVERS & SPEND DISTRIBUTION                      */}
         {/* ------------------------------------------------------------- */}
-        {trackingViewMode === 'distribution' && (
+        {(trackingViewMode === 'all' || trackingViewMode === 'distribution') && (
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>

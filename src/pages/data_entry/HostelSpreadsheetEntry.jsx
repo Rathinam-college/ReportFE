@@ -1838,6 +1838,82 @@ export default function HostelSpreadsheetEntry({
                 </td>
               </tr>
 
+              {/* Power consumption units(EB + DG) Hostel */}
+              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#eff6ff' }}>
+                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                  {getParamSNo('power_units', '34')}
+                </td>
+                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                  {getParamName('power_units', 'Power consumption units(EB + DG) Hostel')}
+                </td>
+                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#eff6ff' }}></td>
+                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                  <input
+                    type="number"
+                    value={currData.power_units ?? ''}
+                    onChange={(e) => handleValChange('power_units', e.target.value)}
+                    disabled={isClosed}
+                    placeholder="0"
+                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                  />
+                </td>
+              </tr>
+
+              {/* Power consumption cost(EB + DG) Hostel */}
+              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#eff6ff' }}>
+                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                  {getParamSNo('power_cost', '35')}
+                </td>
+                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                  {getParamName('power_cost', 'Power consumption cost(EB + DG) Hostel')}
+                </td>
+                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#eff6ff' }}></td>
+                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                  <input
+                    type="number"
+                    value={currData.power_cost ?? ''}
+                    onChange={(e) => handleValChange('power_cost', e.target.value)}
+                    disabled={isClosed}
+                    placeholder="0"
+                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                    className="currency-font"
+                  />
+                </td>
+              </tr>
+
+              {/* No of Students+ staff in Hostel */}
+              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#eff6ff' }}>
+                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                  {getParamSNo('occupants_power', '36')}
+                </td>
+                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                  {getParamName('occupants_power', 'No of Students+ staff in Hostel')}
+                </td>
+                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.total_occupied}</td>
+              </tr>
+
+              {/* Sq feet Hostel */}
+              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#eff6ff' }}>
+                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                  {getParamSNo('sq_feet', '37')}
+                </td>
+                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                  {getParamName('sq_feet', 'Sq feet Hostel')}
+                </td>
+                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#eff6ff' }}></td>
+                <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                  <input
+                    type="number"
+                    value={currData.sq_feet ?? ''}
+                    onChange={(e) => handleValChange('sq_feet', e.target.value)}
+                    disabled={isClosed}
+                    placeholder="0"
+                    style={{ width: '100%', textAlign: 'right', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontWeight: '700' }}
+                  />
+                </td>
+              </tr>
+
               {/* Power cost per sqft */}
               {isParamActive('power_cost_sqft') && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
@@ -1882,14 +1958,14 @@ export default function HostelSpreadsheetEntry({
 
               {/* Normal Water Consumption Ltr */}
               {isParamActive('normal_water_litres') && (
-                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0f9ff' }}>
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
                   <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
                     {getParamSNo('normal_water_litres', '•')}
                   </td>
                   <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {getParamName('normal_water_litres', 'Normal Water Consumption Ltr Hostels')}
                   </td>
-                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0f9ff' }}></td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
                   <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                     <input
                       type="number"
@@ -1905,14 +1981,14 @@ export default function HostelSpreadsheetEntry({
 
               {/* Normal Water Consumption Cost */}
               {isParamActive('normal_water_cost') && (
-                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0f9ff' }}>
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
                   <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
                     {getParamSNo('normal_water_cost', '•')}
                   </td>
                   <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {getParamName('normal_water_cost', 'Normal Water Consumption Cost Hostels')}
                   </td>
-                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0f9ff' }}></td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
                   <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                     <input
                       type="number"
@@ -1926,6 +2002,18 @@ export default function HostelSpreadsheetEntry({
                   </td>
                 </tr>
               )}
+
+              {/* No of Students in Hostels (Normal Water) */}
+              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
+                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                  {getParamSNo('students_normal_water', '•')}
+                </td>
+                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                  {getParamName('students_normal_water', 'No of Students in Hostels')}
+                </td>
+                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.students_total}</td>
+              </tr>
 
               {/* Normal water Ltr per student per day */}
               {isParamActive('normal_water_ltr_day') && (
@@ -1957,14 +2045,14 @@ export default function HostelSpreadsheetEntry({
 
               {/* Drinking Water Consumption Litres */}
               {isParamActive('drinking_water_litres') && (
-                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#ecfeff' }}>
                   <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
                     {getParamSNo('drinking_water_litres', '•')}
                   </td>
                   <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {getParamName('drinking_water_litres', 'Drinking Water Consumption Litres Hostels')}
                   </td>
-                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ecfeff' }}></td>
                   <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                     <input
                       type="number"
@@ -1980,14 +2068,14 @@ export default function HostelSpreadsheetEntry({
 
               {/* Drinking Water Consumption Cost */}
               {isParamActive('drinking_water_cost') && (
-                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#ecfeff' }}>
                   <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
                     {getParamSNo('drinking_water_cost', '•')}
                   </td>
                   <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
                     {getParamName('drinking_water_cost', 'Drinking Water Consumption Cost Hostels')}
                   </td>
-                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
+                  <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ecfeff' }}></td>
                   <td style={{ padding: '4px 8px', textAlign: 'right' }}>
                     <input
                       type="number"
@@ -2001,6 +2089,18 @@ export default function HostelSpreadsheetEntry({
                   </td>
                 </tr>
               )}
+
+              {/* No of Students in Hostels (Drinking Water) */}
+              <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#ecfeff' }}>
+                <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
+                  {getParamSNo('students_drinking_water', '•')}
+                </td>
+                <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
+                  {getParamName('students_drinking_water', 'No of Students in Hostels')}
+                </td>
+                <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
+                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.students_total}</td>
+              </tr>
 
               {/* Drinking water Litres per student per day */}
               {isParamActive('drinking_water_ltr_day') && (

@@ -9,6 +9,7 @@ import { getBudgetMonthCol } from '../../../utils/hostelBudgetConstants';
 import HostelExecutiveKpis from './HostelExecutiveKpis';
 import HostelCapacityOccupancySection from './HostelCapacityOccupancySection';
 import HostelExpensesBudgetSection from './HostelExpensesBudgetSection';
+import HostelPowerWaterSection from './HostelPowerWaterSection';
 import HostelReportsModal from './HostelReportsModal';
 import HostelDashboardCensusView from '../HostelDashboardCensusView';
 import HostelDashboardDataTable from '../HostelDashboardDataTable';
@@ -32,7 +33,7 @@ export default function HostelOperationsDashboard({
   const [activeMainView, setActiveMainView] = useState('all'); // 'executive' | 'census_ledger' | 'spreadsheet_matrix' | 'all'
   const [residentFilter, setResidentFilter] = useState('all'); // 'all' | 'boys' | 'girls' | 'college' | 'school' | 'sports' | 'staff'
   const [budgetMonthFilter, setBudgetMonthFilter] = useState('all'); // 'all' | 'recorded'
-  const [budgetViewMode, setBudgetViewMode] = useState('cards'); // 'both' | 'cards' | 'matrix' | 'distribution'
+  const [budgetViewMode, setBudgetViewMode] = useState('all'); // 'all' | 'both' | 'cards' | 'matrix' | 'distribution'
   const [budgetTrackingData, setBudgetTrackingData] = useState([]);
   const [localHostelMatrix, setLocalHostelMatrix] = useState(null);
 
@@ -333,47 +334,6 @@ export default function HostelOperationsDashboard({
               );
             })}
           </div>
-
-          {/* BUDGET toggles */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              BUDGET
-            </span>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-canvas, #F3F5FA)',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid #E1E6F2'
-            }}>
-              {[
-                { id: 'both', label: 'Both' },
-                { id: 'cards', label: 'Cards view' },
-                { id: 'matrix', label: 'Hostel ledger' },
-                { id: 'distribution', label: 'Cost drivers' }
-              ].map(v => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setBudgetViewMode(v.id)}
-                  style={{
-                    minHeight: '32px',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
-                    backgroundColor: budgetViewMode === v.id ? 'var(--primary, #14245C)' : 'transparent',
-                    color: budgetViewMode === v.id ? '#ffffff' : '#475569',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -422,6 +382,15 @@ export default function HostelOperationsDashboard({
             trackingViewMode={budgetViewMode}
             onTrackingViewModeChange={setBudgetViewMode}
             hideTopToggles={true}
+          />
+
+          {/* 2A. POWER & WATER CONSUMPTION CARD + MONTH-BY-MONTH / SINGLE-MONTH MODAL */}
+          <HostelPowerWaterSection
+            census={activeCensus}
+            allCensusMap={hostelCensusMap}
+            periods={effectivePeriods}
+            isAllMonths={isAllMonths}
+            activePeriodObj={activePeriodObj}
           />
 
           {/* 2B. MONTHLY SUPPORTING ATTACHMENTS, PRESENTATIONS & BILLS FOR ACTIVE MONTH */}

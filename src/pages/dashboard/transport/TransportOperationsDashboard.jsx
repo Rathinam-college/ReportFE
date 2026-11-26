@@ -537,117 +537,57 @@ export default function TransportOperationsDashboard({
     ];
   }, [isAllMonths, visiblePeriods, activeBranch, effectiveMatrix, currentGrandTotal, metrics]);
 
-  // 6 Bento Category Cards for Transport
+  // Parameter-based Bento Category Cards for Transport
   const transportCategories = useMemo(() => {
-    const fuelMonthly = {};
-    const repMonthly = {};
-    const empMonthly = {};
-    const fcMonthly = {};
-    const othMonthly = {};
-    const paxMonthly = {};
-
-    let fuelMax = 1;
-    let repMax = 1;
-    let empMax = 1;
-    let fcMax = 1;
-    let othMax = 1;
-    let paxMax = 1;
-
-    visiblePeriods.forEach(p => {
-      const f = getParamVal(activeBranch, String(p.id), 'fuel_expenses');
-      const r = getParamVal(activeBranch, String(p.id), 'repair_maintenance_cost');
-      const e = getParamVal(activeBranch, String(p.id), 'employee_cost');
-      const fc = getParamVal(activeBranch, String(p.id), 'statutory_cost') + getParamVal(activeBranch, String(p.id), 'fc_cost');
-      const o = getParamVal(activeBranch, String(p.id), 'other_cost') + getParamVal(activeBranch, String(p.id), 'cab_billing') + getParamVal(activeBranch, String(p.id), 'parking_fastag') + getParamVal(activeBranch, String(p.id), 'cctv_replacement');
-      const px = getParamVal(activeBranch, String(p.id), 'passengers_count');
-
-      fuelMonthly[p.id] = f;
-      repMonthly[p.id] = r;
-      empMonthly[p.id] = e;
-      fcMonthly[p.id] = fc;
-      othMonthly[p.id] = o;
-      paxMonthly[p.id] = px;
-
-      if (f > fuelMax) fuelMax = f;
-      if (r > repMax) repMax = r;
-      if (e > empMax) empMax = e;
-      if (fc > fcMax) fcMax = fc;
-      if (o > othMax) othMax = o;
-      if (px > paxMax) paxMax = px;
-    });
+    const paramDefs = [
+      { id: 'fuel_expenses', name: 'Fuel expenses (Rs)', color: '#ea580c' },
+      { id: 'fc_cost', name: 'FC 2025-2026', color: '#0d9488' },
+      { id: 'statutory_cost', name: 'Vehicle Statutory', color: '#10b981' },
+      { id: 'repair_maintenance_cost', name: 'Repair & Maintenance', color: '#0284c7' },
+      { id: 'other_cost', name: 'Others', color: '#f59e0b' },
+      { id: 'cctv_replacement', name: 'CCTV replacement', color: '#7c3aed' },
+      { id: 'employee_cost', name: 'Transport Employees Cost', color: '#6366f1' },
+      { id: 'parking_fastag', name: 'Vehicle Parking & Fastag Recharge', color: '#d97706' },
+      { id: 'students_count', name: 'Students count', color: '#06b6d4', isPersonCategory: true },
+      { id: 'total_expenses', name: 'Total Expenses', color: '#14245C', isTotalCard: true }
+    ];
 
     const denom = currentGrandTotal > 0 ? currentGrandTotal : 1;
 
-    const curFuel = isAllMonths ? Object.values(fuelMonthly).reduce((a, b) => a + b, 0) : (fuelMonthly[activePeriod] || metrics.fuel_expenses);
-    const curRep = isAllMonths ? Object.values(repMonthly).reduce((a, b) => a + b, 0) : (repMonthly[activePeriod] || metrics.repair_maintenance_cost);
-    const curEmp = isAllMonths ? Object.values(empMonthly).reduce((a, b) => a + b, 0) : (empMonthly[activePeriod] || metrics.employee_cost);
-    const curFc = isAllMonths ? Object.values(fcMonthly).reduce((a, b) => a + b, 0) : (fcMonthly[activePeriod] || (metrics.statutory_cost + metrics.fc_cost));
-    const curOth = isAllMonths ? Object.values(othMonthly).reduce((a, b) => a + b, 0) : (othMonthly[activePeriod] || (metrics.other_cost + metrics.cab_billing + (metrics.parking_fastag || 0) + (metrics.cctv_replacement || 0)));
-    const curPax = isAllMonths ? 0 : (paxMonthly[activePeriod] || metrics.passengers_count);
+    return paramDefs.map((def) => {
+      const monthlyAmounts = {};
+      let maxMonthlyAmount = 1;
 
-    return [
-      {
-        categoryId: 'fuel',
-        categoryName: 'Fuel & Diesel Expenses',
-        color: '#ea580c',
-        selectedAmount: curFuel,
-        selectedPercent: (curFuel / denom) * 100,
-        monthlyAmounts: fuelMonthly,
-        maxMonthlyAmount: fuelMax,
+      visiblePeriods.forEach((p) => {
+        const pid = String(p.id);
+        let val = 0;
+        if (def.id === 'students_count') {
+          val = getParamVal(activeBranch, pid, 'students_count') || getParamVal(activeBranch, pid, 'students_count_income');
+        } else if (def.id === 'total_expenses') {
+          val = getBranchMetrics(activeBranch, pid).total_expenses;
+        } else {
+          val = getParamVal(activeBranch, pid, def.id);
+        }
+        monthlyAmounts[p.id] = val;
+        if (val > maxMonthlyAmount) maxMonthlyAmount = val;
+      });
+
+      const curVal = isAllMonths
+        ? (def.isPersonCategory ? (monthlyAmounts[visiblePeriods[visiblePeriods.length - 1]?.id] || 0) : Object.values(monthlyAmounts).reduce((a, b) => a + b, 0))
+        : (monthlyAmounts[activePeriod] ?? (def.id === 'total_expenses' ? metrics.total_expenses : (metrics[def.id] || 0)));
+
+      return {
+        categoryId: def.id,
+        categoryName: def.name,
+        color: def.color,
+        isPersonCategory: !!def.isPersonCategory,
+        selectedAmount: curVal,
+        selectedPercent: def.isPersonCategory ? 0 : (def.isTotalCard ? (curVal > 0 ? 100 : 0) : (curVal / denom) * 100),
+        monthlyAmounts,
+        maxMonthlyAmount,
         hideDetails: true
-      },
-      {
-        categoryId: 'repair',
-        categoryName: 'Repairs & Maintenance',
-        color: '#0284c7',
-        selectedAmount: curRep,
-        selectedPercent: (curRep / denom) * 100,
-        monthlyAmounts: repMonthly,
-        maxMonthlyAmount: repMax,
-        hideDetails: true
-      },
-      {
-        categoryId: 'driver',
-        categoryName: 'Drivers & Crew Wages',
-        color: '#6366f1',
-        selectedAmount: curEmp,
-        selectedPercent: (curEmp / denom) * 100,
-        monthlyAmounts: empMonthly,
-        maxMonthlyAmount: empMax,
-        hideDetails: true
-      },
-      {
-        categoryId: 'statutory',
-        categoryName: 'FC & Statutory Compliance',
-        color: '#10b981',
-        selectedAmount: curFc,
-        selectedPercent: (curFc / denom) * 100,
-        monthlyAmounts: fcMonthly,
-        maxMonthlyAmount: fcMax,
-        hideDetails: true
-      },
-      {
-        categoryId: 'other',
-        categoryName: 'Fastag, Tolls & Operational Sundries',
-        color: '#f59e0b',
-        selectedAmount: curOth,
-        selectedPercent: (curOth / denom) * 100,
-        monthlyAmounts: othMonthly,
-        maxMonthlyAmount: othMax,
-        hideDetails: true
-      },
-      {
-        categoryId: 'census',
-        categoryName: 'Fleet Ridership & Operational Census',
-        color: '#06b6d4',
-        isPersonCategory: true,
-        selectedAmount: curPax,
-        selectedPercent: 0,
-        monthlyAmounts: paxMonthly,
-        maxMonthlyAmount: paxMax,
-        hideDetails: true
-      }
-    ];
+      };
+    });
   }, [visiblePeriods, activeBranch, effectiveMatrix, isAllMonths, activePeriod, currentGrandTotal, metrics]);
 
   // Filtered vehicles list for active branch
@@ -998,376 +938,95 @@ export default function TransportOperationsDashboard({
           {/* 2. OPERATIONAL FLEET PERFORMANCE KPI CARDS (DIESEL, KM RUN, MILEAGE)    */}
           {/* Live DB connection • Click to inspect individual vehicles & averages   */}
           {/* ----------------------------------------------------------------------- */}
+          <button
+            type="button"
+            onClick={() => handleOpenVehicleModal('all')}
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              border: '1px solid #C7D7FE',
+              boxShadow: '0 2px 10px rgba(20, 36, 92, 0.05)',
+              padding: '16px 22px',
+              width: '100%',
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '14px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#2F4BB8';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(47, 75, 184, 0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#C7D7FE';
+              e.currentTarget.style.boxShadow = '0 2px 10px rgba(20, 36, 92, 0.05)';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                backgroundColor: '#EAF0FF',
+                color: '#2F4BB8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '800',
+                fontSize: '18px'
+              }}>
+                ⚡
+              </div>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: '800', color: '#14245C' }}>
+                  Compare the Mileage
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginTop: '2px' }}>
+                  {opPeriodLabel} • {opBusCount} buses • {opDieselLitres.toLocaleString('en-IN', { maximumFractionDigits: 1 })} L • {Math.round(opKmRun).toLocaleString('en-IN')} KM • {Number(opMileage).toFixed(2)} km/L
+                </div>
+              </div>
+            </div>
+
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: '800',
+              color: '#ffffff',
+              backgroundColor: '#2F4BB8',
+              padding: '9px 16px',
+              borderRadius: '10px'
+            }}>
+              Compare the Mileage
+              <ArrowRight size={14} color="#ffffff" />
+            </span>
+          </button>
+
+          {/* ========================================================================= */}
+          {/* VEHICLE-WISE EXPENSES LEDGER (MOVED ABOVE BUDGET)                         */}
+          {/* ========================================================================= */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
-            gap: '14px',
-            width: '100%',
-            boxSizing: 'border-box'
+            backgroundColor: '#ffffff',
+            borderRadius: '20px',
+            border: '1px solid #E1E6F2',
+            padding: '28px',
+            boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)'
           }}>
-            {/* KPI 1: Diesel cons */}
-            <div
-              onClick={() => handleOpenVehicleModal('diesel')}
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '16px',
-                padding: '18px 20px',
-                border: '1.5px solid #fed7aa',
-                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.08)',
-                cursor: 'pointer',
-                position: 'relative',
-                overflow: 'hidden',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = '0 10px 22px rgba(245, 158, 11, 0.18)';
-                e.currentTarget.style.borderColor = '#f59e0b';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(245, 158, 11, 0.08)';
-                e.currentTarget.style.borderColor = '#fed7aa';
-              }}
-            >
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: '#f59e0b' }} />
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      backgroundColor: '#fef3c7',
-                      color: '#d97706',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '18px'
-                    }}>
-                      ⛽
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                        Diesel cons
-                      </h3>
-                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#92400e' }}>
-                        Diesel Consumption • {opPeriodLabel}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span style={{
-                    fontSize: '10.5px',
-                    fontWeight: '800',
-                    padding: '3px 8px',
-                    borderRadius: '9999px',
-                    backgroundColor: '#fffbeb',
-                    color: '#b45309',
-                    border: '1px solid #fde68a'
-                  }}>
-                    Operational KPI
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '12px 0 10px 0' }}>
-                  <span style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.8px', lineHeight: 1 }}>
-                    {opDieselLitres.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
-                  </span>
-                  <span style={{ fontSize: '15px', fontWeight: '800', color: '#d97706' }}>
-                    Litres
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                  <span style={{
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    padding: '3px 10px',
-                    borderRadius: '8px',
-                    backgroundColor: '#fef3c7',
-                    color: '#92400e',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <TrendingUp size={13} />
-                    Avg: <strong>{opAvgDieselPerBus} L / bus</strong>
-                  </span>
-                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Fuel Cost: <strong>₹{formatIndianCompact(opFuelExpenses)}</strong>
-                  </span>
-                </div>
-              </div>
-
-              <div style={{
-                paddingTop: '10px',
-                borderTop: '1px solid #fef3c7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                color: '#d97706',
-                fontSize: '11.5px',
-                fontWeight: '700'
-              }}>
-                <span>Click to view {opBusCount} vehicle litres & avg</span>
-                <ArrowRight size={14} />
-              </div>
-            </div>
-
-            {/* KPI 2: KM run Oct */}
-            <div
-              onClick={() => handleOpenVehicleModal('km')}
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '16px',
-                padding: '18px 20px',
-                border: '1.5px solid #bfdbfe',
-                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.08)',
-                cursor: 'pointer',
-                position: 'relative',
-                overflow: 'hidden',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = '0 10px 22px rgba(2, 132, 199, 0.18)';
-                e.currentTarget.style.borderColor = '#0284c7';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(2, 132, 199, 0.08)';
-                e.currentTarget.style.borderColor = '#bfdbfe';
-              }}
-            >
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: '#0284c7' }} />
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      backgroundColor: '#eff6ff',
-                      color: '#0284c7',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '18px'
-                    }}>
-                      🛣️
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                        {isAllMonths ? 'KM run (All Months)' : `KM run ${opPeriodLabel.split("'")[0]}`}
-                      </h3>
-                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#0369a1' }}>
-                        Distance Logged • {opPeriodLabel}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span style={{
-                    fontSize: '10.5px',
-                    fontWeight: '800',
-                    padding: '3px 8px',
-                    borderRadius: '9999px',
-                    backgroundColor: '#eff6ff',
-                    color: '#0369a1',
-                    border: '1px solid #bfdbfe'
-                  }}>
-                    Fleet Distance
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '12px 0 10px 0' }}>
-                  <span style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.8px', lineHeight: 1 }}>
-                    {Math.round(opKmRun).toLocaleString('en-IN')}
-                  </span>
-                  <span style={{ fontSize: '15px', fontWeight: '800', color: '#0284c7' }}>
-                    KM
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                  <span style={{
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    padding: '3px 10px',
-                    borderRadius: '8px',
-                    backgroundColor: '#e0f2fe',
-                    color: '#075985',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <Gauge size={13} />
-                    Avg: <strong>{opAvgKmPerBus} KM / bus</strong>
-                  </span>
-                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Active: <strong>{opBusCount} buses active</strong>
-                  </span>
-                </div>
-              </div>
-
-              <div style={{
-                paddingTop: '10px',
-                borderTop: '1px solid #e0f2fe',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                color: '#0284c7',
-                fontSize: '11.5px',
-                fontWeight: '700'
-              }}>
-                <span>Click to view {opBusCount} vehicle KMs & avg</span>
-                <ArrowRight size={14} />
-              </div>
-            </div>
-
-            {/* KPI 3: Oct'26 Mileage */}
-            <div
-              onClick={() => handleOpenVehicleModal('mileage')}
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '16px',
-                padding: '18px 20px',
-                border: '1.5px solid #a7f3d0',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.08)',
-                cursor: 'pointer',
-                position: 'relative',
-                overflow: 'hidden',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.boxShadow = '0 10px 22px rgba(16, 185, 129, 0.18)';
-                e.currentTarget.style.borderColor = '#10b981';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.08)';
-                e.currentTarget.style.borderColor = '#a7f3d0';
-              }}
-            >
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: '#10b981' }} />
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      backgroundColor: '#ecfdf5',
-                      color: '#059669',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '18px'
-                    }}>
-                      ⚡
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                        {isAllMonths ? 'Fleet Mileage' : `${opPeriodLabel} Mileage`}
-                      </h3>
-                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#065f46' }}>
-                        Fuel Efficiency • {opPeriodLabel}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span style={{
-                    fontSize: '10.5px',
-                    fontWeight: '800',
-                    padding: '3px 8px',
-                    borderRadius: '9999px',
-                    backgroundColor: '#ecfdf5',
-                    color: '#065f46',
-                    border: '1px solid #a7f3d0'
-                  }}>
-                    Efficiency
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '12px 0 10px 0' }}>
-                  <span style={{ fontSize: '32px', fontWeight: '900', color: '#059669', letterSpacing: '-0.8px', lineHeight: 1 }}>
-                    {Number(opMileage).toFixed(2)}
-                  </span>
-                  <span style={{ fontSize: '15px', fontWeight: '800', color: '#047857' }}>
-                    km/L
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                  <span style={{
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    padding: '3px 10px',
-                    borderRadius: '8px',
-                    backgroundColor: '#d1fae5',
-                    color: '#065f46',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <Sparkles size={13} />
-                    Fleet Avg: <strong>{Number(opMileage).toFixed(2)} km/L</strong>
-                  </span>
-                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Cost: <strong>₹{opFuelCostPerKm} / km</strong>
-                  </span>
-                </div>
-              </div>
-
-              <div style={{
-                paddingTop: '10px',
-                borderTop: '1px solid #d1fae5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                color: '#059669',
-                fontSize: '11.5px',
-                fontWeight: '700'
-              }}>
-                <span>Click to view {opBusCount} vehicle mileage & avg</span>
-                <ArrowRight size={14} />
-              </div>
-            </div>
+            <TransportVehicleExpensesTable
+              periodId={isAllMonths ? 'all' : activePeriodObj?.id}
+              branch={activeBranch}
+              embedded={true}
+              readOnly={true}
+            />
           </div>
 
-
-
-          {/* 2B. VEHICLE FLEET OPERATIONAL ANALYTICS (3-ROW TABLE + SIDE CHART) */}
-          <TransportVehicleDetailsModal
-            embedded={true}
-            isOpen={true}
-            isAllMonths={isAllMonths}
-            vehicles={vehiclesList}
-            periods={visiblePeriods}
-            initialFocus={modalMetricFocus}
-            activeBranch={activeBranch}
-            activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
-            summary={vehicleStats?.summary || {}}
-            branches={TRANSPORT_BRANCHES}
-            onBranchChange={(newBranch) => setActiveBranch(newBranch)}
-            onJumpToLedger={() => setActiveMainView('vehicles')}
-          />
-
-
-                    {/* ----------------------------------------------------------------------- */}
+          {/* ----------------------------------------------------------------------- */}
           {/* MULTI-MONTH SANCTIONED BUDGET PARAMETERS & UTILIZATION TABLE           */}
           {/* Matching User's Image Design with live spend across all recorded months */}
           {/* ----------------------------------------------------------------------- */}
@@ -1803,9 +1462,9 @@ export default function TransportOperationsDashboard({
       )}
 
       {/* ========================================================================= */}
-      {/* SUB-VIEW: VEHICLE-WISE EXPENSES LEDGER (58 BUSES)                         */}
+      {/* SUB-VIEW: VEHICLE-WISE EXPENSES LEDGER (58 BUSES) - VEHICLES TAB ONLY     */}
       {/* ========================================================================= */}
-      {(activeMainView === 'executive' || activeMainView === 'vehicles' || activeMainView === 'all') && (
+      {activeMainView === 'vehicles' && (
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '20px',
