@@ -254,28 +254,36 @@ export default function CctvOperationsDashboard({
   // Total Attachments count
   const activeMonthAttachmentsCount = periodAttachments.length;
 
+  const domainConfigs = [
+    { section: 'Projects', num: '01', title: 'Projects', color: '#0F6B3A', bg: '#E4F6EC', summary: `${totalProjects} Total` },
+    { section: 'Complaints', num: '02', title: 'Complaints', color: '#8A4A00', bg: '#FFF1DD', summary: `${totalComplaints} Tickets · ${tatComplaints}h TAT` },
+    { section: 'Service request', num: '03', title: 'Service requests', color: '#2F4BB8', bg: '#EAF0FF', summary: `${totalServices} Requests · ${tatServices}h TAT` },
+    { section: 'PPM', num: '04', title: 'PPM', color: '#0B6B6B', bg: '#DDF3F3', summary: `${ppmCount} Checks` },
+    { section: 'Quality Issues', num: '05', title: 'Quality issues', color: '#5B34B5', bg: '#EFE9FB', summary: `${qualityOpen} Open` },
+    { section: 'Expenses', num: '06', title: 'Expenses', color: '#A04600', bg: '#FDE3CC', summary: formatINR(totalExpenses) },
+    { section: 'Budget Tracking', num: '07', title: 'Budget tracking', color: '#14663A', bg: '#D9EFD0', summary: `Balance ${formatINR(budgetBalance)}` }
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
       {/* ========================================================================= */}
-      {/* 1. STICKY DASHBOARD MASTER HEADER & FILTER BAR                            */}
+      {/* 1. STICKY TOP FILTER BAR                                                  */}
       {/* ========================================================================= */}
-      <div 
+      <div
         className="sticky-dashboard-master-header"
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 80,
-          backgroundColor: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderRadius: '16px',
-          border: '1.5px solid #e2e8f0',
-          padding: '14px 20px',
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
+          backgroundColor: '#ffffff',
+          borderRadius: '18px',
+          border: '1px solid #E1E6F2',
+          padding: '16px 22px',
+          boxShadow: '0 4px 18px rgba(20, 36, 92, 0.06)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px'
+          gap: '14px'
         }}
       >
         <div style={{
@@ -283,201 +291,236 @@ export default function CctvOperationsDashboard({
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '12px'
+          gap: '14px'
         }}>
           {/* Title & Badges */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <div style={{
               width: '42px',
               height: '42px',
               borderRadius: '12px',
-              backgroundColor: '#e0e7ff',
-              color: '#4338ca',
+              backgroundColor: '#14245C',
+              color: '#F5A524',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.2)'
+              flexShrink: 0
             }}>
-              <Video size={22} />
+              <Video size={21} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                  CCTV Operations & Surveillance Dashboard
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#14245C', margin: 0, letterSpacing: '-0.02em' }}>
+                  CCTV Operations and Surveillance Dashboard
                 </h1>
                 <span style={{
                   fontSize: '11px',
                   fontWeight: '700',
-                  padding: '3px 8px',
+                  padding: '3px 10px',
                   borderRadius: '9999px',
-                  backgroundColor: '#dbeafe',
-                  color: '#1e40af'
+                  backgroundColor: '#EAF0FF',
+                  color: '#2F4BB8'
                 }}>
-                  Surveillance & Security
+                  Surveillance and security
                 </span>
                 <span style={{
                   fontSize: '11px',
                   fontWeight: '700',
-                  padding: '3px 8px',
+                  padding: '3px 10px',
                   borderRadius: '9999px',
-                  backgroundColor: '#f1f5f9',
+                  backgroundColor: '#F3F5FA',
                   color: '#475569'
                 }}>
-                  27 Parameter Model
+                  27 parameter model
                 </span>
               </div>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                Projects • Complaints & Service Requests • PPM • Quality Issues • Expenses & Budget Tracking
+              <p style={{ fontSize: '12.5px', color: '#64748b', margin: '3px 0 0 0', fontWeight: '500' }}>
+                Projects · complaints and service requests · PPM · quality issues · expenses and budget tracking
               </p>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
+              type="button"
               onClick={() => {
                 fetchAllEntries();
                 fetchPeriodAttachments();
                 onRefreshAttachments?.();
               }}
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 14px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '600',
+                minHeight: '38px',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                fontSize: '12.5px',
+                fontWeight: '700',
                 backgroundColor: '#ffffff',
-                color: '#475569',
-                border: '1px solid #cbd5e1',
+                color: '#14245C',
+                border: '1px solid #E1E6F2',
                 cursor: 'pointer'
               }}
             >
-              <RefreshCw size={13} className={loadingEntries ? 'animate-spin' : ''} />
-              <span>Refresh Live</span>
+              <RefreshCw size={14} className={loadingEntries ? 'animate-spin' : ''} />
+              <span>Refresh live</span>
             </button>
 
             {handleExportReport && (
               <button
+                type="button"
                 onClick={handleExportReport}
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 14px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  backgroundColor: '#0284c7',
+                  minHeight: '38px',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  backgroundColor: '#14245C',
                   color: '#ffffff',
                   border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)'
+                  cursor: 'pointer'
                 }}
               >
-                <Download size={13} />
-                <span>Download Report</span>
+                <Download size={14} />
+                <span>Download report</span>
               </button>
             )}
 
             <button
+              type="button"
               onClick={() => onOpenDataEntry?.(activePeriod !== 'all' ? Number(activePeriod) : null)}
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 16px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '700',
-                backgroundColor: '#ec4899',
-                color: '#ffffff',
+                minHeight: '38px',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                backgroundColor: '#F5A524',
+                color: '#14245C',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(236, 72, 153, 0.3)'
+                boxShadow: '0 2px 8px rgba(245, 165, 36, 0.28)'
               }}
             >
-              <span>Open Data Entry</span>
-              <ArrowUpRight size={14} />
+              <span>Open data entry</span>
+              <ArrowUpRight size={15} />
             </button>
           </div>
         </div>
 
-        {/* Month Filter Selector Pills */}
+        {/* Month Chips + Search Parameter Box */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          overflowX: 'auto',
-          paddingBottom: '2px',
-          borderTop: '1px solid #f1f5f9',
-          paddingTop: '10px'
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          borderTop: '1px solid #EDF0F8',
+          paddingTop: '12px'
         }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-            Filter Month:
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+              MONTH
+            </span>
 
-          <button
-            onClick={() => setActivePeriod('all')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: activePeriod === 'all' ? '800' : '600',
-              backgroundColor: activePeriod === 'all' ? '#0f172a' : '#f8fafc',
-              color: activePeriod === 'all' ? '#ffffff' : '#475569',
-              border: activePeriod === 'all' ? '1px solid #0f172a' : '1px solid #e2e8f0',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            All Months (Spreadsheet View)
-          </button>
+            <button
+              type="button"
+              onClick={() => setActivePeriod('all')}
+              style={{
+                minHeight: '36px',
+                padding: '6px 14px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: activePeriod === 'all' ? '800' : '600',
+                backgroundColor: activePeriod === 'all' ? '#14245C' : '#F3F5FA',
+                color: activePeriod === 'all' ? '#ffffff' : '#334155',
+                border: activePeriod === 'all' ? '1px solid #14245C' : '1px solid #E1E6F2',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              All months (spreadsheet view)
+            </button>
 
-          {periods.map(p => {
-            const isSel = String(activePeriod) === String(p.id);
-            const entryForMonth = entriesMap[p.id];
-            const spend = entryForMonth?.total_expenses ? formatINR(entryForMonth.total_expenses) : '₹0';
+            {periods.map(p => {
+              const isSel = String(activePeriod) === String(p.id);
+              const entryForMonth = entriesMap[p.id];
+              const spend = entryForMonth?.total_expenses ? formatINR(entryForMonth.total_expenses) : '₹0';
 
-            return (
-              <button
-                key={p.id}
-                onClick={() => setActivePeriod(String(p.id))}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '12px',
-                  fontWeight: isSel ? '800' : '600',
-                  backgroundColor: isSel ? '#4f46e5' : '#ffffff',
-                  color: isSel ? '#ffffff' : '#334155',
-                  border: isSel ? '1px solid #4f46e5' : '1px solid #e2e8f0',
-                  boxShadow: isSel ? '0 2px 6px rgba(79, 70, 229, 0.3)' : 'none',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                <span>{p.period_label || p.label || `Month ${p.id}`}</span>
-                <span style={{
-                  fontSize: '10px',
-                  padding: '1px 5px',
-                  borderRadius: '9999px',
-                  backgroundColor: isSel ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
-                  color: isSel ? '#ffffff' : '#64748b'
-                }}>
-                  {spend}
-                </span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setActivePeriod(String(p.id))}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    minHeight: '36px',
+                    padding: '6px 14px',
+                    borderRadius: '9999px',
+                    fontSize: '12px',
+                    fontWeight: isSel ? '800' : '600',
+                    backgroundColor: isSel ? '#14245C' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#334155',
+                    border: isSel ? '1px solid #14245C' : '1px solid #E1E6F2',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <span>{p.period_label || p.label || `Month ${p.id}`}</span>
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '700',
+                    padding: '2px 7px',
+                    borderRadius: '9999px',
+                    backgroundColor: isSel ? 'rgba(255,255,255,0.2)' : '#F3F5FA',
+                    color: isSel ? '#F5A524' : '#64748b'
+                  }}>
+                    {spend}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search parameter input */}
+          <div style={{ position: 'relative', minWidth: '220px' }}>
+            <Search size={14} color="#64748b" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              placeholder="Search parameter…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                minHeight: '38px',
+                padding: '7px 12px 7px 34px',
+                borderRadius: '10px',
+                border: '1px solid #E1E6F2',
+                backgroundColor: '#F3F5FA',
+                color: '#14245C',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                boxSizing: 'border-box',
+                outline: 'none'
+              }}
+            />
+          </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. EXECUTIVE BENTO KPI METRICS SUMMARY                                    */}
+      {/* 2. KPI STRIP (6 CARDS)                                                    */}
       {/* ========================================================================= */}
       <div style={{
         display: 'grid',
@@ -487,482 +530,448 @@ export default function CctvOperationsDashboard({
         {/* KPI 1: Projects (Green) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '16px',
+          borderRadius: '18px',
           padding: '18px 20px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #16a34a',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #0F6B3A',
+          boxShadow: '0 2px 8px rgba(20, 36, 92, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#0F6B3A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Projects
             </span>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#dcfce7', color: '#166534', fontWeight: '700' }}>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#E4F6EC', color: '#0F6B3A', fontWeight: '700' }}>
               {activePeriodObj?.period_label || 'Current'}
             </span>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0' }}>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: '#14245C', margin: '8px 0 4px 0' }}>
             {totalProjects}
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', marginLeft: '4px' }}>Total</span>
+            <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#64748b', marginLeft: '6px' }}>Total</span>
           </div>
-          <div style={{ display: 'flex', gap: '12px', fontSize: '11.5px', color: '#475569', marginTop: '4px' }}>
-            <span>Completed: <strong style={{ color: '#16a34a' }}>{completedProjects}</strong></span>
-            <span>•</span>
-            <span>In Progress: <strong style={{ color: '#0284c7' }}>{inProgressProjects}</strong></span>
+          <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+            Completed: <strong style={{ color: '#0F6B3A' }}>{completedProjects}</strong> · In progress: <strong style={{ color: '#2F4BB8' }}>{inProgressProjects}</strong>
           </div>
         </div>
 
-        {/* KPI 2: Complaints & TAT (Yellow) */}
+        {/* KPI 2: Complaints and TAT (Amber) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '16px',
+          borderRadius: '18px',
           padding: '18px 20px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #eab308',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #F5A524',
+          boxShadow: '0 2px 8px rgba(20, 36, 92, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#ca8a04', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Complaints & TAT
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8A4A00', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Complaints &amp; TAT
             </span>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#fef9c3', color: '#854d0e', fontWeight: '700' }}>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#FFF1DD', color: '#8A4A00', fontWeight: '700' }}>
               TAT {tatComplaints}h
             </span>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0' }}>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: '#14245C', margin: '8px 0 4px 0' }}>
             {totalComplaints}
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', marginLeft: '4px' }}>Tickets</span>
+            <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#64748b', marginLeft: '6px' }}>Tickets</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', fontSize: '11.5px', color: '#475569', marginTop: '4px' }}>
-            <span>Avg TAT: <strong>{tatComplaints} Hrs</strong></span>
-            <span>•</span>
-            <span>Repeated: <strong>{repeatedComplaints}</strong></span>
+          <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+            Avg TAT: <strong>{tatComplaints} Hrs</strong> · Repeated: <strong>{repeatedComplaints}</strong>
           </div>
         </div>
 
-        {/* KPI 3: Service Requests & TAT (Cyan) */}
+        {/* KPI 3: Service Requests (Blue) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '16px',
+          borderRadius: '18px',
           padding: '18px 20px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #0284c7',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #2F4BB8',
+          boxShadow: '0 2px 8px rgba(20, 36, 92, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Service Requests
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#2F4BB8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Service requests
             </span>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#e0f2fe', color: '#075985', fontWeight: '700' }}>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#EAF0FF', color: '#2F4BB8', fontWeight: '700' }}>
               TAT {tatServices}h
             </span>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0' }}>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: '#14245C', margin: '8px 0 4px 0' }}>
             {totalServices}
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', marginLeft: '4px' }}>Requests</span>
+            <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#64748b', marginLeft: '6px' }}>Requests</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', fontSize: '11.5px', color: '#475569', marginTop: '4px' }}>
-            <span>Avg TAT: <strong>{tatServices} Hrs</strong></span>
-            <span>•</span>
-            <span>Repeated: <strong>{repeatedServices}</strong></span>
+          <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+            Avg TAT: <strong>{tatServices} Hrs</strong> · Repeated: <strong>{repeatedServices}</strong>
           </div>
         </div>
 
-        {/* KPI 4: PPM & Quality (Lime & Lavender) */}
+        {/* KPI 4: PPM and Quality (Purple) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '16px',
+          borderRadius: '18px',
           padding: '18px 20px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #84cc16',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #5B34B5',
+          boxShadow: '0 2px 8px rgba(20, 36, 92, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#65a30d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              PPM & Quality
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#5B34B5', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              PPM &amp; quality
             </span>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#f3e8ff', color: '#6b21a8', fontWeight: '700' }}>
-              Quality Open: {qualityOpen}
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#EFE9FB', color: '#5B34B5', fontWeight: '700' }}>
+              Open: {qualityOpen}
             </span>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0' }}>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: '#14245C', margin: '8px 0 4px 0' }}>
             {ppmCount}
-            <span style={{ fontSize: '14px', fontWeight: '500', color: '#64748b', marginLeft: '4px' }}>PPM Checks</span>
+            <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#64748b', marginLeft: '6px' }}>PPM checks</span>
           </div>
-          <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px' }}>
-            Quality Closed: <strong style={{ color: '#16a34a' }}>{qualityClosed}</strong> | Open: <strong style={{ color: qualityOpen > 0 ? '#ef4444' : '#16a34a' }}>{qualityOpen}</strong>
+          <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+            Closed: <strong style={{ color: '#0F6B3A' }}>{qualityClosed}</strong> · Open: <strong style={{ color: qualityOpen > 0 ? '#dc2626' : '#0F6B3A' }}>{qualityOpen}</strong>
           </div>
         </div>
 
-        {/* KPI 5: Expenses (Peach) */}
+        {/* KPI 5: Total Expenses (Orange) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '16px',
+          borderRadius: '18px',
           padding: '18px 20px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #f97316',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #A04600',
+          boxShadow: '0 2px 8px rgba(20, 36, 92, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Total Expenses
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#A04600', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Total expenses
             </span>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#ffedd5', color: '#9a3412', fontWeight: '700' }}>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#FDE3CC', color: '#A04600', fontWeight: '700' }}>
               Spent
             </span>
           </div>
-          <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+          <div style={{ fontSize: '26px', fontWeight: '800', color: '#14245C', margin: '8px 0 4px 0' }} className="currency-font">
             {formatINR(totalExpenses)}
           </div>
-          <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px' }}>
-            Material: <strong>{formatINR(materialExpenses)}</strong> | Labour: <strong>{formatINR(labourExpenses)}</strong>
+          <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+            Material: <strong>{formatINR(materialExpenses)}</strong> · Labour: <strong>{formatINR(labourExpenses)}</strong>
           </div>
         </div>
 
-        {/* KPI 6: Budget Tracking & Balance (Green) */}
+        {/* KPI 6: Remaining Balance (Teal) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '16px',
+          borderRadius: '18px',
           padding: '18px 20px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #10b981',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #0B6B6B',
+          boxShadow: '0 2px 8px rgba(20, 36, 92, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Remaining Balance
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#0B6B6B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Remaining balance
             </span>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#d1fae5', color: '#065f46', fontWeight: '700' }}>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', backgroundColor: '#DDF3F3', color: '#0B6B6B', fontWeight: '700' }}>
               {spentPercent}% Spent
             </span>
           </div>
-          <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '6px 0 2px 0' }} className="currency-font">
+          <div style={{ fontSize: '26px', fontWeight: '800', color: '#14245C', margin: '8px 0 4px 0' }} className="currency-font">
             {formatINR(budgetBalance)}
           </div>
-          <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px' }}>
-            Approved: <strong>{formatINR(approvedBudget)}</strong> | Spent: <strong>{formatINR(cumulativeBudgetSpent)}</strong>
+          <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+            Approved: <strong>{formatINR(approvedBudget)}</strong> · Spent: <strong>{formatINR(cumulativeBudgetSpent)}</strong>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. MASTER SPREADSHEET (MATCHES EXACT COLOR SCHEME FROM EXCEL IMAGE)        */}
+      {/* 3. SEVEN DOMAIN CARDS (CCTV OPERATIONS MASTER SPREADSHEET)                */}
       {/* ========================================================================= */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        border: '1.5px solid #cbd5e1',
-        overflow: 'hidden',
-        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)'
-      }}>
-        {/* Spreadsheet Header Bar */}
-        <div style={{
-          backgroundColor: '#0f172a',
-          color: '#ffffff',
-          padding: '14px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(255,255,255,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Video size={18} color="#ffffff" />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '15px', fontWeight: '800', margin: 0, letterSpacing: '0.02em' }}>
-                CCTV Operations Master Spreadsheet
-              </h2>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                Showing all 7 color-coded operational domains and monthly audit values
-              </span>
-            </div>
-          </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {domainConfigs.map((dom) => {
+          const domainParams = filteredParameters.filter(param => param.section === dom.section);
+          if (domainParams.length === 0) return null;
 
-          {/* Quick Search */}
-          <div style={{ position: 'relative', width: '220px' }}>
-            <Search size={14} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              placeholder="Search parameter..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+          return (
+            <div
+              key={dom.section}
               style={{
-                width: '100%',
-                padding: '6px 10px 6px 30px',
-                borderRadius: '6px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                color: '#ffffff',
-                fontSize: '11.5px',
-                boxSizing: 'border-box'
+                backgroundColor: '#ffffff',
+                borderRadius: '18px',
+                border: '1px solid #E1E6F2',
+                overflow: 'hidden',
+                boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)'
               }}
-            />
-          </div>
-        </div>
-
-        {/* Table View */}
-        <div style={{ overflowX: 'auto', width: '100%' }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '12.5px',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-          }}>
-            <thead>
-              <tr style={{ backgroundColor: '#ffffff', borderBottom: '2px solid #000000', color: '#000000', fontWeight: '800' }}>
-                <th style={{ padding: '10px 12px', border: '1px solid #000000', width: '60px', textAlign: 'center' }}>
-                  S.No
-                </th>
-                <th style={{ padding: '10px 14px', border: '1px solid #000000', minWidth: '320px', textAlign: 'left' }}>
-                  Parameters
-                </th>
-                
-                {/* Monthly Columns */}
-                {periods.map(p => {
-                  const isCurrent = String(activePeriod) === String(p.id);
-                  return (
-                    <th 
-                      key={p.id}
-                      style={{
-                        padding: '10px 16px',
-                        border: '1px solid #000000',
-                        textAlign: 'right',
-                        minWidth: '140px',
-                        backgroundColor: isCurrent ? '#f1f5f9' : '#ffffff',
-                        fontWeight: '800'
-                      }}
-                    >
-                      {p.period_label || p.label || `Month ${p.id}`}
-                    </th>
-                  );
-                })}
-
-                <th style={{
-                  padding: '10px 16px',
-                  border: '1px solid #000000',
-                  textAlign: 'right',
-                  minWidth: '140px',
-                  backgroundColor: '#f8fafc',
-                  fontWeight: '900'
+            >
+              {/* Domain Card Header */}
+              <div style={{
+                padding: '14px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                borderBottom: '1px solid #EDF0F8'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    backgroundColor: dom.bg,
+                    color: dom.color
+                  }}>
+                    {dom.num}
+                  </span>
+                  <h2 style={{ fontSize: '15.5px', fontWeight: '800', color: '#14245C', margin: 0 }}>
+                    {dom.title}
+                  </h2>
+                </div>
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  padding: '4px 12px',
+                  borderRadius: '9999px',
+                  backgroundColor: dom.bg,
+                  color: dom.color
                 }}>
-                  Total / Cumulative
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredParameters.map((param, pIdx) => {
-                const styles = getSectionStyles(param.section);
-                const isFirstInSection = pIdx === 0 || filteredParameters[pIdx - 1]?.section !== param.section;
-                const isSectionHeaderRow = param.s_no && !param.param_key.includes('_');
+                  {dom.summary}
+                </span>
+              </div>
 
-                return (
-                  <tr
-                    key={param.param_key || pIdx}
-                    style={{
-                      backgroundColor: styles.bg,
-                      color: styles.text,
-                      borderBottom: '1px solid #000000',
-                      fontWeight: param.is_bold || param.formula ? '800' : '500'
-                    }}
-                  >
-                    {/* S.No */}
-                    <td style={{
-                      padding: '8px 10px',
-                      border: '1px solid #000000',
-                      textAlign: 'center',
-                      fontWeight: '800',
-                      color: styles.text
-                    }}>
-                      {param.s_no || ''}
-                    </td>
-
-                    {/* Parameter Name */}
-                    <td style={{
-                      padding: '8px 14px',
-                      border: '1px solid #000000',
-                      color: styles.text,
-                      fontWeight: param.is_bold || param.formula || isSectionHeaderRow ? '800' : '600'
-                    }}>
-                      {/* Section bold title if S.No is present */}
-                      {param.s_no && isFirstInSection && (
-                        <span style={{ marginRight: '6px', fontWeight: '900' }}>
-                          {param.section}:
-                        </span>
-                      )}
-                      <span>{param.param_name}</span>
-                    </td>
-
-                    {/* Dynamic Monthly Columns */}
-                    {periods.map(p => {
-                      const entryForPeriod = entriesMap[p.id] || {};
-                      const rawVal = entryForPeriod[param.param_key];
-                      const formatted = formatCellValue(rawVal, param);
+              {/* Domain Table (horizontal scroll inside card) */}
+              <div style={{ overflowX: 'auto', width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F7F9FD', borderBottom: '1px solid #D5DCEE', color: '#475569' }}>
+                      <th style={{ padding: '10px 12px', width: '58px', textAlign: 'center', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}>
+                        NO.
+                      </th>
+                      <th style={{ padding: '10px 14px', minWidth: '280px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}>
+                        PARAMETER
+                      </th>
+                      {periods.map(p => {
+                        const isCurrent = String(activePeriod) === String(p.id);
+                        return (
+                          <th
+                            key={p.id}
+                            style={{
+                              padding: '10px 14px',
+                              textAlign: 'right',
+                              minWidth: '130px',
+                              whiteSpace: 'nowrap',
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              backgroundColor: isCurrent ? '#14245C' : '#F7F9FD',
+                              color: isCurrent ? '#ffffff' : '#475569'
+                            }}
+                          >
+                            {p.period_label || p.label || `Month ${p.id}`}
+                          </th>
+                        );
+                      })}
+                      <th style={{ padding: '10px 16px', textAlign: 'right', minWidth: '130px', whiteSpace: 'nowrap', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em', color: '#14245C', backgroundColor: '#F3F5FA' }}>
+                        TOTAL
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {domainParams.map((param, pIdx) => {
+                      const isSummaryRow =
+                        (param.param_name && (
+                          param.param_name.toLowerCase().includes('total') ||
+                          param.param_name.toLowerCase().includes('approved') ||
+                          param.param_name.toLowerCase().includes('balance')
+                        )) ||
+                        param.is_bold ||
+                        Boolean(param.formula);
 
                       return (
-                        <td
-                          key={p.id}
+                        <tr
+                          key={param.param_key || pIdx}
                           style={{
-                            padding: '8px 16px',
-                            border: '1px solid #000000',
-                            textAlign: 'right',
-                            fontWeight: param.is_bold || param.formula ? '800' : '500',
-                            fontFamily: param.input_type === 'cost' ? 'sans-serif' : 'inherit'
+                            backgroundColor: isSummaryRow ? '#F7F9FD' : '#ffffff',
+                            borderBottom: isSummaryRow ? '1px solid #D5DCEE' : '1px solid #EDF0F8',
+                            fontWeight: isSummaryRow ? '800' : '500',
+                            color: '#14245C'
                           }}
                         >
-                          {formatted}
-                        </td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>
+                            {param.s_no || ''}
+                          </td>
+                          <td style={{ padding: '10px 14px', fontWeight: isSummaryRow ? '800' : '600', color: '#14245C' }}>
+                            {param.param_name}
+                          </td>
+                          {periods.map(p => {
+                            const isCurrent = String(activePeriod) === String(p.id);
+                            const entryForPeriod = entriesMap[p.id] || {};
+                            const rawVal = entryForPeriod[param.param_key];
+                            const formatted = formatCellValue(rawVal, param);
+                            const isEmpty = formatted === '—';
+
+                            return (
+                              <td
+                                key={p.id}
+                                style={{
+                                  padding: '10px 14px',
+                                  textAlign: 'right',
+                                  whiteSpace: 'nowrap',
+                                  backgroundColor: isCurrent ? '#EAF0FF' : 'transparent',
+                                  fontWeight: isSummaryRow ? '800' : '600',
+                                  color: isEmpty ? '#94a3b8' : '#14245C'
+                                }}
+                                className="currency-font"
+                              >
+                                {formatted}
+                              </td>
+                            );
+                          })}
+                          <td
+                            style={{
+                              padding: '10px 16px',
+                              textAlign: 'right',
+                              whiteSpace: 'nowrap',
+                              fontWeight: '800',
+                              color: '#14245C',
+                              backgroundColor: isSummaryRow ? '#EEF2FA' : '#F8FAFC'
+                            }}
+                            className="currency-font"
+                          >
+                            {formatCellValue(getParamCumulative(param.param_key, param), param)}
+                          </td>
+                        </tr>
                       );
                     })}
-
-                    {/* Total / Cumulative Column */}
-                    <td style={{
-                      padding: '8px 16px',
-                      border: '1px solid #000000',
-                      textAlign: 'right',
-                      fontWeight: '900',
-                      backgroundColor: 'rgba(0,0,0,0.03)'
-                    }}>
-                      {formatCellValue(getParamCumulative(param.param_key, param), param)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. ATTACHED REFERENCE LINKS & EVIDENCE TABLE (REQUESTED BY USER)           */}
-      {/* "and and also add the link are refen attched for that monthy entry so make */}
-      {/* that onr tbale dfor that make that"                                       */}
+      {/* 4. ATTACHED REFERENCE LINKS & DOCUMENTATION                               */}
       {/* ========================================================================= */}
       <div style={{
         backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        border: '1px solid #e2e8f0',
+        borderRadius: '18px',
+        border: '1px solid #E1E6F2',
         padding: '22px 24px',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+        boxShadow: '0 2px 8px rgba(20, 36, 92, 0.03)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '14px'
+        gap: '16px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              backgroundColor: '#eff6ff',
-              color: '#2563eb',
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
+              backgroundColor: '#EAF0FF',
+              color: '#2F4BB8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <LinkIcon size={20} />
+              <LinkIcon size={19} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Attached Reference Links & Documentation
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#14245C', margin: 0 }}>
+                  Attached reference links and documentation
                 </h3>
                 <span style={{
                   fontSize: '11px',
                   fontWeight: '700',
-                  padding: '2px 8px',
+                  padding: '2px 9px',
                   borderRadius: '9999px',
-                  backgroundColor: '#dbeafe',
-                  color: '#1e40af'
+                  backgroundColor: '#EAF0FF',
+                  color: '#2F4BB8'
                 }}>
-                  {activeMonthAttachmentsCount} Attached
+                  {activeMonthAttachmentsCount} attached
                 </span>
               </div>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                Verified audit URLs, invoice drives, and documentation reference links for {activePeriodObj?.period_label || 'All Months'}
+              <p style={{ fontSize: '12.5px', color: '#64748b', margin: '3px 0 0 0' }}>
+                Verified audit URLs, invoice drives and documentation reference links for {activePeriodObj?.period_label || 'All Months'}
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={() => onOpenDataEntry?.(activePeriod !== 'all' ? Number(activePeriod) : null)}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '7px 14px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: '600',
-              backgroundColor: '#f1f5f9',
-              color: '#334155',
-              border: '1px solid #cbd5e1',
+              minHeight: '38px',
+              padding: '8px 16px',
+              borderRadius: '10px',
+              fontSize: '12.5px',
+              fontWeight: '800',
+              backgroundColor: '#F5A524',
+              color: '#14245C',
+              border: 'none',
               cursor: 'pointer'
             }}
           >
-            <Paperclip size={13} />
-            <span>Manage Attachments in Data Entry</span>
+            <Paperclip size={14} />
+            <span>Manage attachments in data entry</span>
           </button>
         </div>
 
-        {/* Links Table */}
+        {/* Links Table / Empty State */}
         {loadingAttachments ? (
-          <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '12.5px' }}>
+          <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
             Loading attached reference links...
           </div>
         ) : periodAttachments.length === 0 ? (
           <div style={{
-            padding: '36px 20px',
+            padding: '32px 20px',
             textAlign: 'center',
-            backgroundColor: '#f8fafc',
-            borderRadius: '12px',
-            border: '1px dashed #cbd5e1'
+            backgroundColor: '#F7F9FD',
+            borderRadius: '14px',
+            border: '1px dashed #D5DCEE'
           }}>
-            <Paperclip size={28} color="#94a3b8" style={{ margin: '0 auto 8px auto', display: 'block' }} />
-            <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#334155', margin: '0 0 4px 0' }}>
-              No Reference Links Attached for this Month
+            <Paperclip size={26} color="#94a3b8" style={{ margin: '0 auto 8px auto', display: 'block' }} />
+            <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#14245C', margin: '0 0 4px 0' }}>
+              No reference links attached for this month
             </h4>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 14px 0', maxWidth: '420px', marginInline: 'auto' }}>
+            <p style={{ fontSize: '12.5px', color: '#64748b', margin: '0 auto 14px auto', maxWidth: '420px' }}>
               You can attach Google Drive folders, CCTV footage reports, invoice links, or PDF logs in the Data Entry tab.
             </p>
             <button
+              type="button"
               onClick={() => onOpenDataEntry?.(activePeriod !== 'all' ? Number(activePeriod) : null)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 14px',
-                borderRadius: '6px',
+                minHeight: '36px',
+                padding: '7px 14px',
+                borderRadius: '8px',
                 fontSize: '12px',
-                fontWeight: '600',
-                backgroundColor: '#2563eb',
+                fontWeight: '700',
+                backgroundColor: '#14245C',
                 color: '#ffffff',
                 border: 'none',
                 cursor: 'pointer'
               }}
             >
               <LinkIcon size={13} />
-              <span>Attach Reference Link Now</span>
+              <span>Attach reference link now</span>
             </button>
           </div>
         ) : (
           <div style={{
             overflowX: 'auto',
-            borderRadius: '10px',
-            border: '1px solid #e2e8f0'
+            borderRadius: '12px',
+            border: '1px solid #E1E6F2'
           }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '700' }}>
+                <tr style={{ backgroundColor: '#F7F9FD', borderBottom: '1px solid #D5DCEE', color: '#475569', fontWeight: '700' }}>
                   <th style={{ padding: '10px 14px', width: '50px' }}>#</th>
                   <th style={{ padding: '10px 14px' }}>Reference Title / Name</th>
                   <th style={{ padding: '10px 14px' }}>Destination URL / File</th>
@@ -974,24 +983,24 @@ export default function CctvOperationsDashboard({
               <tbody>
                 {periodAttachments.map((att, idx) => {
                   const isWebUrl = att.is_link || att.file_path?.startsWith('http');
-                  const targetUrl = att.file_path?.startsWith('http') 
-                    ? att.file_path 
+                  const targetUrl = att.file_path?.startsWith('http')
+                    ? att.file_path
                     : (att.file_path ? `/api/attachments/download/${att.id}` : '#');
 
                   return (
                     <tr
                       key={att.id || idx}
                       style={{
-                        borderBottom: '1px solid #f1f5f9',
-                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafbfc'
+                        borderBottom: '1px solid #EDF0F8',
+                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#F7F9FD'
                       }}
                     >
                       <td style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: '600' }}>
                         {idx + 1}
                       </td>
-                      <td style={{ padding: '10px 14px', fontWeight: '600', color: '#0f172a' }}>
+                      <td style={{ padding: '10px 14px', fontWeight: '600', color: '#14245C' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {isWebUrl ? <LinkIcon size={14} color="#2563eb" /> : <FileText size={14} color="#059669" />}
+                          {isWebUrl ? <LinkIcon size={14} color="#2F4BB8" /> : <FileText size={14} color="#0F6B3A" />}
                           <span>{att.file_name}</span>
                         </div>
                       </td>
@@ -1006,9 +1015,9 @@ export default function CctvOperationsDashboard({
                           fontWeight: '700',
                           padding: '2px 8px',
                           borderRadius: '4px',
-                          backgroundColor: isWebUrl ? '#eff6ff' : '#ecfdf5',
-                          color: isWebUrl ? '#1d4ed8' : '#047857',
-                          border: `1px solid ${isWebUrl ? '#dbeafe' : '#a7f3d0'}`
+                          backgroundColor: isWebUrl ? '#EAF0FF' : '#E4F6EC',
+                          color: isWebUrl ? '#2F4BB8' : '#0F6B3A',
+                          border: `1px solid ${isWebUrl ? '#C7D7FE' : '#A7F3D0'}`
                         }}>
                           {isWebUrl ? 'Web URL' : 'Uploaded File'}
                         </span>
@@ -1025,13 +1034,13 @@ export default function CctvOperationsDashboard({
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            backgroundColor: '#2563eb',
+                            padding: '5px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: '#14245C',
                             color: '#ffffff',
                             textDecoration: 'none',
                             fontSize: '11.5px',
-                            fontWeight: '600'
+                            fontWeight: '700'
                           }}
                         >
                           <span>Visit</span>
