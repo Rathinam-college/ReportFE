@@ -209,29 +209,28 @@ export default function TransportVehicleDetailsModal({
     return isNaN(n) ? fb : n;
   };
 
-  // Helper to extract or generate realistic 3-month data for each vehicle
+  // Helper to derive 3-month display metrics from the live vehicle record
   const getVehicleHistory = (v) => {
+    const curD = num(v.diesel_litres, 0);
+    const curKm = num(v.km_run, 0);
+    const curM = curD > 0 ? (curKm / curD) : num(v.mileage, 0);
     const vNo = v.vehicle_no || '';
-    if (HISTORICAL_VEHICLE_DATA[vNo]) {
+    if ((curD > 0 || curKm > 0) && HISTORICAL_VEHICLE_DATA[vNo]) {
       return HISTORICAL_VEHICLE_DATA[vNo].months;
     }
-    // Dynamic fallback generation based on vehicle's current stats
-    const curD = num(v.diesel_litres) || 300;
-    const curKm = num(v.km_run) || 1500;
-    const curM = curD > 0 ? (curKm / curD) : (num(v.mileage) || 4.0);
 
     return [
       {
         month: "Aug'26",
-        diesel: Math.round(curD * 0.98),
-        km: Math.round(curKm * 0.94),
-        mileage: Number((curM * 0.96).toFixed(2))
+        diesel: curD > 0 ? Math.round(curD * 0.98) : 0,
+        km: curKm > 0 ? Math.round(curKm * 0.94) : 0,
+        mileage: curD > 0 ? Number((curM * 0.96).toFixed(2)) : 0
       },
       {
         month: "Sept'26",
-        diesel: Math.round(curD * 0.92),
-        km: Math.round(curKm * 0.95),
-        mileage: Number((curM * 1.03).toFixed(2))
+        diesel: curD > 0 ? Math.round(curD * 0.92) : 0,
+        km: curKm > 0 ? Math.round(curKm * 0.95) : 0,
+        mileage: curD > 0 ? Number((curM * 1.03).toFixed(2)) : 0
       },
       {
         month: "Oct'26",
@@ -242,70 +241,9 @@ export default function TransportVehicleDetailsModal({
     ];
   };
 
-  // Filter and sort vehicles
+  // Filter and sort vehicles (strictly live DB vehicles, no dummy fallback)
   const processedVehicles = useMemo(() => {
-    let list = Array.isArray(vehicles) && vehicles.length > 0 ? [...vehicles] : [];
-
-    // Fallback if list is empty OR if all vehicle rows have 0 litres and 0 km
-    const isAllZero = list.length === 0 || list.every(v => num(v.diesel_litres) === 0 && num(v.km_run) === 0);
-
-    if (isAllZero) {
-      if (activeBranch === 'Common') {
-        // Authentic 18 Common Fleet Vehicles with actual operational metrics
-        const commonDefaults = [
-          { vNo: 'TN99 R 3333', make: 'TOYOTA', model: 'Innova', d: 99.7, km: 398.7, m: 4.0, cost: 23121.39 },
-          { vNo: 'TN99 AA3333', make: 'BMW', model: 'BMW', d: 119.2, km: 476.7, m: 4.0, cost: 27645.14 },
-          { vNo: 'TN99 AE 3333', make: 'LEXUS', model: 'LEXUS', d: 118.1, km: 472.3, m: 4.0, cost: 27393.82 },
-          { vNo: 'TN99 AU 3333', make: 'MG', model: 'MG 9', d: 117.0, km: 468.0, m: 4.0, cost: 27142.50 },
-          { vNo: 'TN99 Y 4726', make: 'TATA', model: 'TIAGOR EV ZIPTRON', d: 115.9, km: 463.7, m: 4.0, cost: 26891.18 },
-          { vNo: 'TN99 Y 4767', make: 'TATA', model: 'TIAGOR EC ZIPTRON', d: 114.8, km: 459.3, m: 4.0, cost: 26639.86 },
-          { vNo: 'TN99 Y 5016', make: 'TATA', model: 'TIAGO EV', d: 113.8, km: 455.0, m: 4.0, cost: 26388.55 },
-          { vNo: 'TN99 Y 4718', make: 'TATA', model: 'TIAGO EV', d: 112.7, km: 450.7, m: 4.0, cost: 26137.22 },
-          { vNo: 'TN99 AC 3877', make: 'TATA', model: 'TATA CURVV', d: 111.6, km: 446.3, m: 4.0, cost: 25885.91 },
-          { vNo: 'TN99 AC 2695', make: 'TATA', model: 'TATA NEXON', d: 110.5, km: 442.0, m: 4.0, cost: 25634.58 },
-          { vNo: 'TN 99 Y 4749', make: 'TATA', model: 'TIGOR EV', d: 109.4, km: 437.7, m: 4.0, cost: 25383.26 },
-          { vNo: 'TN 99 AC 6941', make: 'TATA', model: 'TIGOR EV', d: 108.3, km: 433.3, m: 4.0, cost: 25131.94 },
-          { vNo: 'TN 33 BC 2577', make: 'AUDI', model: 'AUDI', d: 107.2, km: 429.0, m: 4.0, cost: 24880.62 },
-          { vNo: 'TN 99 AK 6689', make: 'FORCE', model: 'AMBULANCE', d: 106.2, km: 424.7, m: 4.0, cost: 24629.31 },
-          { vNo: 'TN37 BL 8228', make: 'TATA MARCOPOLO', model: 'Admission', d: 105.1, km: 420.3, m: 4.0, cost: 24377.99 },
-          { vNo: 'GOLF BATTERY - OLD Main', make: 'ELECTRIC GOLF CART', model: 'Campus', d: 104.0, km: 416.0, m: 4.0, cost: 24126.67 },
-          { vNo: 'GOLF BATTERY - NEW - Main', make: 'ELECTRIC GOLF CART', model: 'Campus', d: 102.9, km: 411.7, m: 4.0, cost: 23875.34 },
-          { vNo: 'Golf Battery - Aqualia', make: 'ELECTRIC GOLF CART', model: 'Campus', d: 101.8, km: 407.3, m: 4.0, cost: 23624.03 }
-        ];
-        list = commonDefaults.map((c, idx) => ({
-          id: `common-seed-${idx}`,
-          vehicle_no: c.vNo,
-          make: c.make,
-          model: c.model,
-          branch: 'Common',
-          diesel_litres: c.d,
-          km_run: c.km,
-          mileage: c.m,
-          fuel_expenses: c.d * 92.47,
-          repair_maintenance: 1972.53,
-          total_expenses: c.cost,
-          display_order: idx + 1
-        }));
-      } else {
-        list = Object.entries(HISTORICAL_VEHICLE_DATA).map(([vNo, data], idx) => {
-          const oct = data.months[2];
-          return {
-            id: `seed-${idx}`,
-            vehicle_no: vNo,
-            make: data.make,
-            model: data.model,
-            branch: activeBranch,
-            diesel_litres: oct.diesel,
-            km_run: oct.km,
-            mileage: oct.mileage,
-            fuel_expenses: oct.diesel * 99.4,
-            repair_maintenance: 5000,
-            total_expenses: (oct.diesel * 99.4) + 5000 + 25835,
-            display_order: idx + 1
-          };
-        });
-      }
-    }
+    let list = Array.isArray(vehicles) ? [...vehicles] : [];
 
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
