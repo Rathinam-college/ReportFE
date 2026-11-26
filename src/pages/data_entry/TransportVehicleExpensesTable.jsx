@@ -100,8 +100,8 @@ export default function TransportVehicleExpensesTable({
   const effectiveReadOnly = readOnly || effectiveIsClosed;
 
   useEffect(() => {
-    if (visiblePeriods.length > 0 && selectedBranch !== 'all' && selectedPeriodId) {
-      const exists = visiblePeriods.some(p => p.id === selectedPeriodId);
+    if (visiblePeriods.length > 0 && selectedBranch !== 'all' && selectedPeriodId && selectedPeriodId !== 'all') {
+      const exists = visiblePeriods.some(p => String(p.id) === String(selectedPeriodId));
       if (!exists) {
         const nextId = visiblePeriods[visiblePeriods.length - 1].id;
         setSelectedPeriodId(nextId);
