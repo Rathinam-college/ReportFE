@@ -1784,12 +1784,13 @@ export default function TransportOperationsDashboard({
       {/* ========================================================================= */}
       {/* EMBEDDED FLEET VEHICLE CARDS & 3-MONTH PERFORMANCE ANALYTICS              */}
       {/* ========================================================================= */}
-      {(activeMainView === 'vehicles') && (
+      {(activeMainView === 'vehicles' || activeMainView === 'all') && (
         <TransportVehicleDetailsModal
           embedded={true}
           isOpen={true}
           isAllMonths={isAllMonths}
           vehicles={vehiclesList}
+          periods={visiblePeriods}
           initialFocus={modalMetricFocus}
           activeBranch={activeBranch}
           activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
