@@ -11,9 +11,14 @@ export default function HostelCapacityOccupancySection({
   allCensusMap = {},
   periods = [],
   activePeriodId = null,
-  onPeriodSelect
+  onPeriodSelect,
+  movementFilter: propMovementFilter,
+  onMovementFilterChange,
+  hideMovementFilter = false
 }) {
-  const [movementFilter, setMovementFilter] = useState('all'); // 'all' | 'boys' | 'girls' | 'school' | 'college' | 'sports' | 'staff'
+  const [internalMovementFilter, setInternalMovementFilter] = useState('all'); // 'all' | 'boys' | 'girls' | 'school' | 'college' | 'sports' | 'staff'
+  const movementFilter = propMovementFilter !== undefined ? propMovementFilter : internalMovementFilter;
+  const setMovementFilter = onMovementFilterChange || setInternalMovementFilter;
 
   const num = (v, fb = 0) => {
     if (v === undefined || v === null || v === '') return fb;
@@ -479,15 +484,16 @@ export default function HostelCapacityOccupancySection({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Monthly Student Movement
+            <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: 'var(--primary, #14245C)', margin: 0 }}>
+              Monthly Student Movement{movementFilter !== 'all' ? ` • ${movementFilter.charAt(0).toUpperCase() + movementFilter.slice(1)}` : ''}
             </h3>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
               Calculation: Current Students = Last Month ({filteredMovement.previous.toLocaleString()}) + Joined (+{filteredMovement.admissions.toLocaleString()}) - Left (-{filteredMovement.vacated.toLocaleString()})
             </p>
           </div>
 
-          {/* Filter Pills */}
+          {/* Filter Pills (hidden when controlled from Sticky Top Filter Bar) */}
+          {!hideMovementFilter && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', marginRight: '2px', textTransform: 'uppercase' }}>
               <Filter size={11} style={{ display: 'inline', marginRight: '3px' }} />
@@ -522,6 +528,7 @@ export default function HostelCapacityOccupancySection({
               </button>
             ))}
           </div>
+          )}
         </div>
 
         {/* Movement Metric Cards (6 Cards) */}

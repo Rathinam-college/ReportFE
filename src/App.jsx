@@ -1678,7 +1678,7 @@ export default function App() {
         overflow: 'hidden'
       }}
     >
-      {/* Floating Left Pill Sidebar Dock (Vibrant Royal Purple Gradient matching Image) */}
+      {/* Left Brand Sidebar */}
       <Navbar
         currentUser={currentUser}
         handleLogout={handleLogout}
@@ -1686,6 +1686,8 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         permissions={pagePermissions}
+        dashboardSubTab={dashboardSubTab}
+        setDashboardSubTab={setDashboardSubTab}
       />
 
       {/* Right Main Content Area */}
@@ -1693,7 +1695,7 @@ export default function App() {
         className="bento-right-area"
         style={{
           flex: 1,
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg-canvas, #F3F6FB)',
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
@@ -1702,30 +1704,33 @@ export default function App() {
           position: 'relative'
         }}
       >
-        {/* Top Header inside Area */}
-        <SubNav
-          currentUser={currentUser}
-          dbStatus={dbStatus}
-          activeTab={activeTab}
-          dashboardSubTab={dashboardSubTab}
-          setDashboardSubTab={setDashboardSubTab}
-          dataEntrySubTab={dataEntrySubTab}
-          setDataEntrySubTab={setDataEntrySubTab}
-          masterDataSubTab={masterDataSubTab}
-          setMasterDataSubTab={setMasterDataSubTab}
-        />
+        {/* Top Header inside Area (hidden on dashboard where Sticky Top Filter Bar lives) */}
+        {activeTab !== 'dashboard' && (
+          <SubNav
+            currentUser={currentUser}
+            dbStatus={dbStatus}
+            activeTab={activeTab}
+            dashboardSubTab={dashboardSubTab}
+            setDashboardSubTab={setDashboardSubTab}
+            dataEntrySubTab={dataEntrySubTab}
+            setDataEntrySubTab={setDataEntrySubTab}
+            masterDataSubTab={masterDataSubTab}
+            setMasterDataSubTab={setMasterDataSubTab}
+          />
+        )}
 
         {/* Main Page Workspace */}
         <main 
           className="bento-main-workspace"
           style={{
             flex: 1,
-            padding: activeTab === 'data_entry' ? '14px 20px' : '16px 24px',
+            padding: activeTab === 'dashboard' ? '0' : (activeTab === 'data_entry' ? '14px 20px' : '16px 24px'),
             maxWidth: '100%',
             width: '100%',
             boxSizing: 'border-box',
             overflowY: 'auto',
-            scrollBehavior: 'smooth'
+            scrollBehavior: 'smooth',
+            backgroundColor: activeTab === 'dashboard' ? 'var(--bg-canvas, #F3F6FB)' : '#ffffff'
           }}
         >
         

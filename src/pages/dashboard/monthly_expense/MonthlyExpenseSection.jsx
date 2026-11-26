@@ -21,11 +21,11 @@ import MonthlyExpenseTable from './MonthlyExpenseTable';
 
 // Curated palettes as specified - 16 vibrant distinct colors to support up to 16 cycles without repeating
 const MONTH_PALETTE = [
-  '#6c5ce7', '#ff6b9d', '#1fbf8f', '#3fb8ff', '#f5a524',
-  '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f97316',
-  '#6366f1', '#14b8a6', '#e11d48', '#84cc16', '#a855f7', '#0ea5e9'
+  '#2F4BB8', 'var(--accent, #F5A524)', '#0FA3A3', '#D6455D', '#18A058',
+  'var(--primary, #14245C)', '#0095D9', '#8EBF3E', '#9E308E', '#F27B21',
+  '#2F4BB8', '#0FA3A3', '#D6455D', '#18A058', 'var(--accent, #F5A524)', 'var(--primary, #14245C)'
 ];
-const CATEGORY_PALETTE = ['#6c5ce7', '#ff6b9d', '#1fbf8f', '#3fb8ff', '#f5a524', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
+const CATEGORY_PALETTE = ['#2F4BB8', 'var(--accent, #F5A524)', '#0FA3A3', '#D6455D', '#18A058', 'var(--primary, #14245C)', '#0095D9', '#8EBF3E', '#9E308E', '#F27B21'];
 
 export const CHART_MODELS = [
   { id: 'clustered_columns', name: 'Clustered Columns', icon: BarChart3, desc: 'Compare monthly expenses side-by-side for each category' },
@@ -45,11 +45,15 @@ export default function MonthlyExpenseSection({
   selectedModule = 'food',
   onExportReport,
   activePeriod = 'all',
-  onPeriodChange = null
+  onPeriodChange = null,
+  unitMode: propUnitMode,
+  hideControlsBar = false
 }) {
   const [chartModel, setChartModel] = useState('clustered_columns');
   const [reportingCycle, setReportingCycle] = useState(activePeriod ? String(activePeriod) : 'all');
-  const [unitMode, setUnitMode] = useState('full'); // 'full' | 'lakhs'
+  const [internalUnitMode, setInternalUnitMode] = useState('full'); // 'full' | 'lakhs'
+  const unitMode = propUnitMode !== undefined ? propUnitMode : internalUnitMode;
+  const setUnitMode = setInternalUnitMode;
   const [showTable, setShowTable] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const sectionRef = useRef(null);
@@ -315,68 +319,140 @@ export default function MonthlyExpenseSection({
   const currentModelObj = CHART_MODELS.find((m) => m.id === chartModel) || CHART_MODELS[0];
 
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', boxSizing: 'border-box' }}>
-      {/* 1. Section Title Row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '26px',
-              height: '26px',
-              borderRadius: '50%',
-              backgroundColor: '#0f172a',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '800'
-            }}
-          >
-            2
-          </span>
-          <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-            Monthly Expense by Category
+    <section style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '18px',
+      width: '100%',
+      boxSizing: 'border-box',
+      backgroundColor: '#ffffff',
+      borderRadius: '18px',
+      padding: '28px',
+      border: '1px solid #E1E6F2',
+      boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)'
+    }}>
+      {/* 1. Section Title Row + Quick Tabs (Columns | Trend | Share) + Full Chart Type Dropdown */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--primary, #14245C)', margin: 0, letterSpacing: '-0.02em' }}>
+            Expense by Category
           </h2>
-          <span
-            style={{
-              fontSize: '11px',
-              fontWeight: '800',
-              color: '#1d4ed8',
-              backgroundColor: '#eff6ff',
-              padding: '3px 10px',
-              borderRadius: '9999px',
-              border: '1px solid #bfdbfe'
-            }}
-          >
-            Charts & Rankings
-          </span>
         </div>
 
-        <div style={{ fontSize: '12.5px', color: '#64748b' }}>
-          Monthly expenses by category with 8 interactive chart styles
+        {/* Right: Quick Tabs (Columns | Trend | Share) + Full 8-Chart Styled Dropdown + CSV + Table */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: 'var(--bg-canvas, #F3F6FB)',
+            padding: '4px',
+            borderRadius: '12px',
+            border: '1px solid #E1E6F2',
+            gap: '4px'
+          }}>
+            {[
+              { id: 'clustered_columns', label: 'Columns' },
+              { id: 'trend_lines', label: 'Trend' },
+              { id: 'donut_share', label: 'Share' }
+            ].map((tab) => {
+              const isSel = chartModel === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setChartModel(tab.id)}
+                  style={{
+                    minHeight: '34px',
+                    padding: '6px 14px',
+                    borderRadius: '9px',
+                    border: 'none',
+                    fontSize: '12.5px',
+                    fontWeight: isSel ? '700' : '600',
+                    backgroundColor: isSel ? 'var(--primary, #14245C)' : 'transparent',
+                    color: isSel ? '#ffffff' : '#64748b',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sleek Styled Dropdown for ALL 8 Chart Types */}
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <select
+              aria-label="Chart Type"
+              value={chartModel}
+              onChange={(e) => setChartModel(e.target.value)}
+              style={{
+                minHeight: '40px',
+                padding: '8px 34px 8px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #CBD5E1',
+                backgroundColor: '#ffffff',
+                color: 'var(--primary, #14245C)',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                outline: 'none',
+                boxShadow: '0 1px 3px rgba(20, 36, 92, 0.06)'
+              }}
+            >
+              {CHART_MODELS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  Chart: {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            style={{
+              minHeight: '40px',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1px solid #E1E6F2',
+              backgroundColor: '#F8FAFC',
+              color: 'var(--primary, #14245C)',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            Export CSV
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowTable(!showTable)}
+            style={{
+              minHeight: '40px',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1px solid #E1E6F2',
+              backgroundColor: showTable ? 'var(--primary, #14245C)' : '#F8FAFC',
+              color: showTable ? '#ffffff' : 'var(--primary, #14245C)',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            {showTable ? 'Hide Table' : 'Show Table'}
+          </button>
         </div>
       </div>
 
-      {/* 2. KPI Strip (4 Cards) */}
-      <MonthlyExpenseKpis
-        cycleTotal={cycleTotal}
-        monthCount={activePeriods.length}
-        monthlyAverage={monthlyAverage}
-        topHead={topHead}
-        peakMonth={peakMonth}
-        formatValue={formatValue}
-      />
-
-      {/* 3. Main Panel */}
+      {/* 2. Main Panel */}
       <div
         ref={sectionRef}
         style={{
           backgroundColor: isFullScreen ? '#f8fafc' : '#ffffff',
-          borderRadius: isFullScreen ? '0' : '22px',
-          padding: isFullScreen ? '28px 36px' : '22px 24px',
-          border: isFullScreen ? 'none' : '1px solid #e4e8f5',
-          boxShadow: isFullScreen ? 'none' : '0 2px 10px rgba(20, 26, 51, 0.03)',
+          borderRadius: isFullScreen ? '0' : '16px',
+          padding: isFullScreen ? '28px 36px' : '0',
+          border: 'none',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
@@ -393,78 +469,31 @@ export default function MonthlyExpenseSection({
           overflowY: isFullScreen ? 'auto' : 'visible'
         }}
       >
-        {/* 3a. Control Bar */}
-        <MonthlyExpenseControls
-          chartModel={chartModel}
-          setChartModel={setChartModel}
-          modelOptions={CHART_MODELS}
-          reportingCycle={reportingCycle}
-          setReportingCycle={handleReportingCycleChange}
-          cycleOptions={cycleOptions}
-          unitMode={unitMode}
-          setUnitMode={setUnitMode}
-          onExportCSV={handleExportCSV}
-          showTable={showTable}
-          setShowTable={setShowTable}
-          isFullScreen={isFullScreen}
-          onToggleFullScreen={toggleFullScreen}
-        />
-
-        {/* 3b. Quick-Switch Chips */}
-        <MonthlyExpenseChips
-          chartModel={chartModel}
-          setChartModel={setChartModel}
-          models={CHART_MODELS}
-        />
-
-        {/* 3c. Chart Title, Model Description */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '10px',
-          padding: '2px 4px',
-          flexShrink: 0
-        }}>
-          <div>
-            <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              Monthly Expense by Category • {currentModelObj.name}
-            </h3>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
-              {currentModelObj.desc}
-            </p>
-          </div>
-
-          {isFullScreen && (
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 12px',
-                borderRadius: '9999px',
-                backgroundColor: '#e0e7ff',
-                color: '#4338ca',
-                fontSize: '11px',
-                fontWeight: '700',
-                border: '1px solid #c7d2fe'
-              }}
-            >
-              <span>Full Screen View</span>
-              <span style={{
-                backgroundColor: '#ffffff',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontSize: '10px',
-                fontWeight: '800',
-                color: '#4338ca'
-              }}>
-                Esc
-              </span>
-            </div>
-          )}
-        </div>
+        {!hideControlsBar && (
+          <>
+            <MonthlyExpenseControls
+              chartModel={chartModel}
+              setChartModel={setChartModel}
+              modelOptions={CHART_MODELS}
+              reportingCycle={reportingCycle}
+              setReportingCycle={handleReportingCycleChange}
+              cycleOptions={cycleOptions}
+              unitMode={unitMode}
+              setUnitMode={setUnitMode}
+              onExportCSV={handleExportCSV}
+              showTable={showTable}
+              setShowTable={setShowTable}
+              isFullScreen={isFullScreen}
+              onToggleFullScreen={toggleFullScreen}
+              hideCycleFilter={selectedModule === 'food'}
+            />
+            <MonthlyExpenseChips
+              chartModel={chartModel}
+              setChartModel={setChartModel}
+              models={CHART_MODELS}
+            />
+          </>
+        )}
 
         {/* 3d. Chart Area in soft rounded container (18px radius) */}
         <div

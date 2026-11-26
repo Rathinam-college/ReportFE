@@ -15,13 +15,13 @@ import TransportDashboardDataTable from '../TransportDashboardDataTable';
 // Category color cycle per specification:
 // indigo #5b5bf0, violet #8b5cf6, amber #f59e0b, emerald #10b981, pink #ec4899, then cyan #06b6d4, rose #f43f5e
 const CATEGORY_COLORS = [
-  '#5b5bf0', // 1. Indigo
-  '#8b5cf6', // 2. Violet
-  '#f59e0b', // 3. Amber
-  '#10b981', // 4. Emerald
-  '#ec4899', // 5. Pink
+  '#2F4BB8', // 1. Food Material (Royal Blue)
+  'var(--accent, #F5A524)', // 2. Food Labour (Gold)
+  '#0FA3A3', // 3. FC Maintenance (Teal)
+  '#D6455D', // 4. Event/Additional (Crimson)
+  '#18A058', // 5. Food Festival (Emerald)
   '#06b6d4', // 6. Cyan
-  '#f43f5e'  // 7. Rose
+  'var(--primary, #14245C)'  // 7. Navy
 ];
 
 /**
@@ -79,16 +79,27 @@ export default function ChartDataTable({
   onToggleFullScreen: propOnToggleFullScreen,
   remarksDraft = {},
   onSelectPeriod = null,
-  showMonthPills = false
+  showMonthPills = false,
+  searchTerm: propSearchTerm,
+  selectedCategoryFilter: propCategoryFilter,
+  viewMode: propViewMode,
+  unitMode: propUnitMode = 'inr',
+  hideHeaderBar = false
 }) {
-  // 1. Controls state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+  // 1. Controls state (falls back to internal state when not controlled from parent)
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
+  const [internalCategoryFilter, setInternalCategoryFilter] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState(activePeriod || 'all');
   const [displayMode, setDisplayMode] = useState('both'); // 'both' | 'percentage_only' | 'amount_only'
   const [expandedCardIds, setExpandedCardIds] = useState({}); // { [catId]: boolean }, persists across month changes
   const [internalFullScreen, setInternalFullScreen] = useState(false);
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' (Modern Card Dashboard) | 'spreadsheet' (Full Sheet/Table)
+  const [internalViewMode, setInternalViewMode] = useState('cards'); // 'cards' | 'spreadsheet'
+  const searchTerm = propSearchTerm !== undefined ? propSearchTerm : internalSearchTerm;
+  const setSearchTerm = setInternalSearchTerm;
+  const selectedCategoryFilter = propCategoryFilter !== undefined ? propCategoryFilter : internalCategoryFilter;
+  const setSelectedCategoryFilter = setInternalCategoryFilter;
+  const viewMode = propViewMode !== undefined ? propViewMode : internalViewMode;
+  const setViewMode = setInternalViewMode;
   const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
   const containerRef = useRef(null);
 
@@ -649,7 +660,8 @@ export default function ChartDataTable({
         transition: 'all 0.3s ease'
       }}
     >
-      {/* 1. HEADER & SLIM TOOLBAR */}
+      {/* 1. HEADER & SLIM TOOLBAR (hidden when Top Filter Bar controls all filters) */}
+      {!hideHeaderBar && (
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -929,6 +941,7 @@ export default function ChartDataTable({
           </button>
         </div>
       </div>
+      )}
 
       {/* 2. CONDITIONAL VIEW: SPREADSHEET TABLE OR CARDS DASHBOARD */}
       {viewMode === 'spreadsheet' ? (

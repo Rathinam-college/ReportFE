@@ -665,32 +665,26 @@ export default function TransportOperationsDashboard({
   const opPeriodLabel = isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26");
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
-
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', boxSizing: 'border-box', backgroundColor: 'var(--bg-canvas, #F3F5FA)' }}>
       {/* ========================================================================= */}
-      {/* UNIFIED STICKY DASHBOARD HEADER & FILTER BAR (PINS TO TOP ON SCROLL)     */}
-      {/* Keeps "Transport Operations Dashboard" + Both Filters at Top (Only 1 Bar) */}
+      {/* STICKY TOP FILTER BAR (WHITE, BOTTOM BORDER, SOFT SHADOW, 3 ROWS)         */}
       {/* ========================================================================= */}
-      <div 
+      <div
         className="sticky-dashboard-master-header"
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 80,
-          backgroundColor: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderRadius: '16px',
-          border: '1.5px solid #e2e8f0',
-          padding: '12px 20px',
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #E1E6F2',
+          padding: '16px 28px',
+          boxShadow: '0 4px 16px rgba(20, 36, 92, 0.05)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
-          marginBottom: '4px'
+          gap: '12px'
         }}
       >
-        {/* Tier 1: Transport Title, Badge, Subtitle & Action Buttons */}
+        {/* ROW 1: Title + Transport badge + Red Fleet badge | Refresh, Download Report, Open Data Entry (Gold) */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -698,115 +692,86 @@ export default function TransportOperationsDashboard({
           flexWrap: 'wrap',
           gap: '12px'
         }}>
-          {/* Module Title, Icon & Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              backgroundColor: '#eff6ff',
-              color: '#0284c7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '18px',
-              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.15)',
-              flexShrink: 0
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 style={{
+              fontSize: '21px',
+              fontWeight: '800',
+              color: 'var(--primary, #14245C)',
+              margin: 0,
+              letterSpacing: '-0.02em'
             }}>
-              🚌
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h1 style={{
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  color: '#0f172a',
-                  margin: 0,
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1.2
-                }}>
-                  Transport Operations Dashboard
-                </h1>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  padding: '2px 10px',
-                  borderRadius: '9999px',
-                  backgroundColor: '#eff6ff',
-                  color: '#0284c7',
-                  border: '1px solid #bfdbfe'
-                }}>
-                  Transport
-                </span>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  backgroundColor: activeBranchObj.badgeBg,
-                  color: activeBranchObj.badgeColor,
-                  border: `1px solid ${activeBranchObj.badgeColor}30`
-                }}>
-                  {activeBranchObj.icon} {activeBranchObj.label} ({metrics.vehicles_count})
-                </span>
-              </div>
-            </div>
+              Transport Operations Dashboard
+            </h1>
+            <span style={{
+              fontSize: '11.5px',
+              fontWeight: '800',
+              padding: '3px 11px',
+              borderRadius: '9999px',
+              backgroundColor: '#EAF0FF',
+              color: '#2F4BB8',
+              border: '1px solid #c7d6ff'
+            }}>
+              Transport
+            </span>
+            <span style={{
+              fontSize: '11.5px',
+              fontWeight: '800',
+              padding: '3px 11px',
+              borderRadius: '9999px',
+              backgroundColor: '#FBE3E3',
+              color: '#A32626',
+              border: '1px solid #f5bcbc'
+            }}>
+              {activeBranchObj.label} ({metrics.vehicles_count})
+            </span>
           </div>
 
-          {/* Action Buttons (Refresh Live, Download Report, Open Data Entry) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            {/* Refresh Live Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={fetchLiveMatrix}
               disabled={loading}
-              title="Refresh live data from database"
               style={{
+                minHeight: '38px',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '6px',
                 padding: '7px 14px',
-                borderRadius: '9999px',
+                borderRadius: '10px',
                 backgroundColor: '#ffffff',
-                border: '1.5px solid #cbd5e1',
-                color: '#475569',
-                fontSize: '11.5px',
+                border: '1px solid #CBD5E1',
+                color: 'var(--primary, #14245C)',
+                fontSize: '12.5px',
                 fontWeight: '700',
-                cursor: loading ? 'wait' : 'pointer',
-                transition: 'all 0.15s ease'
+                cursor: loading ? 'wait' : 'pointer'
               }}
             >
-              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-              <span>{loading ? 'Refreshing...' : 'Refresh Live'}</span>
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
             </button>
 
-            {/* Download Official Report Button */}
             <button
               type="button"
               onClick={handleExportReport || handlePrint}
               style={{
+                minHeight: '38px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '8px 18px',
-                borderRadius: '9999px',
-                backgroundColor: '#0284c7',
-                border: 'none',
-                color: '#ffffff',
-                fontSize: '12px',
+                padding: '7px 15px',
+                borderRadius: '10px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #CBD5E1',
+                color: 'var(--primary, #14245C)',
+                fontSize: '12.5px',
                 fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 3px 12px rgba(2, 132, 199, 0.25)',
-                transition: 'all 0.15s ease'
+                cursor: 'pointer'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0369a1'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0284c7'}
             >
-              <Download size={13} />
+              <Download size={14} />
               <span>Download Report</span>
             </button>
 
-            {/* Open Data Entry Button */}
             {onOpenDataEntry && (
               <button
                 type="button"
@@ -816,159 +781,115 @@ export default function TransportOperationsDashboard({
                   onOpenDataEntry(targetPeriodId, targetBranch);
                 }}
                 style={{
+                  minHeight: '38px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '8px 18px',
-                  borderRadius: '9999px',
-                  background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
-                  color: '#ffffff',
+                  padding: '7px 16px',
+                  borderRadius: '10px',
+                  backgroundColor: 'var(--accent, #F5A524)',
+                  color: 'var(--primary, #14245C)',
                   border: 'none',
-                  fontSize: '12px',
+                  fontSize: '12.5px',
                   fontWeight: '800',
                   cursor: 'pointer',
-                  boxShadow: '0 3px 12px rgba(255, 96, 136, 0.3)',
-                  transition: 'all 0.18s ease'
+                  boxShadow: '0 2px 8px rgba(245, 165, 36, 0.28)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 <span>Open Data Entry</span>
-                <ArrowRight size={13} />
+                <ArrowRight size={14} />
               </button>
             )}
           </div>
         </div>
 
-        {/* Tier 2: View Switcher Tabs (Executive Overview, Vehicle Ledger, All Views) + Live Viewing Indicator */}
+        {/* ROW 2: VIEW segmented control + FLEET chips */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '10px',
-          paddingTop: '8px',
-          borderTop: '1px solid #edf0f8'
+          gap: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            {[
-              { id: 'executive', label: 'Executive Overview', icon: LayoutDashboard, desc: 'Bento Cards & Fleet Analysis' },
-              { id: 'vehicles', label: 'Vehicle Ledger (58 Buses)', icon: Bus, desc: 'Live Vehicle-Wise Expenses Ledger' },
-              { id: 'all', label: 'All Views', icon: Layers, desc: 'Complete Stack' }
-            ].map(tab => {
-              const isActive = activeMainView === tab.id;
-              const TabIcon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveMainView(tab.id)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '7px',
-                    padding: '7px 15px',
-                    borderRadius: '10px',
-                    border: isActive ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
-                    backgroundColor: isActive ? '#eff6ff' : '#f8fafc',
-                    color: isActive ? '#0369a1' : '#64748b',
-                    fontSize: '12.5px',
-                    fontWeight: isActive ? '800' : '650',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isActive ? '0 2px 8px rgba(2, 132, 199, 0.15)' : 'none'
-                  }}
-                >
-                  <TabIcon size={15} color={isActive ? '#0284c7' : '#64748b'} />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Right: Active Viewing Indicator */}
-          <div style={{
-            fontSize: '12px',
-            color: '#64748b',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <span>Viewing:</span>
-            <strong style={{
-              color: '#0284c7',
-              fontWeight: '800',
-              padding: '3px 10px',
-              backgroundColor: '#f0f9ff',
-              borderRadius: '8px',
-              border: '1px solid #bae6fd'
-            }}>
-              {isAllMonths
-                ? `All Months (${formatINR(monthlyGrandTotals.grandOverall)}) • ${activeBranchObj.label}`
-                : `${activePeriodObj?.period_label || 'Focus Month'} (${formatINR(metrics.total_expenses)}) • ${activeBranchObj.label}`}
-            </strong>
-          </div>
-        </div>
-
-        {/* Tier 3: Filter 1 - Institutional Fleets Selector */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '8px',
-          paddingTop: '8px',
-          borderTop: '1px dashed #e2e8f0'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{
-              fontSize: '11.5px',
-              fontWeight: '800',
-              color: '#475569',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              marginRight: '2px',
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              VIEW
+            </span>
+            <div style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px'
+              backgroundColor: 'var(--bg-canvas, #F3F5FA)',
+              padding: '3px',
+              borderRadius: '10px',
+              border: '1px solid #E1E6F2',
+              flexWrap: 'wrap',
+              gap: '2px'
             }}>
-              🏫 Institutional Fleets:
+              {[
+                { id: 'executive', label: 'Executive overview' },
+                { id: 'vehicles', label: 'Vehicle ledger (58 buses)' },
+                { id: 'all', label: 'All views' }
+              ].map(tab => {
+                const isActive = activeMainView === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveMainView(tab.id)}
+                    style={{
+                      minHeight: '34px',
+                      padding: '5px 13px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: isActive ? 'var(--primary, #14245C)' : 'transparent',
+                      color: isActive ? '#ffffff' : '#475569',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>
+              FLEET
             </span>
             {TRANSPORT_BRANCHES.filter(br => br.id !== 'all').map(br => {
               const isSel = activeBranch === br.id;
-              const countBadge = br.id === 'Common' ? '18 Buses' : (br.id === 'RPS' ? '19 Buses' : (br.id === 'University' ? '16 Buses' : '5 Buses'));
-
+              const countBadge = br.id === 'Common' ? '18 buses' : (br.id === 'RPS' ? '19' : (br.id === 'University' ? '16' : '5'));
               return (
                 <button
                   key={br.id}
                   type="button"
                   onClick={() => setActiveBranch(br.id)}
                   style={{
+                    minHeight: '34px',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    padding: '4px 12px',
-                    borderRadius: '9999px',
-                    fontSize: '11.5px',
-                    fontWeight: isSel ? '800' : '650',
-                    border: isSel ? `2px solid ${br.badgeColor}` : '1.5px solid #e2e8f0',
-                    backgroundColor: isSel ? br.badgeBg : '#ffffff',
-                    color: isSel ? br.badgeColor : '#475569',
-                    cursor: 'pointer',
-                    boxShadow: isSel ? `0 2px 8px ${br.badgeColor}25` : 'none',
-                    transition: 'all 0.15s ease'
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: isSel ? '700' : '600',
+                    border: isSel ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
+                    backgroundColor: isSel ? 'var(--primary, #14245C)' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#475569',
+                    cursor: 'pointer'
                   }}
                 >
-                  <span>{br.icon}</span>
                   <span>{br.label}</span>
                   <span style={{
-                    fontSize: '10px',
+                    fontSize: '10.5px',
                     fontWeight: '800',
-                    backgroundColor: isSel ? '#ffffff' : '#f1f5f9',
-                    color: isSel ? br.badgeColor : '#64748b',
                     padding: '1px 6px',
-                    borderRadius: '10px'
+                    borderRadius: '6px',
+                    backgroundColor: isSel ? 'rgba(255,255,255,0.18)' : 'var(--bg-canvas, #F3F5FA)',
+                    color: isSel ? 'var(--accent, #F5A524)' : '#64748b'
                   }}>
                     {countBadge}
                   </span>
@@ -976,143 +897,72 @@ export default function TransportOperationsDashboard({
               );
             })}
           </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: activeBranchObj.badgeBg,
-            color: activeBranchObj.badgeColor,
-            padding: '4px 10px',
-            borderRadius: '10px',
-            fontSize: '11px',
-            fontWeight: '700',
-            border: `1px solid ${activeBranchObj.badgeColor}30`
-          }}>
-            <span>{activeBranchObj.icon}</span>
-            <span>{activeBranchObj.description}</span>
-          </div>
         </div>
 
-        {/* Tier 4: Filter 2 - Month Filter Pills */}
+        {/* ROW 3: MONTH chips + Fleet Period / Viewing */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '8px',
+          gap: '12px',
           paddingTop: '6px',
-          borderTop: '1px dashed #e2e8f0'
+          borderTop: '1px solid #F1F5F9'
         }}>
-          {/* Left: Month Filter Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '11.5px',
-              fontWeight: '800',
-              color: '#475569',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              marginRight: '2px'
-            }}>
-              <Calendar size={14} color="#0284c7" />
-              <span>Filter Month:</span>
-            </div>
-
-            {/* All Months Pill */}
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>
+              MONTH
+            </span>
             <button
               type="button"
               onClick={() => setActivePeriod && setActivePeriod('all')}
               style={{
-                padding: '4px 12px',
-                borderRadius: '9999px',
-                fontSize: '11.5px',
-                fontWeight: isAllMonths ? '800' : '650',
-                border: isAllMonths ? '1.5px solid #0284c7' : '1.5px solid #cbd5e1',
-                backgroundColor: isAllMonths ? '#0284c7' : '#ffffff',
+                minHeight: '34px',
+                padding: '5px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: '700',
+                border: isAllMonths ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
+                backgroundColor: isAllMonths ? 'var(--primary, #14245C)' : '#ffffff',
                 color: isAllMonths ? '#ffffff' : '#475569',
-                cursor: 'pointer',
-                boxShadow: isAllMonths ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.15s ease'
+                cursor: 'pointer'
               }}
             >
-              <span>All months</span>
-              {monthlyGrandTotals.grandOverall > 0 && (
-                <span style={{
-                  fontSize: '10px',
-                  fontWeight: '700',
-                  padding: '1px 5px',
-                  borderRadius: '10px',
-                  backgroundColor: isAllMonths ? 'rgba(255,255,255,0.25)' : '#f8fafc',
-                  color: isAllMonths ? '#ffffff' : '#64748b'
-                }}>
-                  {formatIndianCompact(monthlyGrandTotals.grandOverall)}
-                </span>
-              )}
-              {isAllMonths && <Check size={11} strokeWidth={3} />}
+              All months
             </button>
-
-            {/* Individual Month Pills */}
             {visiblePeriods.map(p => {
-              const isSel = String(p.id) === String(activePeriod);
-              const pBm = getBranchMetrics(activeBranch, String(p.id));
-              const pTotal = pBm?.total_expenses || 0;
+              const isSel = !isAllMonths && String(p.id) === String(activePeriod);
               return (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => setActivePeriod && setActivePeriod(String(p.id))}
                   style={{
-                    padding: '4px 12px',
-                    borderRadius: '9999px',
-                    fontSize: '11.5px',
-                    fontWeight: isSel ? '800' : '650',
-                    border: isSel ? '1.5px solid #0284c7' : '1.5px solid #cbd5e1',
-                    backgroundColor: isSel ? '#0284c7' : '#ffffff',
+                    minHeight: '34px',
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: isSel ? '700' : '600',
+                    border: isSel ? '1px solid var(--primary, #14245C)' : '1px solid #E1E6F2',
+                    backgroundColor: isSel ? 'var(--primary, #14245C)' : '#ffffff',
                     color: isSel ? '#ffffff' : '#475569',
-                    cursor: 'pointer',
-                    boxShadow: isSel ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    transition: 'all 0.15s ease'
+                    cursor: 'pointer'
                   }}
                 >
-                  <span>{p.period_label || p.period_code}</span>
-                  {pTotal > 0 && (
-                    <span style={{
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      padding: '1px 5px',
-                      borderRadius: '10px',
-                      backgroundColor: isSel ? 'rgba(255,255,255,0.25)' : '#f8fafc',
-                      color: isSel ? '#ffffff' : '#64748b'
-                    }}>
-                      {formatIndianCompact(pTotal)}
-                    </span>
-                  )}
-                  {isSel && <Check size={11} strokeWidth={3} />}
+                  {p.period_label || p.period_code}
                 </button>
               );
             })}
           </div>
 
-          <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '600' }}>
-            <span>Fleet Period:</span>{' '}
-            <strong style={{ color: '#0f172a' }}>
-              {isAllMonths ? 'All Recorded Cycles' : activePeriodObj?.period_label || 'Focus'}
-            </strong>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+            Fleet period / Viewing <strong style={{ color: 'var(--primary, #14245C)' }}>{activeBranchObj.label}</strong>
           </div>
         </div>
       </div>
 
-
-
+      {/* MAIN CONTENT ON var(--bg-canvas, #F3F5FA) CANVAS (28px padding, 28px gap) */}
+      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '28px', width: '100%', boxSizing: 'border-box' }}>
       {/* ========================================================================= */}
       {/* MAIN VIEW: EXECUTIVE OVERVIEW (BENTO DESIGN WITH HERO SUMMARY & VEHICLES) */}
       {/* ========================================================================= */}
@@ -1714,15 +1564,15 @@ export default function TransportOperationsDashboard({
                 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #94a3b8' }}>
+                      <tr style={{ backgroundColor: 'var(--primary, #14245C)', color: '#ffffff', borderBottom: '2px solid var(--primary, #14245C)' }}>
                         {/* 1. Parameters Column (Sticky Left) */}
                         <th style={{
                           padding: '10px 14px',
                           fontWeight: '800',
-                          color: '#0f172a',
+                          color: '#ffffff',
                           position: 'sticky',
                           left: 0,
-                          backgroundColor: '#f8fafc',
+                          backgroundColor: 'var(--primary, #14245C)',
                           zIndex: 20,
                           minWidth: '240px',
                           boxShadow: '2px 0 5px rgba(0,0,0,0.04)'
@@ -2238,6 +2088,8 @@ export default function TransportOperationsDashboard({
           branch={activeBranch}
           currentUser={null}
         />
+      </div>
+
       </div>
 
       {/* ----------------------------------------------------------------------- */}
