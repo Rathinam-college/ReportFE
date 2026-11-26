@@ -14,7 +14,8 @@ export default function MonthlyExpenseControls({
   showTable,
   setShowTable,
   isFullScreen = false,
-  onToggleFullScreen
+  onToggleFullScreen,
+  hideCycleFilter = false
 }) {
   return (
     <div
@@ -31,7 +32,8 @@ export default function MonthlyExpenseControls({
         flexShrink: 0
       }}
     >
-      {/* 1. Reporting Cycle Select */}
+      {/* 1. Reporting Cycle Select (hidden when top bar handles all month filtering) */}
+      {!hideCycleFilter && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <span
           style={{
@@ -84,6 +86,7 @@ export default function MonthlyExpenseControls({
           />
         </div>
       </div>
+      )}
 
       {/* 2. Segmented Unit Toggle */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

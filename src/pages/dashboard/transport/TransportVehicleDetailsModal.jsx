@@ -771,27 +771,27 @@ export default function TransportVehicleDetailsModal({
             }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1.5px solid #94a3b8' }}>
                 <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                  <tr style={{ backgroundColor: '#f1f5f9', color: '#334155', fontWeight: '800' }}>
-                    <th style={{ padding: '10px 12px', border: '1px solid #cbd5e1', textAlign: 'center', minWidth: '140px' }}>
+                  <tr style={{ backgroundColor: 'var(--primary, #14245C)', color: '#ffffff', fontWeight: '800' }}>
+                    <th style={{ padding: '11px 12px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'center', minWidth: '140px' }}>
                       Vehicle No
                     </th>
-                    <th style={{ padding: '10px 12px', border: '1px solid #cbd5e1', textAlign: 'right', minWidth: '100px' }}>
+                    <th style={{ padding: '11px 12px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', minWidth: '100px' }}>
                       Metric
                     </th>
                     {(isAllMonths || activePeriodLabel === 'All Months') ? (
                       <>
-                        <th style={{ padding: '10px 10px', border: '1px solid #cbd5e1', textAlign: 'right', backgroundColor: '#fefce8', color: '#854d0e' }}>Aug&apos;26</th>
-                        <th style={{ padding: '10px 10px', border: '1px solid #cbd5e1', textAlign: 'right', backgroundColor: '#fefce8', color: '#854d0e' }}>Sept&apos;26</th>
-                        <th style={{ padding: '10px 10px', border: '1px solid #cbd5e1', textAlign: 'right', backgroundColor: '#eff6ff', color: '#1d4ed8' }}>Oct&apos;26</th>
-                        <th style={{ padding: '10px 10px', border: '1px solid #cbd5e1', textAlign: 'right', backgroundColor: '#f5f3ff', color: '#6d28d9' }}>Diff (Prev &rarr; Cur)</th>
-                        <th style={{ padding: '10px 10px', border: '1px solid #cbd5e1', textAlign: 'right', backgroundColor: '#ecfdf5', color: '#065f46' }}>Total</th>
+                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', color: '#cbd5e1' }}>Aug&apos;26</th>
+                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', color: '#cbd5e1' }}>Sept&apos;26</th>
+                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', backgroundColor: '#1e3a8a', color: 'var(--accent, #F5A524)' }}>Oct&apos;26</th>
+                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', color: '#e2e8f0' }}>Diff (Prev &rarr; Cur)</th>
+                        <th style={{ padding: '11px 10px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', backgroundColor: '#0f1c49', color: '#6ee7b7' }}>Total</th>
                       </>
                     ) : (
                       <>
-                        <th style={{ padding: '10px 12px', border: '1px solid #cbd5e1', textAlign: 'right', backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                        <th style={{ padding: '11px 12px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', backgroundColor: '#1e3a8a', color: 'var(--accent, #F5A524)' }}>
                           {activePeriodLabel}
                         </th>
-                        <th style={{ padding: '10px 12px', border: '1px solid #cbd5e1', textAlign: 'right', backgroundColor: '#f5f3ff', color: '#6d28d9' }}>
+                        <th style={{ padding: '11px 12px', border: '1px solid rgba(255,255,255,0.14)', textAlign: 'right', color: '#e2e8f0' }}>
                           Diff (Prev &rarr; Cur)
                         </th>
                       </>
@@ -856,7 +856,7 @@ export default function TransportVehicleDetailsModal({
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', color: '#475569' }}>{num(aug.diesel).toLocaleString('en-IN')}</td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', color: '#475569' }}>{num(sep.diesel).toLocaleString('en-IN')}</td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '700', color: '#1e3a8a' }}>{num(oct.diesel).toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: diffD <= 0 ? '#059669' : '#dc2626' }}>
+                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: diffD === 0 ? '#64748b' : (diffD > 0 ? '#2F4BB8' : '#A32626') }}>
                                 {diffD > 0 ? `+${diffD}` : diffD} L
                               </td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: '#065f46', backgroundColor: '#f0fdf4' }}>{totD.toLocaleString('en-IN')} L</td>
@@ -886,7 +886,7 @@ export default function TransportVehicleDetailsModal({
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', color: '#475569' }}>{num(aug.km).toLocaleString('en-IN')}</td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', color: '#475569' }}>{num(sep.km).toLocaleString('en-IN')}</td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '700', color: '#1e3a8a' }}>{num(oct.km).toLocaleString('en-IN')}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: diffKm >= 0 ? '#0369a1' : '#d97706' }}>
+                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: diffKm === 0 ? '#64748b' : (diffKm > 0 ? '#2F4BB8' : '#A32626') }}>
                                 {diffKm > 0 ? `+${diffKm}` : diffKm}
                               </td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: '#065f46', backgroundColor: '#f0fdf4' }}>{totKm.toLocaleString('en-IN')}</td>
@@ -916,7 +916,7 @@ export default function TransportVehicleDetailsModal({
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', color: '#475569' }}>{num(aug.mileage).toFixed(2)}</td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', color: '#475569' }}>{num(sep.mileage).toFixed(2)}</td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '800', color: '#059669' }}>{num(oct.mileage).toFixed(2)}</td>
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '900', color: diffM >= 0 ? '#059669' : '#dc2626' }}>
+                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '900', color: diffM === 0 ? '#64748b' : (diffM > 0 ? '#2F4BB8' : '#A32626') }}>
                                 {diffM > 0 ? `+${diffM.toFixed(2)}` : diffM.toFixed(2)}
                               </td>
                               <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '900', color: '#065f46', backgroundColor: '#f0fdf4' }}>{avgM.toFixed(2)} km/L</td>
