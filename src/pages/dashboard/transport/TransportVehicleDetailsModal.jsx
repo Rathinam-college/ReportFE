@@ -228,7 +228,8 @@ export default function TransportVehicleDetailsModal({
           const dVal = Number(v.diesel_litres) || 0;
           const kmVal = Number(v.km_run) || 0;
           const mVal = dVal > 0 ? Number((kmVal / dVal).toFixed(2)) : (Number(v.mileage) || 0);
-          map[vNo][label] = { month: label, diesel: dVal, km: kmVal, mileage: mVal };
+          const fuelVal = Number(v.fuel_expenses) || 0;
+          map[vNo][label] = { month: label, diesel: dVal, km: kmVal, mileage: mVal, fuel: fuelVal };
         });
       });
       historyCacheRef.current[cacheKey] = map;
@@ -268,14 +269,15 @@ export default function TransportVehicleDetailsModal({
     const curD = num(v.diesel_litres, 0);
     const curKm = num(v.km_run, 0);
     const curM = curD > 0 ? Number((curKm / curD).toFixed(2)) : num(v.mileage, 0);
+    const curFuel = num(v.fuel_expenses, 0);
 
     return displayPeriods.map((p, idx) => {
       const lbl = p.period_label || p.period_code || String(p.id);
       if (vHist[lbl]) return vHist[lbl];
       if (idx === displayPeriods.length - 1) {
-        return { month: lbl, diesel: Math.round(curD), km: Math.round(curKm), mileage: curM };
+        return { month: lbl, diesel: Math.round(curD), km: Math.round(curKm), mileage: curM, fuel: curFuel };
       }
-      return { month: lbl, diesel: 0, km: 0, mileage: 0 };
+      return { month: lbl, diesel: 0, km: 0, mileage: 0, fuel: 0 };
     });
   };
 
@@ -747,6 +749,7 @@ export default function TransportVehicleDetailsModal({
                     const vD = num(veh.diesel_litres);
                     const vKm = num(veh.km_run);
                     const vM = veh.mileage ? Number(veh.mileage) : (vD > 0 ? Number((vKm / vD).toFixed(2)) : 0);
+                    const vFuel = num(veh.fuel_expenses);
 
                     const curDVal = showAll ? num(curM.diesel) : vD;
                     const curKmVal = showAll ? num(curM.km) : vKm;
@@ -758,6 +761,7 @@ export default function TransportVehicleDetailsModal({
 
                     const totD = hist.reduce((s, m) => s + num(m.diesel), 0);
                     const totKm = hist.reduce((s, m) => s + num(m.km), 0);
+                    const totFuel = hist.reduce((s, m) => s + num(m.fuel), 0);
                     const avgM = totD > 0 ? Number((totKm / totD).toFixed(2)) : 0;
 
                     const rowBg = isSelected ? '#eff6ff' : (vIdx % 2 === 0 ? '#ffffff' : '#fafbfc');
@@ -770,7 +774,7 @@ export default function TransportVehicleDetailsModal({
                           style={{ backgroundColor: rowBg, cursor: 'pointer' }}
                         >
                           <td
-                            rowSpan={3}
+                            rowSpan={4}
                             style={{
                               padding: '10px 12px',
                               border: '1px solid #94a3b8',
@@ -845,9 +849,9 @@ export default function TransportVehicleDetailsModal({
                         {/* Row 3: Mileage */}
                         <tr
                           onClick={() => setSelectedVehicleNo(veh.vehicle_no)}
-                          style={{ backgroundColor: rowBg, cursor: 'pointer', borderBottom: '2px solid #64748b' }}
+                          style={{ backgroundColor: rowBg, cursor: 'pointer' }}
                         >
-                          <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
+                          <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
                             Mileage
                           </td>
                           {showAll ? (
@@ -855,17 +859,46 @@ export default function TransportVehicleDetailsModal({
                               {hist.map((m, mIdx) => {
                                 const isLast = mIdx === hist.length - 1;
                                 return (
-                                  <td key={m.month || mIdx} style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: isLast ? '800' : '400', color: isLast ? '#059669' : '#475569' }}>
+                                  <td key={m.month || mIdx} style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: isLast ? '800' : '400', color: isLast ? '#059669' : '#475569' }}>
                                     {num(m.mileage).toFixed(2)}
                                   </td>
                                 );
                               })}
-                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '900', color: '#065f46', backgroundColor: '#f0fdf4' }}>{avgM.toFixed(2)} km/L</td>
+                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '900', color: '#065f46', backgroundColor: '#f0fdf4' }}>{avgM.toFixed(2)} km/L</td>
                             </>
                           ) : (
                             <>
-                              <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
+                              <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
                                 {vM.toFixed(2)} km/L
+                              </td>
+                            </>
+                          )}
+                        </tr>
+
+                        {/* Row 4: Fuel Expenses */}
+                        <tr
+                          onClick={() => setSelectedVehicleNo(veh.vehicle_no)}
+                          style={{ backgroundColor: rowBg, cursor: 'pointer', borderBottom: '2px solid #64748b' }}
+                        >
+                          <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
+                            Fuel Expenses
+                          </td>
+                          {showAll ? (
+                            <>
+                              {hist.map((m, mIdx) => {
+                                const isLast = mIdx === hist.length - 1;
+                                return (
+                                  <td key={m.month || mIdx} style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: isLast ? '700' : '400', color: isLast ? '#1e3a8a' : '#475569' }}>
+                                    {formatINR(num(m.fuel))}
+                                  </td>
+                                );
+                              })}
+                              <td style={{ padding: '7px 10px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '800', color: '#065f46', backgroundColor: '#f0fdf4' }}>{formatINR(totFuel)}</td>
+                            </>
+                          ) : (
+                            <>
+                              <td style={{ padding: '7px 12px', border: '1px solid #cbd5e1', borderBottom: '2px solid #64748b', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
+                                {formatINR(vFuel)}
                               </td>
                             </>
                           )}
