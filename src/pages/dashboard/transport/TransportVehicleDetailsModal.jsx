@@ -186,12 +186,16 @@ export default function TransportVehicleDetailsModal({
   const [sideChartTab, setSideChartTab] = useState('trend'); // 'trend' | 'ranking' | 'scatter'
   const [liveHistoryByVehicle, setLiveHistoryByVehicle] = useState({});
 
+  const periodsKey = Array.isArray(periods) && periods.length > 0
+    ? periods.map(p => `${p.id}:${p.period_label || p.period_code || ''}`).join('|')
+    : 'default';
+
   // Fetch live multi-month vehicle history from /api/transport/vehicles for all periods of the active branch
   const displayPeriods = useMemo(() => {
     return Array.isArray(periods) && periods.length > 0
       ? periods
       : [{ id: 35, period_label: "Aug'26" }, { id: 36, period_label: "Sept'26" }, { id: 1026, period_label: "Oct'26" }];
-  }, [periods]);
+  }, [periodsKey]);
 
   useEffect(() => {
     if ((!isOpen && !embedded) || !activeBranch) return;
@@ -200,7 +204,7 @@ export default function TransportVehicleDetailsModal({
     Promise.all(
       displayPeriods.map((p) =>
         fetch(`/api/transport/vehicles?period_id=${p.id}&branch=${encodeURIComponent(activeBranch)}`)
-          .then((r) => r.json())
+          .then((r) => (r.ok ? r.json() : { vehicles: [] }))
           .then((d) => ({ label: p.period_label || p.period_code || String(p.id), list: d?.vehicles || [] }))
           .catch(() => ({ label: p.period_label || p.period_code || String(p.id), list: [] }))
       )
@@ -221,7 +225,7 @@ export default function TransportVehicleDetailsModal({
       setLiveHistoryByVehicle(map);
     });
     return () => { cancelled = true; };
-  }, [activeBranch, displayPeriods, isOpen, embedded]);
+  }, [activeBranch, periodsKey, isOpen, embedded]);
 
   // Sync focus metric from props
   useEffect(() => {
