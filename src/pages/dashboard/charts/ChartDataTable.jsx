@@ -100,6 +100,16 @@ export default function ChartDataTable({
   const setSelectedCategoryFilter = setInternalCategoryFilter;
   const viewMode = propViewMode !== undefined ? propViewMode : internalViewMode;
   const setViewMode = setInternalViewMode;
+
+  const formatByUnit = (val) => {
+    if (propUnitMode === 'lakhs') {
+      if (val === undefined || val === null || val === '' || isNaN(Number(val))) return '—';
+      const n = Number(val);
+      if (n === 0) return '₹0 L';
+      return `₹${(n / 100000).toFixed(2)} L`;
+    }
+    return formatIndianCompact(val);
+  };
   const isFullScreen = propIsFullScreen !== undefined ? propIsFullScreen : internalFullScreen;
   const containerRef = useRef(null);
 
@@ -595,7 +605,7 @@ export default function ChartDataTable({
           fontWeight: isBold ? '800' : '600',
           color: numAmt > 0 ? '#0f172a' : '#94a3b8'
         }} className="currency-font">
-          {formatIndianCompact(numAmt)}
+          {formatByUnit(numAmt)}
         </span>
       );
     }
@@ -614,7 +624,7 @@ export default function ChartDataTable({
           color: numAmt > 0 ? '#0f172a' : '#94a3b8',
           fontSize: '12px'
         }} className="currency-font">
-          {formatIndianCompact(numAmt)}
+          {formatByUnit(numAmt)}
         </span>
         {numAmt > 0 && (
           <span style={{
@@ -1152,7 +1162,7 @@ export default function ChartDataTable({
             prevPeriodLabel={prevPeriodLabel}
             isFirstPeriod={isFirstPeriod}
             categoryShares={categoryShares}
-            formatCompact={formatIndianCompact}
+            formatCompact={formatByUnit}
             formatFull={formatIndianFull}
           />
 
@@ -1162,7 +1172,7 @@ export default function ChartDataTable({
               hostelCensusMap={localHostelCensus}
               periods={periods}
               selectedPeriod={selectedPeriod}
-              formatCompact={formatIndianCompact}
+              formatCompact={formatByUnit}
               formatFull={formatIndianFull}
             />
           ) : selectedModule === 'transport' ? (
@@ -1171,7 +1181,7 @@ export default function ChartDataTable({
               transportCensusByBranch={localTransportByBranch}
               periods={periods}
               selectedPeriod={selectedPeriod}
-              formatCompact={formatIndianCompact}
+              formatCompact={formatByUnit}
               formatFull={formatIndianFull}
             />
           ) : null}
@@ -1224,7 +1234,7 @@ export default function ChartDataTable({
                   maxMonthlyAmount={maxMonth}
                   isExpanded={isExpanded}
                   onToggleExpand={handleToggleExpand}
-                  formatCompact={isPersonCat ? formatPersonCount : formatIndianCompact}
+                  formatCompact={isPersonCat ? formatPersonCount : formatByUnit}
                   formatFull={isPersonCat ? formatPersonCount : formatIndianFull}
                   hidePercentage={isNonAdditiveCat || displayMode === 'amount_only'}
                   remarksDraft={remarksDraft}
