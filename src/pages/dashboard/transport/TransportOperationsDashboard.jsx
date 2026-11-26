@@ -1356,6 +1356,7 @@ export default function TransportOperationsDashboard({
             isOpen={true}
             isAllMonths={isAllMonths}
             vehicles={vehiclesList}
+            periods={visiblePeriods}
             initialFocus={modalMetricFocus}
             activeBranch={activeBranch}
             activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
@@ -1802,26 +1803,6 @@ export default function TransportOperationsDashboard({
       )}
 
       {/* ========================================================================= */}
-      {/* EMBEDDED FLEET VEHICLE CARDS & 3-MONTH PERFORMANCE ANALYTICS              */}
-      {/* ========================================================================= */}
-      {(activeMainView === 'vehicles' || activeMainView === 'all') && (
-        <TransportVehicleDetailsModal
-          embedded={true}
-          isOpen={true}
-          isAllMonths={isAllMonths}
-          vehicles={vehiclesList}
-          periods={visiblePeriods}
-          initialFocus={modalMetricFocus}
-          activeBranch={activeBranch}
-          activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
-          summary={vehicleStats?.summary || {}}
-          branches={TRANSPORT_BRANCHES}
-          onBranchChange={(newBranch) => setActiveBranch(newBranch)}
-          onJumpToLedger={() => setActiveMainView('vehicles')}
-        />
-      )}
-
-      {/* ========================================================================= */}
       {/* SUB-VIEW: VEHICLE-WISE EXPENSES LEDGER (58 BUSES)                         */}
       {/* ========================================================================= */}
       {(activeMainView === 'executive' || activeMainView === 'vehicles' || activeMainView === 'all') && (
@@ -2053,6 +2034,7 @@ export default function TransportOperationsDashboard({
           isAllMonths={isAllMonths}
           onClose={() => setIsVehicleModalOpen(false)}
           vehicles={vehiclesList}
+          periods={visiblePeriods}
           initialFocus={modalMetricFocus}
           activeBranch={activeBranch}
           activePeriodLabel={isAllMonths ? 'All Months' : (activePeriodObj?.period_label || "Oct'26")}
