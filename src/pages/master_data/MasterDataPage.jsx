@@ -4,6 +4,10 @@ import CostHeadsManager from './CostHeadsManager';
 import HostelMasterManager from './HostelMasterManager';
 import TransportMasterManager from './TransportMasterManager';
 import CctvMasterManager from './CctvMasterManager';
+import AuditMasterManager from './AuditMasterManager';
+import PurchaseMasterManager from './PurchaseMasterManager';
+import StoreMasterManager from './StoreMasterManager';
+import AssetAuditMasterManager from './AssetAuditMasterManager';
 import PeriodsManager from './PeriodsManager';
 import CategoryFormulaManager from './CategoryFormulaManager';
 import EditPeriodModal from './EditPeriodModal';
@@ -184,6 +188,14 @@ export default function MasterDataPage({
               <TransportMasterManager />
             ) : moduleName === 'CCTV' ? (
               <CctvMasterManager />
+            ) : moduleName === 'Audit' ? (
+              <AuditMasterManager />
+            ) : moduleName === 'Purchase' ? (
+              <PurchaseMasterManager />
+            ) : moduleName === 'Store' ? (
+              <StoreMasterManager />
+            ) : moduleName === 'Asset Audit' ? (
+              <AssetAuditMasterManager />
             ) : (
               <CostHeadsManager
                 costHeadsList={costHeadsList}

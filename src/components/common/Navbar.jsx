@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Home, FileSpreadsheet, SlidersHorizontal,
-  ShieldCheck, LogOut, Utensils, Building2, Bus, Video, ChevronDown
+  ShieldCheck, LogOut, Utensils, Building2, Bus, Video, ClipboardCheck, ShoppingCart, Package, ClipboardList, ChevronDown
 } from 'lucide-react';
 import { getAssetUrl } from '../../utils/api';
 
@@ -22,6 +22,10 @@ export default function Navbar({
     { id: 'food', label: 'Food', icon: Utensils },
     { id: 'hostel', label: 'Hostel', icon: Building2 },
     { id: 'transport', label: 'Transport', icon: Bus },
+    { id: 'audit', label: 'Audit', icon: ClipboardCheck },
+    { id: 'purchase', label: 'Purchase', icon: ShoppingCart },
+    { id: 'store', label: 'Store', icon: Package },
+    { id: 'asset_audit', label: 'Asset Audit', icon: ClipboardList },
     { id: 'cctv', label: 'CCTV', icon: Video }
   ];
 

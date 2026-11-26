@@ -168,7 +168,7 @@ export default function App() {
   // DYNAMIC DOCUMENT TITLE: Report / <Page Name>
   // --------------------------------------------------------------------------
   useEffect(() => {
-    const getModLabel = (m) => m === 'food' ? 'Food' : m === 'hostel' ? 'Hostel' : m === 'cctv' ? 'CCTV' : 'Transport';
+    const getModLabel = (m) => m === 'food' ? 'Food' : m === 'hostel' ? 'Hostel' : m === 'cctv' ? 'CCTV' : m === 'audit' ? 'Audit' : m === 'purchase' ? 'Purchase' : m === 'store' ? 'Store' : m === 'asset_audit' ? 'Asset Audit' : 'Transport';
     let titleStr = 'Dashboard';
     if (activeTab === 'dashboard') {
       titleStr = `Dashboard (${getModLabel(dashboardSubTab)})`;
@@ -1859,7 +1859,7 @@ export default function App() {
             setNewMonthForm={setNewMonthForm}
             handleStartDateChange={handleStartDateChange}
             handleAddNewMonth={handleAddNewMonth}
-            moduleName={masterDataSubTab === 'food' ? 'Food' : masterDataSubTab === 'hostel' ? 'Hostel' : masterDataSubTab === 'cctv' ? 'CCTV' : 'Transport'}
+            moduleName={masterDataSubTab === 'food' ? 'Food' : masterDataSubTab === 'hostel' ? 'Hostel' : masterDataSubTab === 'cctv' ? 'CCTV' : masterDataSubTab === 'audit' ? 'Audit' : masterDataSubTab === 'purchase' ? 'Purchase' : masterDataSubTab === 'store' ? 'Store' : masterDataSubTab === 'asset_audit' ? 'Asset Audit' : 'Transport'}
           />
         )}
 

@@ -8,6 +8,10 @@ import HostelSpreadsheetEntry from './HostelSpreadsheetEntry';
 import TransportSpreadsheetEntry from './TransportSpreadsheetEntry';
 import FoodSpreadsheetEntry from './FoodSpreadsheetEntry';
 import CctvSpreadsheetEntry from './CctvSpreadsheetEntry';
+import AuditSpreadsheetEntry from './AuditSpreadsheetEntry';
+import PurchaseSpreadsheetEntry from './PurchaseSpreadsheetEntry';
+import StoreSpreadsheetEntry from './StoreSpreadsheetEntry';
+import AssetAuditSpreadsheetEntry from './AssetAuditSpreadsheetEntry';
 
 export default function MatrixTable({
   selectedModule = 'food',
@@ -181,6 +185,50 @@ export default function MatrixTable({
       {/* 5. CCTV OPERATIONS & SURVEILLANCE SPREADSHEET */}
       {selectedModule === 'cctv' && (
         <CctvSpreadsheetEntry
+          activePeriodObj={activePeriodObj}
+          computedMatrix={computedMatrix}
+          editingPeriodId={editingPeriodId}
+          setEditingPeriodId={setEditingPeriodId}
+          fetchData={fetchData}
+        />
+      )}
+
+      {/* 6. AUDIT OPERATIONS & COMPLIANCE SPREADSHEET */}
+      {selectedModule === 'audit' && (
+        <AuditSpreadsheetEntry
+          activePeriodObj={activePeriodObj}
+          computedMatrix={computedMatrix}
+          editingPeriodId={editingPeriodId}
+          setEditingPeriodId={setEditingPeriodId}
+          fetchData={fetchData}
+        />
+      )}
+
+      {/* 7. PURCHASE OPERATIONS & PROCUREMENT SPREADSHEET */}
+      {selectedModule === 'purchase' && (
+        <PurchaseSpreadsheetEntry
+          activePeriodObj={activePeriodObj}
+          computedMatrix={computedMatrix}
+          editingPeriodId={editingPeriodId}
+          setEditingPeriodId={setEditingPeriodId}
+          fetchData={fetchData}
+        />
+      )}
+
+      {/* 8. STORE OPERATIONS & INVENTORY SPREADSHEET */}
+      {selectedModule === 'store' && (
+        <StoreSpreadsheetEntry
+          activePeriodObj={activePeriodObj}
+          computedMatrix={computedMatrix}
+          editingPeriodId={editingPeriodId}
+          setEditingPeriodId={setEditingPeriodId}
+          fetchData={fetchData}
+        />
+      )}
+
+      {/* 9. ASSET AUDIT & VERIFICATION SPREADSHEET */}
+      {selectedModule === 'asset_audit' && (
+        <AssetAuditSpreadsheetEntry
           activePeriodObj={activePeriodObj}
           computedMatrix={computedMatrix}
           editingPeriodId={editingPeriodId}

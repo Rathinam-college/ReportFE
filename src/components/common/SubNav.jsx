@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Utensils, Home, Bus, Video, Search, Bell, Database, User } from 'lucide-react';
+import { Utensils, Home, Bus, Video, ClipboardCheck, ShoppingCart, Package, ClipboardList, Search, Bell, Database, User } from 'lucide-react';
 
 export default function SubNav({
   currentUser,
@@ -18,6 +18,10 @@ export default function SubNav({
     { id: 'food', label: 'Food', icon: Utensils },
     { id: 'hostel', label: 'Hostel', icon: Home },
     { id: 'transport', label: 'Transport', icon: Bus },
+    { id: 'audit', label: 'Audit', icon: ClipboardCheck },
+    { id: 'purchase', label: 'Purchase', icon: ShoppingCart },
+    { id: 'store', label: 'Store', icon: Package },
+    { id: 'asset_audit', label: 'Asset Audit', icon: ClipboardList },
     { id: 'cctv', label: 'CCTV', icon: Video }
   ];
 

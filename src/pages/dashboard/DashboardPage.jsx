@@ -34,6 +34,10 @@ import MonthlyExpenseSection from './monthly_expense/MonthlyExpenseSection';
 import HostelOperationsDashboard from './hostel/HostelOperationsDashboard';
 import TransportOperationsDashboard from './transport/TransportOperationsDashboard';
 import CctvOperationsDashboard from './cctv/CctvOperationsDashboard';
+import AuditOperationsDashboard from './audit/AuditOperationsDashboard';
+import PurchaseOperationsDashboard from './purchase/PurchaseOperationsDashboard';
+import StoreOperationsDashboard from './store/StoreOperationsDashboard';
+import AssetAuditOperationsDashboard from './asset_audit/AssetAuditOperationsDashboard';
 import FoodBudgetChartSection from './food/FoodBudgetChartSection';
 
 // Helper to determine the period of the latest recorded entry across modules
@@ -715,6 +719,78 @@ export default function DashboardPage({
             onOpenDataEntry?.('transport', pId, targetBranch);
           }}
           handleExportReport={handleExportReport}
+        />
+      </div>
+    );
+  }
+
+  // Dedicated Enterprise Audit Operations & Compliance Dashboard
+  if (currentModule === 'audit') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
+        <AuditOperationsDashboard
+          periods={periods}
+          activePeriod={activePeriod || (periods.length > 0 ? String(periods[periods.length - 1].id) : 'all')}
+          setActivePeriod={setActivePeriod}
+          onOpenDataEntry={(targetPeriodId) => {
+            const pId = targetPeriodId || (activePeriod !== 'all' ? Number(activePeriod) : null);
+            onOpenDataEntry?.('audit', pId);
+          }}
+          onRefreshAttachments={fetchAttachmentsSummary}
+        />
+      </div>
+    );
+  }
+
+  // Dedicated Enterprise Purchase Operations & Procurement Dashboard
+  if (currentModule === 'purchase') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
+        <PurchaseOperationsDashboard
+          periods={periods}
+          activePeriod={activePeriod || (periods.length > 0 ? String(periods[periods.length - 1].id) : 'all')}
+          setActivePeriod={setActivePeriod}
+          onOpenDataEntry={(targetPeriodId) => {
+            const pId = targetPeriodId || (activePeriod !== 'all' ? Number(activePeriod) : null);
+            onOpenDataEntry?.('purchase', pId);
+          }}
+          onRefreshAttachments={fetchAttachmentsSummary}
+        />
+      </div>
+    );
+  }
+
+  // Dedicated Enterprise Store Operations & Inventory Dashboard
+  if (currentModule === 'store') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
+        <StoreOperationsDashboard
+          periods={periods}
+          activePeriod={activePeriod || (periods.length > 0 ? String(periods[periods.length - 1].id) : 'all')}
+          setActivePeriod={setActivePeriod}
+          onOpenDataEntry={(targetPeriodId) => {
+            const pId = targetPeriodId || (activePeriod !== 'all' ? Number(activePeriod) : null);
+            onOpenDataEntry?.('store', pId);
+          }}
+          onRefreshAttachments={fetchAttachmentsSummary}
+        />
+      </div>
+    );
+  }
+
+  // Dedicated Enterprise Asset Audit & Verification Dashboard
+  if (currentModule === 'asset_audit') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflowX: 'clip' }}>
+        <AssetAuditOperationsDashboard
+          periods={periods}
+          activePeriod={activePeriod || (periods.length > 0 ? String(periods[periods.length - 1].id) : 'all')}
+          setActivePeriod={setActivePeriod}
+          onOpenDataEntry={(targetPeriodId) => {
+            const pId = targetPeriodId || (activePeriod !== 'all' ? Number(activePeriod) : null);
+            onOpenDataEntry?.('asset_audit', pId);
+          }}
+          onRefreshAttachments={fetchAttachmentsSummary}
         />
       </div>
     );
