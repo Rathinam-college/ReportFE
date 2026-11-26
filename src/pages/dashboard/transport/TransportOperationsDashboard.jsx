@@ -33,6 +33,7 @@ export default function TransportOperationsDashboard({
   const [vehicleStats, setVehicleStats] = useState(null);
   const [vehiclesList, setVehiclesList] = useState([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(false);
+  const vehicleCacheRef = React.useRef({});
   const [vehicleSearchTerm, setVehicleSearchTerm] = useState('');
   const [vehicleViewMode, setVehicleViewMode] = useState('cards'); // 'cards' | 'table'
   const [expandedVehicleId, setExpandedVehicleId] = useState(null);
@@ -165,23 +166,42 @@ export default function TransportOperationsDashboard({
 
   const activePeriodIdStr = activePeriodObj ? String(activePeriodObj.id) : null;
 
-  // Fetch live vehicle summary from /api/transport/vehicles for the active branch & period
+  // Fetch live vehicle summary from /api/transport/vehicles for the active branch & period (with AbortController + instant cache)
   useEffect(() => {
     const effectivePeriodId = activePeriod !== 'all' ? (activePeriodObj?.id || activePeriod || '1026') : 'all';
-    setVehiclesLoading(true);
-    fetch(`/api/transport/vehicles?period_id=${effectivePeriodId}&branch=${activeBranch}`)
-      .then(res => res.json())
+    const cacheKey = `${effectivePeriodId}__${activeBranch}`;
+    const cached = vehicleCacheRef.current[cacheKey];
+    if (cached) {
+      setVehicleStats(cached);
+      setVehiclesList(cached.vehicles || []);
+      setVehiclesLoading(false);
+    } else {
+      setVehiclesLoading(true);
+    }
+
+    const controller = new AbortController();
+    fetch(`/api/transport/vehicles?period_id=${effectivePeriodId}&branch=${encodeURIComponent(activeBranch)}`, {
+      signal: controller.signal
+    })
+      .then(res => (res.ok ? res.json() : null))
       .then(d => {
         if (d && d.status === 'success') {
+          vehicleCacheRef.current[cacheKey] = d;
           setVehicleStats(d);
           setVehiclesList(d.vehicles || []);
-        } else {
+        } else if (!cached) {
           setVehiclesList([]);
         }
       })
-      .catch(e => console.warn('[TransportDashboard] Vehicle stats notice:', e))
+      .catch(e => {
+        if (e.name !== 'AbortError') {
+          console.warn('[TransportDashboard] Vehicle stats notice:', e);
+        }
+      })
       .finally(() => setVehiclesLoading(false));
-  }, [activePeriod, activePeriodObj, activeBranch, visiblePeriods]);
+
+    return () => controller.abort();
+  }, [activePeriod, activePeriodObj, activeBranch]);
   const activeBranchObj = TRANSPORT_BRANCHES.find(b => b.id === activeBranch) || TRANSPORT_BRANCHES[0];
 
   const num = (v, fb = 0) => {

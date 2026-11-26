@@ -185,31 +185,40 @@ export default function TransportVehicleDetailsModal({
   const [selectedVehicleNo, setSelectedVehicleNo] = useState(null);
   const [sideChartTab, setSideChartTab] = useState('trend'); // 'trend' | 'ranking' | 'scatter'
   const [liveHistoryByVehicle, setLiveHistoryByVehicle] = useState({});
+  const historyCacheRef = React.useRef({});
 
   const periodsKey = Array.isArray(periods) && periods.length > 0
     ? periods.map(p => `${p.id}:${p.period_label || p.period_code || ''}`).join('|')
     : 'default';
 
-  // Fetch live multi-month vehicle history from /api/transport/vehicles for all periods of the active branch
+  // Fetch live multi-month vehicle history from /api/transport/vehicles only when All Months is active (with branch cache)
   const displayPeriods = useMemo(() => {
     return Array.isArray(periods) && periods.length > 0
       ? periods
       : [{ id: 35, period_label: "Aug'26" }, { id: 36, period_label: "Sept'26" }, { id: 1026, period_label: "Oct'26" }];
   }, [periodsKey]);
 
-  useEffect(() => {
-    if ((!isOpen && !embedded) || !activeBranch) return;
+  const showAllMonths = isAllMonths || activePeriodLabel === 'All Months';
 
-    let cancelled = false;
+  useEffect(() => {
+    if ((!isOpen && !embedded) || !activeBranch || !showAllMonths) return;
+
+    const cacheKey = `${activeBranch}__${periodsKey}`;
+    if (historyCacheRef.current[cacheKey]) {
+      setLiveHistoryByVehicle(historyCacheRef.current[cacheKey]);
+      return;
+    }
+
+    const controller = new AbortController();
     Promise.all(
       displayPeriods.map((p) =>
-        fetch(`/api/transport/vehicles?period_id=${p.id}&branch=${encodeURIComponent(activeBranch)}`)
+        fetch(`/api/transport/vehicles?period_id=${p.id}&branch=${encodeURIComponent(activeBranch)}`, { signal: controller.signal })
           .then((r) => (r.ok ? r.json() : { vehicles: [] }))
           .then((d) => ({ label: p.period_label || p.period_code || String(p.id), list: d?.vehicles || [] }))
           .catch(() => ({ label: p.period_label || p.period_code || String(p.id), list: [] }))
       )
     ).then((results) => {
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
       const map = {};
       results.forEach(({ label, list }) => {
         list.forEach((v) => {
@@ -222,10 +231,11 @@ export default function TransportVehicleDetailsModal({
           map[vNo][label] = { month: label, diesel: dVal, km: kmVal, mileage: mVal };
         });
       });
+      historyCacheRef.current[cacheKey] = map;
       setLiveHistoryByVehicle(map);
     });
-    return () => { cancelled = true; };
-  }, [activeBranch, periodsKey, isOpen, embedded]);
+    return () => controller.abort();
+  }, [activeBranch, periodsKey, isOpen, embedded, showAllMonths]);
 
   // Sync focus metric from props
   useEffect(() => {
@@ -315,13 +325,13 @@ export default function TransportVehicleDetailsModal({
     return processedVehicles.find(v => v.vehicle_no === selectedVehicleNo) || processedVehicles[0] || null;
   }, [processedVehicles, selectedVehicleNo]);
 
-  // 3-Month history for currently active vehicle
+  // Multi-month history for currently active vehicle
   const activeVehicleHistory = useMemo(() => {
     if (!activeVehicle) return [];
     return getVehicleHistory(activeVehicle);
-  }, [activeVehicle]);
+  }, [activeVehicle, liveHistoryByVehicle, displayPeriods]);
 
-  // Aggregate stats
+  // Aggregate stats (strictly from filtered processedVehicles)
   const totals = useMemo(() => {
     const list = processedVehicles;
     const busCount = list.length || 1;
@@ -329,25 +339,20 @@ export default function TransportVehicleDetailsModal({
     const totKm = list.reduce((sum, v) => sum + num(v.km_run), 0);
     const totFuel = list.reduce((sum, v) => sum + num(v.fuel_expenses), 0);
     const totExp = list.reduce((sum, v) => sum + num(v.total_expenses), 0);
-    const avgMileage = totDiesel > 0 ? (totKm / totDiesel) : (num(summary?.mileage) || 4.39);
-
-    const safeTotDiesel = (summary?.diesel_litres && Number(summary.diesel_litres) > 0) ? num(summary.diesel_litres) : totDiesel;
-    const safeTotKm = (summary?.km_run && Number(summary.km_run) > 0) ? num(summary.km_run) : totKm;
-    const safeTotFuel = (summary?.fuel_expenses && Number(summary.fuel_expenses) > 0) ? num(summary.fuel_expenses) : totFuel;
-    const safeTotExp = (summary?.total_expenses && Number(summary.total_expenses) > 0) ? num(summary.total_expenses) : totExp;
+    const avgMileage = totDiesel > 0 ? (totKm / totDiesel) : 0;
 
     return {
       count: list.length,
-      totDiesel: safeTotDiesel,
-      totKm: safeTotKm,
-      totFuel: safeTotFuel,
-      totExp: safeTotExp,
-      avgDieselPerBus: busCount > 0 ? (safeTotDiesel / busCount).toFixed(1) : '0',
-      avgKmPerBus: busCount > 0 ? (safeTotKm / busCount).toFixed(1) : '0',
+      totDiesel,
+      totKm,
+      totFuel,
+      totExp,
+      avgDieselPerBus: busCount > 0 ? (totDiesel / busCount).toFixed(1) : '0.0',
+      avgKmPerBus: busCount > 0 ? (totKm / busCount).toFixed(1) : '0.0',
       avgMileage: Number(avgMileage).toFixed(2),
-      fuelCostPerKm: safeTotKm > 0 ? (safeTotFuel / safeTotKm).toFixed(2) : '22.87'
+      fuelCostPerKm: totKm > 0 ? (totFuel / totKm).toFixed(2) : '0.00'
     };
-  }, [processedVehicles, summary]);
+  }, [processedVehicles]);
 
   // Export CSV
   const handleExportCSV = () => {
