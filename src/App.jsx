@@ -1738,8 +1738,8 @@ export default function App() {
           position: 'relative'
         }}
       >
-        {/* Top Header inside Area (hidden on dashboard where Sticky Top Filter Bar lives) */}
-        {activeTab !== 'dashboard' && (
+        {/* Top Header inside Area (hidden on dashboard and data_entry where Sticky Top Filter Bar lives) */}
+        {activeTab !== 'dashboard' && activeTab !== 'data_entry' && (
           <SubNav
             currentUser={currentUser}
             dbStatus={dbStatus}
@@ -1765,7 +1765,7 @@ export default function App() {
             boxSizing: 'border-box',
             overflowY: 'auto',
             scrollBehavior: 'smooth',
-            backgroundColor: activeTab === 'dashboard' ? 'var(--bg-canvas, #F3F6FB)' : '#ffffff'
+            backgroundColor: activeTab === 'dashboard' ? 'var(--bg-canvas, #F3F6FB)' : (activeTab === 'data_entry' ? '#F3F5FA' : '#ffffff')
           }}
         >
         

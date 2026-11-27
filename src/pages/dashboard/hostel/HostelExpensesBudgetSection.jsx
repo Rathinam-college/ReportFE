@@ -441,6 +441,41 @@ export default function HostelExpensesBudgetSection({
                   />
                 );
               })}
+              {(() => {
+                const totMonthly = {};
+                (periods || []).forEach(p => {
+                  const colKey = getBudgetMonthCol(p, p.id);
+                  totMonthly[p.id] = (activeBudgetHeads || []).reduce((sum, h) => sum + num(h[colKey], 0), 0);
+                });
+                const isAll = activePeriod === 'all';
+                const totAmount = isAll ? allMonthsActualSum : activeMonthActualSum;
+                const totMax = Math.max(...Object.values(totMonthly), 1);
+                return (
+                  <CategoryCard
+                    key="hostel_total_expenses"
+                    category={{
+                      categoryId: 'hostel_total_expenses',
+                      categoryName: 'Total Expenses',
+                      color: '#14245C',
+                      items: [],
+                      hideDetails: true,
+                      isPersonCategory: false
+                    }}
+                    periods={cardPeriods}
+                    selectedPeriod={activePeriod}
+                    selectedAmount={totAmount}
+                    selectedPercent={totAmount > 0 ? 100 : 0}
+                    monthlyAmounts={totMonthly}
+                    maxMonthlyAmount={totMax}
+                    isExpanded={false}
+                    onToggleExpand={() => {}}
+                    formatCompact={formatIndianCompact}
+                    formatFull={formatINR}
+                    hideDetails={true}
+                    remarksDraft={remarksDraft}
+                  />
+                );
+              })()}
             </div>
 
             <div style={{
@@ -480,41 +515,7 @@ export default function HostelExpensesBudgetSection({
                 hideDetails={true}
                 remarksDraft={remarksDraft}
               />
-              {(() => {
-                const totMonthly = {};
-                (periods || []).forEach(p => {
-                  const colKey = getBudgetMonthCol(p, p.id);
-                  totMonthly[p.id] = (activeBudgetHeads || []).reduce((sum, h) => sum + num(h[colKey], 0), 0);
-                });
-                const isAll = activePeriod === 'all';
-                const totAmount = isAll ? allMonthsActualSum : activeMonthActualSum;
-                const totMax = Math.max(...Object.values(totMonthly), 1);
-                return (
-                  <CategoryCard
-                    key="hostel_total_expenses"
-                    category={{
-                      categoryId: 'hostel_total_expenses',
-                      categoryName: 'Total Expenses',
-                      color: '#14245C',
-                      items: [],
-                      hideDetails: true,
-                      isPersonCategory: false
-                    }}
-                    periods={cardPeriods}
-                    selectedPeriod={activePeriod}
-                    selectedAmount={totAmount}
-                    selectedPercent={totAmount > 0 ? 100 : 0}
-                    monthlyAmounts={totMonthly}
-                    maxMonthlyAmount={totMax}
-                    isExpanded={false}
-                    onToggleExpand={() => {}}
-                    formatCompact={formatIndianCompact}
-                    formatFull={formatINR}
-                    hideDetails={true}
-                    remarksDraft={remarksDraft}
-                  />
-                );
-              })()}
+
             </div>
           </div>
         )}

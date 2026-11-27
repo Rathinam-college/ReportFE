@@ -378,105 +378,88 @@ export default function FoodSpreadsheetEntry({
     }
   };
 
+  const subTabBar = (
+    <div style={{
+      position: 'sticky',
+      top: '58px',
+      zIndex: 65,
+      backgroundColor: '#ffffff',
+      padding: '10px 18px',
+      borderRadius: '14px',
+      border: '1px solid #E1E6F2',
+      boxShadow: '0 4px 14px rgba(20, 36, 92, 0.06)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: '12px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '12px', fontWeight: '800', color: '#14245C' }}>
+          Active Month: {activePeriodObj?.period_label || '—'}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#F3F5FA', padding: '4px', borderRadius: '10px', border: '1px solid #E1E6F2' }}>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('excel_grid')}
+          style={{
+            minHeight: '36px',
+            padding: '6px 14px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight: activeSubTab === 'excel_grid' ? '800' : '700',
+            border: 'none',
+            cursor: 'pointer',
+            backgroundColor: activeSubTab === 'excel_grid' ? '#14245C' : 'transparent',
+            color: activeSubTab === 'excel_grid' ? '#ffffff' : '#475569'
+          }}
+        >
+          Multi-month Excel grid
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('budget')}
+          style={{
+            minHeight: '36px',
+            padding: '6px 14px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight: activeSubTab === 'budget' ? '800' : '700',
+            border: 'none',
+            cursor: 'pointer',
+            backgroundColor: activeSubTab === 'budget' ? '#14245C' : 'transparent',
+            color: activeSubTab === 'budget' ? '#ffffff' : '#475569'
+          }}
+        >
+          Food budget tracking (8 heads)
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('power_water')}
+          style={{
+            minHeight: '36px',
+            padding: '6px 14px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight: activeSubTab === 'power_water' ? '800' : '700',
+            border: 'none',
+            cursor: 'pointer',
+            backgroundColor: activeSubTab === 'power_water' ? '#14245C' : 'transparent',
+            color: activeSubTab === 'power_water' ? '#ffffff' : '#475569'
+          }}
+        >
+          Power & Water Entry
+        </button>
+      </div>
+    </div>
+  );
+
   if (activeSubTab === 'budget' || activeSubTab === 'power_water') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-        {/* Active Focus Month + 3-Tab Segmented View Control */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          padding: '14px 20px',
-          borderRadius: '18px',
-          border: '1px solid #E1E6F2',
-          boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Active focus month:
-            </span>
-            {periods.map(p => {
-              const isSel = String(p.id) === currStr;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setEditingPeriodId(p.id)}
-                  style={{
-                    minHeight: '36px',
-                    padding: '6px 14px',
-                    borderRadius: '9999px',
-                    fontSize: '12px',
-                    fontWeight: isSel ? '800' : '600',
-                    border: isSel ? '1px solid #14245C' : '1px solid #E1E6F2',
-                    backgroundColor: isSel ? '#14245C' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#334155',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {p.period_label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#F3F5FA', padding: '4px', borderRadius: '10px', border: '1px solid #E1E6F2' }}>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('excel_grid')}
-              style={{
-                minHeight: '36px',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '700',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: 'transparent',
-                color: '#475569'
-              }}
-            >
-              Multi-month Excel grid
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('budget')}
-              style={{
-                minHeight: '36px',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: activeSubTab === 'budget' ? '800' : '700',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: activeSubTab === 'budget' ? '#14245C' : 'transparent',
-                color: activeSubTab === 'budget' ? '#ffffff' : '#475569'
-              }}
-            >
-              Food budget tracking (8 heads)
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('power_water')}
-              style={{
-                minHeight: '36px',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: activeSubTab === 'power_water' ? '800' : '700',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: activeSubTab === 'power_water' ? '#14245C' : 'transparent',
-                color: activeSubTab === 'power_water' ? '#ffffff' : '#475569'
-              }}
-            >
-              Power & Water Entry
-            </button>
-          </div>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+        {subTabBar}
 
         {activeSubTab === 'budget' ? (
           <FoodBudgetEntrySection periods={periods} onRefreshData={fetchData} editingPeriodId={editingPeriodId} />
@@ -494,15 +477,26 @@ export default function FoodSpreadsheetEntry({
   }
 
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+      {subTabBar}
     <div style={{
       backgroundColor: '#ffffff',
       borderRadius: '20px',
       border: '1px solid #E1E6F2',
       boxShadow: '0 4px 18px rgba(20, 36, 92, 0.05)',
-      overflow: 'hidden',
+      overflow: 'visible',
       marginBottom: '22px',
       fontFamily: 'Plus Jakarta Sans, sans-serif'
     }}>
+      {/* STICKY TOP HEADER BLOCK (Title + Formula Bar) */}
+      <div style={{
+        position: 'sticky',
+        top: '118px',
+        zIndex: 60,
+        borderRadius: '20px 20px 0 0',
+        overflow: 'hidden',
+        boxShadow: '0 4px 14px rgba(20, 36, 92, 0.08)'
+      }}>
       {/* 1. NAVY HEADER BAND */}
       <div style={{
         backgroundColor: '#14245C',
@@ -619,106 +613,6 @@ export default function FoodSpreadsheetEntry({
         </div>
       )}
 
-      {/* 3. CYCLE SELECTION & 2-TAB VIEW TOGGLE */}
-      <div style={{
-        backgroundColor: '#F7F9FD',
-        padding: '12px 22px',
-        borderBottom: '1px solid #E1E6F2',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Active focus month:
-          </span>
-          {periods.map(p => {
-            const isSel = String(p.id) === currStr;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setEditingPeriodId(p.id)}
-                style={{
-                  minHeight: '36px',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '12px',
-                  fontWeight: isSel ? '800' : '600',
-                  border: isSel ? '1px solid #14245C' : '1px solid #D5DCEE',
-                  backgroundColor: isSel ? '#14245C' : '#ffffff',
-                  color: isSel ? '#ffffff' : '#334155',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <span>{p.period_label}</span>
-                {isSel && <Check size={12} color="#F5A524" />}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Two-tab Segmented Control */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '4px', borderRadius: '10px', border: '1px solid #E1E6F2' }}>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('excel_grid')}
-            style={{
-              minHeight: '36px',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: '800',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeSubTab === 'excel_grid' ? '#14245C' : 'transparent',
-              color: activeSubTab === 'excel_grid' ? '#ffffff' : '#475569'
-            }}
-          >
-            Multi-month Excel grid
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('budget')}
-            style={{
-              minHeight: '36px',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeSubTab === 'budget' ? '#14245C' : 'transparent',
-              color: activeSubTab === 'budget' ? '#ffffff' : '#475569'
-            }}
-          >
-            Food budget tracking (8 heads)
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('power_water')}
-            style={{
-              minHeight: '36px',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeSubTab === 'power_water' ? '#14245C' : 'transparent',
-              color: activeSubTab === 'power_water' ? '#ffffff' : '#475569'
-            }}
-          >
-            Power & Water Entry
-          </button>
-        </div>
-      </div>
-
       {/* 4. FORMULA BAR RIBBON */}
       <div style={{
         padding: '10px 22px',
@@ -736,6 +630,7 @@ export default function FoodSpreadsheetEntry({
         <div style={{ fontFamily: 'monospace', color: '#475569', fontSize: '11.5px', flex: 1 }}>
           <strong>Total Food Expenses:</strong> =SUM(Food Material + Food Labour) | <strong>Total Maintenance:</strong> =SUM(FC Maintenance + Water + Vehicle) | <strong>Total Expenses:</strong> =SUM(All Categories)
         </div>
+      </div>
       </div>
 
       {/* 5. MULTI-MONTH EXCEL SPREADSHEET TABLE */}
@@ -1211,6 +1106,7 @@ export default function FoodSpreadsheetEntry({
         </div>
       )}
 
+    </div>
     </div>
   );
 }

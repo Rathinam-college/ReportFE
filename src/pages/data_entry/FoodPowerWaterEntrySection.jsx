@@ -244,8 +244,8 @@ export default function FoodPowerWaterEntrySection({
     }}>
       {/* Header Bar */}
       <div style={{
-        padding: '16px 22px',
-        background: 'linear-gradient(135deg, #14245C 0%, #1e3a8a 100%)',
+        padding: '18px 24px',
+        backgroundColor: '#14245C',
         color: '#ffffff',
         display: 'flex',
         alignItems: 'center',
@@ -255,22 +255,23 @@ export default function FoodPowerWaterEntrySection({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '40px',
-            height: '40px',
+            width: '42px',
+            height: '42px',
             borderRadius: '12px',
-            backgroundColor: 'rgba(255,255,255,0.14)',
+            backgroundColor: '#F5A524',
+            color: '#14245C',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <Zap size={20} color="#F5A524" />
+            <Zap size={20} color="#14245C" />
           </div>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: '800', letterSpacing: '-0.01em' }}>
-              Food / Kitchen — Power & Water Consumption Entry
+            <div style={{ fontSize: '17px', fontWeight: '800', letterSpacing: '-0.01em' }}>
+              Power &amp; Water Entry
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.78)', marginTop: '2px' }}>
-              Active Month: <strong>{activePeriodObj?.period_label || '—'}</strong> ({activePeriodObj?.operating_days || 30} days) • Synced with Food Monthly Periods & Month Lock
+              Active month: <strong>{activePeriodObj?.period_label || '—'}</strong> ({activePeriodObj?.operating_days || 30} days) · Kitchen power, normal water &amp; drinking water
             </div>
           </div>
         </div>
@@ -458,18 +459,21 @@ export default function FoodPowerWaterEntrySection({
                             <input
                               type="number"
                               step="any"
+                              aria-label={`${rowCfg.label} ${p.period_label}`}
                               disabled={isClosed}
                               value={draft[rowCfg.key] ?? ''}
                               onChange={(e) => handleFieldChange(rowCfg.key, e.target.value)}
                               placeholder="0"
                               style={{
                                 width: '100%',
-                                padding: '6px 8px',
+                                height: '38px',
+                                padding: '6px 10px',
                                 textAlign: 'right',
-                                borderRadius: '6px',
-                                border: isClosed ? '1px solid #cbd5e1' : '1.5px solid #2F4BB8',
-                                backgroundColor: isClosed ? '#f1f5f9' : '#ffffff',
-                                color: isClosed ? '#64748b' : '#0f172a',
+                                borderRadius: '8px',
+                                border: isClosed ? '1px solid #E1E6F2' : '1px solid #D5DCEE',
+                                backgroundColor: isClosed ? '#F3F5FA' : '#ffffff',
+                                color: isClosed ? '#64748b' : '#14245C',
+                                cursor: isClosed ? 'not-allowed' : 'text',
                                 fontWeight: '700',
                                 fontSize: '13px',
                                 boxSizing: 'border-box'

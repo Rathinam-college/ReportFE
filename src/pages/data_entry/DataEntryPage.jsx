@@ -188,7 +188,6 @@ export default function DataEntryPage({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-        {/* Supporting Attachments & Documents Pill Button */}
         <button
           type="button"
           onClick={() => setShowAttachmentsModal(true)}

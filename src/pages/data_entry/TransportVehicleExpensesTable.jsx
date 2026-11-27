@@ -1418,14 +1418,28 @@ export default function TransportVehicleExpensesTable({
 
                     {/* 14. Mileage (Auto-calculated: KM / Diesel) */}
                     <td style={{
-                      backgroundColor: '#fef9c3',
-                      border: '1px solid #fde047',
+                      border: '1px solid #E1E6F2',
                       padding: '4px 6px',
-                      textAlign: 'right',
-                      fontWeight: '800',
-                      color: '#854d0e'
+                      textAlign: 'right'
                     }}>
-                      {num(row.mileage) > 0 ? Number(row.mileage).toFixed(2) : '—'}
+                      {(() => {
+                        const milVal = num(row.mileage);
+                        if (milVal <= 0) return <span style={{ color: '#94a3b8' }}>—</span>;
+                        const isLow = milVal < 4.0;
+                        return (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '9999px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            backgroundColor: isLow ? '#FBE3E3' : '#E4F6EC',
+                            color: isLow ? '#A32626' : '#0F6B3A'
+                          }}>
+                            {milVal.toFixed(2)}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Action */}
@@ -1551,45 +1565,45 @@ export default function TransportVehicleExpensesTable({
 
       {/* 5. FOOTER SUMMARY STATS CARDS */}
       <div style={{
-        backgroundColor: '#f8fafc',
-        padding: '12px 18px',
-        borderTop: '1px solid #e2e8f0',
+        backgroundColor: '#F3F5FA',
+        padding: '14px 18px',
+        borderTop: '1px solid #E1E6F2',
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
         gap: '12px'
       }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Fleet Size</div>
-          <div style={{ fontSize: '18px', fontWeight: '900', color: '#0284c7', marginTop: '2px' }}>
-            {totals.count} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>Buses</span>
+        <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '14px', border: '1px solid #E1E6F2', borderTop: '4px solid #2F4BB8' }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Fleet size</div>
+          <div style={{ fontSize: '18px', fontWeight: '900', color: '#14245C', marginTop: '3px' }}>
+            {totals.count} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>buses</span>
           </div>
         </div>
 
-        <div style={{ backgroundColor: '#ffffff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Total Expenses</div>
-          <div style={{ fontSize: '18px', fontWeight: '900', color: '#b45309', marginTop: '2px' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '14px', border: '1px solid #E1E6F2', borderTop: '4px solid #E5A100' }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Total expenses</div>
+          <div style={{ fontSize: '18px', fontWeight: '900', color: '#14245C', marginTop: '3px' }}>
             {formatINR(totals.totalExp)}
           </div>
         </div>
 
-        <div style={{ backgroundColor: '#ffffff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Diesel Consumed</div>
-          <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>
-            {totals.diesel.toLocaleString()} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>Litres</span>
+        <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '14px', border: '1px solid #E1E6F2', borderTop: '4px solid #0FA3A3' }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Diesel consumed</div>
+          <div style={{ fontSize: '18px', fontWeight: '900', color: '#14245C', marginTop: '3px' }}>
+            {totals.diesel.toLocaleString('en-IN')} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>litres</span>
           </div>
         </div>
 
-        <div style={{ backgroundColor: '#ffffff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Distance Traveled</div>
-          <div style={{ fontSize: '18px', fontWeight: '900', color: '#059669', marginTop: '2px' }}>
-            {totals.km.toLocaleString()} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>KMs</span>
+        <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '14px', border: '1px solid #E1E6F2', borderTop: '4px solid #18A058' }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Distance traveled</div>
+          <div style={{ fontSize: '18px', fontWeight: '900', color: '#0F6B3A', marginTop: '3px' }}>
+            {totals.km.toLocaleString('en-IN')} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>KMs</span>
           </div>
         </div>
 
-        <div style={{ backgroundColor: '#fef08a', padding: '10px 14px', borderRadius: '8px', border: '1px solid #fde047' }}>
-          <div style={{ fontSize: '11px', color: '#854d0e', fontWeight: '800', textTransform: 'uppercase' }}>Fleet Avg Mileage</div>
-          <div style={{ fontSize: '18px', fontWeight: '900', color: '#713f12', marginTop: '2px' }}>
-            {totals.avgMileage} <span style={{ fontSize: '12px', fontWeight: '700', color: '#854d0e' }}>km/L</span>
+        <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '14px', border: '1px solid #E1E6F2', borderTop: '4px solid #F5A524' }}>
+          <div style={{ fontSize: '11px', color: '#8A4A00', fontWeight: '800', textTransform: 'uppercase' }}>Fleet avg mileage</div>
+          <div style={{ fontSize: '18px', fontWeight: '900', color: '#14245C', marginTop: '3px' }}>
+            {totals.avgMileage} <span style={{ fontSize: '12px', fontWeight: '700', color: '#8A4A00' }}>km/L</span>
           </div>
         </div>
       </div>

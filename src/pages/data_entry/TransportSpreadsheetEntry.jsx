@@ -1060,13 +1060,15 @@ export default function TransportSpreadsheetEntry({
       setIsSaving(true);
       setLocalMessage(null);
 
-      // Merge computed metrics and any custom drafts for this period
+      // Send only the changed draft fields for this branch & period so existing DB values are preserved
+      const draftFields = branchDrafts[activeBranch]?.[currPeriodIdStr] || {};
+      const existingCustom = computedMatrix?.transport_census_by_branch?.[activeBranch]?.[currPeriodIdStr]?.custom_metrics || {};
       const payload = {
         branch: activeBranch,
-        ...activeMetrics,
-        ...(branchDrafts[activeBranch]?.[currPeriodIdStr] || {}),
+        ...draftFields,
         custom_metrics: {
-          ...(branchDrafts[activeBranch]?.[currPeriodIdStr] || {})
+          ...(typeof existingCustom === 'object' && existingCustom !== null ? existingCustom : {}),
+          ...draftFields
         }
       };
 
@@ -1318,266 +1320,7 @@ export default function TransportSpreadsheetEntry({
       marginBottom: '24px'
     }}>
       
-      {/* 1. TOP TOOLBAR & HEADER */}
-      <div style={{
-        background: 'linear-gradient(135deg, #0aa0e8 0%, #0670c9 100%)',
-        padding: '18px 24px',
-        borderRadius: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        color: '#ffffff'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '12px',
-            backgroundColor: '#ffffff',
-            color: '#6c56db',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
-          }}>
-            <Bus size={22} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#ffffff', letterSpacing: '-0.01em' }}>
-                {activeView === 'vehicles' ? 'College Cab Vehicle Wise Fleet Expenses Ledger' : 'Transport Operations & Fleet Master Spreadsheet'}
-              </h2>
-              <span style={{
-                fontSize: '11px',
-                fontWeight: '700',
-                backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                padding: '2px 8px',
-                borderRadius: '9999px',
-                color: '#ffffff'
-              }}>
-                {activeView === 'vehicles' ? 'Cab Fleet Ledger' : 'Excel Sheet Model'}
-              </span>
-            </div>
-            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#e0f2fe' }}>
-              {activeView === 'vehicles' 
-                ? `Vehicle-by-Vehicle Expenses, Diesel Consumption, KM Run & Mileage Tracking • ${activeBranchObj.label} (${activePeriodObj?.period_label || "OCT'26"})`
-                : 'Exact multi-parameter spreadsheet layout • Multi-Branch (RPS, KPM, Common, University, Consolidated) • Live Real-time Formulas • Synced with Master Data'
-              }
-            </p>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Copy Previous Month - hidden in vehicle ledger view */}
-          {activeView !== 'vehicles' && (
-            <button
-              type="button"
-              onClick={handleCopyFromPreviousMonth}
-              disabled={activeBranch === 'all' || isClosed}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 13px',
-                borderRadius: '6px',
-                backgroundColor: 'rgba(255, 255, 255, 0.18)',
-                border: '1px solid rgba(255, 255, 255, 0.35)',
-                color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: (activeBranch === 'all' || isClosed) ? 'not-allowed' : 'pointer',
-                opacity: (activeBranch === 'all' || isClosed) ? 0.6 : 1
-              }}
-              title="Copy all parameter values from previous month into active month"
-            >
-              <Copy size={13} /> Copy Previous Month
-            </button>
-          )}
-
-          {/* Refresh */}
-          <button
-            type="button"
-            onClick={() => {
-              fetchParameters();
-              if (fetchData) fetchData('transport');
-            }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              border: '1px solid rgba(255, 255, 255, 0.35)',
-              borderRadius: '9999px',
-              padding: '7px 16px',
-              backgroundColor: 'rgba(255, 255, 255, 0.18)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer'
-            }}
-          >
-            <RefreshCw size={13} /> Refresh
-          </button>
-
-          {/* Universal Lock / Unlock Month Button (controls both Page 1 and Page 2) */}
-          <button
-            type="button"
-            onClick={() => handleUniversalToggleLock(editingPeriodId)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              border: `1.5px solid ${isClosed ? '#fca5a5' : 'rgba(255, 255, 255, 0.4)'}`,
-              borderRadius: '9999px',
-              padding: '7px 16px',
-              backgroundColor: isClosed ? '#fee2e2' : 'rgba(255, 255, 255, 0.18)',
-              color: isClosed ? '#991b1b' : '#ffffff',
-              fontSize: '12px',
-              fontWeight: '800',
-              cursor: 'pointer',
-              boxShadow: isClosed ? '0 2px 8px rgba(0, 0, 0, 0.2)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
-            title={isClosed ? "Month is locked. Click to unlock Page 1 & Page 2" : "Click to lock Month across Page 1 & Page 2"}
-          >
-            {isClosed ? <Lock size={13} color="#991b1b" /> : <Unlock size={13} color="#ffffff" />}
-            <span>{isClosed ? 'Unlock Month' : 'Lock Month'}</span>
-          </button>
-
-          {/* Supporting Attachments & Bills Button */}
-          <button
-            type="button"
-            onClick={() => setShowAttachmentsModal(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              border: '1.5px solid rgba(255, 255, 255, 0.4)',
-              borderRadius: '9999px',
-              padding: '7px 16px',
-              backgroundColor: 'rgba(255, 255, 255, 0.18)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: '800',
-              cursor: 'pointer',
-              boxShadow: 'none',
-              transition: 'all 0.15s ease'
-            }}
-            title="Upload or view bills, presentations, documents & attachments for this month"
-          >
-            <Paperclip size={13} color="#ffffff" />
-            <span>Attachments & Bills</span>
-          </button>
-
-          {/* Master Save Button - only for parameter sheet, vehicle ledger has its own Save Vehicle Ledger button */}
-          {activeView !== 'vehicles' && (
-            <button
-              type="button"
-              onClick={handleSaveActiveBranch}
-              disabled={isSaving || isClosed || activeBranch === 'all'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 22px',
-                borderRadius: '9999px',
-                background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
-                border: 'none',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: '800',
-                cursor: (isSaving || isClosed || activeBranch === 'all') ? 'not-allowed' : 'pointer',
-                opacity: (isSaving || isClosed || activeBranch === 'all') ? 0.6 : 1,
-                boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {isSaving ? (
-                <>
-                  <RefreshCw size={14} className="spin-animate" />
-                  <span>Saving {activeBranchObj.label}...</span>
-                </>
-              ) : (
-                <>
-                  <Save size={14} />
-                  <span>
-                    {activeBranch === 'all' ? 'Consolidated (Auto-Calculated)' : `Save ${activeBranchObj.label}`}
-                  </span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. FLEET BRANCH / DIVISION SELECTOR BAR */}
-      <div style={{
-        backgroundColor: '#f8fafc',
-        padding: '12px 22px',
-        borderBottom: '1.5px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            🏫 Fleet Branch:
-          </span>
-          {TRANSPORT_BRANCHES.filter(br => br.id !== 'all').map(br => {
-            const isSel = activeBranch === br.id;
-            return (
-              <button
-                key={br.id}
-                type="button"
-                onClick={() => setActiveBranch(br.id)}
-                title={br.description}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: '20px',
-                  fontSize: '12.5px',
-                  fontWeight: '800',
-                  border: isSel ? `2px solid ${br.badgeColor}` : '1.5px solid #cbd5e1',
-                  backgroundColor: isSel ? br.badgeColor : '#ffffff',
-                  color: isSel ? '#ffffff' : '#334155',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '7px',
-                  boxShadow: isSel ? `0 3px 8px ${br.badgeColor}40` : '0 1px 2px rgba(0,0,0,0.05)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <span style={{ fontSize: '14px' }}>{br.icon}</span>
-                <span>{br.label}</span>
-                {isSel && <Check size={13} color="#ffffff" />}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Active Branch Description Tag */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          backgroundColor: activeBranchObj.badgeBg,
-          color: activeBranchObj.badgeColor,
-          padding: '6px 14px',
-          borderRadius: '16px',
-          fontSize: '11.5px',
-          fontWeight: '700',
-          border: `1px solid ${activeBranchObj.badgeColor}40`
-        }}>
-          <span>{activeBranchObj.icon}</span>
-          <span>{activeBranchObj.description}</span>
-        </div>
-      </div>
-
-      {/* 2.5 FLEET-WISE SANCTIONED BUDGET QUICK-ALLOCATION & VERIFICATION TABLE */}
+      {/* 1. FLEET-WISE SANCTIONED BUDGET CARDS & ALLOCATION */}
       <div style={{
         padding: '14px 22px',
         backgroundColor: '#f8fafc',
@@ -1627,12 +1370,12 @@ export default function TransportSpreadsheetEntry({
                 key={br.id}
                 onClick={() => setActiveBranch(br.id)}
                 style={{
-                  backgroundColor: isCurrent ? '#ffffff' : '#f8fafc',
-                  borderRadius: '12px',
-                  border: isCurrent ? `2px solid ${br.badgeColor}` : '1.5px solid #e2e8f0',
-                  padding: '12px 14px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '18px',
+                  border: isCurrent ? '2px solid #F5A524' : '2px solid #E1E6F2',
+                  padding: '14px 16px',
                   cursor: 'pointer',
-                  boxShadow: isCurrent ? `0 4px 14px ${br.badgeColor}25` : '0 1px 3px rgba(0,0,0,0.03)',
+                  boxShadow: isCurrent ? '0 6px 18px rgba(245, 165, 36, 0.22)' : '0 2px 6px rgba(20, 36, 92, 0.04)',
                   transition: 'all 0.15s ease',
                   position: 'relative'
                 }}
@@ -1640,52 +1383,61 @@ export default function TransportSpreadsheetEntry({
                 {isCurrent && (
                   <div style={{
                     position: 'absolute',
-                    top: '-8px',
-                    right: '10px',
-                    backgroundColor: br.badgeColor,
-                    color: '#ffffff',
-                    fontSize: '9.5px',
+                    top: '-10px',
+                    right: '12px',
+                    backgroundColor: '#F5A524',
+                    color: '#14245C',
+                    fontSize: '10px',
                     fontWeight: '800',
-                    padding: '1px 8px',
+                    padding: '2px 10px',
                     borderRadius: '9999px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                    boxShadow: '0 2px 6px rgba(245, 165, 36, 0.35)'
                   }}>
                     ACTIVE FLEET
                   </div>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '16px' }}>{br.icon}</span>
-                    <strong style={{ fontSize: '13px', color: '#0f172a' }}>{br.label}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '9px',
+                      backgroundColor: isCurrent ? '#FFF1DD' : br.badgeBg,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '15px'
+                    }}>{br.icon}</span>
+                    <strong style={{ fontSize: '13.5px', color: '#14245C' }}>{br.label}</strong>
                   </div>
                   <span style={{
                     fontSize: '10.5px',
                     fontWeight: '700',
-                    padding: '1px 6px',
-                    borderRadius: '6px',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
                     backgroundColor: br.badgeBg,
                     color: br.badgeColor
                   }}>
-                    {bBudget.busCount} Buses
+                    {bBudget.busCount} buses
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 0' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Sanctioned Budget:</span>
-                  <strong style={{ fontSize: '14px', color: br.badgeColor, fontWeight: '800' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Sanctioned:</span>
+                  <strong style={{ fontSize: '14px', color: '#14245C', fontWeight: '800' }}>
                     {formatINR(bBudget.sanctioned)}
                   </strong>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', borderTop: '1px dashed #e2e8f0', paddingTop: '6px', marginTop: '4px' }}>
-                  <span>Monthly Ceiling:</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', borderTop: '1px dashed #E1E6F2', paddingTop: '6px', marginTop: '4px' }}>
+                  <span>Monthly ceiling:</span>
                   <strong>{formatINR(bBudget.monthlyCeiling)}</strong>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#0f172a', marginTop: '3px' }}>
-                  <span>Month Spend:</span>
-                  <span style={{ fontWeight: '700', color: bSpend > bBudget.monthlyCeiling ? '#dc2626' : '#16a34a' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px', color: '#14245C', marginTop: '3px' }}>
+                  <span>Month spend:</span>
+                  <span style={{ fontWeight: '800', color: bSpend > bBudget.monthlyCeiling ? '#C23A3A' : '#0F6B3A' }}>
                     {formatINR(bSpend)}
                   </span>
                 </div>
@@ -1694,7 +1446,9 @@ export default function TransportSpreadsheetEntry({
           })}
         </div>
 
-        {/* View Mode Toggle: Active Fleet Table vs All 4 Fleet Tables */}
+        {/* View Mode Toggle: Active Fleet Table vs All 4 Fleet Tables (Page 3: Budget) */}
+        {activeView === 'budget' && (
+        <>
         <div style={{
           marginTop: '16px',
           display: 'flex',
@@ -1846,32 +1600,29 @@ export default function TransportSpreadsheetEntry({
                     onClick={() => handleStartEditBranch(activeBranch)}
                     title="Unlock to modify budget parameter amounts for this fleet"
                     style={{
+                      minHeight: '36px',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
                       padding: '6px 14px',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       fontSize: '12px',
                       fontWeight: '800',
-                      backgroundColor: '#f8fafc',
-                      color: '#1e293b',
-                      border: '1.5px solid #cbd5e1',
+                      backgroundColor: '#F5A524',
+                      color: '#14245C',
+                      border: 'none',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      boxShadow: '0 2px 8px rgba(245, 165, 36, 0.30)'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#eff6ff';
-                      e.currentTarget.style.borderColor = '#3b82f6';
-                      e.currentTarget.style.color = '#1d4ed8';
+                      e.currentTarget.style.backgroundColor = '#e59617';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f8fafc';
-                      e.currentTarget.style.borderColor = '#cbd5e1';
-                      e.currentTarget.style.color = '#1e293b';
+                      e.currentTarget.style.backgroundColor = '#F5A524';
                     }}
                   >
-                    <Unlock size={13} color="#2563eb" />
+                    <Unlock size={13} color="#14245C" />
                     <span>Unlock to Edit Budget</span>
                   </button>
                 ) : (
@@ -1882,25 +1633,26 @@ export default function TransportSpreadsheetEntry({
                       onClick={() => handleSaveBranchBudget(activeBranch)}
                       title={`Save modified parameter amounts directly to transport_budget_${activeBranch.toLowerCase()}`}
                       style={{
+                        minHeight: '36px',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
                         padding: '6px 14px',
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         fontSize: '12px',
                         fontWeight: '800',
-                        backgroundColor: isSavingBudget ? '#86efac' : '#16a34a',
-                        color: '#ffffff',
+                        backgroundColor: isSavingBudget ? '#fde68a' : '#F5A524',
+                        color: '#14245C',
                         border: 'none',
                         cursor: isSavingBudget ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)',
+                        boxShadow: '0 2px 8px rgba(245, 165, 36, 0.30)',
                         transition: 'all 0.15s ease'
                       }}
                       onMouseEnter={(e) => {
-                        if (!isSavingBudget) e.currentTarget.style.backgroundColor = '#15803d';
+                        if (!isSavingBudget) e.currentTarget.style.backgroundColor = '#e59617';
                       }}
                       onMouseLeave={(e) => {
-                        if (!isSavingBudget) e.currentTarget.style.backgroundColor = '#16a34a';
+                        if (!isSavingBudget) e.currentTarget.style.backgroundColor = '#F5A524';
                       }}
                     >
                       {isSavingBudget ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
@@ -1956,13 +1708,22 @@ export default function TransportSpreadsheetEntry({
             </div>
 
             {/* Parameter Table matching Excel Layout */}
-            <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}>
+            <div style={{ overflowX: 'auto', borderRadius: '14px', border: '1px solid #E1E6F2' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #94a3b8' }}>
-                    <th style={{ padding: '8px 14px', fontWeight: '800', color: '#0f172a', width: '60%' }}>Parameters</th>
-                    <th style={{ padding: '8px 14px', fontWeight: '800', color: '#0f172a', textAlign: 'right', width: '40%' }}>
-                      Sanctioned Amount (₹) {!isBudgetLocked && <span style={{ color: '#2563eb', fontSize: '11px', fontWeight: '700' }}>(Editable)</span>}
+                  <tr style={{ backgroundColor: '#10183A', borderBottom: '2px solid #14245C' }}>
+                    <th style={{ padding: '10px 14px', fontWeight: '800', color: '#ffffff', width: '38%' }}>Parameters</th>
+                    <th style={{ padding: '10px 14px', fontWeight: '800', color: '#ffffff', textAlign: 'right', width: '20%' }}>
+                      Sanctioned (₹) {!isBudgetLocked && <span style={{ color: '#F5A524', fontSize: '11px', fontWeight: '700' }}>(Editable)</span>}
+                    </th>
+                    <th style={{ padding: '10px 14px', fontWeight: '800', color: '#F5A524', textAlign: 'right', width: '16%' }}>
+                      Spent ({activePeriodObj?.period_label || 'Month'})
+                    </th>
+                    <th style={{ padding: '10px 14px', fontWeight: '800', color: '#ffffff', textAlign: 'right', width: '16%' }}>
+                      Balance (₹)
+                    </th>
+                    <th style={{ padding: '10px 14px', fontWeight: '800', color: '#ffffff', textAlign: 'center', width: '10%' }}>
+                      % Used
                     </th>
                   </tr>
                 </thead>
@@ -1972,19 +1733,39 @@ export default function TransportSpreadsheetEntry({
                     const isBlankRow = item.isBlank || item.param === 'EMI';
                     const draftVal = budgetEditDraft[item.param];
 
+                    const pLower = (item.param || '').toLowerCase();
+                    let spentVal = 0;
+                    if (isTotalRow) spentVal = num(activeMetrics.total_expenses);
+                    else if (pLower.includes('fuel')) spentVal = num(activeMetrics.fuel_expenses);
+                    else if (pLower.includes('fc')) spentVal = num(activeMetrics.fc_cost);
+                    else if (pLower.includes('statutory')) spentVal = num(activeMetrics.statutory_cost);
+                    else if (pLower.includes('repair')) spentVal = num(activeMetrics.repair_maintenance_cost);
+                    else if (pLower.includes('cctv')) spentVal = num(activeMetrics.cctv_replacement);
+                    else if (pLower.includes('parking') || pLower.includes('fastag')) spentVal = num(activeMetrics.parking_fastag);
+                    else if (pLower.includes('employee')) spentVal = num(activeMetrics.employee_cost);
+                    else if (pLower.includes('other')) spentVal = num(activeMetrics.other_cost);
+
+                    const sanctionedNum = isTotalRow
+                      ? Number(currentBudgetTotal || 0)
+                      : Number(draftVal !== undefined ? draftVal : (item.amount || 0));
+                    const balVal = sanctionedNum - spentVal;
+                    const usedPct = sanctionedNum > 0 ? (spentVal / sanctionedNum) * 100 : 0;
+                    const pillBg = usedPct > 100 ? '#FBE3E3' : (usedPct >= 80 ? '#FFF1DD' : '#E4F6EC');
+                    const pillColor = usedPct > 100 ? '#A32626' : (usedPct >= 80 ? '#8A4A00' : '#0F6B3A');
+
                     return (
                       <tr
                         key={idx}
                         style={{
-                          backgroundColor: isTotalRow ? '#fef08a' : (item.bg || '#ffffff'),
-                          borderBottom: isTotalRow ? '2.5px solid #ca8a04' : '1px solid #cbd5e1',
-                          borderTop: isTotalRow ? '2.5px solid #ca8a04' : 'none'
+                          backgroundColor: isTotalRow ? '#FFF1DD' : (item.bg || '#ffffff'),
+                          borderBottom: isTotalRow ? '2px solid #F5A524' : '1px solid #E1E6F2',
+                          borderTop: isTotalRow ? '2px solid #F5A524' : 'none'
                         }}
                       >
                         <td style={{
                           padding: isTotalRow ? '10px 14px' : '7px 14px',
                           fontWeight: isTotalRow ? '900' : '650',
-                          color: isTotalRow ? '#854d0e' : '#1e293b',
+                          color: isTotalRow ? '#8A4A00' : '#14245C',
                           fontSize: isTotalRow ? '13.5px' : '12.5px'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2004,7 +1785,7 @@ export default function TransportSpreadsheetEntry({
                         <td style={{
                           padding: isTotalRow ? '10px 14px' : '6px 14px',
                           fontWeight: isTotalRow ? '900' : '700',
-                          color: isTotalRow ? '#854d0e' : (item.color || '#0f172a'),
+                          color: isTotalRow ? '#8A4A00' : '#14245C',
                           textAlign: 'right',
                           fontSize: isTotalRow ? '14px' : '12.5px'
                         }}>
@@ -2028,20 +1809,40 @@ export default function TransportSpreadsheetEntry({
                                 value={draftVal !== undefined ? draftVal : item.amount}
                                 onChange={(e) => handleBranchParamChange(activeBranch, item.param, e.target.value)}
                                 style={{
-                                  width: '160px',
+                                  width: '150px',
                                   padding: '5px 10px',
                                   fontSize: '13px',
                                   fontWeight: '800',
                                   textAlign: 'right',
-                                  color: '#0f172a',
+                                  color: '#14245C',
                                   backgroundColor: '#ffffff',
-                                  border: '1.5px solid #3b82f6',
-                                  borderRadius: '6px',
-                                  outline: 'none',
-                                  boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.15)'
+                                  border: '1.5px solid #2F4BB8',
+                                  borderRadius: '8px',
+                                  outline: 'none'
                                 }}
                               />
                             </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '7px 14px', textAlign: 'right', fontWeight: isTotalRow ? '900' : '700', color: '#14245C' }}>
+                          {isBlankRow ? '—' : formatINR(spentVal)}
+                        </td>
+                        <td style={{ padding: '7px 14px', textAlign: 'right', fontWeight: isTotalRow ? '900' : '700', color: balVal < 0 ? '#C23A3A' : '#0F6B3A' }}>
+                          {isBlankRow ? '—' : formatINR(balVal)}
+                        </td>
+                        <td style={{ padding: '7px 14px', textAlign: 'center' }}>
+                          {isBlankRow ? '—' : (
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: '9999px',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              backgroundColor: pillBg,
+                              color: pillColor
+                            }}>
+                              {usedPct.toFixed(1)}%
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -2303,8 +2104,9 @@ export default function TransportSpreadsheetEntry({
                               <tr
                                 key={idx}
                                 style={{
-                                  backgroundColor: isTotalRow ? '#fef08a' : (item.bg || '#ffffff'),
-                                  borderBottom: isTotalRow ? '2px solid #ca8a04' : '1px solid #f1f5f9'
+                                  backgroundColor: isTotalRow ? '#FFF1DD' : (item.bg || '#ffffff'),
+                                  borderTop: isTotalRow ? '2px solid #F5A524' : 'none',
+                                  borderBottom: isTotalRow ? '1px solid #F5A524' : '1px solid #E1E6F2'
                                 }}
                               >
                                 <td style={{
@@ -2379,6 +2181,8 @@ export default function TransportSpreadsheetEntry({
             </div>
           </div>
         )}
+        </>
+        )}
       </div>
 
       {/* 3. CYCLE SELECTION & VIEW MODE TOGGLE */}
@@ -2447,15 +2251,15 @@ export default function TransportSpreadsheetEntry({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 18px',
+                padding: '7px 18px',
                 borderRadius: '9999px',
                 fontSize: '12px',
-                fontWeight: activeView !== 'vehicles' ? '800' : '600',
+                fontWeight: activeView === 'sheet' ? '800' : '600',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: activeView !== 'vehicles' ? '#0284c7' : 'transparent',
-                color: activeView !== 'vehicles' ? '#ffffff' : '#64748b',
-                boxShadow: activeView !== 'vehicles' ? '0 2px 8px rgba(2, 132, 199, 0.35)' : 'none',
+                backgroundColor: activeView === 'sheet' ? '#14245C' : 'transparent',
+                color: activeView === 'sheet' ? '#ffffff' : '#64748b',
+                boxShadow: activeView === 'sheet' ? '0 2px 8px rgba(20, 36, 92, 0.25)' : 'none',
                 transition: 'all 0.15s ease'
               }}
             >
@@ -2471,20 +2275,44 @@ export default function TransportSpreadsheetEntry({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '6px 18px',
+                padding: '7px 18px',
                 borderRadius: '9999px',
                 fontSize: '12px',
                 fontWeight: activeView === 'vehicles' ? '800' : '600',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: activeView === 'vehicles' ? '#00a2e8' : 'transparent',
+                backgroundColor: activeView === 'vehicles' ? '#14245C' : 'transparent',
                 color: activeView === 'vehicles' ? '#ffffff' : '#64748b',
-                boxShadow: activeView === 'vehicles' ? '0 2px 8px rgba(0, 162, 232, 0.35)' : 'none',
+                boxShadow: activeView === 'vehicles' ? '0 2px 8px rgba(20, 36, 92, 0.25)' : 'none',
                 transition: 'all 0.15s ease'
               }}
             >
               <span>🚌</span>
               <span>Page 2 Entry (Vehicle Wise Ledger)</span>
+            </button>
+
+            {/* Page 3 Entry: Budget */}
+            <button
+              type="button"
+              onClick={() => setActiveView('budget')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 18px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: activeView === 'budget' ? '800' : '600',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: activeView === 'budget' ? '#14245C' : 'transparent',
+                color: activeView === 'budget' ? '#ffffff' : '#64748b',
+                boxShadow: activeView === 'budget' ? '0 2px 8px rgba(20, 36, 92, 0.25)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>💰</span>
+              <span>Page 3 Entry (Budget)</span>
             </button>
           </div>
 
@@ -2676,70 +2504,136 @@ export default function TransportSpreadsheetEntry({
             handleToggleLock={(targetId) => handleUniversalToggleLock(targetId || editingPeriodId)}
           />
         </div>
-      ) : (
+      ) : activeView === 'sheet' ? (
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '20px',
+          border: '1px solid #E1E6F2',
+          boxShadow: '0 4px 18px rgba(20, 36, 92, 0.05)',
+          overflow: 'hidden'
+        }}>
+          {/* Page 1 Navy Header Band */}
+          <div style={{
+            backgroundColor: '#14245C',
+            padding: '16px 22px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            color: '#ffffff'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                backgroundColor: '#F5A524',
+                color: '#14245C',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Bus size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: '#ffffff' }}>
+                  Transport master spreadsheet · {activeBranchObj.label}
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#cbd5e1' }}>
+                  6 canonical sections · live fx auto-calculations · direct DB save
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveActiveBranch}
+              disabled={isSaving || isClosed || activeBranch === 'all'}
+              style={{
+                minHeight: '38px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 18px',
+                borderRadius: '10px',
+                backgroundColor: '#F5A524',
+                border: 'none',
+                color: '#14245C',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                cursor: (isSaving || isClosed || activeBranch === 'all') ? 'not-allowed' : 'pointer',
+                opacity: (isSaving || isClosed || activeBranch === 'all') ? 0.6 : 1
+              }}
+            >
+              {isSaving ? <RefreshCw size={14} className="spin-animate" /> : <Save size={14} />}
+              <span>{isSaving ? 'Saving...' : (activeBranch === 'all' ? 'Consolidated' : 'Save spreadsheet')}</span>
+            </button>
+          </div>
+
         <div style={{
           overflowX: 'auto',
           width: '100%',
           display: 'flex',
           justifyContent: 'center',
-          padding: '20px 12px',
-          backgroundColor: '#f1f5f9'
+          padding: '18px 16px',
+          backgroundColor: '#F3F5FA'
         }}>
           <table style={{
             width: '100%',
-            maxWidth: showFormulaDetails ? '880px' : '650px',
+            maxWidth: showFormulaDetails ? '920px' : '720px',
             borderCollapse: 'collapse',
             fontSize: '13px',
-            border: '2px solid #000000',
+            border: '1px solid #E1E6F2',
+            borderRadius: '16px',
+            overflow: 'hidden',
             backgroundColor: '#ffffff',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-            fontFamily: 'Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif'
+            boxShadow: '0 4px 18px rgba(20, 36, 92, 0.06)',
+            fontFamily: "'Plus Jakarta Sans', sans-serif"
           }}>
-            {/* Header: S.No | Parameters | [Focus Month Period / Sep 1st to 30th] */}
+            {/* Header: S.No | Parameters | [Focus Month Period] */}
             <thead>
               <tr style={{
-                backgroundColor: '#ffffff',
-                borderBottom: '2px solid #000000',
-                color: '#000000',
+                backgroundColor: '#10183A',
+                borderBottom: '2px solid #14245C',
+                color: '#ffffff',
                 fontWeight: '800',
-                fontSize: '13.5px',
-                height: '30px'
+                fontSize: '13px',
+                height: '40px'
               }}>
                 <th style={{
                   width: '60px',
-                  padding: '6px 4px',
+                  padding: '10px 6px',
                   textAlign: 'center',
-                  borderRight: '1px solid #000000',
-                  borderBottom: '2px solid #000000'
+                  borderRight: '1px solid rgba(255,255,255,0.12)'
                 }}>
                   S.No
                 </th>
                 <th style={{
-                  padding: '6px 12px',
-                  textAlign: 'center',
+                  padding: '10px 14px',
+                  textAlign: 'left',
                   minWidth: '340px',
-                  borderRight: '1px solid #000000',
-                  borderBottom: '2px solid #000000'
+                  borderRight: '1px solid rgba(255,255,255,0.12)'
                 }}>
                   Parameters
                 </th>
                 <th style={{
-                  width: '190px',
-                  padding: '6px 12px',
+                  width: '200px',
+                  padding: '10px 14px',
                   textAlign: 'center',
-                  borderRight: showFormulaDetails ? '1px solid #000000' : 'none',
-                  borderBottom: '2px solid #000000'
+                  backgroundColor: '#2F4BB8',
+                  color: '#ffffff',
+                  borderRight: showFormulaDetails ? '1px solid rgba(255,255,255,0.12)' : 'none'
                 }}>
-                  {activePeriodObj?.period_label || periods.find(p => String(p.id) === currPeriodIdStr)?.period_label || "Oct'26"}
+                  ★ {activePeriodObj?.period_label || periods.find(p => String(p.id) === currPeriodIdStr)?.period_label || "Oct'26"}
                 </th>
                 {showFormulaDetails && (
                   <th style={{
                     width: '200px',
-                    padding: '6px 12px',
+                    padding: '10px 14px',
                     textAlign: 'center',
-                    borderBottom: '2px solid #000000',
-                    backgroundColor: '#f8fafc',
-                    color: '#334155'
+                    backgroundColor: '#14245C',
+                    color: '#F5A524'
                   }}>
                     Unit / Type / Formula
                   </th>
@@ -2758,57 +2652,66 @@ export default function TransportSpreadsheetEntry({
                 const formattedVal = formatCellValue(param, cellVal);
                 const isRefError = param.param_key === 'per_student_cost_expenses' && (cellVal === '#REF!' || !cellVal || cellVal === 0);
 
+                const sectionColors = { 1: '#2F4BB8', 2: '#E5A100', 3: '#18A058', 4: '#0FA3A3', 5: '#7A4DE0', 6: '#E8590C', 7: '#E8590C' };
+                const secColor = sectionColors[param.section_order] || '#2F4BB8';
+                const totalBgMap = {
+                  total_expenses: '#FFF1DD',
+                  cumulative_income: '#E4F6EC',
+                  balance: '#E0F2FE'
+                };
+                const effectiveRowBg = isTotalRow ? (totalBgMap[param.param_key] || '#FFF1DD') : '#ffffff';
+
                 return (
                   <React.Fragment key={param.id || param.param_key}>
-                    {/* Optional Blank Spacer Row before cumulative demand per KM to match screenshot row 46 */}
                     {param.param_key === 'cumulative_demand_per_km' && (
-                      <tr style={{ backgroundColor: '#fef08a', height: '24px', borderBottom: '1px solid #000000' }}>
-                        <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
-                        <td style={{ borderRight: '1px solid #000000', backgroundColor: '#fef08a' }}>&nbsp;</td>
-                        <td style={{ borderRight: showFormulaDetails ? '1px solid #000000' : 'none', backgroundColor: '#fef08a' }}>&nbsp;</td>
-                        {showFormulaDetails && <td style={{ backgroundColor: '#fef08a' }}>&nbsp;</td>}
+                      <tr style={{ backgroundColor: '#FFF1DD', height: '24px', borderBottom: '1px solid #E1E6F2' }}>
+                        <td style={{ borderRight: '1px solid #E1E6F2', backgroundColor: '#FFF1DD' }}>&nbsp;</td>
+                        <td style={{ borderRight: '1px solid #E1E6F2', backgroundColor: '#FFF1DD' }}>&nbsp;</td>
+                        <td style={{ borderRight: showFormulaDetails ? '1px solid #E1E6F2' : 'none', backgroundColor: '#FFF1DD' }}>&nbsp;</td>
+                        {showFormulaDetails && <td style={{ backgroundColor: '#FFF1DD' }}>&nbsp;</td>}
                       </tr>
                     )}
 
                     <tr
                       style={{
-                        backgroundColor: rowStyle.bg,
-                        borderBottom: isTotalRow ? '2px solid #000000' : '1px solid #000000',
-                        fontWeight: rowStyle.isBold ? '800' : '500',
-                        height: '27px'
+                        backgroundColor: effectiveRowBg,
+                        borderBottom: isTotalRow ? `2px solid ${secColor}` : '1px solid #E1E6F2',
+                        fontWeight: isTotalRow ? '800' : '500',
+                        height: '38px'
                       }}
                     >
-                      {/* S.No */}
+                      {/* S.No with 5px colored section bar */}
                       <td style={{
-                        padding: '4px 6px',
+                        padding: '6px 8px',
                         textAlign: 'center',
-                        borderRight: '1px solid #000000',
-                        color: '#000000',
-                        fontWeight: rowStyle.isBold ? '800' : '600'
+                        borderLeft: `5px solid ${secColor}`,
+                        borderRight: '1px solid #E1E6F2',
+                        color: '#14245C',
+                        fontWeight: isTotalRow ? '800' : '600'
                       }}>
                         {param.s_no !== undefined && param.s_no !== null && param.s_no !== '' ? param.s_no : (param.display_order || (idx + 1))}
                       </td>
 
                       {/* Parameter Name */}
                       <td style={{
-                        padding: '4px 10px',
-                        borderRight: '1px solid #000000',
-                        color: '#000000',
-                        fontWeight: rowStyle.isBold ? '800' : (param.param_key === 'cumulative_income' || param.param_key === 'students_count_fee' ? '800' : '500')
+                        padding: '6px 12px',
+                        borderRight: '1px solid #E1E6F2',
+                        color: '#14245C',
+                        fontWeight: isTotalRow ? '800' : (param.param_key === 'cumulative_income' || param.param_key === 'students_count_fee' ? '800' : '600')
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span>{param.param_name}</span>
                           {isFormula && (
                             <span style={{
-                              fontSize: '9.5px',
-                              padding: '1px 5px',
-                              borderRadius: '3px',
-                              backgroundColor: 'rgba(21, 128, 61, 0.12)',
-                              color: '#15803d',
-                              fontWeight: '700',
+                              fontSize: '10px',
+                              padding: '2px 7px',
+                              borderRadius: '9999px',
+                              backgroundColor: '#EDE9FE',
+                              color: '#6D28D9',
+                              fontWeight: '800',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '2px',
+                              gap: '3px',
                               marginLeft: '6px'
                             }} title={`Formula: ${param.formula}`}>
                               <Calculator size={9} /> fx
@@ -2819,10 +2722,10 @@ export default function TransportSpreadsheetEntry({
 
                       {/* Value / Input Cell */}
                       <td style={{
-                        padding: '2px 8px',
+                        padding: '4px 10px',
                         textAlign: 'right',
-                        borderRight: showFormulaDetails ? '1px solid #000000' : 'none',
-                        backgroundColor: rowStyle.bg,
+                        borderRight: showFormulaDetails ? '1px solid #E1E6F2' : 'none',
+                        backgroundColor: isTotalRow ? effectiveRowBg : '#EAF0FF',
                         position: 'relative'
                       }}>
                         {/* Excel-style green triangle error indicator for #REF! */}
@@ -2903,7 +2806,8 @@ export default function TransportSpreadsheetEntry({
             </tbody>
           </table>
         </div>
-      )}
+        </div>
+      ) : null}
       {false && (
         /* 5. MULTI-MONTH COMPARISON GRID */
         <div style={{
