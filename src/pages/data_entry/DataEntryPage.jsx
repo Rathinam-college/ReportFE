@@ -123,37 +123,55 @@ export default function DataEntryPage({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       
-      {/* Sticky Top Utility Bar */}
+      {/* Sticky Unified Toolbar: Month Filter + Attachments + Clone + Lock in One Place */}
       <div style={{
         position: 'sticky',
         top: 0,
         zIndex: 70,
         backgroundColor: '#ffffff',
-        borderRadius: '18px',
+        borderRadius: '14px',
         border: '1px solid #E1E6F2',
-        padding: '14px 20px',
+        padding: '10px 16px',
         boxShadow: '0 4px 18px rgba(20, 36, 92, 0.06)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '12px'
+        gap: '10px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: '800', color: '#14245C', margin: 0 }}>
-            Data Entry
-          </h1>
-          <span style={{
-            fontSize: '11.5px',
-            fontWeight: '800',
-            padding: '3px 10px',
-            borderRadius: '9999px',
-            backgroundColor: '#EAF0FF',
-            color: '#2F4BB8',
-            textTransform: 'capitalize'
-          }}>
-            {selectedModule === 'cctv' ? 'CCTV' : selectedModule === 'asset_audit' ? 'Asset Audit' : selectedModule}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '4px' }}>
+            Month
           </span>
+          {periods.map((p) => {
+            const isSel = String(p.id) === String(editingPeriodId);
+            const pLocked = !!p.is_closed;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setEditingPeriodId(p.id)}
+                style={{
+                  minHeight: '34px',
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
+                  fontWeight: isSel ? '800' : '600',
+                  border: isSel ? '1px solid #14245C' : '1px solid #E1E6F2',
+                  backgroundColor: isSel ? '#14245C' : '#ffffff',
+                  color: isSel ? '#ffffff' : '#334155',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span>{p.period_label}</span>
+                {pLocked && <Lock size={11} color={isSel ? '#F5A524' : '#A32626'} />}
+              </button>
+            );
+          })}
           {entryMessage?.type === 'success' && (
             <span style={{
               fontSize: '11.5px',
@@ -161,21 +179,22 @@ export default function DataEntryPage({
               padding: '3px 10px',
               borderRadius: '9999px',
               backgroundColor: '#E4F6EC',
-              color: '#0F6B3A'
+              color: '#0F6B3A',
+              marginLeft: '4px'
             }}>
               Saved
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         {/* Supporting Attachments & Documents Pill Button */}
         <button
           type="button"
           onClick={() => setShowAttachmentsModal(true)}
           style={{
-            minHeight: '38px',
-            padding: '7px 16px',
+            minHeight: '36px',
+            padding: '6px 14px',
             borderRadius: '10px',
             backgroundColor: '#ffffff',
             border: '1.5px solid #2F4BB8',
@@ -197,8 +216,8 @@ export default function DataEntryPage({
           type="button"
           onClick={handleCloneFromPrev}
           style={{
-            minHeight: '38px',
-            padding: '7px 16px',
+            minHeight: '36px',
+            padding: '6px 14px',
             borderRadius: '10px',
             backgroundColor: '#ffffff',
             border: '1px solid #D5DCEE',
@@ -220,8 +239,8 @@ export default function DataEntryPage({
           type="button"
           onClick={() => handleToggleLock && handleToggleLock(editingPeriodId)}
           style={{
-            minHeight: '38px',
-            padding: '7px 16px',
+            minHeight: '36px',
+            padding: '6px 14px',
             borderRadius: '10px',
             backgroundColor: isClosed ? '#FBE3E3' : '#ffffff',
             border: `1px solid ${isClosed ? '#FECACA' : '#D5DCEE'}`,
