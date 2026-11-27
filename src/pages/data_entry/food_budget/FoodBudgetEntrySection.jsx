@@ -27,7 +27,8 @@ export const FOOD_MONTH_COLS = [
 
 export default function FoodBudgetEntrySection({
   periods = [],
-  onRefreshData
+  onRefreshData,
+  editingPeriodId
 }) {
   const [budgetItems, setBudgetItems] = useState([]);
   const [draftEdits, setDraftEdits] = useState({}); // { [b_head]: { field: val } }
@@ -231,8 +232,8 @@ export default function FoodBudgetEntrySection({
       {/* 1. Header Toolbar */}
       <div style={{
         padding: '18px 24px',
-        backgroundColor: '#f8fafc',
-        borderBottom: '1.5px solid #edf2f7',
+        backgroundColor: '#14245C',
+        color: '#ffffff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -244,29 +245,28 @@ export default function FoodBudgetEntrySection({
             width: '42px',
             height: '42px',
             borderRadius: '12px',
-            backgroundColor: '#eef2ff',
-            color: '#4f46e5',
+            backgroundColor: '#F5A524',
+            color: '#14245C',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 6px rgba(79, 70, 229, 0.15)'
+            justifyContent: 'center'
           }}>
-            <Wallet size={22} />
+            <Wallet size={21} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                Food Operations Budget Allocation & Tracking
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#ffffff', margin: 0 }}>
+                Food operations budget allocation and tracking
               </h3>
               <span style={{
                 fontSize: '11px',
                 fontWeight: '700',
-                padding: '2px 8px',
+                padding: '2px 10px',
                 borderRadius: '9999px',
-                backgroundColor: '#dbeafe',
-                color: '#1e40af'
+                backgroundColor: 'rgba(255,255,255,0.16)',
+                color: '#F5A524'
               }}>
-                8 Canonical Heads
+                8 canonical heads
               </span>
               {isDirty && (
                 <span style={{
@@ -274,62 +274,64 @@ export default function FoodBudgetEntrySection({
                   fontWeight: '700',
                   padding: '2px 8px',
                   borderRadius: '9999px',
-                  backgroundColor: '#fef3c7',
-                  color: '#92400e'
+                  backgroundColor: '#FFF1DD',
+                  color: '#8A4A00'
                 }}>
                   Unsaved Changes
                 </span>
               )}
             </div>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
-              Sanctioned Annual Budget • Actual Recorded Spend • Live Balance
+            <p style={{ fontSize: '12px', color: '#cbd5e1', margin: '3px 0 0 0' }}>
+              Sanctioned annual budget · actual recorded spend · live balance
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={handleSyncFromLedger}
             disabled={syncing}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              minHeight: '38px',
               padding: '8px 14px',
-              borderRadius: '8px',
+              borderRadius: '10px',
               fontSize: '12px',
-              fontWeight: '600',
-              backgroundColor: '#f1f5f9',
-              color: '#334155',
-              border: '1px solid #cbd5e1',
+              fontWeight: '700',
+              backgroundColor: 'rgba(255,255,255,0.14)',
+              color: '#ffffff',
+              border: '1px solid rgba(255,255,255,0.28)',
               cursor: syncing ? 'default' : 'pointer'
             }}
           >
             <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
-            <span>{syncing ? 'Syncing...' : 'Auto-Sync from Ledger'}</span>
+            <span>{syncing ? 'Syncing...' : 'Auto-sync from ledger'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowAddHeadModal(true)}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              minHeight: '38px',
               padding: '8px 14px',
-              borderRadius: '8px',
+              borderRadius: '10px',
               fontSize: '12px',
-              fontWeight: '600',
-              backgroundColor: '#ffffff',
-              color: '#4f46e5',
-              border: '1px solid #c7d2fe',
+              fontWeight: '700',
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+              border: '1px solid rgba(255,255,255,0.4)',
               cursor: 'pointer'
             }}
           >
             <Plus size={14} />
-            <span>Add Budget Head</span>
+            <span>Add budget head</span>
           </button>
 
           <button
@@ -337,22 +339,23 @@ export default function FoodBudgetEntrySection({
             onClick={handleSaveBudget}
             disabled={saving}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              minHeight: '38px',
               padding: '8px 18px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: '700',
-              backgroundColor: isDirty ? '#16a34a' : '#4f46e5',
-              color: '#ffffff',
+              borderRadius: '10px',
+              fontSize: '12.5px',
+              fontWeight: '800',
+              backgroundColor: '#F5A524',
+              color: '#14245C',
               border: 'none',
               cursor: saving ? 'default' : 'pointer',
-              boxShadow: isDirty ? '0 2px 8px rgba(22, 163, 74, 0.3)' : '0 2px 8px rgba(79, 70, 229, 0.25)'
+              boxShadow: '0 2px 8px rgba(245, 165, 36, 0.3)'
             }}
           >
             <Save size={14} />
-            <span>{saving ? 'Saving...' : 'Save Budget Tracking'}</span>
+            <span>{saving ? 'Saving...' : 'Save budget tracking'}</span>
           </button>
         </div>
       </div>
@@ -377,25 +380,25 @@ export default function FoodBudgetEntrySection({
 
       {/* 3. Executive Summary KPI Cards */}
       <div style={{
-        padding: '16px 24px',
+        padding: '18px 24px',
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '14px',
-        backgroundColor: '#fafbfc',
-        borderBottom: '1px solid #edf2f7'
+        backgroundColor: '#F7F9FD',
+        borderBottom: '1px solid #E1E6F2'
       }}>
-        {/* KPI 1: Sanctioned Annual */}
+        {/* KPI 1: Sanctioned Annual (Blue) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
+          borderRadius: '14px',
           padding: '14px 16px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #4f46e5'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #2F4BB8'
         }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase' }}>
-            Total Sanctioned Budget
+          <span style={{ fontSize: '11px', fontWeight: '800', color: '#2F4BB8', textTransform: 'uppercase' }}>
+            Total sanctioned budget
           </span>
-          <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px 0' }} className="currency-font">
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#14245C', margin: '4px 0 2px 0' }} className="currency-font">
             {formatINR(totalSanctioned)}
           </div>
           <span style={{ fontSize: '11px', color: '#64748b' }}>
@@ -403,18 +406,18 @@ export default function FoodBudgetEntrySection({
           </span>
         </div>
 
-        {/* KPI 2: Budget Utilization */}
+        {/* KPI 2: Budget Utilization (Green) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
+          borderRadius: '14px',
           padding: '14px 16px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #0284c7'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #0F6B3A'
         }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase' }}>
-            Budget Utilization
+          <span style={{ fontSize: '11px', fontWeight: '800', color: '#0F6B3A', textTransform: 'uppercase' }}>
+            Budget utilization
           </span>
-          <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px 0' }}>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#14245C', margin: '4px 0 2px 0' }}>
             {overallUtilPercent}%
           </div>
           <span style={{ fontSize: '11px', color: '#64748b' }}>
@@ -422,18 +425,18 @@ export default function FoodBudgetEntrySection({
           </span>
         </div>
 
-        {/* KPI 3: Total Actual Spend */}
+        {/* KPI 3: Total Actual Spend (Orange) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
+          borderRadius: '14px',
           padding: '14px 16px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #f97316'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #A04600'
         }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', color: '#ea580c', textTransform: 'uppercase' }}>
-            Total Actual Spend
+          <span style={{ fontSize: '11px', fontWeight: '800', color: '#A04600', textTransform: 'uppercase' }}>
+            Total actual spend
           </span>
-          <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px 0' }} className="currency-font">
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#14245C', margin: '4px 0 2px 0' }} className="currency-font">
             {formatINR(totalActualSpent)}
           </div>
           <span style={{ fontSize: '11px', color: '#64748b' }}>
@@ -441,18 +444,18 @@ export default function FoodBudgetEntrySection({
           </span>
         </div>
 
-        {/* KPI 4: Remaining Balance */}
+        {/* KPI 4: Remaining Balance (Teal) */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
+          borderRadius: '14px',
           padding: '14px 16px',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #16a34a'
+          border: '1px solid #E1E6F2',
+          borderTop: '4px solid #0B6B6B'
         }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', color: '#16a34a', textTransform: 'uppercase' }}>
-            Remaining Budget Balance
+          <span style={{ fontSize: '11px', fontWeight: '800', color: '#0B6B6B', textTransform: 'uppercase' }}>
+            Remaining budget balance
           </span>
-          <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px 0' }} className="currency-font">
+          <div style={{ fontSize: '20px', fontWeight: '800', color: totalBalance < 0 ? '#A32626' : '#14245C', margin: '4px 0 2px 0' }} className="currency-font">
             {formatINR(totalBalance)}
           </div>
           <span style={{ fontSize: '11px', color: '#64748b' }}>
@@ -476,11 +479,20 @@ export default function FoodBudgetEntrySection({
               <th style={{ padding: '12px 14px', minWidth: '160px', textAlign: 'right' }}>Sanctioned Budget (₹)</th>
 
               {/* Monthly Actuals Columns */}
-              {FOOD_MONTH_COLS.map(col => (
-                <th key={col.key} style={{ padding: '12px 14px', minWidth: '130px', textAlign: 'right' }}>
-                  {col.label} Actual
-                </th>
-              ))}
+              {FOOD_MONTH_COLS.map(col => {
+                const isFocus = String(editingPeriodId) === String(col.periodId);
+                return (
+                  <th key={col.key} style={{
+                    padding: '12px 14px',
+                    minWidth: '130px',
+                    textAlign: 'right',
+                    backgroundColor: isFocus ? '#14245C' : '#f1f5f9',
+                    color: isFocus ? '#ffffff' : '#334155'
+                  }}>
+                    {col.label} Actual
+                  </th>
+                );
+              })}
 
               <th style={{ padding: '12px 14px', minWidth: '140px', textAlign: 'right', backgroundColor: '#e2e8f0' }}>
                 Total Spent (₹)
@@ -533,13 +545,15 @@ export default function FoodBudgetEntrySection({
                   <td style={{ padding: '8px 10px', textAlign: 'right' }}>
                     <input
                       type="number"
+                      aria-label={`${item.budget_head} Sanctioned Budget`}
                       value={sanctioned || ''}
                       onChange={(e) => handleCellChange(item.budget_head, 'sanctioned_amount', e.target.value)}
                       style={{
                         width: '100%',
+                        height: '38px',
                         padding: '6px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        border: '1px solid #D5DCEE',
                         fontSize: '12.5px',
                         textAlign: 'right',
                         fontWeight: '700',
@@ -554,23 +568,26 @@ export default function FoodBudgetEntrySection({
                   {/* Monthly Actual Inputs */}
                   {FOOD_MONTH_COLS.map(col => {
                     const cellVal = Number(getValue(item, col.key)) || 0;
+                    const isFocus = String(editingPeriodId) === String(col.periodId);
                     return (
-                      <td key={col.key} style={{ padding: '8px 10px', textAlign: 'right' }}>
+                      <td key={col.key} style={{ padding: '8px 10px', textAlign: 'right', backgroundColor: isFocus ? '#EAF0FF' : 'transparent' }}>
                         <input
                           type="number"
+                          aria-label={`${item.budget_head} ${col.label} Actual`}
                           value={cellVal || ''}
                           placeholder="0"
                           onChange={(e) => handleCellChange(item.budget_head, col.key, e.target.value)}
                           style={{
                             width: '100%',
+                            height: '38px',
                             padding: '6px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid #e2e8f0',
-                            fontSize: '12px',
+                            borderRadius: '8px',
+                            border: isFocus ? '1px solid #2F4BB8' : '1px solid #D5DCEE',
+                            fontSize: '12.5px',
                             textAlign: 'right',
                             fontWeight: '600',
                             boxSizing: 'border-box',
-                            backgroundColor: cellVal > 0 ? '#f8fafc' : '#ffffff'
+                            backgroundColor: '#ffffff'
                           }}
                         />
                       </td>
@@ -582,8 +599,8 @@ export default function FoodBudgetEntrySection({
                     padding: '10px 14px',
                     textAlign: 'right',
                     fontWeight: '800',
-                    color: isExceeded ? '#dc2626' : '#0f172a',
-                    backgroundColor: 'rgba(0,0,0,0.02)'
+                    color: isExceeded ? '#A32626' : '#14245C',
+                    backgroundColor: '#F7F9FD'
                   }} className="currency-font">
                     {formatINR(rowSpent)}
                   </td>
@@ -593,8 +610,8 @@ export default function FoodBudgetEntrySection({
                     padding: '10px 14px',
                     textAlign: 'right',
                     fontWeight: '800',
-                    color: balance >= 0 ? '#16a34a' : '#dc2626',
-                    backgroundColor: 'rgba(0,0,0,0.02)'
+                    color: balance < 0 ? '#A32626' : '#0F6B3A',
+                    backgroundColor: '#F7F9FD'
                   }} className="currency-font">
                     {formatINR(balance)}
                   </td>
@@ -603,11 +620,11 @@ export default function FoodBudgetEntrySection({
                   <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                     <span style={{
                       fontSize: '11px',
-                      fontWeight: '700',
-                      padding: '2px 8px',
+                      fontWeight: '800',
+                      padding: '3px 9px',
                       borderRadius: '9999px',
-                      backgroundColor: isExceeded ? '#fee2e2' : Number(utilPct) > 85 ? '#fef3c7' : '#dcfce7',
-                      color: isExceeded ? '#991b1b' : Number(utilPct) > 85 ? '#92400e' : '#166534'
+                      backgroundColor: Number(utilPct) > 100 ? '#FBE3E3' : Number(utilPct) >= 80 ? '#FFF1DD' : '#E4F6EC',
+                      color: Number(utilPct) > 100 ? '#A32626' : Number(utilPct) >= 80 ? '#8A4A00' : '#0F6B3A'
                     }}>
                       {utilPct}%
                     </span>
@@ -617,11 +634,11 @@ export default function FoodBudgetEntrySection({
             })}
 
             {/* GRAND TOTAL SUMMARY ROW */}
-            <tr style={{ backgroundColor: '#0f172a', color: '#ffffff', fontWeight: '900', borderTop: '2px solid #000000' }}>
+            <tr style={{ backgroundColor: '#10183A', color: '#ffffff', fontWeight: '800', borderTop: '2px solid #14245C' }}>
               <td colSpan={2} style={{ padding: '12px 16px', fontSize: '13px' }}>
-                TOTAL FOOD BUDGET & ACTUALS
+                Total food budget and actuals
               </td>
-              <td style={{ padding: '12px 14px', textAlign: 'right', fontSize: '13px' }} className="currency-font">
+              <td style={{ padding: '12px 14px', textAlign: 'right', fontSize: '13px', color: '#F5A524' }} className="currency-font">
                 {formatINR(totalSanctioned)}
               </td>
 

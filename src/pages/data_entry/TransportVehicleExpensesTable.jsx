@@ -38,7 +38,7 @@ export default function TransportVehicleExpensesTable({
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState(embedded ? 'cards' : 'table'); // 'cards' | 'table'
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
   const [selectedVehicleKey, setSelectedVehicleKey] = useState(null);
 
   useEffect(() => {
@@ -469,8 +469,8 @@ export default function TransportVehicleExpensesTable({
             border: '1px solid rgba(255,255,255,0.2)'
           }}>
             {[
-              { id: 'cards', label: 'Cards' },
-              { id: 'table', label: 'Table' }
+              { id: 'table', label: 'Table' },
+              { id: 'cards', label: 'Cards' }
             ].map(vm => {
               const isVm = viewMode === vm.id;
               return (

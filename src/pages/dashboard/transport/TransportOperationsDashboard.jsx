@@ -334,7 +334,7 @@ export default function TransportOperationsDashboard({
     const tkRaised = num(m.service_tickets_raised, 0);
     const tkClosed = num(m.service_tickets_closed, 0);
 
-    const branchBusCount = branchId === 'Common' ? 18 : (branchId === 'RPS' ? 19 : (branchId === 'University' ? 16 : 5));
+    const branchBusCount = branchId === 'Common' ? 19 : (branchId === 'RPS' ? 19 : (branchId === 'University' ? 39 : 5));
 
     return {
       vehicles_count: `${branchBusCount} Buses`,
@@ -682,7 +682,7 @@ export default function TransportOperationsDashboard({
               color: '#A32626',
               border: '1px solid #f5bcbc'
             }}>
-              {activeBranchObj.label} ({metrics.vehicles_count})
+              {activeBranchObj.label} ({vehicleStats?.branch_summaries?.[activeBranch]?.bus_count !== undefined ? `${vehicleStats.branch_summaries[activeBranch].bus_count} Buses` : metrics.vehicles_count})
             </span>
           </div>
 
@@ -779,7 +779,7 @@ export default function TransportOperationsDashboard({
               const isSel = activeBranch === br.id;
               const liveBranchCount = vehicleStats?.branch_summaries?.[br.id]?.bus_count;
               const countBadge = liveBranchCount !== undefined
-                ? (br.id === 'Common' ? `${liveBranchCount} buses` : String(liveBranchCount))
+                ? String(liveBranchCount)
                 : '—';
               return (
                 <button
@@ -1050,6 +1050,7 @@ export default function TransportOperationsDashboard({
               if (p.includes('cctv')) return 'cctv_replacement';
               if (p.includes('parking') || p.includes('fastag')) return 'parking_fastag';
               if (p.includes('employee') || p.includes('driver')) return 'employee_cost';
+              if (p.includes('emi')) return 'emi_cost';
               if (p.includes('other')) return 'other_cost';
               if (p.includes('total')) return 'total_expenses';
               return null;
@@ -1317,137 +1318,186 @@ export default function TransportOperationsDashboard({
                     </thead>
 
                     <tbody>
-                      {lineItems.map((item, idx) => {
-                        const rowSanctioned = item.amount || 0;
-                        const rowTotalSpent = tablePeriods.reduce((sum, p) => sum + getParamMonthSpend(p.id, item.param), 0);
-                        const rowBalance = rowSanctioned > 0 ? (rowSanctioned - rowTotalSpent) : 0;
-                        const rowPct = rowSanctioned > 0 ? ((rowTotalSpent / rowSanctioned) * 100) : 0;
+                      {(() => {
+                        const isEmiRow = (it) => !it.isTotal && (it.param || '').toLowerCase().includes('emi');
+                        const nonEmiItems = lineItems.filter(it => !it.isTotal && !isEmiRow(it));
+                        const rawEmiItems = lineItems.filter(it => isEmiRow(it));
+                        const emiItems = rawEmiItems.length > 0 ? rawEmiItems : [{ param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true }];
+                        const existingTotalItem = lineItems.find(it => it.isTotal) || {
+                          param: 'Total Expenses',
+                          amount: nonEmiItems.reduce((s, it) => s + (it.amount || 0), 0),
+                          isTotal: true
+                        };
+                        const nonEmiSanctioned = nonEmiItems.reduce((s, it) => s + (it.amount || 0), 0) || existingTotalItem.amount || 0;
+                        const emiSanctioned = emiItems.reduce((s, it) => s + (it.amount || 0), 0);
 
-                        return (
-                          <tr
-                            key={idx}
-                            style={{
-                              backgroundColor: item.isTotal ? '#fef08a' : (idx % 2 === 0 ? '#ffffff' : '#fcfcfd'),
-                              borderBottom: item.isTotal ? '2.5px solid #ca8a04' : '1px solid #e2e8f0',
-                              borderTop: item.isTotal ? '2.5px solid #ca8a04' : 'none'
-                            }}
-                          >
-                            {/* Parameters Column (Sticky Left) */}
-                            <td style={{
-                              padding: item.isTotal ? '11px 14px' : '9px 14px',
-                              fontWeight: item.isTotal ? '900' : '700',
-                              color: item.isTotal ? '#854d0e' : '#1e293b',
-                              fontSize: item.isTotal ? '13.5px' : '12.5px',
-                              position: 'sticky',
-                              left: 0,
-                              backgroundColor: item.isTotal ? '#fef08a' : (idx % 2 === 0 ? '#ffffff' : '#fcfcfd'),
-                              zIndex: 10,
-                              boxShadow: '2px 0 5px rgba(0,0,0,0.03)'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{
-                                  width: '8px',
-                                  height: '8px',
-                                  borderRadius: '50%',
-                                  backgroundColor: item.color || '#3b82f6',
-                                  display: item.isTotal ? 'none' : 'inline-block',
-                                  flexShrink: 0
-                                }} />
-                                {item.param}
-                              </div>
-                            </td>
+                        const orderedRows = [
+                          ...nonEmiItems,
+                          {
+                            ...existingTotalItem,
+                            param: existingTotalItem.param || 'Total Expenses',
+                            amount: nonEmiSanctioned,
+                            isTotal: true,
+                            isNonEmiTotal: true
+                          },
+                          ...emiItems,
+                          {
+                            param: 'Total EMI',
+                            amount: emiSanctioned,
+                            isTotal: true,
+                            isEmiTotal: true
+                          }
+                        ];
 
-                            {/* SANCTIONED (₹) Column (Green text matching image) */}
-                            <td style={{
-                              padding: item.isTotal ? '11px 14px' : '9px 14px',
-                              fontWeight: item.isTotal ? '900' : '800',
-                              color: item.isTotal ? '#854d0e' : '#166534',
-                              textAlign: 'right',
-                              fontSize: item.isTotal ? '14px' : '12.5px',
-                              backgroundColor: item.isTotal ? '#fef08a' : '#f0fdf4',
-                              borderLeft: '1px solid #e2e8f0',
-                              borderRight: '1.5px solid #cbd5e1'
-                            }}>
-                              {item.isBlank || item.param === 'EMI' ? '—' : (item.amount > 0 ? formatINR(item.amount) : '0')}
-                            </td>
+                        const getRowMonthSpend = (pId, item) => {
+                          if (item.isNonEmiTotal) {
+                            const sumNonEmi = nonEmiItems.reduce((s, it) => s + getParamMonthSpend(pId, it.param), 0);
+                            if (sumNonEmi > 0) return sumNonEmi;
+                            const rawTot = getParamMonthSpend(pId, 'Total Expenses');
+                            const sumEmi = emiItems.reduce((s, it) => s + getParamMonthSpend(pId, it.param), 0);
+                            return Math.max(0, rawTot - sumEmi);
+                          }
+                          if (item.isEmiTotal) {
+                            return emiItems.reduce((s, it) => s + getParamMonthSpend(pId, it.param), 0);
+                          }
+                          return getParamMonthSpend(pId, item.param);
+                        };
 
-                            {/* Monthly Spend Columns */}
-                            {tablePeriods.map((p) => {
-                              const monthSpend = getParamMonthSpend(p.id, item.param);
-                              const isActiveMonth = !isAllMonths && (String(p.id) === String(activePeriod) || p.period_label === opPeriodLabel);
+                        return orderedRows.map((item, idx) => {
+                          const rowSanctioned = item.amount || 0;
+                          const rowTotalSpent = tablePeriods.reduce((sum, p) => sum + getRowMonthSpend(p.id, item), 0);
+                          const rowBalance = rowSanctioned > 0 ? (rowSanctioned - rowTotalSpent) : 0;
+                          const rowPct = rowSanctioned > 0 ? ((rowTotalSpent / rowSanctioned) * 100) : 0;
+                          const totalRowBg = item.isEmiTotal ? '#e0f2fe' : '#fef08a';
+                          const totalRowBorder = item.isEmiTotal ? '2px solid #0284c7' : '2.5px solid #ca8a04';
+                          const totalRowText = item.isEmiTotal ? '#0369a1' : '#854d0e';
 
-                              return (
-                                <td
-                                  key={p.id}
-                                  style={{
-                                    padding: item.isTotal ? '11px 12px' : '9px 12px',
-                                    fontWeight: item.isTotal ? '900' : (monthSpend > 0 ? '700' : '400'),
-                                    color: item.isTotal ? '#854d0e' : (monthSpend > 0 ? '#0f172a' : '#94a3b8'),
-                                    textAlign: 'right',
-                                    fontSize: item.isTotal ? '13.5px' : '12.5px',
-                                    backgroundColor: item.isTotal ? '#fef08a' : (isActiveMonth ? '#eff6ff50' : 'transparent'),
-                                    borderLeft: '1px solid #f1f5f9'
-                                  }}
-                                >
-                                  {monthSpend > 0 ? formatINR(monthSpend) : '—'}
-                                </td>
-                              );
-                            })}
+                          return (
+                            <tr
+                              key={idx}
+                              style={{
+                                backgroundColor: item.isTotal ? totalRowBg : (idx % 2 === 0 ? '#ffffff' : '#fcfcfd'),
+                                borderBottom: item.isTotal ? totalRowBorder : '1px solid #e2e8f0',
+                                borderTop: item.isTotal ? totalRowBorder : 'none'
+                              }}
+                            >
+                              {/* Parameters Column (Sticky Left) */}
+                              <td style={{
+                                padding: item.isTotal ? '11px 14px' : '9px 14px',
+                                fontWeight: item.isTotal ? '900' : '700',
+                                color: item.isTotal ? totalRowText : '#1e293b',
+                                fontSize: item.isTotal ? '13.5px' : '12.5px',
+                                position: 'sticky',
+                                left: 0,
+                                backgroundColor: item.isTotal ? totalRowBg : (idx % 2 === 0 ? '#ffffff' : '#fcfcfd'),
+                                zIndex: 10,
+                                boxShadow: '2px 0 5px rgba(0,0,0,0.03)'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    backgroundColor: item.color || '#3b82f6',
+                                    display: item.isTotal ? 'none' : 'inline-block',
+                                    flexShrink: 0
+                                  }} />
+                                  {item.param}
+                                </div>
+                              </td>
 
-                            {/* Total Spent Column */}
-                            <td style={{
-                              padding: item.isTotal ? '11px 14px' : '9px 14px',
-                              fontWeight: item.isTotal ? '900' : '800',
-                              color: item.isTotal ? '#854d0e' : '#0f172a',
-                              textAlign: 'right',
-                              fontSize: item.isTotal ? '14px' : '12.5px',
-                              backgroundColor: item.isTotal ? '#fef08a' : '#f8fafc',
-                              borderLeft: '1.5px solid #cbd5e1'
-                            }}>
-                              {rowTotalSpent > 0 ? formatINR(rowTotalSpent) : (item.isBlank || item.param === 'EMI' ? '—' : '₹0')}
-                            </td>
+                              {/* SANCTIONED (₹) Column */}
+                              <td style={{
+                                padding: item.isTotal ? '11px 14px' : '9px 14px',
+                                fontWeight: item.isTotal ? '900' : '800',
+                                color: item.isTotal ? totalRowText : '#166534',
+                                textAlign: 'right',
+                                fontSize: item.isTotal ? '14px' : '12.5px',
+                                backgroundColor: item.isTotal ? totalRowBg : '#f0fdf4',
+                                borderLeft: '1px solid #e2e8f0',
+                                borderRight: '1.5px solid #cbd5e1'
+                              }}>
+                                {item.isBlank || isEmiRow(item) || (item.isEmiTotal && rowSanctioned <= 0) ? '—' : (item.amount > 0 ? formatINR(item.amount) : '0')}
+                              </td>
 
-                            {/* Balance Column */}
-                            <td style={{
-                              padding: item.isTotal ? '11px 14px' : '9px 14px',
-                              fontWeight: item.isTotal ? '900' : '800',
-                              color: rowBalance >= 0 ? '#15803d' : '#dc2626',
-                              textAlign: 'right',
-                              fontSize: item.isTotal ? '14px' : '12.5px',
-                              backgroundColor: item.isTotal ? '#fef08a' : '#f8fafc',
-                              borderLeft: '1px solid #e2e8f0'
-                            }}>
-                              {item.isTotal || rowSanctioned > 0 ? formatINR(rowBalance) : '—'}
-                            </td>
+                              {/* Monthly Spend Columns */}
+                              {tablePeriods.map((p) => {
+                                const monthSpend = getRowMonthSpend(p.id, item);
+                                const isActiveMonth = !isAllMonths && (String(p.id) === String(activePeriod) || p.period_label === opPeriodLabel);
 
-                            {/* % Utilized Column */}
-                            <td style={{
-                              padding: item.isTotal ? '11px 12px' : '9px 12px',
-                              textAlign: 'center',
-                              fontSize: '11.5px',
-                              backgroundColor: item.isTotal ? '#fef08a' : '#f8fafc',
-                              borderLeft: '1px solid #e2e8f0'
-                            }}>
-                              {rowSanctioned > 0 ? (
-                                <span style={{
-                                  display: 'inline-block',
-                                  padding: '2px 7px',
-                                  borderRadius: '9999px',
-                                  fontWeight: '800',
-                                  fontSize: '11px',
-                                  backgroundColor: rowPct > 100 ? '#fef2f2' : rowPct > 80 ? '#fffbeb' : '#ecfdf5',
-                                  color: rowPct > 100 ? '#b91c1c' : rowPct > 80 ? '#b45309' : '#047857',
-                                  border: `1px solid ${rowPct > 100 ? '#fecaca' : rowPct > 80 ? '#fed7aa' : '#a7f3d0'}`
-                                }}>
-                                  {rowPct.toFixed(1)}%
-                                </span>
-                              ) : (
-                                <span style={{ color: '#94a3b8' }}>—</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                                return (
+                                  <td
+                                    key={p.id}
+                                    style={{
+                                      padding: item.isTotal ? '11px 12px' : '9px 12px',
+                                      fontWeight: item.isTotal ? '900' : (monthSpend > 0 ? '700' : '400'),
+                                      color: item.isTotal ? totalRowText : (monthSpend > 0 ? '#0f172a' : '#94a3b8'),
+                                      textAlign: 'right',
+                                      fontSize: item.isTotal ? '13.5px' : '12.5px',
+                                      backgroundColor: item.isTotal ? totalRowBg : (isActiveMonth ? '#eff6ff50' : 'transparent'),
+                                      borderLeft: '1px solid #f1f5f9'
+                                    }}
+                                  >
+                                    {monthSpend > 0 ? formatINR(monthSpend) : '—'}
+                                  </td>
+                                );
+                              })}
+
+                              {/* Total Spent Column */}
+                              <td style={{
+                                padding: item.isTotal ? '11px 14px' : '9px 14px',
+                                fontWeight: item.isTotal ? '900' : '800',
+                                color: item.isTotal ? totalRowText : '#0f172a',
+                                textAlign: 'right',
+                                fontSize: item.isTotal ? '14px' : '12.5px',
+                                backgroundColor: item.isTotal ? totalRowBg : '#f8fafc',
+                                borderLeft: '1.5px solid #cbd5e1'
+                              }}>
+                                {rowTotalSpent > 0 ? formatINR(rowTotalSpent) : (item.isBlank || isEmiRow(item) || item.isEmiTotal ? '—' : '₹0')}
+                              </td>
+
+                              {/* Balance Column */}
+                              <td style={{
+                                padding: item.isTotal ? '11px 14px' : '9px 14px',
+                                fontWeight: item.isTotal ? '900' : '800',
+                                color: rowBalance >= 0 ? '#15803d' : '#dc2626',
+                                textAlign: 'right',
+                                fontSize: item.isTotal ? '14px' : '12.5px',
+                                backgroundColor: item.isTotal ? totalRowBg : '#f8fafc',
+                                borderLeft: '1px solid #e2e8f0'
+                              }}>
+                                {(item.isNonEmiTotal || rowSanctioned > 0) ? formatINR(rowBalance) : '—'}
+                              </td>
+
+                              {/* % Utilized Column */}
+                              <td style={{
+                                padding: item.isTotal ? '11px 12px' : '9px 12px',
+                                textAlign: 'center',
+                                fontSize: '11.5px',
+                                backgroundColor: item.isTotal ? totalRowBg : '#f8fafc',
+                                borderLeft: '1px solid #e2e8f0'
+                              }}>
+                                {rowSanctioned > 0 ? (
+                                  <span style={{
+                                    display: 'inline-block',
+                                    padding: '2px 7px',
+                                    borderRadius: '9999px',
+                                    fontWeight: '800',
+                                    fontSize: '11px',
+                                    backgroundColor: rowPct > 100 ? '#fef2f2' : rowPct > 80 ? '#fffbeb' : '#ecfdf5',
+                                    color: rowPct > 100 ? '#b91c1c' : rowPct > 80 ? '#b45309' : '#047857',
+                                    border: `1px solid ${rowPct > 100 ? '#fecaca' : rowPct > 80 ? '#fed7aa' : '#a7f3d0'}`
+                                  }}>
+                                    {rowPct.toFixed(1)}%
+                                  </span>
+                                ) : (
+                                  <span style={{ color: '#94a3b8' }}>—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -1478,195 +1528,6 @@ export default function TransportOperationsDashboard({
             embedded={true}
             readOnly={true}
           />
-        </div>
-      )}
-
-      {/* ----------------------------------------------------------------------- */}
-      {/* SECTION: OVERALL EXPENSE SUMMARY (4 BENTO KPI CARDS) - MOVED TO BOTTOM    */}
-      {/* ----------------------------------------------------------------------- */}
-      {(activeMainView === 'executive' || activeMainView === 'all') && (
-        <div style={{ marginTop: '20px' }}>
-          {/* ----------------------------------------------------------------------- */}
-          {/* SECTION: OVERALL EXPENSE SUMMARY (4 BENTO KPI CARDS)                    */}
-          {/* ----------------------------------------------------------------------- */}
-          <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  backgroundColor: '#0f172a',
-                  color: '#ffffff',
-                  fontSize: '12.5px',
-                  fontWeight: '800'
-                }}>
-                  3
-                </span>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Overall Expense Summary
-                </h2>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  color: '#059669',
-                  backgroundColor: '#ecfdf5',
-                  padding: '3px 10px',
-                  borderRadius: '9999px',
-                  border: '1px solid #a7f3d0'
-                }}>
-                  Executive Financial & Fleet Totals
-                </span>
-              </div>
-
-              <div style={{ fontSize: '12.5px', color: '#64748b' }}>
-                Total spent, distance run, sanctioned budget balance, and fleet performance
-              </div>
-            </div>
-
-            {/* Top 4 Executive Financial Total Cards (Bento Style matching Food & Hostel) */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: '18px'
-            }}>
-              {/* Card 1: Total Fleet Size & Passengers (Green border) */}
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '18px',
-                padding: '20px 24px',
-                border: '1px solid #e2e8f0',
-                borderLeft: '4px solid #10b981',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '8px'
-              }}>
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Total Fleet Size & Passengers
-                </div>
-                <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0', letterSpacing: '-0.02em' }}>
-                  {metrics.vehicles_count}
-                </div>
-                <div style={{ fontSize: '12px', color: '#059669', fontWeight: '700' }}>
-                  {num(metrics.passengers_count).toLocaleString()} Passengers • {num(metrics.actual_kms).toLocaleString()} Total KMs
-                </div>
-                <div style={{ fontSize: '11px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                  Dedicated {activeBranchObj.label} Fleet ({activeBranchObj.id})
-                </div>
-              </div>
-
-              {/* Card 2: Total Operating Spend (Indigo border) */}
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '18px',
-                padding: '20px 24px',
-                border: '1px solid #e2e8f0',
-                borderLeft: '4px solid #6366f1',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '8px'
-              }}>
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {activePeriodObj?.period_label || 'Focus Month'} Spend
-                </div>
-                <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0', letterSpacing: '-0.02em' }}>
-                  {formatINR(metrics.total_expenses)}
-                </div>
-                <div style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '700' }}>
-                  Fuel: {formatINR(metrics.fuel_expenses)} • Repair: {formatINR(metrics.repair_maintenance_cost)}
-                </div>
-                <div style={{ fontSize: '11px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                  Monthly Spend: {activeBranchObj.label} ({activePeriodObj?.period_label})
-                </div>
-              </div>
-
-              {/* Card 3: Operating Budget & Remaining Balance (Sky Blue border) */}
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '18px',
-                padding: '20px 24px',
-                border: '1px solid #e2e8f0',
-                borderLeft: '4px solid #0ea5e9',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '8px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Sanctioned Budget & Balance
-                  </div>
-                  <span style={{
-                    fontSize: '10px',
-                    fontWeight: '800',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: activeBranchObj.badgeBg,
-                    color: activeBranchObj.badgeColor
-                  }}>
-                    {activeBranchObj.label}
-                  </span>
-                </div>
-                <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0', letterSpacing: '-0.02em' }}>
-                  {formatINR(metrics.balance)}
-                </div>
-                <div style={{ fontSize: '12px', color: '#0284c7', fontWeight: '700' }}>
-                  Budget: {formatLakhs(metrics.approved_budget)} • Spent: {formatLakhs(metrics.cumulative_budget_spent || metrics.total_expenses)}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
-                    <span>Budget Balance:</span>
-                    <strong style={{ color: '#0284c7' }}>
-                      {metrics.approved_budget > 0 ? (((metrics.approved_budget - (metrics.cumulative_budget_spent || metrics.total_expenses)) / metrics.approved_budget) * 100).toFixed(1) : '100'}% Remaining
-                    </strong>
-                  </div>
-                  <div style={{ width: '100%', height: '5px', backgroundColor: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${metrics.approved_budget > 0 ? Math.min(100, Math.max(0, ((metrics.cumulative_budget_spent || metrics.total_expenses) / metrics.approved_budget) * 100)) : 0}%`,
-                      height: '100%',
-                      backgroundColor: '#0284c7',
-                      borderRadius: '9999px'
-                    }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: Fleet Operational Efficiency (Amber border) */}
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '18px',
-                padding: '20px 24px',
-                border: '1px solid #e2e8f0',
-                borderLeft: '4px solid #f59e0b',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '8px'
-              }}>
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Fleet Performance & Mileage
-                </div>
-                <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0', letterSpacing: '-0.02em' }}>
-                  {metrics.avg_mileage} <span style={{ fontSize: '15px', color: '#64748b', fontWeight: '600' }}>km/L</span>
-                </div>
-                <div style={{ fontSize: '12px', color: '#b45309', fontWeight: '700' }}>
-                  Fuel Cost: ₹{metrics.fuel_cost_per_km} / KM • {metrics.service_tickets_closed} Tickets Closed
-                </div>
-                <div style={{ fontSize: '11px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                  Fee Collections: {formatLakhs(metrics.fee_collected)}
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
       )}
 

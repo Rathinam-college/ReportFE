@@ -39,6 +39,7 @@ import PurchaseOperationsDashboard from './purchase/PurchaseOperationsDashboard'
 import StoreOperationsDashboard from './store/StoreOperationsDashboard';
 import AssetAuditOperationsDashboard from './asset_audit/AssetAuditOperationsDashboard';
 import FoodBudgetChartSection from './food/FoodBudgetChartSection';
+import FoodPowerWaterSection from './food/FoodPowerWaterSection';
 
 // Helper to determine the period of the latest recorded entry across modules
 export const getLastEnteredPeriod = (periods = [], matrix = null, module = 'food', branch = null) => {
@@ -1169,144 +1170,20 @@ export default function DashboardPage({
 
             {/* d. BUDGET ALLOCATION AND EXPENDITURE LEDGER */}
             {currentModule === 'food' && (
-              <FoodBudgetChartSection
-                computedMatrix={effectiveMatrix}
-                periods={periods}
-                activePeriod={activePeriod}
-                onPeriodChange={setActivePeriod}
-              />
+              <>
+                <FoodBudgetChartSection
+                  computedMatrix={effectiveMatrix}
+                  periods={periods}
+                  activePeriod={activePeriod}
+                  onPeriodChange={setActivePeriod}
+                />
+                <FoodPowerWaterSection
+                  periods={periods}
+                  activePeriod={activePeriod}
+                  activePeriodObj={activePeriodObj}
+                />
+              </>
             )}
-
-            {/* KPI STRIP (4 CARDS) */}
-            {(() => {
-              const fbList = effectiveMatrix?.food_budget_tracking || [];
-              const totSanc = fbList.reduce((acc, r) => acc + (Number(r.sanctioned_amount) || 0), 0);
-              const budgetTarget = activePeriod === 'all' ? totSanc : (totSanc / 12);
-              const utilPct = budgetTarget > 0 ? ((grandTotal / budgetTarget) * 100) : 0;
-              const fmtVal = (v) => topUnitMode === 'lakhs' ? formatLakhs(v) : formatINR(v);
-              const deltaPct = prevPeriodTotal > 0 ? (((grandTotal - prevPeriodTotal) / prevPeriodTotal) * 100).toFixed(1) : '0.0';
-
-              return (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-                  gap: '20px'
-                }}>
-                  {/* Card 1: Total Expense (Dark Brand Card var(--primary, #14245C)) */}
-                  <div style={{
-                    backgroundColor: 'var(--primary, #14245C)',
-                    color: '#ffffff',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    border: '1px solid var(--primary, #14245C)',
-                    boxShadow: '0 6px 20px rgba(20, 36, 92, 0.16)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--accent, #F5A524)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      {activePeriod === 'all' ? `Total Expense (${periods.length} Months)` : `Total Expense (${activePeriodObj?.period_label || 'Month'})`}
-                    </div>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.02em' }} className="currency-font">
-                      {fmtVal(grandTotal)}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>
-                      {activePeriod === 'all' ? 'All recorded cycles' : (activePeriodObj?.is_closed ? 'Audited & locked cycle' : 'Active billing cycle')}
-                    </div>
-                  </div>
-
-                  {/* Card 2: Vs Previous Month / Monthly Average */}
-                  <div style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    border: '1px solid #E1E6F2',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      {activePeriod === 'all' ? 'Monthly Average' : `Vs Previous Month (${prevPeriodObj?.period_label || 'Prev'})`}
-                    </div>
-                    <div style={{ fontSize: '26px', fontWeight: '800', color: 'var(--primary, #14245C)', letterSpacing: '-0.02em' }} className="currency-font">
-                      {activePeriod === 'all'
-                        ? fmtVal(monthlyAvg)
-                        : (prevPeriodObj ? `${grandTotal >= prevPeriodTotal ? '+' : ''}${deltaPct}%` : fmtVal(monthlyAvg))
-                      }
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
-                      {activePeriod === 'all'
-                        ? `Average across ${periods.length} months`
-                        : (prevPeriodObj ? `Previous: ${fmtVal(prevPeriodTotal)}` : `Average across ${periods.length} months`)
-                      }
-                    </div>
-                  </div>
-
-                  {/* Card 3: Budget Utilization with Progress Bar */}
-                  <div style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    border: '1px solid #E1E6F2',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Budget Utilization
-                      </span>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        padding: '2px 8px',
-                        borderRadius: '9999px',
-                        backgroundColor: utilPct > 100 ? '#FBE3E3' : utilPct >= 80 ? '#FFF1DD' : '#E4F6EC',
-                        color: utilPct > 100 ? '#A32626' : utilPct >= 80 ? '#8A4A00' : '#0F6B3A'
-                      }}>
-                        {utilPct.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--primary, #14245C)' }} className="currency-font">
-                      {budgetTarget > 0 ? fmtVal(budgetTarget) : '—'}
-                    </div>
-                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-canvas, #F3F6FB)', borderRadius: '9999px', overflow: 'hidden' }}>
-                      <div style={{
-                        width: `${Math.min(100, utilPct)}%`,
-                        height: '100%',
-                        backgroundColor: utilPct > 100 ? '#D6455D' : utilPct >= 80 ? 'var(--accent, #F5A524)' : '#18A058',
-                        borderRadius: '9999px'
-                      }} />
-                    </div>
-                  </div>
-
-                  {/* Card 4: Top Category */}
-                  <div style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    border: '1px solid #E1E6F2',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      Top Category
-                    </div>
-                    <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary, #14245C)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {largestCostHead.name}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }} className="currency-font">
-                      {largestCostHead.total > 0 ? fmtVal(largestCostHead.total) : '₹0'}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
 
             {/* e. ATTACHED FILES, PRESENTATIONS & BILLS */}
             <MonthlyAttachmentsDashboardSection

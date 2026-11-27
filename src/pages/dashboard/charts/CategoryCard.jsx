@@ -52,19 +52,25 @@ export default function CategoryCard({
     ) && !categoryName.toLowerCase().includes('cost'))
   );
 
-  // Identify whether this category represents Cost Per Person / Unit Rate
-  const isCostPerPerson = Boolean(
-    category.isCostPerPerson ||
-    (categoryName && (
-      categoryName.toLowerCase().includes('cost per person') ||
-      categoryName.toLowerCase().includes('cost/person') ||
-      categoryName.toLowerCase().includes('cost / person') ||
-      categoryName.toLowerCase().includes('cost per occupant') ||
-      categoryName.toLowerCase().includes('per student cost')
-    ))
+  // Identify whether this category represents Cost Per Occupant (already Monthly in Hostel)
+  const isCostPerOccupant = Boolean(
+    categoryName && categoryName.toLowerCase().includes('cost per occupant')
   );
 
-  const isNonAdditiveCategory = isPersonCategory || isCostPerPerson || Boolean(category.isExcluded);
+  // Identify whether this category represents Daily Cost Per Person (Food)
+  const isCostPerPerson = Boolean(
+    !isCostPerOccupant && (
+      category.isCostPerPerson ||
+      (categoryName && (
+        categoryName.toLowerCase().includes('cost per person') ||
+        categoryName.toLowerCase().includes('cost/person') ||
+        categoryName.toLowerCase().includes('cost / person') ||
+        categoryName.toLowerCase().includes('per student cost')
+      ))
+    )
+  );
+
+  const isNonAdditiveCategory = isPersonCategory || isCostPerPerson || isCostPerOccupant || Boolean(category.isExcluded);
 
   const getDaysInPeriod = (p) => {
     if (!p) return 30;
@@ -272,6 +278,21 @@ export default function CategoryCard({
                   <div style={{ fontSize: '11px', color: 'var(--text-muted, #6b7090)', fontWeight: '600' }}>
                     Monthly: ₹{Math.round(selectedAmount * currentDays).toLocaleString('en-IN')} ({currentDays} days)
                   </div>
+                </div>
+              ) : isCostPerOccupant ? (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: '24px',
+                    fontWeight: '800',
+                    letterSpacing: '-0.02em',
+                    color: 'var(--text-main, #14172b)',
+                    lineHeight: 1.25
+                  }}>
+                    {formatCompact(selectedAmount)}
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-muted, #6b7090)' }}>
+                    / month
+                  </span>
                 </div>
               ) : (
                 <div style={{

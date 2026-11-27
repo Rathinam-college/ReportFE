@@ -1688,6 +1688,10 @@ export default function App() {
         permissions={pagePermissions}
         dashboardSubTab={dashboardSubTab}
         setDashboardSubTab={setDashboardSubTab}
+        dataEntrySubTab={dataEntrySubTab}
+        setDataEntrySubTab={setDataEntrySubTab}
+        masterDataSubTab={masterDataSubTab}
+        setMasterDataSubTab={setMasterDataSubTab}
       />
 
       {/* Right Main Content Area */}

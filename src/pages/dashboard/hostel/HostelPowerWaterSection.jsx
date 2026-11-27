@@ -113,6 +113,14 @@ export default function HostelPowerWaterSection({
       drinking_water_cost: dwCost,
       drinking_water_ltr_day: avgStu > 0 ? dwLtr / avgStu / (30 * monthsCount) : 0,
       drinking_water_cost_day: avgStu > 0 ? dwCost / avgStu / (30 * monthsCount) : 0,
+      // Monthly averages
+      avg_power_units: pUnits / monthsCount,
+      avg_power_cost: pCost / monthsCount,
+      avg_power_cost_sqft: avgSqFt > 0 ? (pCost / monthsCount) / avgSqFt : 0,
+      avg_normal_water_litres: nwLtr / monthsCount,
+      avg_normal_water_cost: nwCost / monthsCount,
+      avg_drinking_water_litres: dwLtr / monthsCount,
+      avg_drinking_water_cost: dwCost / monthsCount,
     };
   }, [isAllMonths, census, displayPeriods, allCensusMap]);
 
@@ -131,13 +139,55 @@ export default function HostelPowerWaterSection({
       badgeColor: '#1d4ed8',
       icon: <Zap size={18} color="#2F4BB8" />,
       items: [
-        { key: 'power_units', label: 'Power consumption units(EB + DG) Hostel', fmt: (m) => `${Math.round(m.power_units).toLocaleString('en-IN')} kWh` },
-        { key: 'power_cost', label: 'Power consumption cost(EB + DG) Hostel', fmt: (m) => formatINR(m.power_cost) },
-        { key: 'occupants', label: 'No of Students+ staff in Hostel', fmt: (m) => Math.round(m.occupants).toLocaleString('en-IN') },
-        { key: 'sq_feet', label: 'Sq feet Hostel', fmt: (m) => `${Math.round(m.sq_feet).toLocaleString('en-IN')} sq.ft` },
-        { key: 'power_cost_sqft', label: 'Power cost per sq feet', fmt: (m) => `₹ ${formatDec(m.power_cost_sqft, 2)}` },
-        { key: 'units_per_occupant', label: 'Units per occupant per month - Hostel', fmt: (m) => `${formatDec(m.units_per_occupant, 1)} kWh` },
-        { key: 'power_cost_occupant', label: 'Power cost Per occupant per month - Hostel', fmt: (m) => formatINR(m.power_cost_occupant) },
+        {
+          key: 'power_units',
+          label: 'Power consumption units(EB + DG) Hostel',
+          fmt: (m) => `${Math.round(m.power_units).toLocaleString('en-IN')} kWh`,
+          fmtTotal: (s) => `${Math.round(s.power_units).toLocaleString('en-IN')} kWh`,
+          fmtAvg: (s) => `${Math.round(s.avg_power_units).toLocaleString('en-IN')} kWh`,
+        },
+        {
+          key: 'power_cost',
+          label: 'Power consumption cost(EB + DG) Hostel',
+          fmt: (m) => formatINR(m.power_cost),
+          fmtTotal: (s) => formatINR(s.power_cost),
+          fmtAvg: (s) => formatINR(s.avg_power_cost),
+        },
+        {
+          key: 'occupants',
+          label: 'No of Students+ staff in Hostel',
+          fmt: (m) => Math.round(m.occupants).toLocaleString('en-IN'),
+          fmtTotal: () => '—',
+          fmtAvg: (s) => (s.occupants > 0 ? Math.round(s.occupants).toLocaleString('en-IN') : '—'),
+        },
+        {
+          key: 'sq_feet',
+          label: 'Sq feet Hostel',
+          fmt: (m) => `${Math.round(m.sq_feet).toLocaleString('en-IN')} sq.ft`,
+          fmtTotal: () => '—',
+          fmtAvg: () => '—',
+        },
+        {
+          key: 'power_cost_sqft',
+          label: 'Power cost per sq feet',
+          fmt: (m) => `₹ ${formatDec(m.power_cost_sqft, 2)}`,
+          fmtTotal: (s) => `₹ ${formatDec(s.power_cost_sqft, 2)}`,
+          fmtAvg: (s) => `₹ ${formatDec(s.avg_power_cost_sqft, 2)}`,
+        },
+        {
+          key: 'units_per_occupant',
+          label: 'Units per occupant per month - Hostel',
+          fmt: (m) => `${formatDec(m.units_per_occupant, 1)} kWh`,
+          fmtTotal: () => '—',
+          fmtAvg: (s) => `${formatDec(s.units_per_occupant, 1)} kWh`,
+        },
+        {
+          key: 'power_cost_occupant',
+          label: 'Power cost Per occupant per month - Hostel',
+          fmt: (m) => formatINR(m.power_cost_occupant),
+          fmtTotal: () => '—',
+          fmtAvg: (s) => formatINR(s.power_cost_occupant),
+        },
       ],
     },
     normal_water: {
@@ -154,11 +204,41 @@ export default function HostelPowerWaterSection({
       badgeColor: '#0F6B3A',
       icon: <Droplets size={18} color="#0F6B3A" />,
       items: [
-        { key: 'normal_water_litres', label: 'Normal Water Consumption Ltr Hostels', fmt: (m) => `${Math.round(m.normal_water_litres).toLocaleString('en-IN')} L` },
-        { key: 'normal_water_cost', label: 'Normal Water Consumption Cost Hostels', fmt: (m) => formatINR(m.normal_water_cost) },
-        { key: 'students_nw', label: 'No of Students in Hostels', fmt: (m) => Math.round(m.students).toLocaleString('en-IN') },
-        { key: 'normal_water_ltr_day', label: 'Normal water Ltr per student per day - Hostels', fmt: (m) => `${formatDec(m.normal_water_ltr_day, 2)} L` },
-        { key: 'normal_water_cost_day', label: 'Normal Water cost Per student per day Hostels', fmt: (m) => `₹ ${formatDec(m.normal_water_cost_day, 2)}` },
+        {
+          key: 'normal_water_litres',
+          label: 'Normal Water Consumption Ltr Hostels',
+          fmt: (m) => `${Math.round(m.normal_water_litres).toLocaleString('en-IN')} L`,
+          fmtTotal: (s) => `${Math.round(s.normal_water_litres).toLocaleString('en-IN')} L`,
+          fmtAvg: (s) => `${Math.round(s.avg_normal_water_litres).toLocaleString('en-IN')} L`,
+        },
+        {
+          key: 'normal_water_cost',
+          label: 'Normal Water Consumption Cost Hostels',
+          fmt: (m) => formatINR(m.normal_water_cost),
+          fmtTotal: (s) => formatINR(s.normal_water_cost),
+          fmtAvg: (s) => formatINR(s.avg_normal_water_cost),
+        },
+        {
+          key: 'students_nw',
+          label: 'No of Students in Hostels',
+          fmt: (m) => Math.round(m.students).toLocaleString('en-IN'),
+          fmtTotal: () => '—',
+          fmtAvg: (s) => (s.students > 0 ? Math.round(s.students).toLocaleString('en-IN') : '—'),
+        },
+        {
+          key: 'normal_water_ltr_day',
+          label: 'Normal water Ltr per student per day - Hostels',
+          fmt: (m) => `${formatDec(m.normal_water_ltr_day, 2)} L`,
+          fmtTotal: () => '—',
+          fmtAvg: (s) => `${formatDec(s.normal_water_ltr_day, 2)} L`,
+        },
+        {
+          key: 'normal_water_cost_day',
+          label: 'Normal Water cost Per student per day Hostels',
+          fmt: (m) => `₹ ${formatDec(m.normal_water_cost_day, 2)}`,
+          fmtTotal: () => '—',
+          fmtAvg: (s) => `₹ ${formatDec(s.normal_water_cost_day, 2)}`,
+        },
       ],
     },
     drinking_water: {
@@ -175,11 +255,41 @@ export default function HostelPowerWaterSection({
       badgeColor: '#0369a1',
       icon: <GlassWater size={18} color="#0369a1" />,
       items: [
-        { key: 'drinking_water_litres', label: 'Drinking Water Consumption Litres Hostels', fmt: (m) => `${Math.round(m.drinking_water_litres).toLocaleString('en-IN')} L` },
-        { key: 'drinking_water_cost', label: 'Drinking Water Consumption Cost Hostels', fmt: (m) => formatINR(m.drinking_water_cost) },
-        { key: 'students_dw', label: 'No of Students in Hostels', fmt: (m) => Math.round(m.students).toLocaleString('en-IN') },
-        { key: 'drinking_water_ltr_day', label: 'Drinking water Litres per student per day- Hostels', fmt: (m) => `${formatDec(m.drinking_water_ltr_day, 2)} L` },
-        { key: 'drinking_water_cost_day', label: 'Drinking Water cost Per student per day Hostels', fmt: (m) => `₹ ${formatDec(m.drinking_water_cost_day, 2)}` },
+        {
+          key: 'drinking_water_litres',
+          label: 'Drinking Water Consumption Litres Hostels',
+          fmt: (m) => `${Math.round(m.drinking_water_litres).toLocaleString('en-IN')} L`,
+          fmtTotal: (s) => `${Math.round(s.drinking_water_litres).toLocaleString('en-IN')} L`,
+          fmtAvg: (s) => `${Math.round(s.avg_drinking_water_litres).toLocaleString('en-IN')} L`,
+        },
+        {
+          key: 'drinking_water_cost',
+          label: 'Drinking Water Consumption Cost Hostels',
+          fmt: (m) => formatINR(m.drinking_water_cost),
+          fmtTotal: (s) => formatINR(s.drinking_water_cost),
+          fmtAvg: (s) => formatINR(s.avg_drinking_water_cost),
+        },
+        {
+          key: 'students_dw',
+          label: 'No of Students in Hostels',
+          fmt: (m) => Math.round(m.students).toLocaleString('en-IN'),
+          fmtTotal: () => '—',
+          fmtAvg: (s) => (s.students > 0 ? Math.round(s.students).toLocaleString('en-IN') : '—'),
+        },
+        {
+          key: 'drinking_water_ltr_day',
+          label: 'Drinking water Litres per student per day- Hostels',
+          fmt: (m) => `${formatDec(m.drinking_water_ltr_day, 2)} L`,
+          fmtTotal: () => '—',
+          fmtAvg: (s) => `${formatDec(s.drinking_water_ltr_day, 2)} L`,
+        },
+        {
+          key: 'drinking_water_cost_day',
+          label: 'Drinking Water cost Per student per day Hostels',
+          fmt: (m) => `₹ ${formatDec(m.drinking_water_cost_day, 2)}`,
+          fmtTotal: () => '—',
+          fmtAvg: (s) => `₹ ${formatDec(s.drinking_water_cost_day, 2)}`,
+        },
       ],
     },
   };
@@ -352,9 +462,14 @@ export default function HostelPowerWaterSection({
                       </th>
                     ))}
                     {isAllMonths && (
-                      <th style={{ padding: '12px 14px', textAlign: 'right', minWidth: '145px', whiteSpace: 'nowrap', backgroundColor: '#14245C', color: '#F5A524', fontSize: '13.5px' }}>
-                        Total / Avg
-                      </th>
+                      <>
+                        <th style={{ padding: '12px 14px', textAlign: 'right', minWidth: '140px', whiteSpace: 'nowrap', backgroundColor: '#14245C', color: '#F5A524', fontSize: '13.5px' }}>
+                          Total
+                        </th>
+                        <th style={{ padding: '12px 14px', textAlign: 'right', minWidth: '140px', whiteSpace: 'nowrap', backgroundColor: '#0F6B3A', color: '#ffffff', fontSize: '13.5px' }}>
+                          Avg
+                        </th>
+                      </>
                     )}
                   </tr>
                 </thead>
@@ -373,9 +488,14 @@ export default function HostelPowerWaterSection({
                         );
                       })}
                       {isAllMonths && (
-                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#14245C', backgroundColor: '#f8fafc', fontSize: '14.5px', whiteSpace: 'nowrap' }} className="currency-font">
-                          {item.fmt(summary)}
-                        </td>
+                        <>
+                          <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#14245C', backgroundColor: '#f8fafc', fontSize: '14.5px', whiteSpace: 'nowrap' }} className="currency-font">
+                            {item.fmtTotal ? item.fmtTotal(summary) : '—'}
+                          </td>
+                          <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', color: '#0F6B3A', backgroundColor: '#F6FCF9', fontSize: '14.5px', whiteSpace: 'nowrap' }} className="currency-font">
+                            {item.fmtAvg ? item.fmtAvg(summary) : '—'}
+                          </td>
+                        </>
                       )}
                     </tr>
                   ))}

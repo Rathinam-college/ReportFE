@@ -1241,6 +1241,27 @@ export default function ChartDataTable({
                 />
               );
             })}
+            {selectedModule === 'food' && !searchTerm?.trim() && selectedCategoryFilter === 'all' && (
+              <CategoryCard
+                key="food-total-expenses"
+                category={{
+                  categoryId: 'food-total-expenses',
+                  categoryName: 'Total Expenses',
+                  color: '#14245C'
+                }}
+                periods={periods}
+                selectedPeriod={selectedPeriod}
+                selectedAmount={currentGrandTotal}
+                selectedPercent={currentGrandTotal > 0 ? 100 : 0}
+                monthlyAmounts={monthlyGrandTotals.byPeriod || {}}
+                maxMonthlyAmount={Math.max(1, ...Object.values(monthlyGrandTotals.byPeriod || {}))}
+                hideDetails={true}
+                formatCompact={formatByUnit}
+                formatFull={formatIndianFull}
+                hidePercentage={displayMode === 'amount_only'}
+                remarksDraft={remarksDraft}
+              />
+            )}
           </div>
         </>
       )}

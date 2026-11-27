@@ -123,102 +123,122 @@ export default function DataEntryPage({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       
-      {/* Top Utility Bar (Lock & Clone actions - Images 2 & 5 Pill Style) */}
+      {/* Sticky Top Utility Bar */}
       <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 70,
+        backgroundColor: '#ffffff',
+        borderRadius: '18px',
+        border: '1px solid #E1E6F2',
+        padding: '14px 20px',
+        boxShadow: '0 4px 18px rgba(20, 36, 92, 0.06)',
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        gap: '10px'
+        flexWrap: 'wrap',
+        gap: '12px'
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <h1 style={{ fontSize: '18px', fontWeight: '800', color: '#14245C', margin: 0 }}>
+            Data Entry
+          </h1>
+          <span style={{
+            fontSize: '11.5px',
+            fontWeight: '800',
+            padding: '3px 10px',
+            borderRadius: '9999px',
+            backgroundColor: '#EAF0FF',
+            color: '#2F4BB8',
+            textTransform: 'capitalize'
+          }}>
+            {selectedModule === 'cctv' ? 'CCTV' : selectedModule === 'asset_audit' ? 'Asset Audit' : selectedModule}
+          </span>
+          {entryMessage?.type === 'success' && (
+            <span style={{
+              fontSize: '11.5px',
+              fontWeight: '800',
+              padding: '3px 10px',
+              borderRadius: '9999px',
+              backgroundColor: '#E4F6EC',
+              color: '#0F6B3A'
+            }}>
+              Saved
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         {/* Supporting Attachments & Documents Pill Button */}
         <button
           type="button"
           onClick={() => setShowAttachmentsModal(true)}
           style={{
+            minHeight: '38px',
             padding: '7px 16px',
-            borderRadius: '9999px',
-            backgroundColor: attachmentCount > 0 ? '#eff6ff' : '#ffffff',
-            border: `1.5px solid ${attachmentCount > 0 ? '#3b82f6' : '#cbd5e1'}`,
-            color: attachmentCount > 0 ? '#1d4ed8' : '#334155',
+            borderRadius: '10px',
+            backgroundColor: '#ffffff',
+            border: '1.5px solid #2F4BB8',
+            color: '#2F4BB8',
             fontSize: '12.5px',
-            fontWeight: '750',
+            fontWeight: '700',
             cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
             transition: 'all 0.15s ease'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = attachmentCount > 0 ? '#dbeafe' : '#f8fafc'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = attachmentCount > 0 ? '#eff6ff' : '#ffffff'}
           title="Upload or view bills, images, PDFs, spreadsheets, presentations, and links for this month"
         >
-          <Paperclip size={13} color={attachmentCount > 0 ? '#2563eb' : '#64748b'} />
-          <span>Attachments & Bills</span>
-          {attachmentCount > 0 && (
-            <span
-              style={{
-                fontSize: '10.5px',
-                fontWeight: '900',
-                padding: '1px 7px',
-                borderRadius: '9999px',
-                backgroundColor: '#2563eb',
-                color: '#ffffff'
-              }}
-            >
-              {attachmentCount}
-            </span>
-          )}
+          <Paperclip size={14} color="#2F4BB8" />
+          <span>Attachments and bills{attachmentCount > 0 ? ` (${attachmentCount})` : ''}</span>
         </button>
         <button
           type="button"
           onClick={handleCloneFromPrev}
           style={{
+            minHeight: '38px',
             padding: '7px 16px',
-            borderRadius: '9999px',
+            borderRadius: '10px',
             backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
-            color: '#334155',
+            border: '1px solid #D5DCEE',
+            color: '#14245C',
             fontSize: '12.5px',
             fontWeight: '700',
             cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
             transition: 'all 0.15s ease'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
         >
-          <Copy size={13} color="#64748b" />
-          <span>Clone from Prev</span>
+          <Copy size={14} color="#64748b" />
+          <span>Clone from prev</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleToggleLock && handleToggleLock(editingPeriodId)}
           style={{
+            minHeight: '38px',
             padding: '7px 16px',
-            borderRadius: '9999px',
-            backgroundColor: isClosed ? '#fef2f2' : '#ffffff',
-            border: `1px solid ${isClosed ? '#fecaca' : '#cbd5e1'}`,
-            color: isClosed ? '#dc2626' : '#334155',
+            borderRadius: '10px',
+            backgroundColor: isClosed ? '#FBE3E3' : '#ffffff',
+            border: `1px solid ${isClosed ? '#FECACA' : '#D5DCEE'}`,
+            color: isClosed ? '#A32626' : '#14245C',
             fontSize: '12.5px',
             fontWeight: '700',
             cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
             transition: 'all 0.15s ease'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
-          {isClosed ? <Unlock size={13} color="#dc2626" /> : <Lock size={13} color="#64748b" />}
-          <span>{isClosed ? 'Unlock Month' : 'Lock Month'}</span>
+          {isClosed ? <Unlock size={14} color="#A32626" /> : <Lock size={14} color="#64748b" />}
+          <span>{isClosed ? 'Unlock month' : 'Lock month'}</span>
         </button>
+        </div>
       </div>
 
       {entryMessage && (

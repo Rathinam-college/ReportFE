@@ -480,6 +480,41 @@ export default function HostelExpensesBudgetSection({
                 hideDetails={true}
                 remarksDraft={remarksDraft}
               />
+              {(() => {
+                const totMonthly = {};
+                (periods || []).forEach(p => {
+                  const colKey = getBudgetMonthCol(p, p.id);
+                  totMonthly[p.id] = (activeBudgetHeads || []).reduce((sum, h) => sum + num(h[colKey], 0), 0);
+                });
+                const isAll = activePeriod === 'all';
+                const totAmount = isAll ? allMonthsActualSum : activeMonthActualSum;
+                const totMax = Math.max(...Object.values(totMonthly), 1);
+                return (
+                  <CategoryCard
+                    key="hostel_total_expenses"
+                    category={{
+                      categoryId: 'hostel_total_expenses',
+                      categoryName: 'Total Expenses',
+                      color: '#14245C',
+                      items: [],
+                      hideDetails: true,
+                      isPersonCategory: false
+                    }}
+                    periods={cardPeriods}
+                    selectedPeriod={activePeriod}
+                    selectedAmount={totAmount}
+                    selectedPercent={totAmount > 0 ? 100 : 0}
+                    monthlyAmounts={totMonthly}
+                    maxMonthlyAmount={totMax}
+                    isExpanded={false}
+                    onToggleExpand={() => {}}
+                    formatCompact={formatIndianCompact}
+                    formatFull={formatINR}
+                    hideDetails={true}
+                    remarksDraft={remarksDraft}
+                  />
+                );
+              })()}
             </div>
           </div>
         )}
@@ -745,98 +780,6 @@ export default function HostelExpensesBudgetSection({
           </div>
         )}
 
-        {/* ------------------------------------------------------------- */}
-        {/* VIEW C: COST DRIVERS & SPEND DISTRIBUTION                      */}
-        {/* ------------------------------------------------------------- */}
-        {(trackingViewMode === 'all' || trackingViewMode === 'distribution') && (
-          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>
-                Hostel Spend Distribution ({activePeriodName} Active Heads)
-              </h4>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                Proportional breakdown of total monthly expenditure across active operational heads directly from DB
-              </p>
-            </div>
-
-            {/* Stacked Visual Bar */}
-            <div style={{ width: '100%', height: '22px', borderRadius: '8px', overflow: 'hidden', display: 'flex', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)' }}>
-              {rankedCostHeads.map((head, idx) => {
-                const actSpend = num(head[activeMonthCol], 0);
-                const share = activeMonthActualSum > 0 ? (actSpend / activeMonthActualSum) * 100 : 0;
-                const colors = ['#2563eb', '#4338ca', '#0284c7', '#d97706', '#dc2626', '#ea580c'];
-                const bg = colors[idx % colors.length];
-
-                return (
-                  <div
-                    key={head.budget_head}
-                    title={`${head.budget_head}: ${share.toFixed(1)}% (${formatINR(actSpend)})`}
-                    style={{
-                      width: `${share}%`,
-                      height: '100%',
-                      backgroundColor: bg,
-                      transition: 'width 0.3s ease'
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Ranked List Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-              {rankedCostHeads.map((head, idx) => {
-                const actSpend = num(head[activeMonthCol], 0);
-                const sanc = num(head.sanctioned_amount, 0);
-                const share = activeMonthActualSum > 0 ? (actSpend / activeMonthActualSum) * 100 : 0;
-
-                return (
-                  <div
-                    key={head.budget_head}
-                    style={{
-                      padding: '14px 16px',
-                      backgroundColor: '#f8fafc',
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '6px',
-                        backgroundColor: '#1e1b4b',
-                        color: '#ffffff',
-                        fontSize: '11px',
-                        fontWeight: '900',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        #{idx + 1}
-                      </span>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>{head.budget_head}</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Sanctioned: {formatINR(sanc)}</div>
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e40af' }}>
-                        {formatINR(actSpend)}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#059669', fontWeight: '700' }}>
-                        {share.toFixed(1)}% of total
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );

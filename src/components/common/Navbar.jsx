@@ -13,10 +13,14 @@ export default function Navbar({
   permissions = [],
   dbStatus = 'connected',
   dashboardSubTab = 'food',
-  setDashboardSubTab
+  setDashboardSubTab,
+  dataEntrySubTab = 'food',
+  setDataEntrySubTab,
+  masterDataSubTab = 'food',
+  setMasterDataSubTab
 }) {
   const [hoveredId, setHoveredId] = useState(null);
-  const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
+  const [openDropdownTab, setOpenDropdownTab] = useState(null);
 
   const departments = [
     { id: 'food', label: 'Food', icon: Utensils },
@@ -140,24 +144,37 @@ export default function Navbar({
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               const isHovered = hoveredId === `ws_${tab.id}`;
-              const isHome = tab.id === 'dashboard';
-              const showHomeDropdown = isHome && activeTab === 'dashboard' && homeDropdownOpen;
+              const hasDeptDropdown = tab.id === 'dashboard' || tab.id === 'data_entry' || tab.id === 'master_data';
+              const showDropdown = hasDeptDropdown && activeTab === tab.id && openDropdownTab === tab.id;
+              const activeSubDept =
+                tab.id === 'dashboard'
+                  ? (dashboardSubTab || 'food')
+                  : tab.id === 'data_entry'
+                    ? (dataEntrySubTab || 'food')
+                    : (masterDataSubTab || 'food');
+              const setSubDept =
+                tab.id === 'dashboard'
+                  ? setDashboardSubTab
+                  : tab.id === 'data_entry'
+                    ? setDataEntrySubTab
+                    : setMasterDataSubTab;
+
               return (
                 <div key={tab.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
                   <button
                     className="nav-item-btn"
                     type="button"
                     onClick={() => {
-                      if (isHome) {
-                        if (activeTab !== 'dashboard') {
-                          setActiveTab('dashboard');
-                          window.location.hash = 'dashboard';
-                          setHomeDropdownOpen(true);
+                      if (hasDeptDropdown) {
+                        if (activeTab !== tab.id) {
+                          setActiveTab(tab.id);
+                          window.location.hash = tab.id;
+                          setOpenDropdownTab(tab.id);
                         } else {
-                          setHomeDropdownOpen((prev) => !prev);
+                          setOpenDropdownTab((prev) => (prev === tab.id ? null : tab.id));
                         }
                       } else {
-                        setHomeDropdownOpen(false);
+                        setOpenDropdownTab(null);
                         setActiveTab(tab.id);
                         window.location.hash = tab.id;
                       }
@@ -204,13 +221,13 @@ export default function Navbar({
                     }}>
                       {tab.label}
                     </span>
-                    {isHome && (
+                    {hasDeptDropdown && (
                       <ChevronDown
                         size={15}
                         strokeWidth={2.2}
                         style={{
                           color: 'rgba(255, 255, 255, 0.72)',
-                          transform: showHomeDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transform: showDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
                           transition: 'transform 0.15s ease',
                           flexShrink: 0
                         }}
@@ -218,7 +235,7 @@ export default function Navbar({
                     )}
                   </button>
 
-                  {showHomeDropdown && (
+                  {showDropdown && (
                     <div
                       style={{
                         display: 'flex',
@@ -233,18 +250,18 @@ export default function Navbar({
                     >
                       {departments.map((dept) => {
                         const DeptIcon = dept.icon;
-                        const isDeptSelected = activeDept === dept.id;
-                        const isDeptHovered = hoveredId === `home_dd_${dept.id}`;
+                        const isDeptSelected = activeSubDept === dept.id;
+                        const isDeptHovered = hoveredId === `${tab.id}_dd_${dept.id}`;
                         return (
                           <button
                             key={dept.id}
                             type="button"
                             onClick={() => {
-                              if (setDashboardSubTab) setDashboardSubTab(dept.id);
-                              setActiveTab('dashboard');
-                              window.location.hash = 'dashboard';
+                              if (setSubDept) setSubDept(dept.id);
+                              setActiveTab(tab.id);
+                              window.location.hash = tab.id;
                             }}
-                            onMouseEnter={() => setHoveredId(`home_dd_${dept.id}`)}
+                            onMouseEnter={() => setHoveredId(`${tab.id}_dd_${dept.id}`)}
                             onMouseLeave={() => setHoveredId(null)}
                             style={{
                               width: '100%',

@@ -75,7 +75,8 @@ export const DEFAULT_BRANCH_BUDGETS = {
       { param: 'Vehicle Parking & Fastag Recharge 26-27', amount: 1030800, color: '#3f6212', bg: '#ecfccb' },
       { param: 'Transport Employees Cost', amount: 10984952, color: '#075985', bg: '#e0f2fe' },
       { param: 'Others 26-27', amount: 390250, color: '#065f46', bg: '#d1fae5' },
-      { param: 'Total Expenses', amount: 40330187, color: '#854d0e', bg: '#fef08a', isTotal: true }
+      { param: 'Total Expenses', amount: 40330187, color: '#854d0e', bg: '#fef08a', isTotal: true },
+      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true }
     ]
   },
   all: {
@@ -94,7 +95,8 @@ export const DEFAULT_BRANCH_BUDGETS = {
       { param: 'Vehicle Parking & Fastag Recharge 26-27', amount: 1030800, color: '#3f6212', bg: '#ecfccb' },
       { param: 'Transport Employees Cost', amount: 10984952, color: '#075985', bg: '#e0f2fe' },
       { param: 'Others 26-27', amount: 390250, color: '#065f46', bg: '#d1fae5' },
-      { param: 'Total Expenses', amount: 40330187, color: '#854d0e', bg: '#fef08a', isTotal: true }
+      { param: 'Total Expenses', amount: 40330187, color: '#854d0e', bg: '#fef08a', isTotal: true },
+      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true }
     ]
   },
   RPS: {
@@ -111,8 +113,8 @@ export const DEFAULT_BRANCH_BUDGETS = {
       { param: 'Repair & Maintenance', amount: 1780500, color: '#4338ca', bg: '#eef2ff' },
       { param: 'Others', amount: 519081, color: '#047857', bg: '#ecfdf5' },
       { param: 'Transport Employees Cost', amount: 5993043, color: '#0369a1', bg: '#f0f9ff' },
-      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true },
-      { param: 'Total Expenses', amount: 14107491, color: '#854d0e', bg: '#fef08a', isTotal: true }
+      { param: 'Total Expenses', amount: 14107491, color: '#854d0e', bg: '#fef08a', isTotal: true },
+      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true }
     ]
   },
   KPM: {
@@ -129,8 +131,8 @@ export const DEFAULT_BRANCH_BUDGETS = {
       { param: 'Repair & Maintenance', amount: 500000, color: '#4338ca', bg: '#eef2ff' },
       { param: 'Others', amount: 280000, color: '#047857', bg: '#ecfdf5' },
       { param: 'Transport Employees Cost', amount: 1430000, color: '#0369a1', bg: '#f0f9ff' },
-      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true },
-      { param: 'Total Expenses', amount: 4000000, color: '#854d0e', bg: '#fef08a', isTotal: true }
+      { param: 'Total Expenses', amount: 4000000, color: '#854d0e', bg: '#fef08a', isTotal: true },
+      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true }
     ]
   },
   Common: {
@@ -147,7 +149,8 @@ export const DEFAULT_BRANCH_BUDGETS = {
       { param: 'Repair & Maintenance', amount: 973333, color: '#4338ca', bg: '#eef2ff' },
       { param: 'Others', amount: 75000, color: '#047857', bg: '#ecfdf5' },
       { param: 'Transport Employees Cost', amount: 2970945, color: '#0369a1', bg: '#f0f9ff' },
-      { param: 'Total Expenses', amount: 5552143, color: '#854d0e', bg: '#fef08a', isTotal: true }
+      { param: 'Total Expenses', amount: 5552143, color: '#854d0e', bg: '#fef08a', isTotal: true },
+      { param: 'EMI', amount: 0, color: '#64748b', bg: '#f8fafc', isBlank: true }
     ]
   }
 };

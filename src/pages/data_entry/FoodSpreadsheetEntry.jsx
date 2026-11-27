@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import FoodCardSpreadsheet from './cards/FoodCardSpreadsheet';
 import FoodBudgetEntrySection from './food_budget/FoodBudgetEntrySection';
+import FoodPowerWaterEntrySection from './FoodPowerWaterEntrySection';
 
 export default function FoodSpreadsheetEntry({
   activePeriodObj,
@@ -29,7 +30,7 @@ export default function FoodSpreadsheetEntry({
   handleCloneFromPrev,
   handleToggleLock
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('cards'); // 'cards' (card-based dashboard), 'excel_grid', 'single_month'
+  const [activeSubTab, setActiveSubTab] = useState('excel_grid'); // 'excel_grid' | 'budget'
   const [localMessage, setLocalMessage] = useState(null);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
@@ -113,30 +114,32 @@ export default function FoodSpreadsheetEntry({
     return 0;
   };
 
-  // Category Color Palette matching user's Excel mockup (Image 1)
+  // Category Color Palette matching Food Data Entry design
   const getCategoryColor = (catName, idx) => {
     const nameLower = (catName || '').toLowerCase();
-    if (nameLower.includes('material')) {
-      return { headerBg: '#ffc90e', text: '#000000', rowBg: '#fff2df' }; // Golden yellow
+    if (nameLower.includes('material') || nameLower.includes('maintenance') || nameLower.includes('fc') || nameLower.includes('power')) {
+      return { barColor: '#E5A100', totalBg: '#FFF8E1', totalText: '#8A4A00', headerBg: '#FFFBEB', text: '#14245C' };
     }
     if (nameLower.includes('labour') || nameLower.includes('labor')) {
-      return { headerBg: '#dcdde1', text: '#000000', rowBg: '#fff2df' }; // Silver / Grey
-    }
-    if (nameLower.includes('maintenance') || nameLower.includes('fc') || nameLower.includes('power')) {
-      return { headerBg: '#ffc90e', text: '#000000', rowBg: '#fff2df' }; // Golden yellow
+      return { barColor: '#6B7699', totalBg: '#EEF1F7', totalText: '#334155', headerBg: '#F4F6FA', text: '#14245C' };
     }
     if (nameLower.includes('event')) {
-      return { headerBg: '#a8d8ea', text: '#000000', rowBg: '#fff2df' }; // Soft sky blue
+      return { barColor: '#2F8FD1', totalBg: '#E6F4FE', totalText: '#1D4ED8', headerBg: '#EFF6FF', text: '#14245C' };
     }
     if (nameLower.includes('festival')) {
-      return { headerBg: '#d4edda', text: '#000000', rowBg: '#fff2df' }; // Soft mint green
+      return { barColor: '#18A058', totalBg: '#E4F6EC', totalText: '#0F6B3A', headerBg: '#ECFDF5', text: '#14245C' };
+    }
+    if (nameLower.includes('cost per person')) {
+      return { barColor: '#7A4DE0', totalBg: '#EFE9FB', totalText: '#5B34B5', headerBg: '#F5F3FF', text: '#14245C' };
+    }
+    if (nameLower.includes('person')) {
+      return { barColor: '#C9A400', totalBg: '#FEF9C3', totalText: '#854D0E', headerBg: '#FEFCE8', text: '#14245C' };
     }
     const fallbacks = [
-      { headerBg: '#fef08a', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#e2e8f0', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#fed7aa', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#bfdbfe', text: '#000000', rowBg: '#fff2df' },
-      { headerBg: '#bbf7d0', text: '#000000', rowBg: '#fff2df' }
+      { barColor: '#E5A100', totalBg: '#FFF8E1', totalText: '#8A4A00', headerBg: '#FFFBEB', text: '#14245C' },
+      { barColor: '#6B7699', totalBg: '#EEF1F7', totalText: '#334155', headerBg: '#F4F6FA', text: '#14245C' },
+      { barColor: '#2F8FD1', totalBg: '#E6F4FE', totalText: '#1D4ED8', headerBg: '#EFF6FF', text: '#14245C' },
+      { barColor: '#18A058', totalBg: '#E4F6EC', totalText: '#0F6B3A', headerBg: '#ECFDF5', text: '#14245C' }
     ];
     return fallbacks[idx % fallbacks.length];
   };
@@ -375,116 +378,117 @@ export default function FoodSpreadsheetEntry({
     }
   };
 
-  if (activeSubTab === 'cards') {
+  if (activeSubTab === 'budget' || activeSubTab === 'power_water') {
     return (
-      <FoodCardSpreadsheet
-        periods={periods}
-        categories={categories}
-        editingPeriodId={editingPeriodId}
-        setEditingPeriodId={setEditingPeriodId}
-        activePeriodObj={activePeriodObj}
-        isClosed={isClosed}
-        getCellAmount={getCellAmount}
-        categorySubtotals={categorySubtotals}
-        grandTotalsByPeriod={grandTotalsByPeriod}
-        isNonExpenseItem={isNonExpenseItem}
-        editedCostHeadNames={editedCostHeadNames}
-        handleCostHeadNameChange={handleCostHeadNameChange}
-        editedCategoryNames={editedCategoryNames}
-        handleCategoryNameChange={handleCategoryNameChange}
-        newRowDrafts={newRowDrafts}
-        handleAddNewRow={handleAddNewRow}
-        handleRemoveDraftRow={handleRemoveDraftRow}
-        handleDraftRowAmountChange={handleDraftRowAmountChange}
-        handleCellChange={handleCellChange}
-        handleDeleteCostHead={handleDeleteCostHead}
-        remarksDraft={remarksDraft}
-        handleRemarkChange={handleRemarkChange}
-        handleSaveAllSpreadsheetData={handleSaveAllSpreadsheetData}
-        isSavingLocal={isSavingLocal}
-        localMessage={localMessage}
-        openAddCategoryModal={openAddCategoryModal}
-        handleCloneFromPrev={handleCloneFromPrev}
-        handleToggleLock={handleToggleLock}
-        viewMode={activeSubTab}
-        setViewMode={setActiveSubTab}
-      />
-    );
-  }
-
-  if (activeSubTab === 'budget') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-        {/* Navigation Switcher Pills */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+        {/* Active Focus Month + 3-Tab Segmented View Control */}
         <div style={{
+          backgroundColor: '#ffffff',
+          padding: '14px 20px',
+          borderRadius: '18px',
+          border: '1px solid #E1E6F2',
+          boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          backgroundColor: '#ffffff',
-          padding: '12px 20px',
-          borderRadius: '16px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)'
+          flexWrap: 'wrap',
+          gap: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Switch Food View:
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Active focus month:
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '9999px' }}>
-              <button
-                type="button"
-                onClick={() => setActiveSubTab('cards')}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: 'transparent',
-                  color: '#64748b'
-                }}
-              >
-                🗂️ Cards View
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSubTab('excel_grid')}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: 'transparent',
-                  color: '#64748b'
-                }}
-              >
-                📊 Multi-Month Excel Grid
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSubTab('budget')}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: '#4f46e5',
-                  color: '#ffffff',
-                  boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)'
-                }}
-              >
-                💰 Food Budget Tracking (8 Heads)
-              </button>
-            </div>
+            {periods.map(p => {
+              const isSel = String(p.id) === currStr;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setEditingPeriodId(p.id)}
+                  style={{
+                    minHeight: '36px',
+                    padding: '6px 14px',
+                    borderRadius: '9999px',
+                    fontSize: '12px',
+                    fontWeight: isSel ? '800' : '600',
+                    border: isSel ? '1px solid #14245C' : '1px solid #E1E6F2',
+                    backgroundColor: isSel ? '#14245C' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#334155',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {p.period_label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#F3F5FA', padding: '4px', borderRadius: '10px', border: '1px solid #E1E6F2' }}>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('excel_grid')}
+              style={{
+                minHeight: '36px',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: '700',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: 'transparent',
+                color: '#475569'
+              }}
+            >
+              Multi-month Excel grid
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('budget')}
+              style={{
+                minHeight: '36px',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: activeSubTab === 'budget' ? '800' : '700',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: activeSubTab === 'budget' ? '#14245C' : 'transparent',
+                color: activeSubTab === 'budget' ? '#ffffff' : '#475569'
+              }}
+            >
+              Food budget tracking (8 heads)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('power_water')}
+              style={{
+                minHeight: '36px',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: activeSubTab === 'power_water' ? '800' : '700',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: activeSubTab === 'power_water' ? '#14245C' : 'transparent',
+                color: activeSubTab === 'power_water' ? '#ffffff' : '#475569'
+              }}
+            >
+              Power & Water Entry
+            </button>
           </div>
         </div>
 
-        <FoodBudgetEntrySection periods={periods} onRefreshData={fetchData} />
+        {activeSubTab === 'budget' ? (
+          <FoodBudgetEntrySection periods={periods} onRefreshData={fetchData} editingPeriodId={editingPeriodId} />
+        ) : (
+          <FoodPowerWaterEntrySection
+            periods={periods}
+            editingPeriodId={editingPeriodId}
+            activePeriodObj={activePeriodObj}
+            handleToggleLock={handleToggleLock}
+            onRefreshData={fetchData}
+          />
+        )}
       </div>
     );
   }
@@ -492,17 +496,17 @@ export default function FoodSpreadsheetEntry({
   return (
     <div style={{
       backgroundColor: '#ffffff',
-      borderRadius: '24px',
-      border: '1px solid rgba(108, 86, 219, 0.15)',
-      boxShadow: '0 20px 45px rgba(108, 86, 219, 0.08)',
+      borderRadius: '20px',
+      border: '1px solid #E1E6F2',
+      boxShadow: '0 4px 18px rgba(20, 36, 92, 0.05)',
       overflow: 'hidden',
       marginBottom: '22px',
       fontFamily: 'Plus Jakarta Sans, sans-serif'
     }}>
-      {/* 1. SPREADSHEET TOOLBAR & HEADER */}
+      {/* 1. NAVY HEADER BAND */}
       <div style={{
-        background: 'linear-gradient(135deg, #745df0 0%, #5d44db 100%)',
-        padding: '16px 22px',
+        backgroundColor: '#14245C',
+        padding: '18px 24px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -510,44 +514,43 @@ export default function FoodSpreadsheetEntry({
         gap: '12px',
         color: '#ffffff'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '38px',
-            height: '38px',
+            width: '40px',
+            height: '40px',
             borderRadius: '12px',
-            backgroundColor: '#ffffff',
+            backgroundColor: '#F5A524',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#6c56db',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
+            color: '#14245C'
           }}>
             <FileSpreadsheet size={20} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 style={{ fontSize: '16.5px', fontWeight: '800', color: '#ffffff', margin: 0 }}>
-                Food Operations Master Spreadsheet
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#ffffff', margin: 0 }}>
+                Food operations master spreadsheet
               </h2>
               <span style={{
                 fontSize: '11px',
-                fontWeight: '800',
-                padding: '3px 10px',
+                fontWeight: '700',
+                padding: '2px 10px',
                 borderRadius: '9999px',
-                backgroundColor: '#ffffff',
-                color: '#6c56db'
+                backgroundColor: 'rgba(255,255,255,0.16)',
+                color: '#F5A524'
               }}>
-                Rathinam Report Excel Grid
+                Rathinam report Excel grid
               </span>
             </div>
-            <p style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.85)', margin: '2px 0 0 0' }}>
-              Full Editable Matrix • Click to edit line item descriptions, category titles, cell values & formulas • Direct DB Save
+            <p style={{ fontSize: '12px', color: '#cbd5e1', margin: '3px 0 0 0' }}>
+              Full editable matrix · click to edit line item descriptions, category titles, cell values and formulas · direct DB save
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {openAddCategoryModal && (
             <button
               type="button"
@@ -555,20 +558,20 @@ export default function FoodSpreadsheetEntry({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '7px 18px',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                gap: '6px',
+                minHeight: '38px',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                backgroundColor: 'transparent',
                 border: '1px solid rgba(255, 255, 255, 0.4)',
                 color: '#ffffff',
-                fontSize: '12px',
+                fontSize: '12.5px',
                 fontWeight: '700',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                cursor: 'pointer'
               }}
             >
-              <Plus size={13} />
-              <span>Add Category</span>
+              <Plus size={14} />
+              <span>Add category</span>
             </button>
           )}
 
@@ -580,20 +583,20 @@ export default function FoodSpreadsheetEntry({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 22px',
-              borderRadius: '9999px',
-              background: 'linear-gradient(135deg, #ff7e9e 0%, #ff4b72 100%)',
-              color: '#ffffff',
-              fontSize: '13px',
+              minHeight: '38px',
+              padding: '8px 18px',
+              borderRadius: '10px',
+              backgroundColor: '#F5A524',
+              color: '#14245C',
+              fontSize: '12.5px',
               fontWeight: '800',
               border: 'none',
               cursor: isSavingLocal ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 14px rgba(255, 96, 136, 0.35)',
-              transition: 'all 0.15s ease'
+              boxShadow: '0 2px 8px rgba(245, 165, 36, 0.3)'
             }}
           >
             {isSavingLocal ? <RefreshCw size={14} className="spin" /> : <Save size={14} />}
-            <span>💾 Save All Rows & Values to DB</span>
+            <span>Save all rows and values to DB</span>
           </button>
         </div>
       </div>
@@ -601,26 +604,26 @@ export default function FoodSpreadsheetEntry({
       {/* 2. NOTIFICATION BANNER */}
       {localMessage && (
         <div style={{
-          padding: '10px 20px',
-          backgroundColor: localMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
-          borderBottom: `1px solid ${localMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-          color: localMessage.type === 'success' ? '#065f46' : '#991b1b',
+          padding: '10px 22px',
+          backgroundColor: localMessage.type === 'success' ? '#E4F6EC' : '#FBE3E3',
+          borderBottom: `1px solid ${localMessage.type === 'success' ? '#A7F3D0' : '#FECACA'}`,
+          color: localMessage.type === 'success' ? '#0F6B3A' : '#A32626',
           fontSize: '12.5px',
           fontWeight: '700',
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
         }}>
-          {localMessage.type === 'success' ? <CheckCircle2 size={16} color="#059669" /> : <AlertCircle size={16} color="#dc2626" />}
+          {localMessage.type === 'success' ? <CheckCircle2 size={16} color="#0F6B3A" /> : <AlertCircle size={16} color="#A32626" />}
           <span>{localMessage.text}</span>
         </div>
       )}
 
-      {/* 3. CYCLE SELECTION & VIEW TOGGLE */}
+      {/* 3. CYCLE SELECTION & 2-TAB VIEW TOGGLE */}
       <div style={{
-        backgroundColor: '#f4f6fc',
-        padding: '10px 20px',
-        borderBottom: '1px solid #edf0f8',
+        backgroundColor: '#F7F9FD',
+        padding: '12px 22px',
+        borderBottom: '1px solid #E1E6F2',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -628,8 +631,8 @@ export default function FoodSpreadsheetEntry({
         gap: '12px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            📅 Active Focus Month:
+          <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Active focus month:
           </span>
           {periods.map(p => {
             const isSel = String(p.id) === currStr;
@@ -639,172 +642,153 @@ export default function FoodSpreadsheetEntry({
                 type="button"
                 onClick={() => setEditingPeriodId(p.id)}
                 style={{
-                  padding: '6px 16px',
+                  minHeight: '36px',
+                  padding: '6px 14px',
                   borderRadius: '9999px',
                   fontSize: '12px',
-                  fontWeight: '800',
-                  border: isSel ? 'none' : '1px solid #cbd5e1',
-                  backgroundColor: isSel ? '#6c56db' : '#ffffff',
+                  fontWeight: isSel ? '800' : '600',
+                  border: isSel ? '1px solid #14245C' : '1px solid #D5DCEE',
+                  backgroundColor: isSel ? '#14245C' : '#ffffff',
                   color: isSel ? '#ffffff' : '#334155',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: isSel ? '0 4px 12px rgba(108, 86, 219, 0.3)' : 'none'
+                  gap: '6px'
                 }}
               >
                 <span>{p.period_label}</span>
-                {isSel && <Check size={12} color="#ffffff" />}
+                {isSel && <Check size={12} color="#F5A524" />}
               </button>
             );
           })}
         </div>
 
-        {/* View mode toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '4px', borderRadius: '9999px', border: '1px solid #e2e8f0' }}>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('cards')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              fontSize: '11.5px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeSubTab === 'cards' ? '#0aa0e8' : 'transparent',
-              color: activeSubTab === 'cards' ? '#ffffff' : '#64748b'
-            }}
-          >
-            🗂️ Cards View
-          </button>
+        {/* Two-tab Segmented Control */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ffffff', padding: '4px', borderRadius: '10px', border: '1px solid #E1E6F2' }}>
           <button
             type="button"
             onClick={() => setActiveSubTab('excel_grid')}
             style={{
+              minHeight: '36px',
               padding: '6px 14px',
-              borderRadius: '9999px',
-              fontSize: '11.5px',
-              fontWeight: '700',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '800',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'excel_grid' ? '#6c56db' : 'transparent',
-              color: activeSubTab === 'excel_grid' ? '#ffffff' : '#64748b'
+              backgroundColor: activeSubTab === 'excel_grid' ? '#14245C' : 'transparent',
+              color: activeSubTab === 'excel_grid' ? '#ffffff' : '#475569'
             }}
           >
-            📊 Multi-Month Excel Grid (Image 1 Style)
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('single_month')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              fontSize: '11.5px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeSubTab === 'single_month' ? '#6c56db' : 'transparent',
-              color: activeSubTab === 'single_month' ? '#ffffff' : '#64748b'
-            }}
-          >
-            Focused Month ({activePeriodObj?.period_label})
+            Multi-month Excel grid
           </button>
           <button
             type="button"
             onClick={() => setActiveSubTab('budget')}
             style={{
+              minHeight: '36px',
               padding: '6px 14px',
-              borderRadius: '9999px',
-              fontSize: '11.5px',
-              fontWeight: '800',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '700',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeSubTab === 'budget' ? '#4f46e5' : 'transparent',
-              color: activeSubTab === 'budget' ? '#ffffff' : '#64748b'
+              backgroundColor: activeSubTab === 'budget' ? '#14245C' : 'transparent',
+              color: activeSubTab === 'budget' ? '#ffffff' : '#475569'
             }}
           >
-            💰 Budget Tracking (8 Heads)
+            Food budget tracking (8 heads)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('power_water')}
+            style={{
+              minHeight: '36px',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: activeSubTab === 'power_water' ? '#14245C' : 'transparent',
+              color: activeSubTab === 'power_water' ? '#ffffff' : '#475569'
+            }}
+          >
+            Power & Water Entry
           </button>
         </div>
       </div>
 
       {/* 4. FORMULA BAR RIBBON */}
       <div style={{
-        padding: '8px 20px',
+        padding: '10px 22px',
         backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid #EDF0F8',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
         fontSize: '12px'
       }}>
-        <div style={{ fontWeight: '800', color: '#6c56db', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span>fx</span>
+        <div style={{ fontWeight: '800', color: '#2F4BB8', fontFamily: 'monospace' }}>
+          fx
         </div>
-        <div style={{ height: '14px', width: '1px', backgroundColor: '#e2e8f0' }} />
+        <div style={{ height: '14px', width: '1px', backgroundColor: '#E1E6F2' }} />
         <div style={{ fontFamily: 'monospace', color: '#475569', fontSize: '11.5px', flex: 1 }}>
           <strong>Total Food Expenses:</strong> =SUM(Food Material + Food Labour) | <strong>Total Maintenance:</strong> =SUM(FC Maintenance + Water + Vehicle) | <strong>Total Expenses:</strong> =SUM(All Categories)
         </div>
       </div>
 
-      {/* 5. MULTI-MONTH EXCEL SPREADSHEET TABLE (IMAGE 1 EXACT DESIGN) */}
-      {(activeSubTab === 'excel_grid' || activeSubTab === 'single_month') && (
-        <div style={{ overflowX: 'auto', padding: '16px 20px' }}>
+      {/* 5. MULTI-MONTH EXCEL SPREADSHEET TABLE */}
+      {activeSubTab === 'excel_grid' && (
+        <div style={{ overflowX: 'auto', padding: '16px 22px' }}>
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
             fontSize: '13px',
-            border: '2px solid #000000',
+            border: '1px solid #E1E6F2',
+            borderRadius: '12px',
             backgroundColor: '#ffffff'
           }}>
-            {/* Table Header: Cyan / Sky Blue matching Image 1 */}
+            {/* Table Header */}
             <thead>
               <tr style={{
-                backgroundColor: '#00a2e8',
-                color: '#000000',
-                borderBottom: '2px solid #000000',
+                backgroundColor: '#14245C',
+                color: '#ffffff',
+                borderBottom: '2px solid #14245C',
                 fontWeight: '800',
-                fontSize: '13px'
+                fontSize: '12.5px'
               }}>
-                <th style={{ padding: '10px 14px', width: '180px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                <th style={{ padding: '12px 14px', width: '185px', textAlign: 'left', borderRight: '1px solid rgba(255,255,255,0.14)' }}>
                   Category
                 </th>
-                <th style={{ padding: '10px 16px', minWidth: '220px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+                <th style={{ padding: '12px 16px', minWidth: '220px', textAlign: 'left', borderRight: '1px solid rgba(255,255,255,0.14)' }}>
                   Description
                 </th>
 
-                {/* Display columns: If 'excel_grid', show all periods; if 'single_month', show active month */}
-                {activeSubTab === 'excel_grid' ? (
-                  periods.map(p => {
-                    const isSel = String(p.id) === currStr;
-                    return (
-                      <th
-                        key={p.id}
-                        style={{
-                          padding: '10px 14px',
-                          minWidth: '125px',
-                          textAlign: 'center',
-                          borderRight: '1px solid #000000',
-                          backgroundColor: isSel ? '#0ea5e9' : '#00a2e8',
-                          color: '#000000',
-                          fontWeight: '800'
-                        }}
-                      >
-                        {p.period_label} {isSel && '★'}
-                      </th>
-                    );
-                  })
-                ) : (
-                  <th style={{ padding: '10px 16px', minWidth: '150px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#0ea5e9' }}>
-                    {activePeriodObj?.period_label} • Amount (₹)
-                  </th>
-                )}
+                {periods.map(p => {
+                  const isSel = String(p.id) === currStr;
+                  return (
+                    <th
+                      key={p.id}
+                      style={{
+                        padding: '12px 14px',
+                        minWidth: '130px',
+                        textAlign: 'right',
+                        borderRight: '1px solid rgba(255,255,255,0.14)',
+                        backgroundColor: isSel ? '#2F4BB8' : '#14245C',
+                        color: '#ffffff',
+                        fontWeight: '800'
+                      }}
+                    >
+                      {p.period_label} {isSel && '★'}
+                    </th>
+                  );
+                })}
 
-                <th style={{ padding: '10px 16px', width: '130px', textAlign: 'center', borderRight: '1px solid #000000', backgroundColor: '#0284c7', color: '#ffffff' }}>
-                  Total Spend
+                <th style={{ padding: '12px 16px', width: '135px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.14)', backgroundColor: '#10183A', color: '#F5A524' }}>
+                  Total spend
                 </th>
-                <th style={{ padding: '10px 10px', width: '70px', textAlign: 'center' }}>
+                <th style={{ padding: '12px 10px', width: '70px', textAlign: 'center' }}>
                   Action
                 </th>
               </tr>
@@ -836,53 +820,55 @@ export default function FoodSpreadsheetEntry({
                       });
 
                       return (
-                        <tr key={item.cost_head_id} style={{ borderBottom: '1px solid #000000' }}>
-                          {/* Merged Category Column on the first row of category */}
+                        <tr key={item.cost_head_id} style={{ borderBottom: '1px solid #EDF0F8', backgroundColor: '#ffffff' }}>
+                          {/* Merged Category Column on the first row of category with 5px coloured left bar */}
                           {itemIdx === 0 && (
                             <td
                               rowSpan={allItemsCount > 0 ? allItemsCount : 1}
                               style={{
                                 padding: '12px 14px',
-                                textAlign: 'center',
+                                textAlign: 'left',
                                 verticalAlign: 'middle',
                                 backgroundColor: colorTheme.headerBg,
                                 color: colorTheme.text,
                                 fontWeight: '800',
-                                fontSize: '13.5px',
-                                borderRight: '1px solid #000000',
-                                borderBottom: '1px solid #000000'
+                                fontSize: '13px',
+                                borderLeft: `5px solid ${colorTheme.barColor}`,
+                                borderRight: '1px solid #EDF0F8',
+                                borderBottom: '1px solid #EDF0F8'
                               }}
                             >
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
                                 {cat.category_type === 'FORMULA' && (
                                   <span
                                     title={`Auto-calculated Formula: ${cat.formula_expression || ''}`}
                                     style={{
-                                      fontSize: '9.5px',
+                                      fontSize: '10px',
                                       fontWeight: '800',
-                                      backgroundColor: '#312e81',
-                                      color: '#e0e7ff',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
+                                      backgroundColor: '#EFE9FB',
+                                      color: '#5B34B5',
+                                      padding: '2px 7px',
+                                      borderRadius: '6px',
                                       letterSpacing: '0.03em',
                                       whiteSpace: 'nowrap'
                                     }}
                                   >
-                                    📐 fx FORMULA
+                                    fx FORMULA
                                   </span>
                                 )}
                                 <input
                                   type="text"
+                                  aria-label={`Category name ${catDisplayName}`}
                                   value={catDisplayName}
                                   onChange={(e) => handleCategoryNameChange(cat.category_id, e.target.value)}
                                   style={{
                                     width: '100%',
-                                    textAlign: 'center',
+                                    textAlign: 'left',
                                     fontWeight: '800',
                                     backgroundColor: 'transparent',
-                                    border: '1px dashed rgba(0,0,0,0.3)',
-                                    borderRadius: '4px',
-                                    padding: '3px 4px',
+                                    border: '1px dashed rgba(20, 36, 92, 0.22)',
+                                    borderRadius: '6px',
+                                    padding: '4px 6px',
                                     fontSize: '13px',
                                     color: colorTheme.text
                                   }}
@@ -896,17 +882,18 @@ export default function FoodSpreadsheetEntry({
                                     style={{
                                       display: 'inline-flex',
                                       alignItems: 'center',
-                                      gap: '2px',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      backgroundColor: 'rgba(0,0,0,0.08)',
-                                      border: '1px solid rgba(0,0,0,0.15)',
-                                      fontSize: '10.5px',
+                                      gap: '3px',
+                                      padding: '3px 8px',
+                                      borderRadius: '6px',
+                                      backgroundColor: '#ffffff',
+                                      color: '#14245C',
+                                      border: '1px solid #D5DCEE',
+                                      fontSize: '11px',
                                       fontWeight: '700',
                                       cursor: 'pointer'
                                     }}
                                   >
-                                    <Plus size={10} /> Add Row
+                                    <Plus size={11} /> Row
                                   </button>
                                 )}
                               </div>
@@ -915,110 +902,84 @@ export default function FoodSpreadsheetEntry({
 
                           {/* Editable Description Column */}
                           <td style={{
-                            padding: '6px 12px',
-                            backgroundColor: colorTheme.headerBg,
-                            fontWeight: '700',
-                            color: '#000000',
-                            borderRight: '1px solid #000000'
+                            padding: '8px 12px',
+                            backgroundColor: '#ffffff',
+                            fontWeight: '600',
+                            color: '#14245C',
+                            borderRight: '1px solid #EDF0F8'
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <input
                                 type="text"
+                                aria-label={`Description ${itemDisplayName}`}
                                 value={itemDisplayName}
                                 onChange={(e) => handleCostHeadNameChange(item.cost_head_id, e.target.value)}
                                 style={{
                                   width: '100%',
-                                  padding: '4px 6px',
-                                  borderRadius: '4px',
-                                  border: '1px dashed rgba(0,0,0,0.25)',
-                                  backgroundColor: 'rgba(255,255,255,0.7)',
-                                  fontWeight: '700',
+                                  height: '38px',
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  border: '1px solid #D5DCEE',
+                                  backgroundColor: '#ffffff',
+                                  fontWeight: '600',
                                   fontSize: '12.5px',
-                                  color: '#000000'
+                                  color: '#14245C'
                                 }}
                                 title="Click to edit line item description"
                               />
                             </div>
                           </td>
 
-                          {/* Data Cells: Peach/Cream Background with Crisp Borders */}
-                          {activeSubTab === 'excel_grid' ? (
-                            periods.map(p => {
-                              const amt = getCellAmount(item.cost_head_id, p.id);
-                              const isSel = String(p.id) === currStr;
-                              return (
-                                <td
-                                  key={p.id}
-                                  style={{
-                                    padding: '4px 8px',
-                                    textAlign: 'right',
-                                    backgroundColor: isSel ? '#ffedd5' : '#fff2df',
-                                    borderRight: '1px solid #000000'
-                                  }}
-                                >
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={amt || ''}
-                                    onChange={(e) => handleCellChange(item.cost_head_id, p.id, e.target.value)}
-                                    disabled={isClosed || cat.category_type === 'FORMULA'}
-                                    title={cat.category_type === 'FORMULA' ? `Auto-calculated by formula: ${cat.formula_expression || ''}` : ''}
-                                    style={{
-                                      width: '100%',
-                                      textAlign: 'right',
-                                      padding: '4px 6px',
-                                      borderRadius: '4px',
-                                      border: isSel ? '1.5px solid #6c56db' : '1px solid #cbd5e1',
-                                      backgroundColor: cat.category_type === 'FORMULA' ? '#ecfdf5' : '#ffffff',
-                                      fontWeight: '700',
-                                      color: cat.category_type === 'FORMULA' ? '#15803d' : '#000000',
-                                      fontSize: '12.5px',
-                                      cursor: cat.category_type === 'FORMULA' ? 'not-allowed' : 'text'
-                                    }}
-                                    className="currency-font"
-                                  />
-                                </td>
-                              );
-                            })
-                          ) : (
-                            <td style={{
-                              padding: '4px 10px',
-                              textAlign: 'right',
-                              backgroundColor: '#ffedd5',
-                              borderRight: '1px solid #000000'
-                            }}>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={getCellAmount(item.cost_head_id, editingPeriodId) || ''}
-                                onChange={(e) => handleCellChange(item.cost_head_id, editingPeriodId, e.target.value)}
-                                disabled={isClosed || cat.category_type === 'FORMULA'}
-                                title={cat.category_type === 'FORMULA' ? `Auto-calculated by formula: ${cat.formula_expression || ''}` : ''}
+                          {/* Data Cells */}
+                          {periods.map(p => {
+                            const amt = getCellAmount(item.cost_head_id, p.id);
+                            const isSel = String(p.id) === currStr;
+                            return (
+                              <td
+                                key={p.id}
                                 style={{
-                                  width: '100%',
+                                  padding: '6px 8px',
                                   textAlign: 'right',
-                                  padding: '4px 8px',
-                                  borderRadius: '4px',
-                                  border: '1.5px solid #6c56db',
-                                  backgroundColor: cat.category_type === 'FORMULA' ? '#ecfdf5' : '#ffffff',
-                                  fontWeight: '800',
-                                  color: cat.category_type === 'FORMULA' ? '#15803d' : '#000000',
-                                  fontSize: '13px',
-                                  cursor: cat.category_type === 'FORMULA' ? 'not-allowed' : 'text'
+                                  backgroundColor: isSel ? '#EAF0FF' : '#ffffff',
+                                  borderRight: '1px solid #EDF0F8'
                                 }}
-                                className="currency-font"
-                              />
-                            </td>
-                          )}
+                              >
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  aria-label={`${itemDisplayName} ${p.period_label}`}
+                                  value={amt || ''}
+                                  onChange={(e) => handleCellChange(item.cost_head_id, p.id, e.target.value)}
+                                  disabled={isClosed || cat.category_type === 'FORMULA'}
+                                  title={cat.category_type === 'FORMULA' ? `Auto-calculated by formula: ${cat.formula_expression || ''}` : ''}
+                                  style={{
+                                    width: '100%',
+                                    height: '38px',
+                                    textAlign: 'right',
+                                    padding: '6px 10px',
+                                    borderRadius: '8px',
+                                    border: isSel ? '1.5px solid #2F4BB8' : '1px solid #D5DCEE',
+                                    backgroundColor: cat.category_type === 'FORMULA' ? '#F5F3FF' : '#ffffff',
+                                    fontWeight: '700',
+                                    color: cat.category_type === 'FORMULA' ? '#5B34B5' : '#14245C',
+                                    fontSize: '12.5px',
+                                    cursor: cat.category_type === 'FORMULA' ? 'not-allowed' : 'text',
+                                    boxSizing: 'border-box'
+                                  }}
+                                  className="currency-font"
+                                />
+                              </td>
+                            );
+                          })}
 
                           {/* Total Spend */}
                           <td style={{
-                            padding: '6px 14px',
+                            padding: '8px 14px',
                             textAlign: 'right',
                             fontWeight: '800',
-                            backgroundColor: '#fafafa',
-                            color: '#000000',
-                            borderRight: '1px solid #000000'
+                            backgroundColor: '#F7F9FD',
+                            color: '#14245C',
+                            borderRight: '1px solid #EDF0F8'
                           }} className="currency-font">
                             {formatINR(itemTotal)}
                           </td>
@@ -1141,123 +1102,105 @@ export default function FoodSpreadsheetEntry({
                       );
                     })}
 
-                    {/* CATEGORY SUBTOTAL ROW: Bright Green matching Image 1 */}
+                    {/* CATEGORY SUBTOTAL ROW: Pale tint of category colour, bold text, no input */}
                     <tr style={{
-                      backgroundColor: '#00ff00',
-                      color: '#000000',
-                      borderTop: '2px solid #000000',
-                      borderBottom: '2px solid #000000',
+                      backgroundColor: colorTheme.totalBg,
+                      color: colorTheme.totalText,
+                      borderTop: '1px solid #D5DCEE',
+                      borderBottom: '1px solid #D5DCEE',
                       fontWeight: '800',
                       fontSize: '13px'
                     }}>
                       <td colSpan={2} style={{
-                        padding: '9px 18px',
-                        textAlign: 'center',
-                        borderRight: '1px solid #000000',
-                        letterSpacing: '0.02em'
+                        padding: '10px 16px',
+                        textAlign: 'left',
+                        borderLeft: `5px solid ${colorTheme.barColor}`,
+                        borderRight: '1px solid #D5DCEE',
+                        letterSpacing: '0.01em'
                       }}>
                         Total {cat.category_name}
                       </td>
 
                       {/* Subtotal columns per period */}
-                      {activeSubTab === 'excel_grid' ? (
-                        periods.map(p => {
-                          const subVal = categorySubtotals[cat.category_id]?.[p.id] || 0;
-                          return (
-                            <td
-                              key={p.id}
-                              style={{
-                                padding: '9px 12px',
-                                textAlign: 'right',
-                                borderRight: '1px solid #000000',
-                                fontWeight: '800'
-                              }}
-                              className="currency-font"
-                            >
-                              {formatINR(subVal)}
-                            </td>
-                          );
-                        })
-                      ) : (
-                        <td style={{
-                          padding: '9px 14px',
-                          textAlign: 'right',
-                          borderRight: '1px solid #000000',
-                          fontWeight: '800'
-                        }} className="currency-font">
-                          {formatINR(categorySubtotals[cat.category_id]?.[editingPeriodId] || 0)}
-                        </td>
-                      )}
+                      {periods.map(p => {
+                        const subVal = categorySubtotals[cat.category_id]?.[p.id] || 0;
+                        const isSel = String(p.id) === currStr;
+                        return (
+                          <td
+                            key={p.id}
+                            style={{
+                              padding: '10px 12px',
+                              textAlign: 'right',
+                              borderRight: '1px solid #D5DCEE',
+                              backgroundColor: isSel ? '#EAF0FF' : 'transparent',
+                              fontWeight: '800'
+                            }}
+                            className="currency-font"
+                          >
+                            {formatINR(subVal)}
+                          </td>
+                        );
+                      })}
 
                       {/* Overall Category Total */}
                       <td style={{
-                        padding: '9px 14px',
+                        padding: '10px 14px',
                         textAlign: 'right',
-                        borderRight: '1px solid #000000',
+                        borderRight: '1px solid #D5DCEE',
                         fontWeight: '800'
                       }} className="currency-font">
                         {formatINR(
                           periods.reduce((acc, p) => acc + (categorySubtotals[cat.category_id]?.[p.id] || 0), 0)
                         )}
                       </td>
-                      <td style={{ padding: '9px 8px' }}></td>
+                      <td style={{ padding: '10px 8px' }}></td>
                     </tr>
                   </React.Fragment>
                 );
               })}
 
-              {/* BOTTOM GRAND TOTAL ROW: Deep Emerald / Teal matching Image 1 */}
+              {/* BOTTOM GRAND TOTAL ROW: Dark #10183A with white bold text */}
               <tr style={{
-                backgroundColor: '#00b894',
-                color: '#000000',
-                borderTop: '3px solid #000000',
-                fontWeight: '900',
+                backgroundColor: '#10183A',
+                color: '#ffffff',
+                borderTop: '2px solid #14245C',
+                fontWeight: '800',
                 fontSize: '13.5px'
               }}>
                 <td colSpan={2} style={{
                   padding: '12px 18px',
-                  textAlign: 'center',
-                  borderRight: '1px solid #000000',
-                  letterSpacing: '0.04em'
+                  textAlign: 'left',
+                  borderRight: '1px solid rgba(255,255,255,0.14)',
+                  letterSpacing: '0.02em'
                 }}>
                   Total Expenses
                 </td>
 
                 {/* Grand Total per period */}
-                {activeSubTab === 'excel_grid' ? (
-                  periods.map(p => {
-                    const gVal = grandTotalsByPeriod.totals[p.id] || 0;
-                    return (
-                      <td
-                        key={p.id}
-                        style={{
-                          padding: '12px 12px',
-                          textAlign: 'right',
-                          borderRight: '1px solid #000000',
-                          fontWeight: '900'
-                        }}
-                        className="currency-font"
-                      >
-                        {formatINR(gVal)}
-                      </td>
-                    );
-                  })
-                ) : (
-                  <td style={{
-                    padding: '12px 14px',
-                    textAlign: 'right',
-                    borderRight: '1px solid #000000',
-                    fontWeight: '900'
-                  }} className="currency-font">
-                    {formatINR(grandTotalsByPeriod.totals[editingPeriodId] || 0)}
-                  </td>
-                )}
+                {periods.map(p => {
+                  const gVal = grandTotalsByPeriod.totals[p.id] || 0;
+                  return (
+                    <td
+                      key={p.id}
+                      style={{
+                        padding: '12px 12px',
+                        textAlign: 'right',
+                        borderRight: '1px solid rgba(255,255,255,0.14)',
+                        fontWeight: '800'
+                      }}
+                      className="currency-font"
+                    >
+                      {formatINR(gVal)}
+                    </td>
+                  );
+                })}
 
                 <td style={{
                   padding: '12px 14px',
                   textAlign: 'right',
-                  borderRight: '1px solid #000000',
-                  fontWeight: '900'
+                  borderRight: '1px solid rgba(255,255,255,0.14)',
+                  fontWeight: '800',
+                  color: '#F5A524'
                 }} className="currency-font">
                   {formatINR(grandTotalsByPeriod.overallGrand)}
                 </td>

@@ -89,44 +89,44 @@ export default function HostelExecutiveKpis({
   const costPerStudentDay = costPerStudentMonth > 0 ? (costPerStudentMonth / 30) : 0;
 
   const kpis = [
-    {
-      label: 'Total Bed Capacity',
-      value: bedCapacity > 0 ? bedCapacity.toLocaleString() : '—',
-      sub: `${num(census.bed_capacity_boys, 0)} Boys • ${num(census.bed_capacity_girls, 0)} Girls`,
-      icon: BedDouble,
-      color: '#059669',
-      bg: '#ecfdf5',
-      border: '#a7f3d0'
-    },
-    {
-      label: 'Occupied Beds',
-      value: totalOccupied > 0 ? totalOccupied.toLocaleString() : '—',
-      sub: isAllMonths 
-        ? `${totalOccupied.toLocaleString()} Latest • ${num(census.students_total, 0)} Students • ${num(census.staff_total, 0)} Staff`
-        : `${num(census.students_total, 0)} Students • ${num(census.staff_total, 0)} Staff`,
-      icon: Users,
-      color: '#2563eb',
-      bg: '#eff6ff',
-      border: '#bfdbfe'
-    },
-    {
-      label: 'Total Vacant Beds',
-      value: vacantBeds.toLocaleString(),
-      sub: `${num(census.vacant_boys, 0)} Boys • ${num(census.vacant_girls, 0)} Girls free`,
-      icon: UserCheck,
-      color: '#0d9488',
-      bg: '#f0fdfa',
-      border: '#99f6e4'
-    },
-    {
-      label: 'Occupancy Rate',
-      value: bedCapacity > 0 ? `${occupancyPct.toFixed(1)}%` : '—',
-      sub: bedCapacity > 0 ? `Free beds: ${(100 - occupancyPct).toFixed(1)}%` : 'No capacity logged',
-      icon: PieChart,
-      color: '#4f46e5',
-      bg: '#eef2ff',
-      border: '#c7d2fe'
-    },
+    ...(!isAllMonths ? [
+      {
+        label: 'Total Bed Capacity',
+        value: bedCapacity > 0 ? bedCapacity.toLocaleString() : '—',
+        sub: `${num(census.bed_capacity_boys, 0)} Boys • ${num(census.bed_capacity_girls, 0)} Girls`,
+        icon: BedDouble,
+        color: '#059669',
+        bg: '#ecfdf5',
+        border: '#a7f3d0'
+      },
+      {
+        label: 'Occupied Beds',
+        value: totalOccupied > 0 ? totalOccupied.toLocaleString() : '—',
+        sub: `${num(census.students_total, 0)} Students • ${num(census.staff_total, 0)} Staff`,
+        icon: Users,
+        color: '#2563eb',
+        bg: '#eff6ff',
+        border: '#bfdbfe'
+      },
+      {
+        label: 'Total Vacant Beds',
+        value: vacantBeds.toLocaleString(),
+        sub: `${num(census.vacant_boys, 0)} Boys • ${num(census.vacant_girls, 0)} Girls free`,
+        icon: UserCheck,
+        color: '#0d9488',
+        bg: '#f0fdfa',
+        border: '#99f6e4'
+      },
+      {
+        label: 'Occupancy Rate',
+        value: bedCapacity > 0 ? `${occupancyPct.toFixed(1)}%` : '—',
+        sub: bedCapacity > 0 ? `Free beds: ${(100 - occupancyPct).toFixed(1)}%` : 'No capacity logged',
+        icon: PieChart,
+        color: '#4f46e5',
+        bg: '#eef2ff',
+        border: '#c7d2fe'
+      }
+    ] : []),
     {
       label: 'New Admissions',
       value: prevResidents > 0 ? `+${newAdmissions.toLocaleString()}` : '—',
