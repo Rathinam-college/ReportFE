@@ -7,14 +7,14 @@ import {
 } from 'lucide-react';
 
 export const CANONICAL_FOOD_BUDGET_HEADS = [
-  { s_no: 1, budget_head: 'Food Material', sanctioned_amount: 105000000.0, month_limit: 8750000.0 },
-  { s_no: 2, budget_head: 'Food Team Salary', sanctioned_amount: 36000000.0, month_limit: 3000000.0 },
-  { s_no: 3, budget_head: 'Contract Labour Expenses', sanctioned_amount: 4800000.0, month_limit: 400000.0 },
-  { s_no: 4, budget_head: 'Catering Vendor Expenses', sanctioned_amount: 6000000.0, month_limit: 500000.0 },
-  { s_no: 5, budget_head: 'FC Maintenance/Power/Water/Vehicle', sanctioned_amount: 6600000.0, month_limit: 550000.0 },
-  { s_no: 6, budget_head: 'Event/Additional Food', sanctioned_amount: 3000000.0, month_limit: 250000.0 },
-  { s_no: 7, budget_head: 'Food Festival', sanctioned_amount: 6000000.0, month_limit: 500000.0 },
-  { s_no: 8, budget_head: 'Staff Welfare', sanctioned_amount: 1800000.0, month_limit: 150000.0 }
+  { s_no: 1, budget_head: 'Food Material', sanctioned_amount: 126608030.0, month_limit: 0.0 },
+  { s_no: 2, budget_head: 'Food Team Salary', sanctioned_amount: 23020132.0, month_limit: 0.0 },
+  { s_no: 3, budget_head: 'Contract Labour Expenses', sanctioned_amount: 11292833.0, month_limit: 0.0 },
+  { s_no: 4, budget_head: 'Catering Vendor Expenses', sanctioned_amount: 5486000.0, month_limit: 0.0 },
+  { s_no: 5, budget_head: 'FC Maintenance/Power/Water/Vehicle', sanctioned_amount: 6170173.0, month_limit: 0.0 },
+  { s_no: 6, budget_head: 'Event/Additional Food', sanctioned_amount: 2263630.0, month_limit: 0.0 },
+  { s_no: 7, budget_head: 'Food Festival', sanctioned_amount: 2531639.0, month_limit: 0.0 },
+  { s_no: 8, budget_head: 'Staff Welfare', sanctioned_amount: 325000.0, month_limit: 0.0 }
 ];
 
 export const FOOD_MONTH_COLS = [

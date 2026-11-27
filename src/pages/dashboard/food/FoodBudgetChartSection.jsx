@@ -5,16 +5,16 @@ import { CANONICAL_FOOD_BUDGET_HEADS, FOOD_MONTH_COLS } from '../../data_entry/f
 
 const mapFoodPeriodToColKey = (pObj) => {
   if (!pObj) return null;
+  const label = `${pObj.period_code || ''} ${pObj.period_label || ''}`.toLowerCase();
+  if (label.includes('jun') || label.includes('-06')) return 'jun_26_actual';
+  if (label.includes('jul') || label.includes('-07')) return 'jul_26_actual';
+  if (label.includes('aug') || label.includes('-08')) return 'aug_26_actual';
+  if (label.includes('sep') || label.includes('-09')) return 'sep_26_actual';
+  if (label.includes('oct') || label.includes('-10')) return 'oct_26_actual';
+  if (label.includes('nov') || label.includes('-11')) return 'nov_26_actual';
+  if (label.includes('dec') || label.includes('-12')) return 'dec_26_actual';
   const found = FOOD_MONTH_COLS.find(c => String(c.periodId) === String(pObj.id));
   if (found) return found.key;
-  const code = (pObj.period_code || pObj.period_label || '').toLowerCase();
-  if (code.includes('jun')) return 'jun_26_actual';
-  if (code.includes('jul')) return 'jul_26_actual';
-  if (code.includes('aug')) return 'aug_26_actual';
-  if (code.includes('sep')) return 'sep_26_actual';
-  if (code.includes('oct')) return 'oct_26_actual';
-  if (code.includes('nov')) return 'nov_26_actual';
-  if (code.includes('dec')) return 'dec_26_actual';
   return `period_${pObj.id}_actual`;
 };
 
@@ -61,10 +61,9 @@ export default function FoodBudgetChartSection({
   useEffect(() => {
     if (computedMatrix?.food_budget_tracking && Array.isArray(computedMatrix.food_budget_tracking) && computedMatrix.food_budget_tracking.length > 0) {
       setBudgetData(computedMatrix.food_budget_tracking);
-    } else {
-      fetchBudget();
     }
-  }, [computedMatrix?.food_budget_tracking]);
+    fetchBudget();
+  }, [computedMatrix?.food_budget_tracking, activePeriod]);
 
   // Dynamic month columns derived from live periods (or canonical FOOD_MONTH_COLS fallback)
   const allFoodMonthCols = useMemo(() => {
