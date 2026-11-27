@@ -203,14 +203,8 @@ export default function FoodBudgetChartSection({
               <Wallet size={22} color="#fbbf24" />
             </div>
             <div>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: '#fbbf24', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '2px' }}>
-                Official Food Operations Budget Tracking Ledger ({periodRangeLabel})
-              </div>
               <div style={{ fontSize: '18px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
                 Budget Allocation &amp; Expenditure Ledger
-              </div>
-              <div style={{ fontSize: '11.5px', color: '#a5b4fc', marginTop: '3px', fontWeight: '600' }}>
-                {budgetData.length} Budget Heads &nbsp;&bull;&nbsp; {visibleMonthCols.length} Months &nbsp;&bull;&nbsp; Focus: <span style={{ color: '#fbbf24' }}>{activePeriodLabel}</span>
               </div>
             </div>
           </div>
