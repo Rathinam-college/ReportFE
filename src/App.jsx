@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 // Common Components
 import LoginPage from './components/auth/LoginPage';
@@ -39,9 +39,9 @@ export default function App() {
   // --------------------------------------------------------------------------
   const [activeTab, setActiveTab] = useState(() => {
     try {
-      const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (['dashboard', 'data_entry', 'master_data', 'settings'].includes(hash)) {
-        return hash;
+      const [hashTab] = window.location.hash.replace('#', '').toLowerCase().split('/');
+      if (['dashboard', 'data_entry', 'master_data', 'settings'].includes(hashTab)) {
+        return hashTab;
       }
       const savedTab = localStorage.getItem('rathinam_active_tab');
       if (savedTab && ['dashboard', 'data_entry', 'master_data', 'settings'].includes(savedTab)) {
@@ -55,6 +55,8 @@ export default function App() {
 
   const [dashboardSubTab, setDashboardSubTab] = useState(() => {
     try {
+      const [hashTab, hashSub] = window.location.hash.replace('#', '').toLowerCase().split('/');
+      if (hashTab === 'dashboard' && hashSub) return hashSub;
       return localStorage.getItem('rathinam_dashboard_subtab') || 'food';
     } catch {
       return 'food';
@@ -63,6 +65,8 @@ export default function App() {
 
   const [dataEntrySubTab, setDataEntrySubTab] = useState(() => {
     try {
+      const [hashTab, hashSub] = window.location.hash.replace('#', '').toLowerCase().split('/');
+      if (hashTab === 'data_entry' && hashSub) return hashSub;
       return localStorage.getItem('rathinam_data_entry_subtab') || 'food';
     } catch {
       return 'food';
@@ -71,11 +75,15 @@ export default function App() {
 
   const [masterDataSubTab, setMasterDataSubTab] = useState(() => {
     try {
+      const [hashTab, hashSub] = window.location.hash.replace('#', '').toLowerCase().split('/');
+      if (hashTab === 'master_data' && hashSub) return hashSub;
       return localStorage.getItem('rathinam_master_subtab') || 'food';
     } catch {
       return 'food';
     }
   });
+
+  const mainWorkspaceRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [dbStatus, setDbStatus] = useState('checking');
@@ -190,25 +198,47 @@ export default function App() {
     if (activeTab) {
       try {
         localStorage.setItem('rathinam_active_tab', activeTab);
-        if (window.location.hash !== `#${activeTab}`) {
-          window.location.hash = activeTab;
+        const subTab =
+          activeTab === 'dashboard'
+            ? dashboardSubTab
+            : activeTab === 'data_entry'
+              ? dataEntrySubTab
+              : activeTab === 'master_data'
+                ? masterDataSubTab
+                : '';
+        const targetHash = subTab ? `${activeTab}/${subTab}` : activeTab;
+        if (window.location.hash !== `#${targetHash}`) {
+          window.location.hash = targetHash;
         }
       } catch (err) {
         console.error('Error syncing tab:', err);
       }
     }
-  }, [activeTab]);
+  }, [activeTab, dashboardSubTab, dataEntrySubTab, masterDataSubTab]);
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (['dashboard', 'data_entry', 'master_data', 'settings'].includes(hash)) {
-        setActiveTab(hash);
+      const [hashTab, hashSub] = window.location.hash.replace('#', '').toLowerCase().split('/');
+      if (['dashboard', 'data_entry', 'master_data', 'settings'].includes(hashTab)) {
+        setActiveTab(hashTab);
+        if (hashSub) {
+          if (hashTab === 'dashboard') setDashboardSubTab(hashSub);
+          else if (hashTab === 'data_entry') setDataEntrySubTab(hashSub);
+          else if (hashTab === 'master_data') setMasterDataSubTab(hashSub);
+        }
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  // Scroll to top whenever user navigates to another page or module
+  useEffect(() => {
+    if (mainWorkspaceRef.current) {
+      mainWorkspaceRef.current.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [activeTab, dashboardSubTab, dataEntrySubTab, masterDataSubTab]);
 
   useEffect(() => {
     if (dashboardSubTab) {
@@ -1725,6 +1755,7 @@ export default function App() {
 
         {/* Main Page Workspace */}
         <main 
+          ref={mainWorkspaceRef}
           className="bento-main-workspace"
           style={{
             flex: 1,
