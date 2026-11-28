@@ -549,8 +549,8 @@ export default function TransportOperationsDashboard({
       ...(isUniversity ? [{ id: 'cctv_replacement', name: 'CCTV replacement', color: '#7c3aed' }] : []),
       { id: 'employee_cost', name: 'Transport Employees Cost', color: '#6366f1' },
       ...(isUniversity ? [{ id: 'parking_fastag', name: 'Vehicle Parking & Fastag Recharge', color: '#d97706' }] : []),
-      { id: 'students_count', name: 'Students count', color: '#06b6d4', isPersonCategory: true },
-      { id: 'total_expenses', name: 'Total Expenses', color: '#14245C', isTotalCard: true }
+      { id: 'total_expenses', name: 'Total Expenses', color: '#14245C', isTotalCard: true },
+      { id: 'students_count', name: 'Students count', color: '#06b6d4', isPersonCategory: true }
     ];
 
     const denom = currentGrandTotal > 0 ? currentGrandTotal : 1;
