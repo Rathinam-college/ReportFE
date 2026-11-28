@@ -539,15 +539,16 @@ export default function TransportOperationsDashboard({
 
   // Parameter-based Bento Category Cards for Transport
   const transportCategories = useMemo(() => {
+    const isUniversity = activeBranch === 'University';
     const paramDefs = [
       { id: 'fuel_expenses', name: 'Fuel expenses (Rs)', color: '#ea580c' },
       { id: 'fc_cost', name: 'FC 2025-2026', color: '#0d9488' },
       { id: 'statutory_cost', name: 'Vehicle Statutory', color: '#10b981' },
       { id: 'repair_maintenance_cost', name: 'Repair & Maintenance', color: '#0284c7' },
       { id: 'other_cost', name: 'Others', color: '#f59e0b' },
-      { id: 'cctv_replacement', name: 'CCTV replacement', color: '#7c3aed' },
+      ...(isUniversity ? [{ id: 'cctv_replacement', name: 'CCTV replacement', color: '#7c3aed' }] : []),
       { id: 'employee_cost', name: 'Transport Employees Cost', color: '#6366f1' },
-      { id: 'parking_fastag', name: 'Vehicle Parking & Fastag Recharge', color: '#d97706' },
+      ...(isUniversity ? [{ id: 'parking_fastag', name: 'Vehicle Parking & Fastag Recharge', color: '#d97706' }] : []),
       { id: 'students_count', name: 'Students count', color: '#06b6d4', isPersonCategory: true },
       { id: 'total_expenses', name: 'Total Expenses', color: '#14245C', isTotalCard: true }
     ];
@@ -1023,6 +1024,7 @@ export default function TransportOperationsDashboard({
               branch={activeBranch}
               embedded={true}
               readOnly={true}
+              hideFuelMileage={true}
             />
           </div>
 
@@ -1527,6 +1529,7 @@ export default function TransportOperationsDashboard({
             branch={activeBranch}
             embedded={true}
             readOnly={true}
+            hideFuelMileage={true}
           />
         </div>
       )}

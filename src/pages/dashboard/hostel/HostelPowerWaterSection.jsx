@@ -69,12 +69,12 @@ export default function HostelPowerWaterSection({
       normal_water_litres: nwLtr,
       normal_water_cost: nwCost,
       students,
-      normal_water_ltr_day: c.normal_water_ltr_day !== undefined ? num(c.normal_water_ltr_day) : (students > 0 ? nwLtr / students / 30 : 0),
-      normal_water_cost_day: c.normal_water_cost_day !== undefined ? num(c.normal_water_cost_day) : (students > 0 ? nwCost / students / 30 : 0),
+      normal_water_ltr_day: c.normal_water_ltr_day !== undefined ? num(c.normal_water_ltr_day) : (occ > 0 ? nwLtr / occ / 30 : 0),
+      normal_water_cost_day: c.normal_water_cost_day !== undefined ? num(c.normal_water_cost_day) : (occ > 0 ? nwCost / occ / 30 : 0),
       drinking_water_litres: dwLtr,
       drinking_water_cost: dwCost,
-      drinking_water_ltr_day: c.drinking_water_ltr_day !== undefined ? num(c.drinking_water_ltr_day) : (students > 0 ? dwLtr / students / 30 : 0),
-      drinking_water_cost_day: c.drinking_water_cost_day !== undefined ? num(c.drinking_water_cost_day) : (students > 0 ? dwCost / students / 30 : 0),
+      drinking_water_ltr_day: c.drinking_water_ltr_day !== undefined ? num(c.drinking_water_ltr_day) : (occ > 0 ? dwLtr / occ / 30 : 0),
+      drinking_water_cost_day: c.drinking_water_cost_day !== undefined ? num(c.drinking_water_cost_day) : (occ > 0 ? dwCost / occ / 30 : 0),
     };
   };
 
@@ -107,12 +107,12 @@ export default function HostelPowerWaterSection({
       normal_water_litres: nwLtr,
       normal_water_cost: nwCost,
       students: Math.round(avgStu),
-      normal_water_ltr_day: avgStu > 0 ? nwLtr / avgStu / (30 * monthsCount) : 0,
-      normal_water_cost_day: avgStu > 0 ? nwCost / avgStu / (30 * monthsCount) : 0,
+      normal_water_ltr_day: avgOcc > 0 ? nwLtr / avgOcc / (30 * monthsCount) : 0,
+      normal_water_cost_day: avgOcc > 0 ? nwCost / avgOcc / (30 * monthsCount) : 0,
       drinking_water_litres: dwLtr,
       drinking_water_cost: dwCost,
-      drinking_water_ltr_day: avgStu > 0 ? dwLtr / avgStu / (30 * monthsCount) : 0,
-      drinking_water_cost_day: avgStu > 0 ? dwCost / avgStu / (30 * monthsCount) : 0,
+      drinking_water_ltr_day: avgOcc > 0 ? dwLtr / avgOcc / (30 * monthsCount) : 0,
+      drinking_water_cost_day: avgOcc > 0 ? dwCost / avgOcc / (30 * monthsCount) : 0,
       // Monthly averages
       avg_power_units: pUnits / monthsCount,
       avg_power_cost: pCost / monthsCount,
@@ -220,10 +220,10 @@ export default function HostelPowerWaterSection({
         },
         {
           key: 'students_nw',
-          label: 'No of Students in Hostels',
-          fmt: (m) => Math.round(m.students).toLocaleString('en-IN'),
+          label: 'No of Staff + Students in Hostels',
+          fmt: (m) => Math.round(m.occupants).toLocaleString('en-IN'),
           fmtTotal: () => '—',
-          fmtAvg: (s) => (s.students > 0 ? Math.round(s.students).toLocaleString('en-IN') : '—'),
+          fmtAvg: (s) => (s.occupants > 0 ? Math.round(s.occupants).toLocaleString('en-IN') : '—'),
         },
         {
           key: 'normal_water_ltr_day',
@@ -271,10 +271,10 @@ export default function HostelPowerWaterSection({
         },
         {
           key: 'students_dw',
-          label: 'No of Students in Hostels',
-          fmt: (m) => Math.round(m.students).toLocaleString('en-IN'),
+          label: 'No of Staff + Students in Hostels',
+          fmt: (m) => Math.round(m.occupants).toLocaleString('en-IN'),
           fmtTotal: () => '—',
-          fmtAvg: (s) => (s.students > 0 ? Math.round(s.students).toLocaleString('en-IN') : '—'),
+          fmtAvg: (s) => (s.occupants > 0 ? Math.round(s.occupants).toLocaleString('en-IN') : '—'),
         },
         {
           key: 'drinking_water_ltr_day',

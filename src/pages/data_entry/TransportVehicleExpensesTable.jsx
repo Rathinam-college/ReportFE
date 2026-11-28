@@ -25,6 +25,7 @@ export default function TransportVehicleExpensesTable({
   onBranchChange = null,
   embedded = false,
   readOnly = false,
+  hideFuelMileage = false,
   isClosed: propIsClosed = null,
   handleToggleLock = null,
   onSyncCensus = null
@@ -157,10 +158,11 @@ export default function TransportVehicleExpensesTable({
       const fc = num(field === 'fc_cost' ? value : row.fc_cost);
       const stat = num(field === 'statutory_cost' ? value : row.statutory_cost);
       const rep = num(field === 'repair_maintenance' ? value : row.repair_maintenance);
+      const cctv = num(field === 'cctv_replacement' ? value : row.cctv_replacement);
       const park = num(field === 'parking_fastag' ? value : row.parking_fastag);
       const emp = num(field === 'employee_cost' ? value : row.employee_cost);
       const oth = num(field === 'other_cost' ? value : row.other_cost);
-      row.total_expenses = fuel + fc + stat + rep + park + emp + oth;
+      row.total_expenses = fuel + fc + stat + rep + cctv + park + emp + oth;
 
       // Live recalculate mileage
       const diesel = num(field === 'diesel_litres' ? value : row.diesel_litres);
@@ -189,6 +191,7 @@ export default function TransportVehicleExpensesTable({
       fc_cost: 0,
       statutory_cost: 0,
       repair_maintenance: 0,
+      cctv_replacement: 0,
       parking_fastag: 0,
       employee_cost: 0,
       other_cost: 0,
@@ -256,6 +259,7 @@ export default function TransportVehicleExpensesTable({
           fc_cost: num(v.fc_cost),
           statutory_cost: num(v.statutory_cost),
           repair_maintenance: num(v.repair_maintenance),
+          cctv_replacement: num(v.cctv_replacement),
           parking_fastag: num(v.parking_fastag),
           employee_cost: num(v.employee_cost),
           other_cost: num(v.other_cost),
@@ -300,7 +304,7 @@ export default function TransportVehicleExpensesTable({
     const headers = [
       'Vehicle', 'Branch', 'Make', 'Model', 
       'Fuel expenses', 'FC 2026-2027', 'Vehicle Statutory', 
-      'Vehicle Repair & Maintenance', 'Vehicle Parking & Fastag Recharge', 
+      'Vehicle Repair & Maintenance', 'CCTV Replacement', 'Vehicle Parking & Fastag Recharge', 
       'Transport Employees Cost', 'Others 26-27', 'Total Expenses', 
       'Diesel cons (L)', 'KM run', 'Mileage (km/L)'
     ];
@@ -314,6 +318,7 @@ export default function TransportVehicleExpensesTable({
       num(v.fc_cost),
       num(v.statutory_cost),
       num(v.repair_maintenance),
+      num(v.cctv_replacement),
       num(v.parking_fastag),
       num(v.employee_cost),
       num(v.other_cost),
@@ -333,6 +338,7 @@ export default function TransportVehicleExpensesTable({
       totals.fc,
       totals.statutory,
       totals.repair,
+      totals.cctv,
       totals.parking,
       totals.employee,
       totals.others,
@@ -367,7 +373,7 @@ export default function TransportVehicleExpensesTable({
 
   // Live Totals calculation for yellow row
   const totals = useMemo(() => {
-    let fuel = 0, fc = 0, statutory = 0, repair = 0, parking = 0, employee = 0, others = 0;
+    let fuel = 0, fc = 0, statutory = 0, repair = 0, cctv = 0, parking = 0, employee = 0, others = 0;
     let totalExp = 0, diesel = 0, km = 0;
 
     filteredVehicles.forEach(v => {
@@ -375,6 +381,7 @@ export default function TransportVehicleExpensesTable({
       fc += num(v.fc_cost);
       statutory += num(v.statutory_cost);
       repair += num(v.repair_maintenance);
+      cctv += num(v.cctv_replacement);
       parking += num(v.parking_fastag);
       employee += num(v.employee_cost);
       others += num(v.other_cost);
@@ -387,7 +394,7 @@ export default function TransportVehicleExpensesTable({
 
     return {
       count: filteredVehicles.length,
-      fuel, fc, statutory, repair, parking, employee, others,
+      fuel, fc, statutory, repair, cctv, parking, employee, others,
       totalExp, diesel, km, avgMileage
     };
   }, [filteredVehicles]);
@@ -1051,6 +1058,9 @@ export default function TransportVehicleExpensesTable({
               <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '110px' }}>
                 Vehicle Repair & Maintenance
               </th>
+              <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '100px' }}>
+                CCTV Replacement
+              </th>
               <th style={{ backgroundColor: '#14245C', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '110px' }}>
                 Vehicle Parking & Fastag Recharge
               </th>
@@ -1064,15 +1074,19 @@ export default function TransportVehicleExpensesTable({
               <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '105px', fontWeight: '800' }}>
                 Total Expens
               </th>
-              <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
-                Diesel cons
-              </th>
-              <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
-                KM run {pLabel.split("'")[0]}
-              </th>
-              <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
-                {pLabel} Mileage
-              </th>
+              {!hideFuelMileage && (
+                <>
+                  <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
+                    Diesel cons
+                  </th>
+                  <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
+                    KM run {pLabel.split("'")[0]}
+                  </th>
+                  <th style={{ backgroundColor: '#1e3a8a', color: '#F5A524', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 10px', minWidth: '90px', fontWeight: '800' }}>
+                    {pLabel} Mileage
+                  </th>
+                </>
+              )}
               {!effectiveReadOnly && selectedBranch !== 'all' && (
                 <th style={{ backgroundColor: '#991b1b', color: '#ffffff', border: '1px solid rgba(255,255,255,0.14)', padding: '8px 6px', width: '50px' }}>
                   Action
@@ -1297,6 +1311,27 @@ export default function TransportVehicleExpensesTable({
                       )}
                     </td>
 
+                    {/* 7b. CCTV Replacement */}
+                    <td style={{ border: '1px solid #e2e8f0', padding: '4px 6px', textAlign: 'right' }}>
+                      {canEdit ? (
+                        <input
+                          type="number"
+                          value={row.cctv_replacement || ''}
+                          onChange={(e) => handleCellChange(idx, 'cctv_replacement', e.target.value)}
+                          style={{
+                            width: '100%',
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            textAlign: 'right',
+                            outline: 'none',
+                            fontSize: '11.5px'
+                          }}
+                        />
+                      ) : (
+                        <span>{num(row.cctv_replacement) > 0 ? num(row.cctv_replacement).toLocaleString() : '—'}</span>
+                      )}
+                    </td>
+
                     {/* 8. Vehicle Parking & Fastag Recharge */}
                     <td style={{ border: '1px solid #e2e8f0', padding: '4px 6px', textAlign: 'right' }}>
                       {canEdit ? (
@@ -1372,75 +1407,79 @@ export default function TransportVehicleExpensesTable({
                       {num(row.total_expenses).toLocaleString()}
                     </td>
 
-                    {/* 12. Diesel consumed */}
-                    <td style={{ border: '1px solid #e2e8f0', padding: '4px 6px', textAlign: 'right' }}>
-                      {canEdit ? (
-                        <input
-                          type="number"
-                          value={row.diesel_litres || ''}
-                          onChange={(e) => handleCellChange(idx, 'diesel_litres', e.target.value)}
-                          style={{
-                            width: '100%',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            textAlign: 'right',
-                            outline: 'none',
-                            fontSize: '11.5px',
-                            fontWeight: '600'
-                          }}
-                        />
-                      ) : (
-                        <span>{num(row.diesel_litres) > 0 ? num(row.diesel_litres).toLocaleString() : '—'}</span>
-                      )}
-                    </td>
+                    {!hideFuelMileage && (
+                      <>
+                        {/* 12. Diesel consumed */}
+                        <td style={{ border: '1px solid #e2e8f0', padding: '4px 6px', textAlign: 'right' }}>
+                          {canEdit ? (
+                            <input
+                              type="number"
+                              value={row.diesel_litres || ''}
+                              onChange={(e) => handleCellChange(idx, 'diesel_litres', e.target.value)}
+                              style={{
+                                width: '100%',
+                                border: 'none',
+                                backgroundColor: 'transparent',
+                                textAlign: 'right',
+                                outline: 'none',
+                                fontSize: '11.5px',
+                                fontWeight: '600'
+                              }}
+                            />
+                          ) : (
+                            <span>{num(row.diesel_litres) > 0 ? num(row.diesel_litres).toLocaleString() : '—'}</span>
+                          )}
+                        </td>
 
-                    {/* 13. KM run */}
-                    <td style={{ border: '1px solid #e2e8f0', padding: '4px 6px', textAlign: 'right' }}>
-                      {canEdit ? (
-                        <input
-                          type="number"
-                          value={row.km_run || ''}
-                          onChange={(e) => handleCellChange(idx, 'km_run', e.target.value)}
-                          style={{
-                            width: '100%',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            textAlign: 'right',
-                            outline: 'none',
-                            fontSize: '11.5px',
-                            fontWeight: '600'
-                          }}
-                        />
-                      ) : (
-                        <span>{num(row.km_run) > 0 ? num(row.km_run).toLocaleString() : '—'}</span>
-                      )}
-                    </td>
+                        {/* 13. KM run */}
+                        <td style={{ border: '1px solid #e2e8f0', padding: '4px 6px', textAlign: 'right' }}>
+                          {canEdit ? (
+                            <input
+                              type="number"
+                              value={row.km_run || ''}
+                              onChange={(e) => handleCellChange(idx, 'km_run', e.target.value)}
+                              style={{
+                                width: '100%',
+                                border: 'none',
+                                backgroundColor: 'transparent',
+                                textAlign: 'right',
+                                outline: 'none',
+                                fontSize: '11.5px',
+                                fontWeight: '600'
+                              }}
+                            />
+                          ) : (
+                            <span>{num(row.km_run) > 0 ? num(row.km_run).toLocaleString() : '—'}</span>
+                          )}
+                        </td>
 
-                    {/* 14. Mileage (Auto-calculated: KM / Diesel) */}
-                    <td style={{
-                      border: '1px solid #E1E6F2',
-                      padding: '4px 6px',
-                      textAlign: 'right'
-                    }}>
-                      {(() => {
-                        const milVal = num(row.mileage);
-                        if (milVal <= 0) return <span style={{ color: '#94a3b8' }}>—</span>;
-                        const isLow = milVal < 4.0;
-                        return (
-                          <span style={{
-                            display: 'inline-block',
-                            padding: '2px 8px',
-                            borderRadius: '9999px',
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            backgroundColor: isLow ? '#FBE3E3' : '#E4F6EC',
-                            color: isLow ? '#A32626' : '#0F6B3A'
-                          }}>
-                            {milVal.toFixed(2)}
-                          </span>
-                        );
-                      })()}
-                    </td>
+                        {/* 14. Mileage (Auto-calculated: KM / Diesel) */}
+                        <td style={{
+                          border: '1px solid #E1E6F2',
+                          padding: '4px 6px',
+                          textAlign: 'right'
+                        }}>
+                          {(() => {
+                            const milVal = num(row.mileage);
+                            if (milVal <= 0) return <span style={{ color: '#94a3b8' }}>—</span>;
+                            const isLow = milVal < 4.0;
+                            return (
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                backgroundColor: isLow ? '#FBE3E3' : '#E4F6EC',
+                                color: isLow ? '#A32626' : '#0F6B3A'
+                              }}>
+                                {milVal.toFixed(2)}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      </>
+                    )}
 
                     {/* Action */}
                     {canEdit && (
@@ -1519,6 +1558,11 @@ export default function TransportVehicleExpensesTable({
                 {totals.repair.toLocaleString()}
               </td>
 
+              {/* CCTV Replacement Total */}
+              <td style={{ border: '1px solid #eab308', padding: '6px 8px', textAlign: 'right' }}>
+                {totals.cctv > 0 ? totals.cctv.toLocaleString() : '—'}
+              </td>
+
               {/* Parking Total */}
               <td style={{ border: '1px solid #eab308', padding: '6px 8px', textAlign: 'right' }}>
                 {totals.parking.toLocaleString()}
@@ -1539,20 +1583,24 @@ export default function TransportVehicleExpensesTable({
                 {totals.totalExp.toLocaleString()}
               </td>
 
-              {/* Total Diesel */}
-              <td style={{ border: '1px solid #ca8a04', padding: '6px 8px', textAlign: 'right' }}>
-                {totals.diesel.toLocaleString()}
-              </td>
+              {!hideFuelMileage && (
+                <>
+                  {/* Total Diesel */}
+                  <td style={{ border: '1px solid #ca8a04', padding: '6px 8px', textAlign: 'right' }}>
+                    {totals.diesel.toLocaleString()}
+                  </td>
 
-              {/* Total KM */}
-              <td style={{ border: '1px solid #ca8a04', padding: '6px 8px', textAlign: 'right' }}>
-                {totals.km.toLocaleString()}
-              </td>
+                  {/* Total KM */}
+                  <td style={{ border: '1px solid #ca8a04', padding: '6px 8px', textAlign: 'right' }}>
+                    {totals.km.toLocaleString()}
+                  </td>
 
-              {/* Average Mileage */}
-              <td style={{ border: '1px solid #ca8a04', padding: '6px 8px', textAlign: 'right', color: '#000000' }}>
-                {totals.avgMileage.toFixed(2)}
-              </td>
+                  {/* Average Mileage */}
+                  <td style={{ border: '1px solid #ca8a04', padding: '6px 8px', textAlign: 'right', color: '#000000' }}>
+                    {totals.avgMileage.toFixed(2)}
+                  </td>
+                </>
+              )}
 
               {!effectiveReadOnly && selectedBranch !== 'all' && (
                 <td style={{ border: '1px solid #eab308' }}></td>
