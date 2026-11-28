@@ -562,7 +562,7 @@ export default function TransportOperationsDashboard({
         const pid = String(p.id);
         let val = 0;
         if (def.id === 'students_count') {
-          val = getParamVal(activeBranch, pid, 'students_count') || getParamVal(activeBranch, pid, 'students_count_income');
+          val = getParamVal(activeBranch, pid, 'students_count') || getParamVal(activeBranch, pid, 'passengers_count') || getParamVal(activeBranch, pid, 'students_count_income');
         } else if (def.id === 'total_expenses') {
           val = getBranchMetrics(activeBranch, pid).total_expenses;
         } else {
