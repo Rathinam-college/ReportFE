@@ -23,6 +23,7 @@ export default function CctvOperationsDashboard({
   const [masterParams, setMasterParams] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSection, setSelectedSection] = useState('ALL');
+  const [viewMode, setViewMode] = useState('charts');
 
   // Month-specific attachments for reference links table
   const [periodAttachments, setPeriodAttachments] = useState([]);
@@ -381,9 +382,9 @@ export default function CctvOperationsDashboard({
                   borderRadius: '10px',
                   fontSize: '12.5px',
                   fontWeight: '700',
-                  backgroundColor: '#14245C',
-                  color: '#ffffff',
-                  border: 'none',
+                  backgroundColor: '#ffffff',
+                  color: '#14245C',
+                  border: '1px solid #14245C',
                   cursor: 'pointer'
                 }}
               >
@@ -493,28 +494,84 @@ export default function CctvOperationsDashboard({
             })}
           </div>
 
-          {/* Search parameter input */}
-          <div style={{ position: 'relative', minWidth: '220px' }}>
-            <Search size={14} color="#64748b" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              placeholder="Search parameter…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                minHeight: '38px',
-                padding: '7px 12px 7px 34px',
-                borderRadius: '10px',
-                border: '1px solid #E1E6F2',
-                backgroundColor: '#F3F5FA',
-                color: '#14245C',
-                fontSize: '12.5px',
-                fontWeight: '600',
-                boxSizing: 'border-box',
-                outline: 'none'
-              }}
-            />
+          {/* Search parameter input + VIEW segmented control */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', minWidth: '220px' }}>
+              <Search size={14} color="#64748b" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                aria-label="Search parameter"
+                placeholder="Search parameter…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  minHeight: '38px',
+                  padding: '7px 12px 7px 34px',
+                  borderRadius: '10px',
+                  border: '1px solid #E1E6F2',
+                  backgroundColor: '#F3F5FA',
+                  color: '#14245C',
+                  fontSize: '12.5px',
+                  fontWeight: '600',
+                  boxSizing: 'border-box',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                VIEW
+              </span>
+              <div
+                role="group"
+                aria-label="Dashboard view mode"
+                style={{
+                  display: 'inline-flex',
+                  backgroundColor: '#F3F5FA',
+                  border: '1px solid #E1E6F2',
+                  borderRadius: '10px',
+                  padding: '3px',
+                  gap: '2px'
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setViewMode('charts')}
+                  style={{
+                    minHeight: '32px',
+                    padding: '5px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: viewMode === 'charts' ? '800' : '600',
+                    backgroundColor: viewMode === 'charts' ? '#14245C' : 'transparent',
+                    color: viewMode === 'charts' ? '#ffffff' : '#475569',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Charts
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('tables')}
+                  style={{
+                    minHeight: '32px',
+                    padding: '5px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: viewMode === 'tables' ? '800' : '600',
+                    backgroundColor: viewMode === 'tables' ? '#14245C' : 'transparent',
+                    color: viewMode === 'tables' ? '#ffffff' : '#475569',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Tables
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -683,171 +740,617 @@ export default function CctvOperationsDashboard({
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. SEVEN DOMAIN CARDS (CCTV OPERATIONS MASTER SPREADSHEET)                */}
+      {/* 3. CHARTS VIEW (DEFAULT) OR TABLES VIEW                                   */}
       {/* ========================================================================= */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {domainConfigs.map((dom) => {
-          const domainParams = filteredParameters.filter(param => param.section === dom.section);
-          if (domainParams.length === 0) return null;
+      {viewMode === 'charts' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* 3a. Monthly Expenses Column Chart (Full Width) */}
+          {(() => {
+            const monthBars = periods.map(p => {
+              const e = entriesMap[p.id] || {};
+              return {
+                id: p.id,
+                label: p.period_label || p.label || `Month ${p.id}`,
+                value: Number(e.total_expenses || 0),
+                isSelected: String(activePeriod) === String(p.id)
+              };
+            });
+            const maxExpense = Math.max(...monthBars.map(b => b.value), 1);
 
-          return (
-            <div
-              key={dom.section}
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '18px',
-                border: '1px solid #E1E6F2',
-                overflow: 'hidden',
-                boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)'
-              }}
-            >
-              {/* Domain Card Header */}
-              <div style={{
-                padding: '14px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '10px',
-                borderBottom: '1px solid #EDF0F8'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            return (
+              <div
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: '20px',
+                  border: '1px solid #E1E6F2',
+                  padding: '22px',
+                  boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '16px', fontWeight: '800', color: '#14245C', margin: 0 }}>
+                      Monthly expenses trend
+                    </h2>
+                    <p style={{ fontSize: '12.5px', color: '#64748b', margin: '3px 0 0 0' }}>
+                      Total CCTV material and labour expenses by month ({activePeriodObj?.period_label || 'Latest / All'})
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#E8590C', display: 'inline-block' }} />
+                      Selected month
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#F5B97A', display: 'inline-block' }} />
+                      Other months
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  role="img"
+                  aria-label="Monthly CCTV total expenses bar chart"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${Math.max(monthBars.length, 1)}, minmax(72px, 1fr))`,
+                    gap: '14px',
+                    alignItems: 'end',
+                    minHeight: '190px',
+                    paddingTop: '24px',
+                    overflowX: 'auto'
+                  }}
+                >
+                  {monthBars.map((bar) => {
+                    const heightPct = bar.value > 0 ? Math.max(10, Math.round((bar.value / maxExpense) * 100)) : 6;
+                    const barColor = bar.value <= 0
+                      ? '#E2E8F0'
+                      : (bar.isSelected ? '#E8590C' : '#F5B97A');
+
+                    return (
+                      <button
+                        key={bar.id}
+                        type="button"
+                        onClick={() => setActivePeriod(String(bar.id))}
+                        aria-label={`${bar.label}: ${formatINR(bar.value)}`}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: '8px',
+                          height: '175px',
+                          background: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span style={{ fontSize: '11.5px', fontWeight: '800', color: bar.value > 0 ? '#14245C' : '#94a3b8', whiteSpace: 'nowrap' }} className="currency-font">
+                          {formatINR(bar.value)}
+                        </span>
+                        <div style={{ width: '100%', maxWidth: '58px', height: '120px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                          <div
+                            style={{
+                              width: '100%',
+                              height: `${heightPct}%`,
+                              backgroundColor: barColor,
+                              borderRadius: '10px 10px 4px 4px',
+                              transition: 'height 0.25s ease, background-color 0.2s ease'
+                            }}
+                          />
+                        </div>
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: bar.isSelected ? '800' : '600',
+                          color: bar.isSelected ? '#14245C' : '#64748b',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {bar.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 3b. Seven Domain Chart Cards (Responsive Grid min 340px) */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+            gap: '20px'
+          }}>
+            {domainConfigs.map((dom) => {
+              const domainParams = filteredParameters.filter(param => param.section === dom.section);
+              if (domainParams.length === 0) return null;
+
+              const renderDonut = (firstVal, secondVal, firstColor, secondColor, centerText, centerSub, legendItems, ariaLabel) => {
+                const total = Math.max(0, firstVal) + Math.max(0, secondVal);
+                const r = 46;
+                const circ = 2 * Math.PI * r;
+                const firstDash = total > 0 ? (Math.max(0, firstVal) / total) * circ : 0;
+                const secondDash = total > 0 ? (Math.max(0, secondVal) / total) * circ : 0;
+
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                    <svg width="124" height="124" viewBox="0 0 124 124" role="img" aria-label={ariaLabel} style={{ flexShrink: 0 }}>
+                      <circle cx="62" cy="62" r={r} fill="none" stroke="#E2E8F0" strokeWidth="16" />
+                      {total > 0 && (
+                        <>
+                          <circle
+                            cx="62"
+                            cy="62"
+                            r={r}
+                            fill="none"
+                            stroke={firstColor}
+                            strokeWidth="16"
+                            strokeDasharray={`${firstDash} ${circ}`}
+                            transform="rotate(-90 62 62)"
+                          />
+                          <circle
+                            cx="62"
+                            cy="62"
+                            r={r}
+                            fill="none"
+                            stroke={secondColor}
+                            strokeWidth="16"
+                            strokeDasharray={`${secondDash} ${circ}`}
+                            strokeDashoffset={-firstDash}
+                            transform="rotate(-90 62 62)"
+                          />
+                        </>
+                      )}
+                      <text x="62" y="59" textAnchor="middle" fill="#14245C" fontSize="15" fontWeight="800">
+                        {centerText}
+                      </text>
+                      <text x="62" y="76" textAnchor="middle" fill="#64748b" fontSize="10.5" fontWeight="700">
+                        {centerSub}
+                      </text>
+                    </svg>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minWidth: '150px' }}>
+                      {legendItems.map((item) => (
+                        <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: '#F7F9FD' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '9999px', backgroundColor: item.color, display: 'inline-block' }} />
+                            {item.label}
+                          </span>
+                          <span style={{ fontSize: '13px', fontWeight: '800', color: '#14245C' }} className="currency-font">
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              };
+
+              const renderBars = (items, ariaLabel) => {
+                const maxVal = Math.max(...items.map(i => Number(i.value || 0)), 1);
+                return (
+                  <div role="img" aria-label={ariaLabel} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {items.map((item) => {
+                      const val = Number(item.value || 0);
+                      const pct = val > 0 ? Math.max(4, Math.round((val / maxVal) * 100)) : 0;
+                      return (
+                        <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>
+                            <span>{item.label}</span>
+                            <span style={{ color: '#14245C', fontWeight: '800' }}>{val.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div style={{ width: '100%', height: '10px', borderRadius: '9999px', backgroundColor: '#F3F5FA', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', borderRadius: '9999px', backgroundColor: val > 0 ? item.color : '#E2E8F0' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              };
+
+              let cardBody = null;
+              if (dom.section === 'Projects') {
+                cardBody = renderDonut(
+                  completedProjects,
+                  inProgressProjects,
+                  '#18A058',
+                  '#BFE6CF',
+                  String(totalProjects),
+                  'Total',
+                  [
+                    { label: 'Completed', value: completedProjects, color: '#18A058' },
+                    { label: 'In progress', value: inProgressProjects, color: '#BFE6CF' }
+                  ],
+                  `Projects donut chart: ${completedProjects} completed, ${inProgressProjects} in progress`
+                );
+              } else if (dom.section === 'Complaints') {
+                const cCctv = Number(activeEntry.complaints_cctv || 0);
+                const cBio = Number(activeEntry.complaints_biometric || 0);
+                const cFlap = Number(activeEntry.complaints_flapbarrier || 0);
+                const timeTakenC = Number(activeEntry.time_taken_complaints_hrs || 0);
+                cardBody = (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {renderBars(
+                      [
+                        { label: 'CCTV', value: cCctv, color: '#E5A100' },
+                        { label: 'Biometric', value: cBio, color: '#E5A100' },
+                        { label: 'Flapbarrier', value: cFlap, color: '#E5A100' }
+                      ],
+                      `Complaints bar chart: CCTV ${cCctv}, Biometric ${cBio}, Flapbarrier ${cFlap}`
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>Repeated</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#14245C', marginTop: '2px' }}>{repeatedComplaints}</div>
+                      </div>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>Time taken</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#14245C', marginTop: '2px' }}>{timeTakenC}h</div>
+                      </div>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>TAT hrs</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#8A4A00', marginTop: '2px' }}>{tatComplaints}h</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else if (dom.section === 'Service request') {
+                const sCctv = Number(activeEntry.service_cctv || 0);
+                const sBio = Number(activeEntry.service_biometric || 0);
+                const sFlap = Number(activeEntry.service_flapbarrier || 0);
+                const timeTakenS = Number(activeEntry.time_taken_service_hrs || 0);
+                cardBody = (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {renderBars(
+                      [
+                        { label: 'CCTV', value: sCctv, color: '#2F4BB8' },
+                        { label: 'Biometric', value: sBio, color: '#2F4BB8' },
+                        { label: 'Flapbarrier', value: sFlap, color: '#2F4BB8' }
+                      ],
+                      `Service requests bar chart: CCTV ${sCctv}, Biometric ${sBio}, Flapbarrier ${sFlap}`
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>Repeated work</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#14245C', marginTop: '2px' }}>{repeatedServices}</div>
+                      </div>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>Time taken</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#14245C', marginTop: '2px' }}>{timeTakenS}h</div>
+                      </div>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>TAT hrs</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#2F4BB8', marginTop: '2px' }}>{tatServices}h</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else if (dom.section === 'PPM') {
+                const ppmBars = periods.map(p => {
+                  const fullLabel = p.period_label || p.label || `M${p.id}`;
+                  const shortLabel = fullLabel.split(' ')[0];
+                  return {
+                    id: p.id,
+                    label: shortLabel,
+                    fullLabel,
+                    value: Number(entriesMap[p.id]?.ppm_count || 0),
+                    isSelected: String(activePeriod) === String(p.id)
+                  };
+                });
+                const maxPpm = Math.max(...ppmBars.map(b => b.value), 1);
+                cardBody = (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '34px', fontWeight: '800', color: '#14245C', lineHeight: 1.1 }}>{ppmCount}</div>
+                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#0B6B6B', marginTop: '4px' }}>preventive checks</div>
+                    </div>
+                    <div
+                      role="img"
+                      aria-label="PPM preventive checks per month column chart"
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${Math.max(ppmBars.length, 1)}, minmax(38px, 1fr))`,
+                        gap: '8px',
+                        alignItems: 'end',
+                        minHeight: '95px',
+                        overflowX: 'auto'
+                      }}
+                    >
+                      {ppmBars.map(b => {
+                        const hPct = b.value > 0 ? Math.max(12, Math.round((b.value / maxPpm) * 100)) : 8;
+                        return (
+                          <div key={b.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '10.5px', fontWeight: '800', color: b.value > 0 ? '#14245C' : '#94a3b8' }}>{b.value}</span>
+                            <div style={{ width: '100%', maxWidth: '30px', height: '56px', display: 'flex', alignItems: 'flex-end' }}>
+                              <div style={{ width: '100%', height: `${hPct}%`, borderRadius: '6px 6px 2px 2px', backgroundColor: b.value <= 0 ? '#E2E8F0' : (b.isSelected ? '#0B6B6B' : '#99D5D5') }} />
+                            </div>
+                            <span style={{ fontSize: '10.5px', fontWeight: b.isSelected ? '800' : '600', color: b.isSelected ? '#0B6B6B' : '#64748b', whiteSpace: 'nowrap' }}>
+                              {b.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              } else if (dom.section === 'Quality Issues') {
+                const qRec = Number(activeEntry.quality_issues_received || 0);
+                cardBody = (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {renderBars(
+                      [
+                        { label: 'Received', value: qRec, color: '#5B34B5' },
+                        { label: 'Closed', value: qualityClosed, color: '#18A058' },
+                        { label: 'Open', value: qualityOpen, color: '#DC2626' }
+                      ],
+                      `Quality issues bar chart: Received ${qRec}, Closed ${qualityClosed}, Open ${qualityOpen}`
+                    )}
+                    <div style={{ fontSize: '11.5px', fontWeight: '600', color: '#64748b', backgroundColor: '#F7F9FD', padding: '8px 12px', borderRadius: '8px' }}>
+                      Open = received − closed
+                    </div>
+                  </div>
+                );
+              } else if (dom.section === 'Expenses') {
+                cardBody = renderDonut(
+                  materialExpenses,
+                  labourExpenses,
+                  '#E8590C',
+                  '#F5B97A',
+                  formatINR(totalExpenses),
+                  'Total',
+                  [
+                    { label: 'Material', value: formatINR(materialExpenses), color: '#E8590C' },
+                    { label: 'Labour', value: formatINR(labourExpenses), color: '#F5B97A' }
+                  ],
+                  `Expenses donut chart: Material ${formatINR(materialExpenses)}, Labour ${formatINR(labourExpenses)}`
+                );
+              } else if (dom.section === 'Budget Tracking') {
+                const pctNum = Math.min(100, Math.max(0, Number(spentPercent) || 0));
+                cardBody = (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
+                      <span style={{ fontSize: '30px', fontWeight: '800', color: '#14245C' }}>{spentPercent}%</span>
+                      <span style={{ fontSize: '12.5px', fontWeight: '700', color: '#14663A' }}>spent of approved budget</span>
+                    </div>
+                    <div
+                      role="img"
+                      aria-label={`Budget progress: ${spentPercent}% spent`}
+                      style={{ width: '100%', height: '12px', borderRadius: '9999px', backgroundColor: '#E4F6EC', overflow: 'hidden' }}
+                    >
+                      <div style={{ width: `${pctNum}%`, height: '100%', borderRadius: '9999px', backgroundColor: '#14663A' }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>Approved</div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#14245C', marginTop: '2px' }} className="currency-font">{formatINR(approvedBudget)}</div>
+                      </div>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>Spent</div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#A04600', marginTop: '2px' }} className="currency-font">{formatINR(cumulativeBudgetSpent)}</div>
+                      </div>
+                      <div style={{ backgroundColor: '#F7F9FD', borderRadius: '10px', padding: '10px' }}>
+                        <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>Balance</div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#14663A', marginTop: '2px' }} className="currency-font">{formatINR(budgetBalance)}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={dom.section}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '20px',
+                    border: '1px solid #E1E6F2',
+                    padding: '22px',
+                    boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '18px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        backgroundColor: dom.bg,
+                        color: dom.color
+                      }}>
+                        {dom.num}
+                      </span>
+                      <h2 style={{ fontSize: '15.5px', fontWeight: '800', color: '#14245C', margin: 0 }}>
+                        {dom.title}
+                      </h2>
+                    </div>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      padding: '4px 12px',
+                      borderRadius: '9999px',
+                      backgroundColor: dom.bg,
+                      color: dom.color
+                    }}>
+                      {dom.summary}
+                    </span>
+                  </div>
+                  {cardBody}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {domainConfigs.map((dom) => {
+            const domainParams = filteredParameters.filter(param => param.section === dom.section);
+            if (domainParams.length === 0) return null;
+
+            return (
+              <div
+                key={dom.section}
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: '18px',
+                  border: '1px solid #E1E6F2',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 10px rgba(20, 36, 92, 0.04)'
+                }}
+              >
+                {/* Domain Card Header */}
+                <div style={{
+                  padding: '14px 20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                  borderBottom: '1px solid #EDF0F8'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      backgroundColor: dom.bg,
+                      color: dom.color
+                    }}>
+                      {dom.num}
+                    </span>
+                    <h2 style={{ fontSize: '15.5px', fontWeight: '800', color: '#14245C', margin: 0 }}>
+                      {dom.title}
+                    </h2>
+                  </div>
                   <span style={{
                     fontSize: '12px',
                     fontWeight: '800',
-                    padding: '4px 10px',
-                    borderRadius: '8px',
+                    padding: '4px 12px',
+                    borderRadius: '9999px',
                     backgroundColor: dom.bg,
                     color: dom.color
                   }}>
-                    {dom.num}
+                    {dom.summary}
                   </span>
-                  <h2 style={{ fontSize: '15.5px', fontWeight: '800', color: '#14245C', margin: 0 }}>
-                    {dom.title}
-                  </h2>
                 </div>
-                <span style={{
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  padding: '4px 12px',
-                  borderRadius: '9999px',
-                  backgroundColor: dom.bg,
-                  color: dom.color
-                }}>
-                  {dom.summary}
-                </span>
-              </div>
 
-              {/* Domain Table (horizontal scroll inside card) */}
-              <div style={{ overflowX: 'auto', width: '100%' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#F7F9FD', borderBottom: '1px solid #D5DCEE', color: '#475569' }}>
-                      <th style={{ padding: '10px 12px', width: '58px', textAlign: 'center', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}>
-                        NO.
-                      </th>
-                      <th style={{ padding: '10px 14px', minWidth: '280px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}>
-                        PARAMETER
-                      </th>
-                      {periods.map(p => {
-                        const isCurrent = String(activePeriod) === String(p.id);
+                {/* Domain Table (horizontal scroll inside card) */}
+                <div style={{ overflowX: 'auto', width: '100%' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#F7F9FD', borderBottom: '1px solid #D5DCEE', color: '#475569' }}>
+                        <th style={{ padding: '10px 12px', width: '58px', textAlign: 'center', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}>
+                          NO.
+                        </th>
+                        <th style={{ padding: '10px 14px', minWidth: '280px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}>
+                          PARAMETER
+                        </th>
+                        {periods.map(p => {
+                          const isCurrent = String(activePeriod) === String(p.id);
+                          return (
+                            <th
+                              key={p.id}
+                              style={{
+                                padding: '10px 14px',
+                                textAlign: 'right',
+                                minWidth: '130px',
+                                whiteSpace: 'nowrap',
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                backgroundColor: isCurrent ? '#14245C' : '#F7F9FD',
+                                color: isCurrent ? '#ffffff' : '#475569'
+                              }}
+                            >
+                              {p.period_label || p.label || `Month ${p.id}`}
+                            </th>
+                          );
+                        })}
+                        <th style={{ padding: '10px 16px', textAlign: 'right', minWidth: '130px', whiteSpace: 'nowrap', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em', color: '#14245C', backgroundColor: '#F3F5FA' }}>
+                          TOTAL
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {domainParams.map((param, pIdx) => {
+                        const isSummaryRow =
+                          (param.param_name && (
+                            param.param_name.toLowerCase().includes('total') ||
+                            param.param_name.toLowerCase().includes('approved') ||
+                            param.param_name.toLowerCase().includes('balance')
+                          )) ||
+                          param.is_bold ||
+                          Boolean(param.formula);
+
                         return (
-                          <th
-                            key={p.id}
+                          <tr
+                            key={param.param_key || pIdx}
                             style={{
-                              padding: '10px 14px',
-                              textAlign: 'right',
-                              minWidth: '130px',
-                              whiteSpace: 'nowrap',
-                              fontSize: '11.5px',
-                              fontWeight: '800',
-                              backgroundColor: isCurrent ? '#14245C' : '#F7F9FD',
-                              color: isCurrent ? '#ffffff' : '#475569'
+                              backgroundColor: isSummaryRow ? '#F7F9FD' : '#ffffff',
+                              borderBottom: isSummaryRow ? '1px solid #D5DCEE' : '1px solid #EDF0F8',
+                              fontWeight: isSummaryRow ? '800' : '500',
+                              color: '#14245C'
                             }}
                           >
-                            {p.period_label || p.label || `Month ${p.id}`}
-                          </th>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>
+                              {param.s_no || ''}
+                            </td>
+                            <td style={{ padding: '10px 14px', fontWeight: isSummaryRow ? '800' : '600', color: '#14245C' }}>
+                              {param.param_name}
+                            </td>
+                            {periods.map(p => {
+                              const isCurrent = String(activePeriod) === String(p.id);
+                              const entryForPeriod = entriesMap[p.id] || {};
+                              const rawVal = entryForPeriod[param.param_key];
+                              const formatted = formatCellValue(rawVal, param);
+                              const isEmpty = formatted === '—';
+
+                              return (
+                                <td
+                                  key={p.id}
+                                  style={{
+                                    padding: '10px 14px',
+                                    textAlign: 'right',
+                                    whiteSpace: 'nowrap',
+                                    backgroundColor: isCurrent ? '#EAF0FF' : 'transparent',
+                                    fontWeight: isSummaryRow ? '800' : '600',
+                                    color: isEmpty ? '#94a3b8' : '#14245C'
+                                  }}
+                                  className="currency-font"
+                                >
+                                  {formatted}
+                                </td>
+                              );
+                            })}
+                            <td
+                              style={{
+                                padding: '10px 16px',
+                                textAlign: 'right',
+                                whiteSpace: 'nowrap',
+                                fontWeight: '800',
+                                color: '#14245C',
+                                backgroundColor: isSummaryRow ? '#EEF2FA' : '#F8FAFC'
+                              }}
+                              className="currency-font"
+                            >
+                              {formatCellValue(getParamCumulative(param.param_key, param), param)}
+                            </td>
+                          </tr>
                         );
                       })}
-                      <th style={{ padding: '10px 16px', textAlign: 'right', minWidth: '130px', whiteSpace: 'nowrap', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em', color: '#14245C', backgroundColor: '#F3F5FA' }}>
-                        TOTAL
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {domainParams.map((param, pIdx) => {
-                      const isSummaryRow =
-                        (param.param_name && (
-                          param.param_name.toLowerCase().includes('total') ||
-                          param.param_name.toLowerCase().includes('approved') ||
-                          param.param_name.toLowerCase().includes('balance')
-                        )) ||
-                        param.is_bold ||
-                        Boolean(param.formula);
-
-                      return (
-                        <tr
-                          key={param.param_key || pIdx}
-                          style={{
-                            backgroundColor: isSummaryRow ? '#F7F9FD' : '#ffffff',
-                            borderBottom: isSummaryRow ? '1px solid #D5DCEE' : '1px solid #EDF0F8',
-                            fontWeight: isSummaryRow ? '800' : '500',
-                            color: '#14245C'
-                          }}
-                        >
-                          <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>
-                            {param.s_no || ''}
-                          </td>
-                          <td style={{ padding: '10px 14px', fontWeight: isSummaryRow ? '800' : '600', color: '#14245C' }}>
-                            {param.param_name}
-                          </td>
-                          {periods.map(p => {
-                            const isCurrent = String(activePeriod) === String(p.id);
-                            const entryForPeriod = entriesMap[p.id] || {};
-                            const rawVal = entryForPeriod[param.param_key];
-                            const formatted = formatCellValue(rawVal, param);
-                            const isEmpty = formatted === '—';
-
-                            return (
-                              <td
-                                key={p.id}
-                                style={{
-                                  padding: '10px 14px',
-                                  textAlign: 'right',
-                                  whiteSpace: 'nowrap',
-                                  backgroundColor: isCurrent ? '#EAF0FF' : 'transparent',
-                                  fontWeight: isSummaryRow ? '800' : '600',
-                                  color: isEmpty ? '#94a3b8' : '#14245C'
-                                }}
-                                className="currency-font"
-                              >
-                                {formatted}
-                              </td>
-                            );
-                          })}
-                          <td
-                            style={{
-                              padding: '10px 16px',
-                              textAlign: 'right',
-                              whiteSpace: 'nowrap',
-                              fontWeight: '800',
-                              color: '#14245C',
-                              backgroundColor: isSummaryRow ? '#EEF2FA' : '#F8FAFC'
-                            }}
-                            className="currency-font"
-                          >
-                            {formatCellValue(getParamCumulative(param.param_key, param), param)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 4. ATTACHED REFERENCE LINKS & DOCUMENTATION                               */}
@@ -965,93 +1468,92 @@ export default function CctvOperationsDashboard({
           </div>
         ) : (
           <div style={{
-            overflowX: 'auto',
-            borderRadius: '12px',
-            border: '1px solid #E1E6F2'
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+            gap: '12px'
           }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F7F9FD', borderBottom: '1px solid #D5DCEE', color: '#475569', fontWeight: '700' }}>
-                  <th style={{ padding: '10px 14px', width: '50px' }}>#</th>
-                  <th style={{ padding: '10px 14px' }}>Reference Title / Name</th>
-                  <th style={{ padding: '10px 14px' }}>Destination URL / File</th>
-                  <th style={{ padding: '10px 14px', width: '110px' }}>Type</th>
-                  <th style={{ padding: '10px 14px', width: '120px' }}>Uploaded By</th>
-                  <th style={{ padding: '10px 14px', width: '110px', textAlign: 'right' }}>Open Link</th>
-                </tr>
-              </thead>
-              <tbody>
-                {periodAttachments.map((att, idx) => {
-                  const isWebUrl = att.is_link || att.file_path?.startsWith('http');
-                  const targetUrl = att.file_path?.startsWith('http')
-                    ? att.file_path
-                    : (att.file_path ? `/api/attachments/download/${att.id}` : '#');
+            {periodAttachments.map((att, idx) => {
+              const isWebUrl = att.is_link || att.file_path?.startsWith('http');
+              const targetUrl = att.file_path?.startsWith('http')
+                ? att.file_path
+                : (att.file_path ? `/api/attachments/download/${att.id}` : '#');
+              const attDate = att.created_at ? new Date(att.created_at).toLocaleDateString('en-IN') : (att.uploaded_by || 'Admin');
 
-                  return (
-                    <tr
-                      key={att.id || idx}
-                      style={{
-                        borderBottom: '1px solid #EDF0F8',
-                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#F7F9FD'
-                      }}
-                    >
-                      <td style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: '600' }}>
-                        {idx + 1}
-                      </td>
-                      <td style={{ padding: '10px 14px', fontWeight: '600', color: '#14245C' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {isWebUrl ? <LinkIcon size={14} color="#2F4BB8" /> : <FileText size={14} color="#0F6B3A" />}
-                          <span>{att.file_name}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '10px 14px', color: '#64748b', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '11.5px' }}>
-                          {att.file_path}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 14px' }}>
+              return (
+                <div
+                  key={att.id || idx}
+                  style={{
+                    backgroundColor: '#F7F9FD',
+                    borderRadius: '14px',
+                    border: '1px solid #E1E6F2',
+                    padding: '14px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <div style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '10px',
+                      backgroundColor: isWebUrl ? '#EAF0FF' : '#E4F6EC',
+                      color: isWebUrl ? '#2F4BB8' : '#0F6B3A',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {isWebUrl ? <LinkIcon size={16} /> : <FileText size={16} />}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#14245C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {att.file_name}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                         <span style={{
-                          fontSize: '11px',
+                          fontSize: '10.5px',
                           fontWeight: '700',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
+                          padding: '2px 7px',
+                          borderRadius: '6px',
                           backgroundColor: isWebUrl ? '#EAF0FF' : '#E4F6EC',
-                          color: isWebUrl ? '#2F4BB8' : '#0F6B3A',
-                          border: `1px solid ${isWebUrl ? '#C7D7FE' : '#A7F3D0'}`
+                          color: isWebUrl ? '#2F4BB8' : '#0F6B3A'
                         }}>
                           {isWebUrl ? 'Web URL' : 'Uploaded File'}
                         </span>
-                      </td>
-                      <td style={{ padding: '10px 14px', color: '#64748b' }}>
-                        {att.uploaded_by || 'Admin'}
-                      </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                        <a
-                          href={targetUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '5px 12px',
-                            borderRadius: '8px',
-                            backgroundColor: '#14245C',
-                            color: '#ffffff',
-                            textDecoration: 'none',
-                            fontSize: '11.5px',
-                            fontWeight: '700'
-                          }}
-                        >
-                          <span>Visit</span>
-                          <ExternalLink size={12} />
-                        </a>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+                          {attDate}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <a
+                      href={targetUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        minHeight: '34px',
+                        padding: '5px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: '#14245C',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                        fontSize: '12px',
+                        fontWeight: '700'
+                      }}
+                    >
+                      <span>Visit</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

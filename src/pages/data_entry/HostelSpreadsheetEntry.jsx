@@ -2009,10 +2009,10 @@ export default function HostelSpreadsheetEntry({
                   {getParamSNo('students_normal_water', '•')}
                 </td>
                 <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
-                  {getParamName('students_normal_water', 'No of Students in Hostels')}
+                  {getParamName('students_normal_water', 'No of Staff + Students in Hostels')}
                 </td>
                 <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.students_total}</td>
+                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.total_occupied}</td>
               </tr>
 
               {/* Normal water Ltr per student per day */}
@@ -2096,10 +2096,10 @@ export default function HostelSpreadsheetEntry({
                   {getParamSNo('students_drinking_water', '•')}
                 </td>
                 <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
-                  {getParamName('students_drinking_water', 'No of Students in Hostels')}
+                  {getParamName('students_drinking_water', 'No of Staff + Students in Hostels')}
                 </td>
                 <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f8fafc' }}></td>
-                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.students_total}</td>
+                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: '800' }}>{metrics.total_occupied}</td>
               </tr>
 
               {/* Drinking water Litres per student per day */}

@@ -1529,17 +1529,17 @@ export default function HostelDashboardDataTable({
                 </tr>
               )}
 
-              {/* No of Students in Hostels (Normal Water) */}
-              {matchesSearch(getParamName('students_normal_water', 'No of Students in Hostels')) && (
+              {/* No of Staff + Students in Hostels (Normal Water) */}
+              {matchesSearch(getParamName('students_normal_water', 'No of Staff + Students in Hostels')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
                   <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
                     {getParamSNo('students_normal_water', '')}
                   </td>
                   <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
-                    {getParamName('students_normal_water', 'No of Students in Hostels')}
+                    {getParamName('students_normal_water', 'No of Staff + Students in Hostels')}
                   </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#f0fdf4' }}></td>
-                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{fmtVal(c.total_students)}</td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{fmtVal(c.total_occupied)}</td>
                 </tr>
               )}
 
@@ -1599,17 +1599,17 @@ export default function HostelDashboardDataTable({
                 </tr>
               )}
 
-              {/* No of Students in Hostels (Drinking Water) */}
-              {matchesSearch(getParamName('students_drinking_water', 'No of Students in Hostels')) && (
+              {/* No of Staff + Students in Hostels (Drinking Water) */}
+              {matchesSearch(getParamName('students_drinking_water', 'No of Staff + Students in Hostels')) && (
                 <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#ecfeff' }}>
                   <td style={{ textAlign: 'center', padding: '6px 4px', borderRight: '1px solid #000000' }}>
                     {getParamSNo('students_drinking_water', '')}
                   </td>
                   <td style={{ padding: '6px 14px', fontWeight: '700', borderRight: '1px solid #000000' }}>
-                    {getParamName('students_drinking_water', 'No of Students in Hostels')}
+                    {getParamName('students_drinking_water', 'No of Staff + Students in Hostels')}
                   </td>
                   <td colSpan={3} style={{ borderRight: '1px solid #000000', backgroundColor: '#ecfeff' }}></td>
-                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{fmtVal(c.total_students)}</td>
+                  <td style={{ padding: '6px 14px', textAlign: 'right', fontWeight: '800' }}>{fmtVal(c.total_occupied)}</td>
                 </tr>
               )}
 
