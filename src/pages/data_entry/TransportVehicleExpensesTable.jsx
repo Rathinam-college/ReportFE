@@ -41,6 +41,7 @@ export default function TransportVehicleExpensesTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
   const [selectedVehicleKey, setSelectedVehicleKey] = useState(null);
+  const [monthlyVehiclesMap, setMonthlyVehiclesMap] = useState({});
 
   useEffect(() => {
     setSelectedVehicleKey(null);
@@ -88,6 +89,36 @@ export default function TransportVehicleExpensesTable({
   const activePeriodObj = useMemo(() => {
     return visiblePeriods.find(p => p.id === selectedPeriodId) || visiblePeriods[visiblePeriods.length - 1] || periods[periods.length - 1] || null;
   }, [visiblePeriods, periods, selectedPeriodId]);
+
+  const normVehKey = (vNo) => String(vNo || '').toUpperCase().replace(/\s+/g, '').replace(/AC$/, '');
+
+  // Fetch per-month vehicle breakdown when Cards view is active (for All Months matrix & vehicle trend chart)
+  useEffect(() => {
+    if (viewMode !== 'cards' || visiblePeriods.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      visiblePeriods.map((p) =>
+        fetch(`/api/transport/vehicles?period_id=${p.id}&branch=${encodeURIComponent(selectedBranch)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => ({ pid: String(p.id), vehicles: d?.vehicles || [] }))
+          .catch(() => ({ pid: String(p.id), vehicles: [] }))
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const nextMap = {};
+      results.forEach(({ pid, vehicles: list }) => {
+        const byVeh = {};
+        list.forEach((v) => {
+          byVeh[normVehKey(v.vehicle_no)] = v;
+        });
+        nextMap[pid] = byVeh;
+      });
+      setMonthlyVehiclesMap(nextMap);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewMode, selectedBranch, visiblePeriods]);
 
   // Synchronize periods from parent if provided
   useEffect(() => {
@@ -807,216 +838,165 @@ export default function TransportVehicleExpensesTable({
               <Bus size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
               <div style={{ fontSize: '13.5px', fontWeight: '700' }}>No vehicles recorded for {branchLabel} in {pLabel}.</div>
             </div>
-          ) : (
-            <>
-              {/* Horizontal Scrollable Vehicle Number Strip */}
+          ) : (() => {
+            const isAll = String(selectedPeriodId) === 'all';
+            const displayCols = isAll
+              ? visiblePeriods
+              : [effectivePeriod || activePeriodObj || { id: selectedPeriodId, period_label: pLabel }];
+
+            const metricRows = [
+              { key: 'fuel_expenses', label: 'Fuel expenses' },
+              { key: 'fc_cost', label: 'FC 2026-2027' },
+              { key: 'statutory_cost', label: 'Vehicle Statutory' },
+              { key: 'repair_maintenance', label: 'Vehicle Repair & Maintenance' },
+              { key: 'cctv_replacement', label: 'CCTV Replacement' },
+              { key: 'parking_fastag', label: 'Vehicle Parking & Fastag Recharge' },
+              { key: 'employee_cost', label: 'Transport Employees Cost' },
+              { key: 'other_cost', label: 'Others 26-27' },
+              { key: 'total_expenses', label: 'Total Expenses', isTotal: true }
+            ];
+
+            return (
               <div style={{
-                display: 'flex',
+                backgroundColor: '#ffffff',
+                borderRadius: '14px',
+                border: '1px solid #D5DCEE',
                 overflowX: 'auto',
-                gap: '12px',
-                padding: '2px 2px 14px 2px',
-                marginBottom: '12px',
-                scrollbarWidth: 'thin'
+                boxShadow: '0 2px 10px rgba(20, 36, 92, 0.05)'
               }}>
-                {filteredVehicles.map((v, idx) => {
-                  const vKey = v.id || v.vehicle_no || idx;
-                  const activeKey = selectedVehicleKey || (filteredVehicles[0]?.id || filteredVehicles[0]?.vehicle_no || 0);
-                  const isSel = activeKey === vKey;
-                  const vTot = num(v.total_expenses);
-                  const vD = num(v.diesel_litres);
-                  const vKm = num(v.km_run);
-
-                  return (
-                    <button
-                      key={vKey}
-                      type="button"
-                      onClick={() => setSelectedVehicleKey(vKey)}
-                      style={{
-                        flex: '0 0 auto',
-                        minWidth: '185px',
-                        textAlign: 'left',
-                        backgroundColor: isSel ? '#EFF6FF' : '#ffffff',
-                        borderRadius: '12px',
-                        border: isSel ? '2px solid #14245C' : '1px solid #E1E6F2',
-                        padding: '12px 14px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        boxShadow: isSel ? '0 4px 12px rgba(20, 36, 92, 0.14)' : '0 1px 4px rgba(20, 36, 92, 0.04)',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
-                        <span style={{
-                          fontFamily: 'monospace',
-                          fontSize: '12.5px',
-                          fontWeight: '800',
-                          color: isSel ? '#F5A524' : '#14245C',
-                          backgroundColor: isSel ? '#14245C' : '#F3F5FA',
-                          padding: '3px 8px',
-                          borderRadius: '7px'
-                        }}>
-                          {v.vehicle_no}
-                        </span>
-                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>
-                          #{idx + 1}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
-                        {v.make || '—'}{v.model ? ` • ${v.model}` : ''}
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%', paddingTop: '4px', borderTop: '1px solid #F1F5F9' }}>
-                        <span style={{ fontSize: '15px', fontWeight: '800', color: '#14245C' }} className="currency-font">
-                          {formatINR(vTot)}
-                        </span>
-                        <span style={{ fontSize: '10.5px', fontWeight: '700', color: isSel ? '#14245C' : '#64748b' }}>
-                          {vD.toLocaleString('en-IN', { maximumFractionDigits: 0 })}L • {vKm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}km
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Fixed Single-Vehicle Detail Section */}
-              {(() => {
-                const selectedVeh = filteredVehicles.find(v => (v.id || v.vehicle_no) === selectedVehicleKey) || filteredVehicles[0];
-                if (!selectedVeh) return null;
-                const selectedIdx = filteredVehicles.indexOf(selectedVeh) + 1;
-                const svFuel = num(selectedVeh.fuel_expenses);
-                const svFc = num(selectedVeh.fc_cost);
-                const svStat = num(selectedVeh.statutory_cost);
-                const svRep = num(selectedVeh.repair_maintenance);
-                const svPark = num(selectedVeh.parking_fastag);
-                const svCctv = num(selectedVeh.cctv_replacement);
-                const svEmp = num(selectedVeh.employee_cost);
-                const svOth = num(selectedVeh.other_cost);
-                const svTot = num(selectedVeh.total_expenses);
-                const svDiesel = num(selectedVeh.diesel_litres);
-                const svKm = num(selectedVeh.km_run);
-                const svMil = svDiesel > 0 ? (svKm / svDiesel) : num(selectedVeh.mileage);
-
-                const expenseItems = [
-                  { label: 'Fuel Expenses', val: svFuel, color: '#0284c7' },
-                  { label: 'FC 2026-2027', val: svFc, color: '#d97706' },
-                  { label: 'Vehicle Statutory', val: svStat, color: '#ea580c' },
-                  { label: 'Repair & Maintenance', val: svRep, color: '#475569' },
-                  { label: 'Parking & Fastag', val: svPark, color: '#059669' },
-                  { label: 'CCTV Replacement', val: svCctv, color: '#7c3aed' },
-                  { label: 'Employees Cost', val: svEmp, color: '#4338ca' },
-                  { label: 'Others 26-27', val: svOth, color: '#64748b' }
-                ];
-
-                return (
-                  <div style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '16px',
-                    border: '2px solid #14245C',
-                    boxShadow: '0 8px 24px rgba(20, 36, 92, 0.10)',
-                    padding: '20px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #E1E6F2' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          padding: '8px 14px',
-                          borderRadius: '10px',
-                          backgroundColor: '#14245C',
-                          color: '#F5A524',
-                          fontFamily: 'monospace',
-                          fontSize: '15px',
-                          fontWeight: '800'
-                        }}>
-                          {selectedVeh.vehicle_no}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '15px', fontWeight: '800', color: '#14245C' }}>
-                            {selectedVeh.make || 'Vehicle'} {selectedVeh.model ? `• ${selectedVeh.model}` : ''}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>
-                            {selectedVeh.branch || branchLabel} • {pLabel} Expense Breakdown
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <span style={{
-                          padding: '5px 10px',
-                          borderRadius: '8px',
-                          backgroundColor: '#F3F5FA',
-                          color: '#475569',
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#14245C', color: '#ffffff' }}>
+                      <th style={{ padding: '11px 16px', textAlign: 'center', minWidth: '175px', fontSize: '11.5px', fontWeight: '800', borderRight: '1px solid rgba(255,255,255,0.14)' }}>
+                        Vehicle No
+                      </th>
+                      <th style={{ padding: '11px 16px', textAlign: 'right', minWidth: '215px', fontSize: '11.5px', fontWeight: '800', borderRight: '1px solid rgba(255,255,255,0.14)' }}>
+                        Metric
+                      </th>
+                      {displayCols.map((col, cIdx) => {
+                        const isHighlight = !isAll || cIdx === displayCols.length - 1;
+                        return (
+                          <th
+                            key={col.id}
+                            style={{
+                              padding: '11px 14px',
+                              textAlign: 'right',
+                              minWidth: '115px',
+                              whiteSpace: 'nowrap',
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              backgroundColor: isHighlight ? '#1e3a8a' : '#14245C',
+                              color: isHighlight ? '#F5A524' : '#ffffff',
+                              borderRight: '1px solid rgba(255,255,255,0.14)'
+                            }}
+                          >
+                            {col.period_label || col.label || pLabel}
+                          </th>
+                        );
+                      })}
+                      {isAll && (
+                        <th style={{
+                          padding: '11px 16px',
+                          textAlign: 'right',
+                          minWidth: '125px',
+                          whiteSpace: 'nowrap',
                           fontSize: '11.5px',
-                          fontWeight: '700'
+                          fontWeight: '800',
+                          backgroundColor: '#0F6B3A',
+                          color: '#ffffff'
                         }}>
-                          Vehicle #{selectedIdx} of {filteredVehicles.length}
-                        </span>
-                        <div style={{
-                          padding: '6px 14px',
-                          borderRadius: '10px',
-                          backgroundColor: '#14245C',
-                          color: '#ffffff',
-                          fontSize: '13px',
-                          fontWeight: '800'
-                        }} className="currency-font">
-                          Total: <span style={{ color: '#F5A524' }}>{formatINR(svTot)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))',
-                      gap: '12px',
-                      marginBottom: '14px'
-                    }}>
-                      {expenseItems.map((it) => (
-                        <div key={it.label} style={{
-                          backgroundColor: '#F8FAFC',
-                          borderRadius: '12px',
-                          border: '1px solid #E1E6F2',
-                          borderTop: `3px solid ${it.color}`,
-                          padding: '12px 14px'
-                        }}>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            {it.label}
-                          </div>
-                          <div style={{ fontSize: '17px', fontWeight: '800', color: '#14245C', marginTop: '4px' }} className="currency-font">
-                            {formatINR(it.val)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '14px',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      backgroundColor: '#F3F5FA',
-                      fontSize: '12.5px',
-                      fontWeight: '700',
-                      color: '#14245C'
-                    }}>
-                      <span>Diesel: {svDiesel.toLocaleString('en-IN', { maximumFractionDigits: 1 })} L</span>
-                      <span>•</span>
-                      <span>KM Run: {svKm.toLocaleString('en-IN', { maximumFractionDigits: 1 })} KM</span>
-                      <span>•</span>
-                      <span>Mileage: {svMil.toFixed(2)} km/L</span>
-                      {selectedVeh.remarks && (
-                        <>
-                          <span>•</span>
-                          <span style={{ color: '#475569' }}>Remarks: {selectedVeh.remarks}</span>
-                        </>
+                          Total
+                        </th>
                       )}
-                    </div>
-                  </div>
-                );
-              })()}
-            </>
-          )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredVehicles.map((veh, vIdx) => {
+                      const vKey = veh.id || veh.vehicle_no || vIdx;
+                      const nKey = normVehKey(veh.vehicle_no);
+                      const isFirstBlue = vIdx % 2 === 0;
+
+                      return metricRows.map((mr, mIdx) => {
+                        const rowBg = mr.isTotal ? '#FFF1DD' : '#ffffff';
+                        const borderBottom = mIdx === metricRows.length - 1 ? '2px solid #94a3b8' : '1px solid #E1E6F2';
+
+                        return (
+                          <tr key={`${vKey}-${mr.key}`} style={{ backgroundColor: rowBg, borderBottom }}>
+                            {mIdx === 0 && (
+                              <td
+                                rowSpan={metricRows.length}
+                                style={{
+                                  padding: '14px 16px',
+                                  textAlign: 'center',
+                                  verticalAlign: 'middle',
+                                  backgroundColor: isFirstBlue ? '#EFF6FF' : '#ffffff',
+                                  borderRight: '1px solid #D5DCEE',
+                                  borderBottom: '2px solid #94a3b8'
+                                }}
+                              >
+                                <div style={{ fontFamily: 'monospace', fontSize: '13.5px', fontWeight: '800', color: '#2F4BB8' }}>
+                                  {veh.vehicle_no}
+                                </div>
+                                <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', marginTop: '4px' }}>
+                                  {veh.make || 'Vehicle'}{veh.model ? ` • ${veh.model}` : ''}
+                                </div>
+                              </td>
+                            )}
+                            <td style={{
+                              padding: '8px 16px',
+                              textAlign: 'right',
+                              fontWeight: mr.isTotal ? '800' : '600',
+                              color: mr.isTotal ? '#14245C' : '#334155',
+                              borderRight: '1px solid #E1E6F2'
+                            }}>
+                              {mr.label}
+                            </td>
+                            {displayCols.map((col) => {
+                              const monthRow = isAll
+                                ? (monthlyVehiclesMap[String(col.id)]?.[nKey] || {})
+                                : veh;
+                              const val = num(monthRow[mr.key]);
+                              return (
+                                <td
+                                  key={col.id}
+                                  style={{
+                                    padding: '8px 14px',
+                                    textAlign: 'right',
+                                    whiteSpace: 'nowrap',
+                                    fontWeight: mr.isTotal ? '800' : '700',
+                                    color: val > 0 ? '#14245C' : '#94a3b8',
+                                    borderRight: '1px solid #E1E6F2'
+                                  }}
+                                  className="currency-font"
+                                >
+                                  {formatINR(val)}
+                                </td>
+                              );
+                            })}
+                            {isAll && (
+                              <td
+                                style={{
+                                  padding: '8px 16px',
+                                  textAlign: 'right',
+                                  whiteSpace: 'nowrap',
+                                  fontWeight: '800',
+                                  backgroundColor: mr.isTotal ? '#D1FAE5' : '#ECFDF5',
+                                  color: '#0F6B3A'
+                                }}
+                                className="currency-font"
+                              >
+                                {formatINR(num(veh[mr.key]))}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      });
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       )}
 
