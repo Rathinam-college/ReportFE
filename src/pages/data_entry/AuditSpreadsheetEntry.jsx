@@ -69,10 +69,28 @@ export default function AuditSpreadsheetEntry({
         setNaScheduleRows(data.non_academic_schedule || []);
         setNcTrackerRows(data.nc_tracker || []);
         const intList = data.internal_report || [];
-        setInternalRows(intList);
         if (intList.length > 0) {
+          setInternalRows(intList);
           if (intList[0].cycle_no) setInternalCycleNo(intList[0].cycle_no);
           if (intList[0].criteria) setInternalCriteria(intList[0].criteria);
+        } else {
+          // Auto-populate departments from Audit Master Data if this month has no saved internal audit rows yet
+          const mRes = await fetch('/api/audit/master-departments?topic=internal_report');
+          const mData = await mRes.json();
+          const activeMasters = (mData?.data || []).filter(m => m.is_active !== false);
+          if (activeMasters.length > 0) {
+            setInternalCycleNo(activeMasters[0].default_cycle_no || '12');
+            setInternalCriteria(activeMasters[0].default_criteria || 'QMS - 9001:2015');
+            setInternalRows(activeMasters.map((m, idx) => ({
+              s_no: m.s_no || idx + 1,
+              department: m.department,
+              status: '',
+              total_scores: '',
+              remarks: ''
+            })));
+          } else {
+            setInternalRows([]);
+          }
         }
       }
     } catch (err) {
@@ -580,6 +598,45 @@ export default function AuditSpreadsheetEntry({
                     <span style={{ fontSize: '12px', fontWeight: '800', color: '#14245C', whiteSpace: 'nowrap' }}>Audit Process Criteria:</span>
                     <input disabled={isClosed} value={internalCriteria} onChange={(e) => setInternalCriteria(e.target.value)} style={inputStyle({ maxWidth: '300px' })} />
                   </div>
+                  {!isClosed && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const mRes = await fetch('/api/audit/master-departments?topic=internal_report');
+                        const mData = await mRes.json();
+                        const activeMasters = (mData?.data || []).filter(m => m.is_active !== false);
+                        if (activeMasters.length > 0) {
+                          setInternalCycleNo(activeMasters[0].default_cycle_no || '12');
+                          setInternalCriteria(activeMasters[0].default_criteria || 'QMS - 9001:2015');
+                          setInternalRows(prev => {
+                            const existing = new Set(prev.map(r => (r.department || '').trim().toLowerCase()));
+                            const additions = activeMasters
+                              .filter(m => !existing.has((m.department || '').trim().toLowerCase()))
+                              .map((m, idx) => ({
+                                s_no: prev.length + idx + 1,
+                                department: m.department,
+                                status: '',
+                                total_scores: '',
+                                remarks: ''
+                              }));
+                            return [...prev, ...additions];
+                          });
+                        }
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #14245C',
+                        backgroundColor: '#ffffff',
+                        color: '#14245C',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + Sync from Master Data
+                    </button>
+                  )}
                 </div>
 
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>

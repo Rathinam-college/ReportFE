@@ -838,6 +838,72 @@ export default function TransportVehicleExpensesTable({
               <Bus size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
               <div style={{ fontSize: '13.5px', fontWeight: '700' }}>No vehicles recorded for {branchLabel} in {pLabel}.</div>
             </div>
+          ) : !embedded ? (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gap: '14px'
+            }}>
+              {filteredVehicles.map((veh, vIdx) => {
+                const vKey = veh.id || veh.vehicle_no || vIdx;
+                const svTot = num(veh.total_expenses);
+                const svDiesel = num(veh.diesel_litres);
+                const svKm = num(veh.km_run);
+                const svMil = svDiesel > 0 ? (svKm / svDiesel) : num(veh.mileage);
+                const isLowMil = svMil > 0 && svMil < 4.0;
+                return (
+                  <div
+                    key={vKey}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: '16px',
+                      border: '1px solid #E1E6F2',
+                      padding: '16px',
+                      boxShadow: '0 2px 8px rgba(20, 36, 92, 0.04)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                      <div>
+                        <div style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: '800', color: '#14245C' }}>
+                          {veh.vehicle_no}
+                        </div>
+                        <div style={{ fontSize: '11.5px', fontWeight: '600', color: '#64748b', marginTop: '2px' }}>
+                          {veh.make || 'Vehicle'}{veh.model ? ` • ${veh.model}` : ''}
+                        </div>
+                      </div>
+                      <span style={{
+                        padding: '3px 9px',
+                        borderRadius: '9999px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        backgroundColor: svMil <= 0 ? '#F1F5F9' : (isLowMil ? '#FBE3E3' : '#E4F6EC'),
+                        color: svMil <= 0 ? '#64748b' : (isLowMil ? '#A32626' : '#0F6B3A'),
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {svMil > 0 ? `${svMil.toFixed(2)} km/L` : '— km/L'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', paddingTop: '10px', borderTop: '1px solid #EDF0F8' }}>
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Expenses</div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#14245C', marginTop: '2px' }} className="currency-font">{formatINR(svTot)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Diesel</div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#14245C', marginTop: '2px' }}>{svDiesel.toLocaleString('en-IN')} L</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>KM run</div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#14245C', marginTop: '2px' }}>{svKm.toLocaleString('en-IN')}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (() => {
             const isAll = String(selectedPeriodId) === 'all';
             const displayCols = isAll

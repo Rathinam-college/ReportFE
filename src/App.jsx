@@ -419,7 +419,9 @@ export default function App() {
         if (mData.hostel_census) {
           setHostelCensusDraft(mData.hostel_census);
         }
-        if (mData.transport_census) {
+        if (mData.transport_census_by_branch) {
+          setTransportCensusDraft(mData.transport_census_by_branch);
+        } else if (mData.transport_census) {
           setTransportCensusDraft(mData.transport_census);
         }
         setIsDirty(false);
@@ -453,7 +455,8 @@ export default function App() {
               setRemarksDraft(remarkMap);
               if (retryData.census) setCensusDraft(retryData.census);
               if (retryData.hostel_census) setHostelCensusDraft(retryData.hostel_census);
-              if (retryData.transport_census) setTransportCensusDraft(retryData.transport_census);
+              if (retryData.transport_census_by_branch) setTransportCensusDraft(retryData.transport_census_by_branch);
+              else if (retryData.transport_census) setTransportCensusDraft(retryData.transport_census);
               setIsDirty(false);
               if (retryData.periods && retryData.periods.length > 0) {
                 setEditingPeriodId(retryData.periods[retryData.periods.length - 1].id);
@@ -627,24 +630,24 @@ export default function App() {
         ...(matrixData.transport_census || {}),
         ...(transportCensusDraft?.RPS || transportCensusDraft || {})
       },
-      transport_census_by_branch: {
-        Common: {
-          ...(matrixData.transport_census_by_branch?.Common || {}),
-          ...(transportCensusDraft?.Common || {})
-        },
-        RPS: {
-          ...(matrixData.transport_census_by_branch?.RPS || {}),
-          ...(transportCensusDraft?.RPS || {})
-        },
-        KPM: {
-          ...(matrixData.transport_census_by_branch?.KPM || {}),
-          ...(transportCensusDraft?.KPM || {})
-        },
-        University: {
-          ...(matrixData.transport_census_by_branch?.University || {}),
-          ...(transportCensusDraft?.University || {})
-        }
-      }
+      transport_census_by_branch: (() => {
+        const mergeBranchPeriods = (dbBranch = {}, draftBranch = {}) => {
+          const merged = { ...dbBranch };
+          Object.keys(draftBranch || {}).forEach((pid) => {
+            merged[pid] = {
+              ...(dbBranch?.[pid] || {}),
+              ...(draftBranch[pid] || {})
+            };
+          });
+          return merged;
+        };
+        return {
+          Common: mergeBranchPeriods(matrixData.transport_census_by_branch?.Common, transportCensusDraft?.Common),
+          RPS: mergeBranchPeriods(matrixData.transport_census_by_branch?.RPS, transportCensusDraft?.RPS),
+          KPM: mergeBranchPeriods(matrixData.transport_census_by_branch?.KPM, transportCensusDraft?.KPM),
+          University: mergeBranchPeriods(matrixData.transport_census_by_branch?.University, transportCensusDraft?.University)
+        };
+      })()
     };
   }, [matrixData, matrixDraft, hostelCensusDraft, transportCensusDraft]);
 
@@ -738,7 +741,8 @@ export default function App() {
 
     setTransportCensusDraft(prev => {
       const branchMap = prev[branch] || {};
-      const current = branchMap[pIdStr] || {};
+      const existingDbRow = matrixData?.transport_census_by_branch?.[branch]?.[pIdStr] || {};
+      const current = branchMap[pIdStr] ? { ...existingDbRow, ...branchMap[pIdStr] } : { ...existingDbRow };
       let updated;
       if (typeof fieldOrObj === 'object' && fieldOrObj !== null) {
         updated = { ...current, ...fieldOrObj };
