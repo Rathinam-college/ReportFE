@@ -1187,16 +1187,25 @@ export default function ChartDataTable({
           ) : null}
 
           {/* 4. CATEGORY CARDS GRID: CSS grid repeat(auto-fill, minmax(310px, 1fr)), 14px gap */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
-              gap: '14px',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}
-          >
-            {filteredCategories.map((cat) => {
+          {(() => {
+            const isMetricCat = (cat) => {
+              const name = (cat.categoryName || '').toLowerCase();
+              return (
+                isPersonCountCategory(cat.categoryName) ||
+                name.includes('cost per person') ||
+                name.includes('cost/person') ||
+                name.includes('cost / person') ||
+                name.includes('cost per occupant')
+              );
+            };
+            const mainCategories = selectedModule === 'food'
+              ? filteredCategories.filter(cat => !isMetricCat(cat))
+              : filteredCategories;
+            const bottomMetricCategories = selectedModule === 'food'
+              ? filteredCategories.filter(cat => isMetricCat(cat))
+              : [];
+
+            const renderCategoryCard = (cat) => {
               const catId = cat.categoryId;
               const isPersonCat = isPersonCountCategory(cat.categoryName);
               const isCostPerPersonCat = cat.categoryName.toLowerCase().includes('cost per person') || 
@@ -1240,29 +1249,50 @@ export default function ChartDataTable({
                   remarksDraft={remarksDraft}
                 />
               );
-            })}
-            {selectedModule === 'food' && !searchTerm?.trim() && selectedCategoryFilter === 'all' && (
-              <CategoryCard
-                key="food-total-expenses"
-                category={{
-                  categoryId: 'food-total-expenses',
-                  categoryName: 'Total Expenses',
-                  color: '#14245C'
-                }}
-                periods={periods}
-                selectedPeriod={selectedPeriod}
-                selectedAmount={currentGrandTotal}
-                selectedPercent={currentGrandTotal > 0 ? 100 : 0}
-                monthlyAmounts={monthlyGrandTotals.byPeriod || {}}
-                maxMonthlyAmount={Math.max(1, ...Object.values(monthlyGrandTotals.byPeriod || {}))}
-                hideDetails={true}
-                formatCompact={formatByUnit}
-                formatFull={formatIndianFull}
-                hidePercentage={displayMode === 'amount_only'}
-                remarksDraft={remarksDraft}
-              />
-            )}
-          </div>
+            };
+
+            const gridStyle = {
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
+              gap: '14px',
+              width: '100%',
+              boxSizing: 'border-box'
+            };
+
+            return (
+              <>
+                <div style={{ ...gridStyle, marginBottom: bottomMetricCategories.length > 0 ? '14px' : undefined }}>
+                  {mainCategories.map(renderCategoryCard)}
+                  {selectedModule === 'food' && !searchTerm?.trim() && selectedCategoryFilter === 'all' && (
+                    <CategoryCard
+                      key="food-total-expenses"
+                      category={{
+                        categoryId: 'food-total-expenses',
+                        categoryName: 'Total Expenses',
+                        color: '#14245C'
+                      }}
+                      periods={periods}
+                      selectedPeriod={selectedPeriod}
+                      selectedAmount={currentGrandTotal}
+                      selectedPercent={currentGrandTotal > 0 ? 100 : 0}
+                      monthlyAmounts={monthlyGrandTotals.byPeriod || {}}
+                      maxMonthlyAmount={Math.max(1, ...Object.values(monthlyGrandTotals.byPeriod || {}))}
+                      hideDetails={true}
+                      formatCompact={formatByUnit}
+                      formatFull={formatIndianFull}
+                      hidePercentage={displayMode === 'amount_only'}
+                      remarksDraft={remarksDraft}
+                    />
+                  )}
+                </div>
+                {bottomMetricCategories.length > 0 && (
+                  <div style={gridStyle}>
+                    {bottomMetricCategories.map(renderCategoryCard)}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </>
       )}
     </div>
